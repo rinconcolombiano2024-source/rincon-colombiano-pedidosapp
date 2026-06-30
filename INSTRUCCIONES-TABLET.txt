@@ -38,3 +38,12 @@ NOTAS DE USO
 - Cada dia se reinicia en #0001.
 - El cierre de mes suma los pedidos guardados en esa misma tablet.
 - Si usas varias tablets al mismo tiempo, se necesita una version con base de datos para que no se repitan los tickets.
+
+LOGIN CON CORREO Y CONTRASENA
+La app ya esta preparada para Supabase.
+Para activar el login:
+1. Ejecuta en Supabase el archivo supabase-schema.sql.
+2. Copia Project URL y anon public key.
+3. Pegalos en supabase-config.js.
+4. Publica de nuevo en Vercel.
+5. Al abrir la app aparecera la pantalla de iniciar sesion.

@@ -49,6 +49,15 @@ const DEFAULT_MENU_CATALOG = {
 };
 
 const elements = {
+  authScreen: document.querySelector("#authScreen"),
+  authForm: document.querySelector("#authForm"),
+  authEmail: document.querySelector("#authEmail"),
+  authPassword: document.querySelector("#authPassword"),
+  signInButton: document.querySelector("#signInButton"),
+  signUpButton: document.querySelector("#signUpButton"),
+  authMessage: document.querySelector("#authMessage"),
+  cloudStatus: document.querySelector("#cloudStatus"),
+  signOutButton: document.querySelector("#signOutButton"),
   nextTicketLabel: document.querySelector("#nextTicketLabel"),
   categoryTabs: document.querySelector("#categoryTabs"),
   menuGrid: document.querySelector("#menuGrid"),
@@ -119,6 +128,13 @@ let currencySymbol = readCurrencySymbol();
 let currencyPosition = readCurrencyPosition();
 let moneyFormat = readMoneyFormat();
 let editingNoteItemId = null;
+const cloudState = {
+  client: null,
+  configured: false,
+  ready: false,
+  user: null,
+  loading: false,
+};
 
 function createBlankOrder() {
   return {
@@ -278,6 +294,241 @@ function saveOrders() {
   localStorage.setItem(STORAGE_KEYS.orders, JSON.stringify(savedOrders.slice(0, 5000)));
 }
 
+function supabaseConfig() {
+  const config = window.RINCON_SUPABASE || {};
+  return {
+    url: String(config.url || "").trim(),
+    anonKey: String(config.anonKey || "").trim(),
+  };
+}
+
+function hasSupabaseConfig() {
+  const config = supabaseConfig();
+  return config.url.startsWith("http") && config.anonKey.length > 20;
+}
+
+function currentSettingsPayload() {
+  return {
+    currencySymbol,
+    currencyPosition,
+    moneyFormat,
+  };
+}
+
+function applySettingsPayload(settings = {}) {
+  currencySymbol = settings.currencySymbol || currencySymbol || "$";
+  currencyPosition = settings.currencyPosition === "after" ? "after" : "before";
+  moneyFormat = settings.moneyFormat === "eu" ? "eu" : "us";
+  localStorage.setItem(STORAGE_KEYS.currencySymbol, currencySymbol);
+  localStorage.setItem(STORAGE_KEYS.currencyPosition, currencyPosition);
+  localStorage.setItem(STORAGE_KEYS.moneyFormat, moneyFormat);
+}
+
+function renderCloudState(message = "") {
+  if (!cloudState.configured) {
+    elements.authScreen.hidden = true;
+    elements.signOutButton.hidden = true;
+    elements.cloudStatus.textContent = "Modo local";
+    return;
+  }
+
+  elements.authScreen.hidden = Boolean(cloudState.user);
+  elements.signOutButton.hidden = !cloudState.user;
+  elements.cloudStatus.textContent = cloudState.user ? "Sincronizado" : "Iniciar sesion";
+  elements.authMessage.textContent = message;
+}
+
+async function initializeCloud() {
+  cloudState.configured = hasSupabaseConfig();
+  if (!cloudState.configured) {
+    renderCloudState();
+    return;
+  }
+
+  if (!window.supabase?.createClient) {
+    renderCloudState("No se pudo cargar Supabase. Revisa la conexion a internet.");
+    return;
+  }
+
+  const config = supabaseConfig();
+  cloudState.client = window.supabase.createClient(config.url, config.anonKey);
+  const { data } = await cloudState.client.auth.getSession();
+  cloudState.user = data.session?.user || null;
+  renderCloudState();
+
+  cloudState.client.auth.onAuthStateChange(async (_event, session) => {
+    cloudState.user = session?.user || null;
+    renderCloudState();
+    if (cloudState.user) await loadCloudData();
+  });
+
+  if (cloudState.user) await loadCloudData();
+}
+
+async function loadCloudData() {
+  if (!cloudState.client || !cloudState.user || cloudState.loading) return;
+  cloudState.loading = true;
+  elements.cloudStatus.textContent = "Cargando nube...";
+
+  try {
+    const { data: settingsRow, error: settingsError } = await cloudState.client
+      .from("app_settings")
+      .select("menu, settings")
+      .eq("user_id", cloudState.user.id)
+      .maybeSingle();
+
+    if (settingsError) throw settingsError;
+
+    if (settingsRow) {
+      menuCatalog = normalizeMenuCatalog(settingsRow.menu || DEFAULT_MENU_CATALOG);
+      localStorage.setItem(STORAGE_KEYS.menu, JSON.stringify(menuCatalog));
+      applySettingsPayload(settingsRow.settings || {});
+    } else {
+      await saveCloudSettings();
+    }
+
+    const { data: cloudOrders, error: ordersError } = await cloudState.client
+      .from("orders")
+      .select("order_json")
+      .eq("user_id", cloudState.user.id)
+      .order("created_at", { ascending: false })
+      .limit(5000);
+
+    if (ordersError) throw ordersError;
+
+    savedOrders = (cloudOrders || []).map((row) => ({
+      ...row.order_json,
+      type: normalizeOrderType(row.order_json?.type),
+      businessDate: orderBusinessDate(row.order_json),
+    }));
+    saveOrders();
+
+    todayKey = currentBusinessDate();
+    const { data: counterRow, error: counterError } = await cloudState.client
+      .from("ticket_counters")
+      .select("next_ticket")
+      .eq("user_id", cloudState.user.id)
+      .eq("business_date", todayKey)
+      .maybeSingle();
+
+    if (counterError) throw counterError;
+    nextTicket = counterRow?.next_ticket || 1;
+    saveTicketState();
+
+    currentOrder = createBlankOrder();
+    renderCurrencySettings();
+    renderCategories();
+    renderMenu();
+    renderOrder();
+    renderHistory();
+    cloudState.ready = true;
+    elements.cloudStatus.textContent = "Sincronizado";
+  } catch (error) {
+    console.error(error);
+    elements.cloudStatus.textContent = "Error nube";
+    elements.authMessage.textContent = error.message || "No se pudo cargar la informacion.";
+  } finally {
+    cloudState.loading = false;
+  }
+}
+
+async function saveCloudSettings() {
+  if (!cloudState.client || !cloudState.user) return;
+
+  const { error } = await cloudState.client.from("app_settings").upsert({
+    user_id: cloudState.user.id,
+    menu: normalizeMenuCatalog(menuCatalog),
+    settings: currentSettingsPayload(),
+    updated_at: new Date().toISOString(),
+  });
+
+  if (error) throw error;
+}
+
+async function claimCloudTicket() {
+  if (!cloudState.client || !cloudState.user) return null;
+
+  const { data, error } = await cloudState.client.rpc("claim_next_ticket", {
+    p_business_date: todayKey,
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+async function setCloudNextTicket(number) {
+  if (!cloudState.client || !cloudState.user) return;
+
+  const { error } = await cloudState.client.rpc("set_next_ticket", {
+    p_business_date: todayKey,
+    p_next_ticket: number,
+  });
+
+  if (error) throw error;
+}
+
+async function saveCloudOrder(order) {
+  if (!cloudState.client || !cloudState.user || !order.saved) return;
+
+  const { error } = await cloudState.client.from("orders").upsert({
+    id: order.id,
+    user_id: cloudState.user.id,
+    ticket_number: order.ticketNumber,
+    business_date: orderBusinessDate(order),
+    order_json: structuredCloneOrder(order),
+    total: orderTotal(order),
+    created_at: order.createdAt,
+    updated_at: order.updatedAt,
+  });
+
+  if (error) throw error;
+}
+
+async function signInWithEmail() {
+  const email = elements.authEmail.value.trim();
+  const password = elements.authPassword.value;
+  if (!email || !password) {
+    elements.authMessage.textContent = "Escribe correo y contrasena.";
+    return;
+  }
+
+  elements.authMessage.textContent = "Iniciando sesion...";
+  const { error } = await cloudState.client.auth.signInWithPassword({ email, password });
+  if (error) {
+    elements.authMessage.textContent = error.message;
+    return;
+  }
+
+  elements.authPassword.value = "";
+}
+
+async function signUpWithEmail() {
+  const email = elements.authEmail.value.trim();
+  const password = elements.authPassword.value;
+  if (!email || password.length < 6) {
+    elements.authMessage.textContent = "Usa un correo y una contrasena de minimo 6 caracteres.";
+    return;
+  }
+
+  elements.authMessage.textContent = "Creando cuenta...";
+  const { error } = await cloudState.client.auth.signUp({ email, password });
+  if (error) {
+    elements.authMessage.textContent = error.message;
+    return;
+  }
+
+  elements.authMessage.textContent = "Cuenta creada. Si Supabase pide confirmacion, revisa el correo.";
+  elements.authPassword.value = "";
+}
+
+async function signOut() {
+  if (!cloudState.client) return;
+  await cloudState.client.auth.signOut();
+  cloudState.user = null;
+  cloudState.ready = false;
+  renderCloudState("Sesion cerrada.");
+}
+
 function readMenuCatalog() {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEYS.menu) || "null");
@@ -321,6 +572,12 @@ function saveMenuCatalog() {
 
   renderCategories();
   renderMenu();
+  if (cloudState.user) {
+    saveCloudSettings().catch((error) => {
+      console.error(error);
+      elements.cloudStatus.textContent = "Pendiente nube";
+    });
+  }
 }
 
 function readCurrencySymbol() {
@@ -351,6 +608,12 @@ function saveCurrencySymbol() {
   renderHistory();
   if (elements.menuEditorDialog.open) renderMenuEditor();
   if (elements.monthlyCloseDialog.open) renderMonthlyClose(elements.closeMonthInput.value || currentMonthKey());
+  if (cloudState.user) {
+    saveCloudSettings().catch((error) => {
+      console.error(error);
+      elements.cloudStatus.textContent = "Pendiente nube";
+    });
+  }
 }
 
 function renderCurrencySettings() {
@@ -728,7 +991,7 @@ function renderOrder() {
   elements.printOrderButton.disabled = currentOrder.items.length === 0;
 }
 
-function upsertCurrentOrder() {
+async function upsertCurrentOrder() {
   rollOverDayIfNeeded();
   syncFormToOrder();
 
@@ -741,13 +1004,23 @@ function upsertCurrentOrder() {
 
   if (!currentOrder.saved) {
     currentOrder.id = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
-    currentOrder.ticketNumber = nextTicket;
+    if (cloudState.user) {
+      try {
+        currentOrder.ticketNumber = await claimCloudTicket();
+        nextTicket = currentOrder.ticketNumber + 1;
+      } catch (error) {
+        alert(`No se pudo crear el ticket en la nube: ${error.message}`);
+        return false;
+      }
+    } else {
+      currentOrder.ticketNumber = nextTicket;
+      nextTicket += 1;
+      saveTicketState();
+    }
     currentOrder.createdAt = now;
     currentOrder.updatedAt = now;
     currentOrder.businessDate = todayKey;
     currentOrder.saved = true;
-    nextTicket += 1;
-    saveTicketState();
     savedOrders.unshift(structuredCloneOrder(currentOrder));
   } else {
     currentOrder.updatedAt = now;
@@ -755,7 +1028,18 @@ function upsertCurrentOrder() {
     if (index >= 0) savedOrders[index] = structuredCloneOrder(currentOrder);
   }
 
+  if (cloudState.user) {
+    try {
+      await saveCloudOrder(currentOrder);
+      elements.cloudStatus.textContent = "Sincronizado";
+    } catch (error) {
+      alert(`No se pudo guardar el pedido en la nube: ${error.message}`);
+      return false;
+    }
+  }
+
   saveOrders();
+  saveTicketState();
   renderOrder();
   renderHistory();
   if (elements.monthlyCloseDialog.open) {
@@ -768,8 +1052,8 @@ function structuredCloneOrder(order) {
   return JSON.parse(JSON.stringify(order));
 }
 
-function printCurrentOrder() {
-  if (!upsertCurrentOrder()) return;
+async function printCurrentOrder() {
+  if (!(await upsertCurrentOrder())) return;
   renderPrintTicket(currentOrder);
   window.print();
 }
@@ -1056,11 +1340,21 @@ function loadOrder(orderId) {
   renderPrintTicket(currentOrder);
 }
 
-function setNextTicket(value) {
+async function setNextTicket(value) {
   const number = Number.parseInt(value, 10);
   if (!Number.isFinite(number) || number < 1) {
     alert("Escribe un numero valido mayor a cero.");
     return;
+  }
+
+  if (cloudState.user) {
+    try {
+      await setCloudNextTicket(number);
+      elements.cloudStatus.textContent = "Sincronizado";
+    } catch (error) {
+      alert(`No se pudo cambiar el numero en la nube: ${error.message}`);
+      return;
+    }
   }
 
   nextTicket = number;
@@ -1142,8 +1436,16 @@ elements.lineItems.addEventListener("input", (event) => {
   });
 });
 
-elements.saveOrderButton.addEventListener("click", () => {
-  if (upsertCurrentOrder()) alert(`Pedido ${formatTicket(currentOrder.ticketNumber)} guardado.`);
+elements.authForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  await signInWithEmail();
+});
+
+elements.signUpButton.addEventListener("click", signUpWithEmail);
+elements.signOutButton.addEventListener("click", signOut);
+
+elements.saveOrderButton.addEventListener("click", async () => {
+  if (await upsertCurrentOrder()) alert(`Pedido ${formatTicket(currentOrder.ticketNumber)} guardado.`);
 });
 
 elements.printOrderButton.addEventListener("click", printCurrentOrder);
@@ -1161,7 +1463,9 @@ elements.counterButton.addEventListener("click", () => {
   elements.counterDialog.showModal();
 });
 
-elements.confirmCounterButton.addEventListener("click", () => setNextTicket(elements.counterInput.value));
+elements.confirmCounterButton.addEventListener("click", () => {
+  setNextTicket(elements.counterInput.value);
+});
 elements.saveItemNoteButton.addEventListener("click", saveItemNote);
 elements.customerButton.addEventListener("click", openCustomerDialog);
 elements.saveCustomerButton.addEventListener("click", saveCustomerFromDialog);
@@ -1234,3 +1538,8 @@ renderCategories();
 renderMenu();
 renderOrder();
 renderHistory();
+initializeCloud().catch((error) => {
+  console.error(error);
+  elements.cloudStatus.textContent = "Error nube";
+  elements.authMessage.textContent = error.message || "No se pudo iniciar Supabase.";
+});

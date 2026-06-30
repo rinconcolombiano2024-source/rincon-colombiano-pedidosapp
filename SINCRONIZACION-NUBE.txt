@@ -1,0 +1,62 @@
+RINCON COLOMBIANO - Inicio de sesion y datos en la nube
+
+SI, SE PUEDE
+Para iniciar sesion con correo y contrasena y ver la misma informacion desde cualquier tablet,
+telefono o computadora, la app necesita una base de datos en la nube.
+
+LA VERSION ACTUAL
+- Guarda pedidos, menu, moneda y cierres en el dispositivo donde se usa.
+- Si cambias de tablet, esa otra tablet no tiene automaticamente la informacion.
+- Es buena para una sola tablet o una sola computadora.
+
+VERSION CON CUENTA Y SINCRONIZACION
+Recomendado:
+- Vercel: para publicar la app.
+- Supabase: para login con correo/contrasena y base de datos.
+
+PASOS PARA ACTIVARLO
+1. Entra a https://supabase.com y crea un proyecto.
+2. En Supabase, abre SQL Editor.
+3. Copia y ejecuta todo el archivo supabase-schema.sql.
+4. En Supabase, ve a Project Settings > API.
+5. Copia Project URL y anon public key.
+6. Abre el archivo supabase-config.js.
+7. Pega los valores:
+
+window.RINCON_SUPABASE = {
+  url: "TU_PROJECT_URL",
+  anonKey: "TU_ANON_PUBLIC_KEY",
+};
+
+8. Sube la app a GitHub y despliega en Vercel.
+9. Abre el enlace de Vercel. Ya debe aparecer la pantalla de iniciar sesion.
+
+QUIEN CREA CONTRASENAS
+- supabase-config.js se configura una sola vez. Los empleados no deben tocar ese archivo.
+- Las contrasenas se crean desde la pantalla de la app o desde Supabase Auth.
+- Si todos deben ver el mismo menu, tickets y cierres, usa una cuenta principal del restaurante en todos los dispositivos.
+- Si quieres que cada empleado tenga su propio correo y contrasena, hay que agregar sistema de empleados/equipo para que todos pertenezcan al mismo restaurante.
+
+QUE SE PUEDE SINCRONIZAR
+- Menu y precios.
+- Simbolo/formato de moneda.
+- Tickets y pedidos.
+- Cierre diario y mensual.
+- Nombre de quien tomo el pedido.
+- Usuarios/empleados autorizados.
+
+IMPORTANTE PARA VARIAS TABLETS
+Si varias tablets toman pedidos al mismo tiempo, el numero de ticket debe salir desde la base de datos,
+no desde cada tablet. Asi se evita que dos tablets creen el mismo ticket.
+
+LO QUE HAY QUE CREAR EN SUPABASE
+- Tabla de restaurantes.
+- Tabla de usuarios/empleados.
+- Tabla de productos/menu.
+- Tabla de pedidos.
+- Tabla de items del pedido.
+- Funcion segura para generar el siguiente ticket del dia.
+
+DESPUES
+La app se conecta a Supabase, pide iniciar sesion y descarga la informacion del restaurante.
+Si pierdes la tablet, puedes abrir la app en otro dispositivo, iniciar sesion y seguir trabajando.

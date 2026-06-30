@@ -13,6 +13,27 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <section class="auth-screen" id="authScreen" hidden>
+      <form class="auth-card" id="authForm">
+        <p class="eyebrow">Acceso privado</p>
+        <h1>RINCON COLOMBIANO</h1>
+        <p>Usa la cuenta del restaurante para compartir menu, tickets y cierres en todos los dispositivos.</p>
+        <label>
+          Correo electronico
+          <input id="authEmail" type="email" autocomplete="email" placeholder="correo@ejemplo.com" />
+        </label>
+        <label>
+          Contrasena
+          <input id="authPassword" type="password" autocomplete="current-password" placeholder="Minimo 6 caracteres" />
+        </label>
+        <div class="auth-actions">
+          <button id="signInButton" type="submit">Iniciar sesion</button>
+          <button id="signUpButton" type="button">Crear cuenta principal</button>
+        </div>
+        <p class="auth-message" id="authMessage"></p>
+      </form>
+    </section>
+
     <main class="app-shell">
       <header class="topbar">
         <div>
@@ -20,6 +41,8 @@
           <h1>RINCON COLOMBIANO</h1>
         </div>
         <div class="topbar-actions">
+          <span class="cloud-status" id="cloudStatus">Modo local</span>
+          <button class="sign-out-button" id="signOutButton" type="button" hidden>Cerrar sesion</button>
           <button class="install-button" id="installAppButton" type="button" hidden>Instalar app</button>
           <div class="ticket-counter" aria-live="polite">
             <span>Proximo ticket</span>
@@ -70,20 +93,23 @@
 
           <div class="order-info">
             <label>
-              Tipo
+              Tipo de pedido
               <select id="orderType">
-                <option value="Mesa">Mesa</option>
+                <option value="Comer en el punto">Comer en el punto</option>
                 <option value="Para llevar">Para llevar</option>
                 <option value="Domicilio">Domicilio</option>
               </select>
             </label>
             <label>
               Mesa / Cliente
-              <input id="customerName" type="text" placeholder="Ej: Mesa 4" autocomplete="off" />
+              <div class="customer-field-row">
+                <input id="customerName" type="text" placeholder="Ej: Mesa 4 o Juan Perez" autocomplete="off" />
+                <button class="customer-button" id="customerButton" type="button">Cliente</button>
+              </div>
             </label>
             <label>
-              Atiende
-              <input id="serverName" type="text" placeholder="Nombre" autocomplete="off" />
+              Tomo el pedido
+              <input id="serverName" type="text" placeholder="Nombre del empleado" autocomplete="off" />
             </label>
           </div>
 
@@ -141,6 +167,36 @@
       </form>
     </dialog>
 
+    <dialog id="itemNoteDialog">
+      <form method="dialog" class="counter-form">
+        <h2>Nota del plato</h2>
+        <p id="itemNoteTitle">Producto</p>
+        <label>
+          Nota para cocina
+          <textarea id="itemNoteTextarea" rows="5" placeholder="Ej: sin cebolla, salsa aparte, bien asado..."></textarea>
+        </label>
+        <div class="dialog-actions">
+          <button value="cancel" type="submit">Cancelar</button>
+          <button id="saveItemNoteButton" value="default" type="button">Guardar nota</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="customerDialog">
+      <form method="dialog" class="counter-form">
+        <h2>Nombre del cliente</h2>
+        <p>Este nombre sale en el pedido y en el ticket de cocina.</p>
+        <label>
+          Cliente / Mesa
+          <input id="customerDialogInput" type="text" placeholder="Ej: Juan Perez - Mesa 4" autocomplete="off" />
+        </label>
+        <div class="dialog-actions">
+          <button value="cancel" type="submit">Cancelar</button>
+          <button id="saveCustomerButton" value="default" type="button">Guardar cliente</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="menuEditorDialog" class="menu-editor-dialog">
       <form method="dialog" class="menu-editor-form">
         <div class="monthly-dialog-header">
@@ -152,6 +208,32 @@
             <span aria-hidden="true">x</span>
           </button>
         </div>
+
+        <section class="settings-card">
+          <div>
+            <h3>Moneda</h3>
+            <p>Este simbolo se usa en precios, pedidos, tickets y cierres.</p>
+          </div>
+          <label>
+            Simbolo
+            <input id="currencySymbolInput" type="text" maxlength="8" placeholder="zł" autocomplete="off" />
+          </label>
+          <label>
+            Posicion
+            <select id="currencyPositionSelect">
+              <option value="before">Antes</option>
+              <option value="after">Despues</option>
+            </select>
+          </label>
+          <label>
+            Formato
+            <select id="moneyFormatSelect">
+              <option value="us">1,234.56</option>
+              <option value="eu">1 234,56</option>
+            </select>
+          </label>
+          <button id="saveCurrencyButton" type="button">Guardar moneda</button>
+        </section>
 
         <div class="menu-editor-layout">
           <section class="editor-section">
@@ -222,6 +304,8 @@
       </form>
     </dialog>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

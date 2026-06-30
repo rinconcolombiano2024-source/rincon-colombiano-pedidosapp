@@ -31,6 +31,74 @@ body {
   color: var(--ink);
 }
 
+.auth-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background:
+    linear-gradient(90deg, rgba(31, 143, 77, 0.16), rgba(244, 246, 249, 0.96), rgba(199, 57, 47, 0.14)),
+    var(--page);
+}
+
+.auth-screen[hidden] {
+  display: none;
+}
+
+.auth-card {
+  display: grid;
+  gap: 14px;
+  width: min(430px, 100%);
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: var(--shadow);
+}
+
+.auth-card h1,
+.auth-card p {
+  margin: 0;
+}
+
+.auth-card > p:not(.eyebrow):not(.auth-message) {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.auth-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.auth-actions button {
+  min-height: 44px;
+  border-radius: 8px;
+  font-weight: 900;
+}
+
+.auth-actions button:first-child {
+  border: 0;
+  background: var(--green);
+  color: #ffffff;
+}
+
+.auth-actions button:last-child {
+  border: 1px solid var(--line);
+  background: #ffffff;
+  color: var(--dark);
+}
+
+.auth-message {
+  min-height: 20px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
 button,
 input,
 select,
@@ -126,6 +194,29 @@ button {
 
 .install-button[hidden] {
   display: none;
+}
+
+.cloud-status {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #f8fafc;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.sign-out-button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--dark);
+  font-weight: 900;
 }
 
 .workspace {
@@ -348,6 +439,22 @@ textarea:focus {
   padding: 16px;
 }
 
+.customer-field-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.customer-button {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--blue);
+  font-weight: 900;
+}
+
 .line-items {
   display: grid;
   gap: 10px;
@@ -433,6 +540,23 @@ textarea:focus {
   min-height: 38px;
   padding: 8px;
   font-size: 0.9rem;
+}
+
+.item-note-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.note-item-button {
+  min-height: 38px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--blue);
+  font-weight: 900;
 }
 
 .remove-item {
@@ -608,6 +732,39 @@ dialog::backdrop {
   align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
+}
+
+.settings-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(90px, 110px) minmax(120px, 140px) minmax(130px, 150px) auto;
+  gap: 12px;
+  align-items: end;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.settings-card h3 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+}
+
+.settings-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.settings-card button {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--green);
+  color: #ffffff;
+  font-weight: 900;
 }
 
 .menu-editor-layout {
@@ -906,12 +1063,17 @@ dialog::backdrop {
 
   .order-info,
   .custom-item,
+  .customer-field-row,
   .action-row {
     grid-template-columns: 1fr;
   }
 
   .line-item {
     grid-template-columns: 82px minmax(0, 1fr) 38px;
+  }
+
+  .item-note-row {
+    grid-template-columns: 1fr;
   }
 
   .monthly-summary-grid,
@@ -921,6 +1083,7 @@ dialog::backdrop {
   }
 
   .menu-editor-layout,
+  .settings-card,
   .product-form-grid,
   .product-row {
     grid-template-columns: 1fr;
@@ -972,6 +1135,16 @@ dialog::backdrop {
     margin-top: 4px;
     text-align: center;
     font-size: 24px;
+    font-weight: 900;
+  }
+
+  .print-ticket .receipt-order-type {
+    margin-top: 8px;
+    padding: 6px 0;
+    border-top: 2px solid #000000;
+    border-bottom: 2px solid #000000;
+    text-align: center;
+    font-size: 18px;
     font-weight: 900;
   }
 
