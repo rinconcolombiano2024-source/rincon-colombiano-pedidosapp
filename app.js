@@ -3,6 +3,9 @@ const STORAGE_KEYS = {
   ticketDate: "rincon_colombiano_ticket_date",
   orders: "rincon_colombiano_orders",
   menu: "rincon_colombiano_menu",
+  currencySymbol: "rincon_colombiano_currency_symbol",
+  currencyPosition: "rincon_colombiano_currency_position",
+  moneyFormat: "rincon_colombiano_money_format",
 };
 
 const DEFAULT_MENU_CATALOG = {
@@ -70,6 +73,14 @@ const elements = {
   counterDialog: document.querySelector("#counterDialog"),
   counterInput: document.querySelector("#counterInput"),
   confirmCounterButton: document.querySelector("#confirmCounterButton"),
+  itemNoteDialog: document.querySelector("#itemNoteDialog"),
+  itemNoteTitle: document.querySelector("#itemNoteTitle"),
+  itemNoteTextarea: document.querySelector("#itemNoteTextarea"),
+  saveItemNoteButton: document.querySelector("#saveItemNoteButton"),
+  customerButton: document.querySelector("#customerButton"),
+  customerDialog: document.querySelector("#customerDialog"),
+  customerDialogInput: document.querySelector("#customerDialogInput"),
+  saveCustomerButton: document.querySelector("#saveCustomerButton"),
   monthlyCloseButton: document.querySelector("#monthlyCloseButton"),
   monthlyCloseDialog: document.querySelector("#monthlyCloseDialog"),
   closeMonthInput: document.querySelector("#closeMonthInput"),
@@ -90,6 +101,10 @@ const elements = {
   cancelEditProductButton: document.querySelector("#cancelEditProductButton"),
   productList: document.querySelector("#productList"),
   resetMenuButton: document.querySelector("#resetMenuButton"),
+  currencySymbolInput: document.querySelector("#currencySymbolInput"),
+  currencyPositionSelect: document.querySelector("#currencyPositionSelect"),
+  moneyFormatSelect: document.querySelector("#moneyFormatSelect"),
+  saveCurrencyButton: document.querySelector("#saveCurrencyButton"),
 };
 
 let menuCatalog = readMenuCatalog();
@@ -100,12 +115,16 @@ let savedOrders = readOrders();
 let currentOrder = createBlankOrder();
 let deferredInstallPrompt = null;
 let editingProduct = null;
+let currencySymbol = readCurrencySymbol();
+let currencyPosition = readCurrencyPosition();
+let moneyFormat = readMoneyFormat();
+let editingNoteItemId = null;
 
 function createBlankOrder() {
   return {
     id: null,
     ticketNumber: null,
-    type: "Mesa",
+    type: "Comer en el punto",
     customer: "",
     server: "",
     notes: "",
@@ -165,7 +184,11 @@ function readOrders() {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEYS.orders) || "[]");
     return Array.isArray(parsed)
-      ? parsed.map((order) => ({ ...order, businessDate: orderBusinessDate(order) }))
+      ? parsed.map((order) => ({
+          ...order,
+          type: normalizeOrderType(order.type),
+          businessDate: orderBusinessDate(order),
+        }))
       : [];
   } catch {
     return [];
@@ -300,15 +323,60 @@ function saveMenuCatalog() {
   renderMenu();
 }
 
+function readCurrencySymbol() {
+  return localStorage.getItem(STORAGE_KEYS.currencySymbol) || "$";
+}
+
+function readCurrencyPosition() {
+  const position = localStorage.getItem(STORAGE_KEYS.currencyPosition);
+  return position === "after" ? "after" : "before";
+}
+
+function readMoneyFormat() {
+  const format = localStorage.getItem(STORAGE_KEYS.moneyFormat);
+  return format === "eu" ? "eu" : "us";
+}
+
+function saveCurrencySymbol() {
+  const symbol = elements.currencySymbolInput.value.trim() || "$";
+  currencySymbol = symbol;
+  currencyPosition = elements.currencyPositionSelect.value === "after" ? "after" : "before";
+  moneyFormat = elements.moneyFormatSelect.value === "eu" ? "eu" : "us";
+  localStorage.setItem(STORAGE_KEYS.currencySymbol, currencySymbol);
+  localStorage.setItem(STORAGE_KEYS.currencyPosition, currencyPosition);
+  localStorage.setItem(STORAGE_KEYS.moneyFormat, moneyFormat);
+  renderCurrencySettings();
+  renderMenu();
+  renderOrder();
+  renderHistory();
+  if (elements.menuEditorDialog.open) renderMenuEditor();
+  if (elements.monthlyCloseDialog.open) renderMonthlyClose(elements.closeMonthInput.value || currentMonthKey());
+}
+
+function renderCurrencySettings() {
+  elements.currencySymbolInput.value = currencySymbol;
+  elements.currencyPositionSelect.value = currencyPosition;
+  elements.moneyFormatSelect.value = moneyFormat;
+}
+
 function formatTicket(number) {
   return `#${String(number).padStart(4, "0")}`;
 }
 
 function formatMoney(amount) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(amount || 0);
+  const value = Number(amount) || 0;
+  const formatted = new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+  const localized = moneyFormat === "eu" ? formatted.replaceAll(",", " ").replace(".", ",") : formatted;
+
+  if (currencyPosition === "after") {
+    return `${localized} ${currencySymbol}`;
+  }
+
+  const separator = /[A-Za-z0-9]$/.test(currencySymbol) ? " " : "";
+  return `${currencySymbol}${separator}${localized}`;
 }
 
 function escapeHtml(value) {
@@ -324,8 +392,14 @@ function orderTotal(order = currentOrder) {
   return order.items.reduce((total, item) => total + item.qty * item.price, 0);
 }
 
+function normalizeOrderType(type) {
+  if (type === "Mesa") return "Comer en el punto";
+  if (type === "Para llevar" || type === "Domicilio" || type === "Comer en el punto") return type;
+  return "Comer en el punto";
+}
+
 function syncFormToOrder() {
-  currentOrder.type = elements.orderType.value;
+  currentOrder.type = normalizeOrderType(elements.orderType.value);
   currentOrder.customer = elements.customerName.value.trim();
   currentOrder.server = elements.serverName.value.trim();
   currentOrder.notes = elements.orderNotes.value.trim();
@@ -426,6 +500,7 @@ function renderProductList() {
 function openMenuEditor() {
   editingProduct = null;
   clearProductForm();
+  renderCurrencySettings();
   renderMenuEditor();
   elements.menuEditorDialog.showModal();
 }
@@ -605,6 +680,7 @@ function markOrderChanged() {
 }
 
 function renderOrder() {
+  currentOrder.type = normalizeOrderType(currentOrder.type);
   elements.nextTicketLabel.textContent = formatTicket(nextTicket);
   elements.activeTicketTitle.textContent = currentOrder.ticketNumber
     ? `Ticket ${formatTicket(currentOrder.ticketNumber)}`
@@ -613,7 +689,7 @@ function renderOrder() {
   elements.orderStatus.textContent = currentOrder.saved ? "Guardado" : "Nuevo";
   elements.orderStatus.classList.toggle("saved", currentOrder.saved);
 
-  elements.orderType.value = currentOrder.type;
+  elements.orderType.value = normalizeOrderType(currentOrder.type);
   elements.customerName.value = currentOrder.customer;
   elements.serverName.value = currentOrder.server;
   elements.orderNotes.value = currentOrder.notes;
@@ -636,7 +712,10 @@ function renderOrder() {
                 <strong>${escapeHtml(item.name)}</strong>
                 <span class="item-subtotal">${formatMoney(item.qty * item.price)}</span>
               </div>
-              <input class="item-note" type="text" value="${escapeHtml(item.note)}" data-action="note" placeholder="Nota para este plato" />
+              <div class="item-note-row">
+                <input class="item-note" type="text" value="${escapeHtml(item.note)}" data-action="note" placeholder="Nota para este plato" />
+                <button class="note-item-button" type="button" data-action="open-note">Nota</button>
+              </div>
             </div>
             <button class="remove-item" type="button" data-action="remove" aria-label="Quitar">x</button>
           </article>
@@ -701,14 +780,16 @@ function renderPrintTicket(order) {
   const timeText = created.toLocaleTimeString("es-US", { hour: "2-digit", minute: "2-digit" });
   const place = order.customer || "Sin mesa/cliente";
   const server = order.server || "No indicado";
+  const orderType = normalizeOrderType(order.type);
 
   elements.printTicket.innerHTML = `
     <div class="receipt-brand">RINCON COLOMBIANO</div>
     <div class="receipt-number">COCINA ${formatTicket(order.ticketNumber)}</div>
+    <div class="receipt-order-type">TIPO DE PEDIDO<br>${escapeHtml(orderType).toUpperCase()}</div>
     <div class="receipt-divider"></div>
-    <div class="receipt-row"><strong>Tipo:</strong><span>${escapeHtml(order.type)}</span></div>
+    <div class="receipt-row"><strong>Tipo:</strong><span>${escapeHtml(orderType)}</span></div>
     <div class="receipt-row"><strong>Mesa/Cliente:</strong><span>${escapeHtml(place)}</span></div>
-    <div class="receipt-row"><strong>Atiende:</strong><span>${escapeHtml(server)}</span></div>
+    <div class="receipt-row"><strong>Tomo pedido:</strong><span>${escapeHtml(server)}</span></div>
     <div class="receipt-row"><strong>Fecha:</strong><span>${escapeHtml(dateText)}</span></div>
     <div class="receipt-row"><strong>Hora:</strong><span>${escapeHtml(timeText)}</span></div>
     <div class="receipt-divider"></div>
@@ -755,7 +836,7 @@ function renderHistory() {
             <span>${formatMoney(orderTotal(order))}</span>
           </div>
           <div class="history-meta">
-            <span>${escapeHtml(order.type)}</span>
+            <span>${escapeHtml(normalizeOrderType(order.type))}</span>
             <span>${escapeHtml(timeText)}</span>
           </div>
           <div class="history-meta">
@@ -931,6 +1012,42 @@ function clearCurrentOrder() {
   renderOrder();
 }
 
+function openItemNote(itemId) {
+  const item = currentOrder.items.find((entry) => entry.id === itemId);
+  if (!item) return;
+
+  editingNoteItemId = item.id;
+  elements.itemNoteTitle.textContent = item.name;
+  elements.itemNoteTextarea.value = item.note || "";
+  elements.itemNoteDialog.showModal();
+  elements.itemNoteTextarea.focus();
+}
+
+function saveItemNote() {
+  const item = currentOrder.items.find((entry) => entry.id === editingNoteItemId);
+  if (!item) return;
+
+  item.note = elements.itemNoteTextarea.value.trim();
+  markOrderChanged();
+  renderOrder();
+  elements.itemNoteDialog.close();
+  editingNoteItemId = null;
+}
+
+function openCustomerDialog() {
+  syncFormToOrder();
+  elements.customerDialogInput.value = currentOrder.customer || "";
+  elements.customerDialog.showModal();
+  elements.customerDialogInput.focus();
+}
+
+function saveCustomerFromDialog() {
+  currentOrder.customer = elements.customerDialogInput.value.trim();
+  elements.customerName.value = currentOrder.customer;
+  markOrderChanged();
+  elements.customerDialog.close();
+}
+
 function loadOrder(orderId) {
   const order = savedOrders.find((item) => item.id === orderId);
   if (!order) return;
@@ -978,6 +1095,7 @@ elements.lineItems.addEventListener("click", (event) => {
   const itemElement = event.target.closest(".line-item");
   const action = event.target.dataset.action;
   if (!itemElement || !action) return;
+  if (!["plus", "minus", "remove", "open-note"].includes(action)) return;
 
   const item = currentOrder.items.find((entry) => entry.id === itemElement.dataset.id);
   if (!item) return;
@@ -985,6 +1103,10 @@ elements.lineItems.addEventListener("click", (event) => {
   if (action === "plus") item.qty += 1;
   if (action === "minus") item.qty = Math.max(1, item.qty - 1);
   if (action === "remove") currentOrder.items = currentOrder.items.filter((entry) => entry.id !== item.id);
+  if (action === "open-note") {
+    openItemNote(item.id);
+    return;
+  }
 
   markOrderChanged();
   renderOrder();
@@ -1040,6 +1162,9 @@ elements.counterButton.addEventListener("click", () => {
 });
 
 elements.confirmCounterButton.addEventListener("click", () => setNextTicket(elements.counterInput.value));
+elements.saveItemNoteButton.addEventListener("click", saveItemNote);
+elements.customerButton.addEventListener("click", openCustomerDialog);
+elements.saveCustomerButton.addEventListener("click", saveCustomerFromDialog);
 
 elements.monthlyCloseButton.addEventListener("click", () => {
   renderMonthlyClose(currentMonthKey());
@@ -1070,6 +1195,7 @@ elements.deleteCategoryButton.addEventListener("click", deleteCategory);
 elements.saveProductButton.addEventListener("click", saveProduct);
 elements.cancelEditProductButton.addEventListener("click", clearProductForm);
 elements.resetMenuButton.addEventListener("click", resetMenu);
+elements.saveCurrencyButton.addEventListener("click", saveCurrencySymbol);
 
 elements.productList.addEventListener("click", (event) => {
   const row = event.target.closest(".product-row");
