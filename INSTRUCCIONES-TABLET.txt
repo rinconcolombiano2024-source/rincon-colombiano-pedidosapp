@@ -1,0 +1,40 @@
+RINCON COLOMBIANO - Como poner la app en una tablet
+
+IMPORTANTE
+La app se puede abrir como archivo en esta computadora, pero para instalarla en una tablet
+como aplicacion necesita estar publicada en una direccion web con HTTPS.
+
+OPCION MAS FACIL: NETLIFY DROP
+1. En la computadora, entra a https://app.netlify.com/drop
+2. Arrastra la carpeta completa "rincon-colombiano-app" a la pagina.
+3. Netlify te dara un enlace web.
+4. Abre ese enlace en la tablet.
+5. En Android/Chrome: toca "Instalar app" si aparece, o menu de Chrome > Agregar a pantalla principal.
+6. En iPad/Safari: toca Compartir > Agregar a pantalla de inicio.
+
+OPCION GRATIS CON GITHUB PAGES
+1. Crea un repositorio en GitHub.
+2. Sube todos los archivos de esta carpeta.
+3. Activa Pages en Settings > Pages.
+4. Abre el enlace publicado en la tablet.
+5. Agrega la app a la pantalla de inicio.
+
+OPCION RECOMENDADA CON GITHUB + VERCEL
+1. Crea un repositorio nuevo en GitHub.
+2. Sube todos los archivos de esta carpeta al repositorio. El archivo index.html debe quedar en la raiz.
+3. Entra a https://vercel.com y crea una cuenta o inicia sesion.
+4. En Vercel, elige New Project e importa el repositorio de GitHub.
+5. Como es una app HTML simple, no necesita comando de build. Deja el framework como Other/Static si aparece.
+6. Publica con Deploy.
+7. Vercel te dara un enlace HTTPS. Abre ese enlace en la tablet.
+8. En Android/Chrome: toca Instalar app o menu > Agregar a pantalla principal.
+9. En iPad/Safari: toca Compartir > Agregar a pantalla de inicio.
+
+VENTAJA DE VERCEL
+Cada vez que cambies algo y lo subas a GitHub, Vercel publica la nueva version automaticamente.
+
+NOTAS DE USO
+- El consecutivo se guarda en el navegador de la tablet.
+- Cada dia se reinicia en #0001.
+- El cierre de mes suma los pedidos guardados en esa misma tablet.
+- Si usas varias tablets al mismo tiempo, se necesita una version con base de datos para que no se repitan los tickets.

@@ -1,0 +1,19 @@
+{
+  "name": "RINCON COLOMBIANO - Pedidos",
+  "short_name": "Rincon",
+  "description": "Pedidos, tickets de cocina y cierre mensual para RINCON COLOMBIANO.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#f4f6f9",
+  "theme_color": "#1f8f4d",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

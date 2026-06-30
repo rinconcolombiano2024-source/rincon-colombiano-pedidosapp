@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RINCON COLOMBIANO - Pedidos</title>
+    <meta name="theme-color" content="#1f8f4d" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Rincon Colombiano" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="app-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="app-icon.svg" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Sistema de pedidos</p>
+          <h1>RINCON COLOMBIANO</h1>
+        </div>
+        <div class="topbar-actions">
+          <button class="install-button" id="installAppButton" type="button" hidden>Instalar app</button>
+          <div class="ticket-counter" aria-live="polite">
+            <span>Proximo ticket</span>
+            <strong id="nextTicketLabel">#0001</strong>
+          </div>
+        </div>
+      </header>
+
+      <section class="workspace" aria-label="Pedidos del restaurante">
+        <aside class="panel menu-panel" aria-label="Menu">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Menu rapido</p>
+              <h2>Agregar platos</h2>
+            </div>
+            <div class="header-actions">
+              <button class="close-month-button" id="editMenuButton" type="button">Editar menu</button>
+              <button class="icon-button" id="clearOrderButton" type="button" title="Limpiar pedido" aria-label="Limpiar pedido">
+                <span aria-hidden="true">x</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="category-tabs" id="categoryTabs" role="tablist" aria-label="Categorias"></div>
+          <div class="menu-grid" id="menuGrid" aria-label="Platos disponibles"></div>
+
+          <form class="custom-item" id="customItemForm">
+            <label>
+              Producto especial
+              <input id="customItemName" type="text" placeholder="Ej: Jugo de lulo" autocomplete="off" />
+            </label>
+            <label>
+              Precio
+              <input id="customItemPrice" type="number" min="0" step="0.01" placeholder="0.00" />
+            </label>
+            <button type="submit">Agregar</button>
+          </form>
+        </aside>
+
+        <section class="panel order-panel" aria-label="Pedido actual">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Pedido actual</p>
+              <h2 id="activeTicketTitle">Ticket sin guardar</h2>
+            </div>
+            <div class="status-pill" id="orderStatus">Nuevo</div>
+          </div>
+
+          <div class="order-info">
+            <label>
+              Tipo
+              <select id="orderType">
+                <option value="Mesa">Mesa</option>
+                <option value="Para llevar">Para llevar</option>
+                <option value="Domicilio">Domicilio</option>
+              </select>
+            </label>
+            <label>
+              Mesa / Cliente
+              <input id="customerName" type="text" placeholder="Ej: Mesa 4" autocomplete="off" />
+            </label>
+            <label>
+              Atiende
+              <input id="serverName" type="text" placeholder="Nombre" autocomplete="off" />
+            </label>
+          </div>
+
+          <div class="line-items" id="lineItems" aria-live="polite"></div>
+
+          <label class="notes-field">
+            Notas para cocina
+            <textarea id="orderNotes" rows="3" placeholder="Sin cebolla, salsa aparte, termino de carne..."></textarea>
+          </label>
+
+          <div class="totals-row">
+            <span>Total estimado</span>
+            <strong id="orderTotal">$0.00</strong>
+          </div>
+
+          <div class="action-row">
+            <button class="secondary-action" id="newOrderButton" type="button">Nuevo</button>
+            <button class="secondary-action" id="saveOrderButton" type="button">Guardar pedido</button>
+            <button class="primary-action" id="printOrderButton" type="button">Imprimir cocina</button>
+          </div>
+        </section>
+
+        <aside class="panel history-panel" aria-label="Historial">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Turno</p>
+              <h2>Tickets de hoy</h2>
+            </div>
+            <div class="header-actions">
+              <button class="close-month-button" id="monthlyCloseButton" type="button">Cierre mes</button>
+              <button class="icon-button" id="counterButton" type="button" title="Cambiar proximo numero" aria-label="Cambiar proximo numero">
+                <span aria-hidden="true">#</span>
+              </button>
+            </div>
+          </div>
+          <div class="history-list" id="historyList"></div>
+        </aside>
+      </section>
+    </main>
+
+    <section class="print-ticket" id="printTicket" aria-label="Ticket para cocina"></section>
+
+    <dialog id="counterDialog">
+      <form method="dialog" class="counter-form">
+        <h2>Cambiar proximo ticket</h2>
+        <p>Usa esto solo si necesitas corregir la secuencia del dia.</p>
+        <label>
+          Proximo numero
+          <input id="counterInput" type="number" min="1" step="1" />
+        </label>
+        <div class="dialog-actions">
+          <button value="cancel" type="submit">Cancelar</button>
+          <button id="confirmCounterButton" value="default" type="button">Guardar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="menuEditorDialog" class="menu-editor-dialog">
+      <form method="dialog" class="menu-editor-form">
+        <div class="monthly-dialog-header">
+          <div>
+            <p class="eyebrow">Administracion</p>
+            <h2>Editar menu</h2>
+          </div>
+          <button class="icon-button" value="cancel" type="submit" title="Cerrar" aria-label="Cerrar">
+            <span aria-hidden="true">x</span>
+          </button>
+        </div>
+
+        <div class="menu-editor-layout">
+          <section class="editor-section">
+            <h3>Categorias</h3>
+            <div class="editor-category-list" id="editorCategoryList"></div>
+            <label>
+              Nombre de categoria
+              <input id="categoryNameInput" type="text" placeholder="Ej: Sopas" autocomplete="off" />
+            </label>
+            <div class="editor-actions">
+              <button id="addCategoryButton" type="button">Agregar</button>
+              <button id="renameCategoryButton" type="button">Cambiar nombre</button>
+              <button id="deleteCategoryButton" type="button">Eliminar</button>
+            </div>
+          </section>
+
+          <section class="editor-section">
+            <h3>Productos</h3>
+            <div class="product-form-grid">
+              <label>
+                Categoria
+                <select id="productCategorySelect"></select>
+              </label>
+              <label>
+                Precio
+                <input id="productPriceInput" type="number" min="0" step="0.01" placeholder="0.00" />
+              </label>
+              <label class="product-name-field">
+                Nombre del producto
+                <input id="productNameInput" type="text" placeholder="Ej: Jugo de guanabana" autocomplete="off" />
+              </label>
+            </div>
+            <div class="editor-actions">
+              <button id="saveProductButton" type="button">Guardar producto</button>
+              <button id="cancelEditProductButton" type="button">Cancelar edicion</button>
+            </div>
+            <div class="product-list" id="productList"></div>
+          </section>
+        </div>
+
+        <div class="dialog-actions">
+          <button id="resetMenuButton" value="default" type="button">Restaurar menu base</button>
+          <button value="cancel" type="submit">Cerrar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="monthlyCloseDialog" class="monthly-dialog">
+      <form method="dialog" class="monthly-form">
+        <div class="monthly-dialog-header">
+          <div>
+            <p class="eyebrow">Reporte</p>
+            <h2>Cierre de mes</h2>
+          </div>
+          <button class="icon-button" value="cancel" type="submit" title="Cerrar" aria-label="Cerrar">
+            <span aria-hidden="true">x</span>
+          </button>
+        </div>
+        <label>
+          Mes
+          <input id="closeMonthInput" type="month" />
+        </label>
+        <div class="monthly-close-content" id="monthlyCloseContent"></div>
+        <div class="dialog-actions">
+          <button value="cancel" type="submit">Cerrar</button>
+          <button id="printCloseButton" value="default" type="button">Imprimir cierre</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="app.js"></script>
+  </body>
+</html>
