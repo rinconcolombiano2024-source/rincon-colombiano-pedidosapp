@@ -6,6 +6,8 @@ const STORAGE_KEYS = {
   currencySymbol: "rincon_colombiano_currency_symbol",
   currencyPosition: "rincon_colombiano_currency_position",
   moneyFormat: "rincon_colombiano_money_format",
+  settingsPending: "rincon_colombiano_settings_pending",
+  cloudSession: "rincon_colombiano_cloud_session",
 };
 
 const DEFAULT_MENU_CATALOG = {
@@ -103,6 +105,8 @@ const elements = {
   addCategoryButton: document.querySelector("#addCategoryButton"),
   renameCategoryButton: document.querySelector("#renameCategoryButton"),
   deleteCategoryButton: document.querySelector("#deleteCategoryButton"),
+  activeProductCategoryLabel: document.querySelector("#activeProductCategoryLabel"),
+  newProductButton: document.querySelector("#newProductButton"),
   productCategorySelect: document.querySelector("#productCategorySelect"),
   productNameInput: document.querySelector("#productNameInput"),
   productPriceInput: document.querySelector("#productPriceInput"),
@@ -134,6 +138,7 @@ const cloudState = {
   ready: false,
   user: null,
   loading: false,
+  syncing: false,
 };
 
 function createBlankOrder() {
@@ -149,6 +154,7 @@ function createBlankOrder() {
     updatedAt: null,
     businessDate: todayKey,
     saved: false,
+    syncStatus: "local",
   };
 }
 
@@ -204,6 +210,7 @@ function readOrders() {
           ...order,
           type: normalizeOrderType(order.type),
           businessDate: orderBusinessDate(order),
+          syncStatus: order.syncStatus || "synced",
         }))
       : [];
   } catch {
@@ -294,6 +301,66 @@ function saveOrders() {
   localStorage.setItem(STORAGE_KEYS.orders, JSON.stringify(savedOrders.slice(0, 5000)));
 }
 
+function hasKnownCloudSession() {
+  return localStorage.getItem(STORAGE_KEYS.cloudSession) === "1";
+}
+
+function rememberCloudSession(user) {
+  if (user) {
+    localStorage.setItem(STORAGE_KEYS.cloudSession, "1");
+  }
+}
+
+function clearRememberedCloudSession() {
+  localStorage.removeItem(STORAGE_KEYS.cloudSession);
+}
+
+function shouldQueueForCloud() {
+  return cloudState.configured && (Boolean(cloudState.user) || hasKnownCloudSession());
+}
+
+function needsCloudSync(order) {
+  return Boolean(order?.saved && order.syncStatus === "pending");
+}
+
+function pendingOrdersCount() {
+  return savedOrders.filter(needsCloudSync).length;
+}
+
+function hasPendingSettings() {
+  return localStorage.getItem(STORAGE_KEYS.settingsPending) === "1";
+}
+
+function markSettingsPending() {
+  if (cloudState.configured) localStorage.setItem(STORAGE_KEYS.settingsPending, "1");
+}
+
+function clearSettingsPending() {
+  localStorage.removeItem(STORAGE_KEYS.settingsPending);
+}
+
+function setOrderSyncStatus(orderId, status) {
+  savedOrders = savedOrders.map((order) => (order.id === orderId ? { ...order, syncStatus: status } : order));
+  if (currentOrder.id === orderId) currentOrder.syncStatus = status;
+}
+
+function mergeOrders(cloudOrders, localOrders) {
+  const ordersById = new Map();
+  [...cloudOrders, ...localOrders].forEach((order) => {
+    if (!order?.id) return;
+    const current = ordersById.get(order.id);
+    if (!current || needsCloudSync(order) || new Date(order.updatedAt || 0) > new Date(current.updatedAt || 0)) {
+      ordersById.set(order.id, {
+        ...order,
+        type: normalizeOrderType(order.type),
+        businessDate: orderBusinessDate(order),
+      });
+    }
+  });
+
+  return Array.from(ordersById.values()).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+}
+
 function supabaseConfig() {
   const config = window.RINCON_SUPABASE || {};
   const rawUrl = String(config.url || "").trim();
@@ -334,18 +401,66 @@ function applySettingsPayload(settings = {}) {
   localStorage.setItem(STORAGE_KEYS.moneyFormat, moneyFormat);
 }
 
-function renderCloudState(message = "") {
+function updateCloudStatus(message = "") {
   if (!cloudState.configured) {
-    elements.authScreen.hidden = true;
-    elements.signOutButton.hidden = true;
     elements.cloudStatus.textContent = "Modo local";
     return;
   }
 
-  elements.authScreen.hidden = Boolean(cloudState.user);
-  elements.signOutButton.hidden = !cloudState.user;
+  if (message) {
+    elements.cloudStatus.textContent = message;
+    return;
+  }
+
+  const pending = pendingOrdersCount();
+  if (!navigator.onLine) {
+    elements.cloudStatus.textContent = pending ? `Sin internet (${pending} pendientes)` : "Sin internet";
+    return;
+  }
+
+  if (pending || hasPendingSettings()) {
+    elements.cloudStatus.textContent = pending ? `Pendiente nube (${pending})` : "Pendiente nube";
+    return;
+  }
+
   elements.cloudStatus.textContent = cloudState.user ? "Sincronizado" : "Iniciar sesion";
+}
+
+function renderCloudState(message = "") {
+  if (!cloudState.configured) {
+    elements.authScreen.hidden = true;
+    elements.signOutButton.hidden = true;
+    updateCloudStatus();
+    return;
+  }
+
+  const canWorkOffline = !cloudState.user && hasKnownCloudSession() && !navigator.onLine;
+  elements.authScreen.hidden = Boolean(cloudState.user) || canWorkOffline;
+  elements.signOutButton.hidden = !cloudState.user;
+  updateCloudStatus(canWorkOffline ? "" : message);
   elements.authMessage.textContent = message;
+}
+
+function loadSupabaseLibrary() {
+  if (window.supabase?.createClient) return Promise.resolve(true);
+  if (!navigator.onLine) return Promise.resolve(false);
+
+  return new Promise((resolve) => {
+    const existingScript = document.querySelector("script[data-supabase-loader]");
+    if (existingScript) {
+      existingScript.addEventListener("load", () => resolve(Boolean(window.supabase?.createClient)), { once: true });
+      existingScript.addEventListener("error", () => resolve(false), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+    script.async = true;
+    script.dataset.supabaseLoader = "true";
+    script.addEventListener("load", () => resolve(Boolean(window.supabase?.createClient)), { once: true });
+    script.addEventListener("error", () => resolve(false), { once: true });
+    document.head.appendChild(script);
+  });
 }
 
 async function initializeCloud() {
@@ -355,19 +470,22 @@ async function initializeCloud() {
     return;
   }
 
-  if (!window.supabase?.createClient) {
-    renderCloudState("No se pudo cargar Supabase. Revisa la conexion a internet.");
+  if (!window.supabase?.createClient && !(await loadSupabaseLibrary())) {
+    renderCloudState(hasKnownCloudSession() ? "" : "No se pudo cargar Supabase. Revisa la conexion a internet.");
     return;
   }
 
   const config = supabaseConfig();
   cloudState.client = window.supabase.createClient(config.url, config.anonKey);
-  const { data } = await cloudState.client.auth.getSession();
+  const { data, error } = await cloudState.client.auth.getSession();
+  if (error) throw error;
   cloudState.user = data.session?.user || null;
+  if (cloudState.user) rememberCloudSession(cloudState.user);
   renderCloudState();
 
   cloudState.client.auth.onAuthStateChange(async (_event, session) => {
     cloudState.user = session?.user || null;
+    if (cloudState.user) rememberCloudSession(cloudState.user);
     renderCloudState();
     if (cloudState.user) await loadCloudData();
   });
@@ -379,6 +497,9 @@ async function loadCloudData() {
   if (!cloudState.client || !cloudState.user || cloudState.loading) return;
   cloudState.loading = true;
   elements.cloudStatus.textContent = "Cargando nube...";
+  const localOrdersBeforeLoad = savedOrders.map(structuredCloneOrder);
+  const localPendingOrders = localOrdersBeforeLoad.filter(needsCloudSync);
+  const localSettingsPending = hasPendingSettings();
 
   try {
     const { data: settingsRow, error: settingsError } = await cloudState.client
@@ -389,12 +510,13 @@ async function loadCloudData() {
 
     if (settingsError) throw settingsError;
 
-    if (settingsRow) {
+    if (settingsRow && !localSettingsPending) {
       menuCatalog = normalizeMenuCatalog(settingsRow.menu || DEFAULT_MENU_CATALOG);
       localStorage.setItem(STORAGE_KEYS.menu, JSON.stringify(menuCatalog));
       applySettingsPayload(settingsRow.settings || {});
-    } else {
+    } else if (!settingsRow || localSettingsPending) {
       await saveCloudSettings();
+      clearSettingsPending();
     }
 
     const { data: cloudOrders, error: ordersError } = await cloudState.client
@@ -406,11 +528,13 @@ async function loadCloudData() {
 
     if (ordersError) throw ordersError;
 
-    savedOrders = (cloudOrders || []).map((row) => ({
+    const normalizedCloudOrders = (cloudOrders || []).map((row) => ({
       ...row.order_json,
       type: normalizeOrderType(row.order_json?.type),
       businessDate: orderBusinessDate(row.order_json),
+      syncStatus: "synced",
     }));
+    savedOrders = mergeOrders(normalizedCloudOrders, localPendingOrders);
     saveOrders();
 
     todayKey = currentBusinessDate();
@@ -432,10 +556,11 @@ async function loadCloudData() {
     renderOrder();
     renderHistory();
     cloudState.ready = true;
-    elements.cloudStatus.textContent = "Sincronizado";
+    await syncPendingData({ silent: true, allowWhileLoading: true });
+    updateCloudStatus();
   } catch (error) {
     console.error(error);
-    elements.cloudStatus.textContent = "Error nube";
+    updateCloudStatus(navigator.onLine ? "Error nube" : "");
     elements.authMessage.textContent = error.message || "No se pudo cargar la informacion.";
   } finally {
     cloudState.loading = false;
@@ -480,18 +605,87 @@ async function setCloudNextTicket(number) {
 async function saveCloudOrder(order) {
   if (!cloudState.client || !cloudState.user || !order.saved) return;
 
+  const orderForCloud = structuredCloneOrder(order);
+  orderForCloud.syncStatus = "synced";
+
   const { error } = await cloudState.client.from("orders").upsert({
     id: order.id,
     user_id: cloudState.user.id,
     ticket_number: order.ticketNumber,
     business_date: orderBusinessDate(order),
-    order_json: structuredCloneOrder(order),
+    order_json: orderForCloud,
     total: orderTotal(order),
     created_at: order.createdAt,
     updated_at: order.updatedAt,
   });
 
   if (error) throw error;
+}
+
+async function advanceCloudTicketCounter(minimumNextTicket) {
+  if (!cloudState.client || !cloudState.user || !Number.isFinite(minimumNextTicket)) return;
+
+  const { data, error } = await cloudState.client
+    .from("ticket_counters")
+    .select("next_ticket")
+    .eq("user_id", cloudState.user.id)
+    .eq("business_date", todayKey)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data || data.next_ticket < minimumNextTicket) {
+    await setCloudNextTicket(minimumNextTicket);
+  }
+}
+
+async function syncPendingData(options = {}) {
+  const { silent = false, allowWhileLoading = false } = options;
+  if (!cloudState.client || !cloudState.user || cloudState.syncing || !navigator.onLine) {
+    updateCloudStatus();
+    return;
+  }
+  if (cloudState.loading && !allowWhileLoading) return;
+
+  const pendingOrders = savedOrders.filter(needsCloudSync);
+  const shouldSyncSettings = hasPendingSettings();
+  if (!pendingOrders.length && !shouldSyncSettings) {
+    updateCloudStatus();
+    return;
+  }
+
+  cloudState.syncing = true;
+  if (!silent) updateCloudStatus("Sincronizando...");
+
+  try {
+    if (shouldSyncSettings) {
+      await saveCloudSettings();
+      clearSettingsPending();
+    }
+
+    for (const order of pendingOrders) {
+      await saveCloudOrder(order);
+      setOrderSyncStatus(order.id, "synced");
+      saveOrders();
+    }
+
+    const highestLocalTicketToday = savedOrders
+      .filter((order) => orderBusinessDate(order) === todayKey)
+      .reduce((highest, order) => Math.max(highest, Number(order.ticketNumber) || 0), 0);
+    const minimumNextTicket = Math.max(nextTicket, highestLocalTicketToday + 1);
+    await advanceCloudTicketCounter(minimumNextTicket);
+    nextTicket = minimumNextTicket;
+    saveTicketState();
+    saveOrders();
+    renderOrder();
+    renderHistory();
+    updateCloudStatus();
+  } catch (error) {
+    console.error(error);
+    saveOrders();
+    updateCloudStatus();
+  } finally {
+    cloudState.syncing = false;
+  }
 }
 
 async function signInWithEmail() {
@@ -555,6 +749,7 @@ async function signOut() {
   await cloudState.client.auth.signOut();
   cloudState.user = null;
   cloudState.ready = false;
+  clearRememberedCloudSession();
   renderCloudState("Sesion cerrada.");
 }
 
@@ -601,11 +796,38 @@ function saveMenuCatalog() {
 
   renderCategories();
   renderMenu();
-  if (cloudState.user) {
-    saveCloudSettings().catch((error) => {
-      console.error(error);
-      elements.cloudStatus.textContent = "Pendiente nube";
-    });
+  if (cloudState.user && navigator.onLine) {
+    saveCloudSettings()
+      .then(() => {
+        clearSettingsPending();
+        updateCloudStatus();
+      })
+      .catch((error) => {
+        console.error(error);
+        markSettingsPending();
+        updateCloudStatus();
+      });
+  } else if (shouldQueueForCloud()) {
+    markSettingsPending();
+    updateCloudStatus();
+  }
+}
+
+function saveSettingsWhenPossible() {
+  if (cloudState.user && navigator.onLine) {
+    saveCloudSettings()
+      .then(() => {
+        clearSettingsPending();
+        updateCloudStatus();
+      })
+      .catch((error) => {
+        console.error(error);
+        markSettingsPending();
+        updateCloudStatus();
+      });
+  } else if (shouldQueueForCloud()) {
+    markSettingsPending();
+    updateCloudStatus();
   }
 }
 
@@ -637,12 +859,7 @@ function saveCurrencySymbol() {
   renderHistory();
   if (elements.menuEditorDialog.open) renderMenuEditor();
   if (elements.monthlyCloseDialog.open) renderMonthlyClose(elements.closeMonthInput.value || currentMonthKey());
-  if (cloudState.user) {
-    saveCloudSettings().catch((error) => {
-      console.error(error);
-      elements.cloudStatus.textContent = "Pendiente nube";
-    });
-  }
+  saveSettingsWhenPossible();
 }
 
 function renderCurrencySettings() {
@@ -738,6 +955,7 @@ function renderMenuEditor() {
   }
 
   elements.categoryNameInput.value = activeCategory;
+  elements.activeProductCategoryLabel.textContent = `Categoria: ${activeCategory}`;
   elements.editorCategoryList.innerHTML = categories
     .map(
       (category) => `
@@ -811,8 +1029,15 @@ function clearProductForm() {
   elements.productNameInput.value = "";
   elements.productPriceInput.value = "";
   elements.productCategorySelect.value = activeCategory;
-  elements.saveProductButton.textContent = "Guardar producto";
+  elements.saveProductButton.textContent = "Agregar producto";
+  elements.cancelEditProductButton.hidden = true;
   editingProduct = null;
+}
+
+function startNewProduct() {
+  clearProductForm();
+  elements.productCategorySelect.value = activeCategory;
+  elements.productNameInput.focus();
 }
 
 function addCategory() {
@@ -912,7 +1137,8 @@ function editProduct(index) {
   elements.productCategorySelect.value = activeCategory;
   elements.productNameInput.value = product.name;
   elements.productPriceInput.value = product.price;
-  elements.saveProductButton.textContent = "Actualizar producto";
+  elements.saveProductButton.textContent = "Guardar cambios";
+  elements.cancelEditProductButton.hidden = false;
   elements.productNameInput.focus();
 }
 
@@ -978,8 +1204,13 @@ function renderOrder() {
     ? `Ticket ${formatTicket(currentOrder.ticketNumber)}`
     : "Ticket sin guardar";
 
-  elements.orderStatus.textContent = currentOrder.saved ? "Guardado" : "Nuevo";
+  elements.orderStatus.textContent = currentOrder.saved
+    ? needsCloudSync(currentOrder)
+      ? "Pendiente nube"
+      : "Guardado"
+    : "Nuevo";
   elements.orderStatus.classList.toggle("saved", currentOrder.saved);
+  elements.orderStatus.classList.toggle("pending", needsCloudSync(currentOrder));
 
   elements.orderType.value = normalizeOrderType(currentOrder.type);
   elements.customerName.value = currentOrder.customer;
@@ -1030,22 +1261,28 @@ async function upsertCurrentOrder() {
   }
 
   const now = new Date().toISOString();
+  const canTryCloud = Boolean(cloudState.user && navigator.onLine);
 
   if (!currentOrder.saved) {
     currentOrder.id = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
-    if (cloudState.user) {
+    currentOrder.syncStatus = shouldQueueForCloud() ? "pending" : "local";
+
+    if (canTryCloud) {
       try {
         currentOrder.ticketNumber = await claimCloudTicket();
         nextTicket = currentOrder.ticketNumber + 1;
       } catch (error) {
-        alert(`No se pudo crear el ticket en la nube: ${error.message}`);
-        return false;
+        console.error(error);
+        currentOrder.ticketNumber = nextTicket;
+        nextTicket += 1;
+        currentOrder.syncStatus = shouldQueueForCloud() ? "pending" : "local";
+        updateCloudStatus();
       }
     } else {
       currentOrder.ticketNumber = nextTicket;
       nextTicket += 1;
-      saveTicketState();
     }
+    saveTicketState();
     currentOrder.createdAt = now;
     currentOrder.updatedAt = now;
     currentOrder.businessDate = todayKey;
@@ -1053,18 +1290,28 @@ async function upsertCurrentOrder() {
     savedOrders.unshift(structuredCloneOrder(currentOrder));
   } else {
     currentOrder.updatedAt = now;
+    if (shouldQueueForCloud()) currentOrder.syncStatus = "pending";
     const index = savedOrders.findIndex((order) => order.id === currentOrder.id);
     if (index >= 0) savedOrders[index] = structuredCloneOrder(currentOrder);
   }
 
-  if (cloudState.user) {
+  if (canTryCloud) {
     try {
       await saveCloudOrder(currentOrder);
-      elements.cloudStatus.textContent = "Sincronizado";
+      currentOrder.syncStatus = "synced";
+      setOrderSyncStatus(currentOrder.id, "synced");
+      await advanceCloudTicketCounter(Math.max(nextTicket, Number(currentOrder.ticketNumber) + 1));
+      updateCloudStatus();
     } catch (error) {
-      alert(`No se pudo guardar el pedido en la nube: ${error.message}`);
-      return false;
+      console.error(error);
+      currentOrder.syncStatus = shouldQueueForCloud() ? "pending" : "local";
+      setOrderSyncStatus(currentOrder.id, currentOrder.syncStatus);
+      updateCloudStatus();
     }
+  } else if (shouldQueueForCloud()) {
+    currentOrder.syncStatus = "pending";
+    setOrderSyncStatus(currentOrder.id, "pending");
+    updateCloudStatus();
   }
 
   saveOrders();
@@ -1156,6 +1403,7 @@ function renderHistory() {
             <span>${escapeHtml(order.customer || "Sin mesa")}</span>
             <span>${itemCount} items</span>
           </div>
+          ${needsCloudSync(order) ? `<div class="sync-badge">Pendiente nube</div>` : ""}
           <button type="button" data-history-id="${escapeHtml(order.id)}">Abrir / reimprimir</button>
         </article>
       `;
@@ -1376,14 +1624,18 @@ async function setNextTicket(value) {
     return;
   }
 
-  if (cloudState.user) {
+  if (cloudState.user && navigator.onLine) {
     try {
       await setCloudNextTicket(number);
-      elements.cloudStatus.textContent = "Sincronizado";
+      updateCloudStatus();
     } catch (error) {
-      alert(`No se pudo cambiar el numero en la nube: ${error.message}`);
-      return;
+      console.error(error);
+      markSettingsPending();
+      updateCloudStatus();
     }
+  } else if (shouldQueueForCloud()) {
+    markSettingsPending();
+    updateCloudStatus();
   }
 
   nextTicket = number;
@@ -1474,7 +1726,10 @@ elements.signUpButton.addEventListener("click", signUpWithEmail);
 elements.signOutButton.addEventListener("click", signOut);
 
 elements.saveOrderButton.addEventListener("click", async () => {
-  if (await upsertCurrentOrder()) alert(`Pedido ${formatTicket(currentOrder.ticketNumber)} guardado.`);
+  if (await upsertCurrentOrder()) {
+    const syncMessage = needsCloudSync(currentOrder) ? " Guardado localmente; se subira cuando vuelva internet." : "";
+    alert(`Pedido ${formatTicket(currentOrder.ticketNumber)} guardado.${syncMessage}`);
+  }
 });
 
 elements.printOrderButton.addEventListener("click", printCurrentOrder);
@@ -1525,6 +1780,7 @@ elements.productCategorySelect.addEventListener("change", () => {
 elements.addCategoryButton.addEventListener("click", addCategory);
 elements.renameCategoryButton.addEventListener("click", renameCategory);
 elements.deleteCategoryButton.addEventListener("click", deleteCategory);
+elements.newProductButton.addEventListener("click", startNewProduct);
 elements.saveProductButton.addEventListener("click", saveProduct);
 elements.cancelEditProductButton.addEventListener("click", clearProductForm);
 elements.resetMenuButton.addEventListener("click", resetMenu);
@@ -1559,6 +1815,23 @@ window.addEventListener("appinstalled", () => {
   elements.installAppButton.hidden = true;
 });
 
+window.addEventListener("offline", () => {
+  renderCloudState();
+});
+
+window.addEventListener("online", async () => {
+  updateCloudStatus("Conectando...");
+  try {
+    if (cloudState.configured && !cloudState.client) {
+      await initializeCloud();
+    }
+    await syncPendingData();
+  } catch (error) {
+    console.error(error);
+    updateCloudStatus();
+  }
+});
+
 if ("serviceWorker" in navigator && window.location.protocol.startsWith("http")) {
   navigator.serviceWorker.register("./service-worker.js").catch(() => {});
 }
@@ -1569,6 +1842,6 @@ renderOrder();
 renderHistory();
 initializeCloud().catch((error) => {
   console.error(error);
-  elements.cloudStatus.textContent = "Error nube";
+  updateCloudStatus(navigator.onLine ? "Error nube" : "");
   elements.authMessage.textContent = error.message || "No se pudo iniciar Supabase.";
 });
