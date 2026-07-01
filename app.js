@@ -296,8 +296,18 @@ function saveOrders() {
 
 function supabaseConfig() {
   const config = window.RINCON_SUPABASE || {};
+  const rawUrl = String(config.url || "").trim();
+  let cleanUrl = rawUrl;
+
+  try {
+    const parsed = new URL(rawUrl);
+    cleanUrl = `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    cleanUrl = rawUrl.replace(/\/rest\/v1\/?.*$/i, "").replace(/\/+$/, "");
+  }
+
   return {
-    url: String(config.url || "").trim(),
+    url: cleanUrl,
     anonKey: String(config.anonKey || "").trim(),
   };
 }
@@ -493,9 +503,14 @@ async function signInWithEmail() {
   }
 
   elements.authMessage.textContent = "Iniciando sesion...";
-  const { error } = await cloudState.client.auth.signInWithPassword({ email, password });
-  if (error) {
-    elements.authMessage.textContent = error.message;
+  try {
+    const { error } = await cloudState.client.auth.signInWithPassword({ email, password });
+    if (error) {
+      elements.authMessage.textContent = friendlyAuthError(error);
+      return;
+    }
+  } catch (error) {
+    elements.authMessage.textContent = friendlyAuthError(error);
     return;
   }
 
@@ -511,14 +526,28 @@ async function signUpWithEmail() {
   }
 
   elements.authMessage.textContent = "Creando cuenta...";
-  const { error } = await cloudState.client.auth.signUp({ email, password });
-  if (error) {
-    elements.authMessage.textContent = error.message;
+  try {
+    const { error } = await cloudState.client.auth.signUp({ email, password });
+    if (error) {
+      elements.authMessage.textContent = friendlyAuthError(error);
+      return;
+    }
+  } catch (error) {
+    elements.authMessage.textContent = friendlyAuthError(error);
     return;
   }
 
   elements.authMessage.textContent = "Cuenta creada. Si Supabase pide confirmacion, revisa el correo.";
   elements.authPassword.value = "";
+}
+
+function friendlyAuthError(error) {
+  const message = error?.message || String(error || "");
+  if (message.toLowerCase().includes("invalid path specified")) {
+    return "URL de Supabase incorrecta. Usa solo https://tu-proyecto.supabase.co, sin /rest/v1.";
+  }
+
+  return message;
 }
 
 async function signOut() {
