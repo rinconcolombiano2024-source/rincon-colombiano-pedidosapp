@@ -29,8 +29,19 @@
         <div class="auth-actions">
           <button id="signInButton" type="submit">Iniciar sesion</button>
           <button id="signUpButton" type="button">Crear cuenta principal</button>
+          <button id="resetPasswordButton" type="button">Recuperar contrasena</button>
         </div>
         <p class="auth-message" id="authMessage"></p>
+        <div class="password-recovery-panel" id="passwordRecoveryPanel" hidden>
+          <label>
+            Nueva contrasena
+            <input id="newPasswordInput" type="password" autocomplete="new-password" placeholder="Minimo 6 caracteres" />
+          </label>
+          <div class="auth-actions">
+            <button id="updatePasswordButton" type="button">Guardar nueva contrasena</button>
+            <button id="cancelRecoveryButton" type="button">Cancelar</button>
+          </div>
+        </div>
       </form>
     </section>
 
@@ -42,8 +53,9 @@
         </div>
         <div class="topbar-actions">
           <span class="cloud-status" id="cloudStatus">Modo local</span>
+          <button class="sign-in-top-button" id="openSignInButton" type="button">Iniciar sesion</button>
           <button class="sign-out-button" id="signOutButton" type="button" hidden>Cerrar sesion</button>
-          <button class="install-button" id="installAppButton" type="button" hidden>Instalar app</button>
+          <button class="install-button" id="installAppButton" type="button">Descargar app</button>
           <div class="ticket-counter" aria-live="polite">
             <span>Proximo ticket</span>
             <strong id="nextTicketLabel">#0001</strong>
@@ -251,7 +263,13 @@
           </section>
 
           <section class="editor-section">
-            <h3>Productos</h3>
+            <div class="product-section-header">
+              <div>
+                <h3>Productos</h3>
+                <p id="activeProductCategoryLabel">Selecciona una categoria</p>
+              </div>
+              <button id="newProductButton" type="button">+ Agregar producto</button>
+            </div>
             <div class="product-form-grid">
               <label>
                 Categoria
@@ -267,7 +285,7 @@
               </label>
             </div>
             <div class="editor-actions">
-              <button id="saveProductButton" type="button">Guardar producto</button>
+              <button id="saveProductButton" type="button">Agregar producto</button>
               <button id="cancelEditProductButton" type="button">Cancelar edicion</button>
             </div>
             <div class="product-list" id="productList"></div>
@@ -276,6 +294,16 @@
 
         <div class="dialog-actions">
           <button id="resetMenuButton" value="default" type="button">Restaurar menu base</button>
+          <button value="cancel" type="submit">Cerrar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="installHelpDialog" class="install-help-dialog">
+      <form method="dialog" class="counter-form">
+        <h2>Descargar app</h2>
+        <p>En computador, usa el boton Instalar del navegador si aparece. En telefono, abre el menu del navegador y toca Agregar a pantalla principal.</p>
+        <div class="dialog-actions">
           <button value="cancel" type="submit">Cerrar</button>
         </div>
       </form>

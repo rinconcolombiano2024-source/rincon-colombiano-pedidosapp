@@ -1,0 +1,61 @@
+MEMORIA DE LA APP - RINCON COLOMBIANO
+
+Regla principal:
+- No quitar, borrar ni reemplazar funciones existentes sin pedido claro del usuario.
+- No inventar cambios fuera de lo solicitado.
+- Cada cambio debe conservar lo ya hecho: pedidos, tickets, impresion, cierre mensual, edicion de menu, Supabase, modo offline y PWA.
+
+Funciones actuales que deben conservarse:
+- App de pedidos para restaurante RINCON COLOMBIANO.
+- Tomar pedidos desde categorias y productos.
+- Categorias editables: agregar, cambiar nombre y eliminar.
+- Productos editables dentro de cada categoria: agregar, editar precio, editar nombre y eliminar.
+- Categorias base: Entradas, Platos principales, Bebidas, Postres, Extras, Porciones.
+- Producto especial/manual con precio.
+- Tipo de pedido: Comer en el punto, Para llevar, Domicilio.
+- Nombre del cliente o mesa.
+- Nombre de la persona que tomo el pedido.
+- Nota general del pedido.
+- Nota individual por plato.
+- Ticket de cocina impreso con numero consecutivo.
+- Ticket diario reinicia cada dia.
+- Boton para cambiar manualmente el proximo numero de ticket.
+- Historial de tickets del dia.
+- Abrir y reimprimir tickets guardados.
+- Cierre mensual con total vendido, tickets, productos, promedio, detalle por dia y productos vendidos.
+- Impresion del cierre mensual.
+- Moneda editable: simbolo, posicion y formato.
+- Inicio de sesion por correo electronico y contrasena usando Supabase.
+- Crear cuenta principal.
+- Recuperar contrasena por correo electronico.
+- Guardar nueva contrasena desde enlace de recuperacion.
+- Sincronizacion con Supabase: menu, moneda, pedidos y contador de tickets.
+- Modo sin internet: permite seguir tomando pedidos y guardarlos localmente.
+- Pedidos sin internet quedan como Pendiente nube.
+- Cuando vuelve internet, la app intenta sincronizar automaticamente.
+- Boton Descargar app visible.
+- Ventana de ayuda para instalar/agregar a pantalla principal si el navegador no permite instalacion directa.
+- PWA con manifest, icono y service worker.
+
+Configuracion Supabase actual:
+- URL del proyecto: https://ouulrehcgmfbettseibn.supabase.co
+- La URL no debe llevar /rest/v1/.
+- La app usa publishable key en supabase-config.js.
+- No usar secret key en la app ni en GitHub.
+
+Archivos importantes:
+- index.html: estructura de pantalla, login, pedidos, dialogos.
+- app.js: logica de pedidos, tickets, Supabase, offline, cierre mensual.
+- styles.css: diseno responsive para PC y telefono.
+- service-worker.js: cache de PWA.
+- supabase-config.js: URL y publishable key.
+- supabase-schema.sql: tablas, politicas RLS y funciones RPC.
+
+Notas para telefono:
+- Si el telefono no muestra cambios nuevos, desinstalar la app vieja y volver a instalar desde la URL de Vercel.
+- El service worker debe subir version cada vez que cambie la app.
+- Version de cache actual al crear esta memoria: rincon-colombiano-v18.
+
+Precaucion offline:
+- Si varias tablets trabajan sin internet al mismo tiempo, pueden repetirse numeros locales de ticket.
+- Para evitar conflictos en hora pico sin internet, usar una tablet principal o mantener conexion estable.

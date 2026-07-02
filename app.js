@@ -57,8 +57,14 @@ const elements = {
   authPassword: document.querySelector("#authPassword"),
   signInButton: document.querySelector("#signInButton"),
   signUpButton: document.querySelector("#signUpButton"),
+  resetPasswordButton: document.querySelector("#resetPasswordButton"),
+  passwordRecoveryPanel: document.querySelector("#passwordRecoveryPanel"),
+  newPasswordInput: document.querySelector("#newPasswordInput"),
+  updatePasswordButton: document.querySelector("#updatePasswordButton"),
+  cancelRecoveryButton: document.querySelector("#cancelRecoveryButton"),
   authMessage: document.querySelector("#authMessage"),
   cloudStatus: document.querySelector("#cloudStatus"),
+  openSignInButton: document.querySelector("#openSignInButton"),
   signOutButton: document.querySelector("#signOutButton"),
   nextTicketLabel: document.querySelector("#nextTicketLabel"),
   categoryTabs: document.querySelector("#categoryTabs"),
@@ -98,6 +104,7 @@ const elements = {
   monthlyCloseContent: document.querySelector("#monthlyCloseContent"),
   printCloseButton: document.querySelector("#printCloseButton"),
   installAppButton: document.querySelector("#installAppButton"),
+  installHelpDialog: document.querySelector("#installHelpDialog"),
   editMenuButton: document.querySelector("#editMenuButton"),
   menuEditorDialog: document.querySelector("#menuEditorDialog"),
   editorCategoryList: document.querySelector("#editorCategoryList"),
@@ -139,6 +146,7 @@ const cloudState = {
   user: null,
   loading: false,
   syncing: false,
+  recoveringPassword: false,
 };
 
 function createBlankOrder() {
@@ -429,16 +437,28 @@ function updateCloudStatus(message = "") {
 function renderCloudState(message = "") {
   if (!cloudState.configured) {
     elements.authScreen.hidden = true;
+    elements.openSignInButton.hidden = true;
     elements.signOutButton.hidden = true;
     updateCloudStatus();
     return;
   }
 
   const canWorkOffline = !cloudState.user && hasKnownCloudSession() && !navigator.onLine;
-  elements.authScreen.hidden = Boolean(cloudState.user) || canWorkOffline;
+  elements.authScreen.hidden = cloudState.recoveringPassword ? false : Boolean(cloudState.user) || canWorkOffline;
+  elements.openSignInButton.hidden = Boolean(cloudState.user) || cloudState.recoveringPassword;
   elements.signOutButton.hidden = !cloudState.user;
   updateCloudStatus(canWorkOffline ? "" : message);
   elements.authMessage.textContent = message;
+}
+
+function openSignInScreen() {
+  if (!cloudState.configured) {
+    alert("La nube no esta configurada todavia.");
+    return;
+  }
+  hidePasswordRecoveryForm();
+  elements.authScreen.hidden = false;
+  elements.authEmail.focus();
 }
 
 function loadSupabaseLibrary() {
@@ -483,9 +503,13 @@ async function initializeCloud() {
   if (cloudState.user) rememberCloudSession(cloudState.user);
   renderCloudState();
 
-  cloudState.client.auth.onAuthStateChange(async (_event, session) => {
+  cloudState.client.auth.onAuthStateChange(async (event, session) => {
     cloudState.user = session?.user || null;
     if (cloudState.user) rememberCloudSession(cloudState.user);
+    if (event === "PASSWORD_RECOVERY") {
+      showPasswordRecoveryForm();
+      return;
+    }
     renderCloudState();
     if (cloudState.user) await loadCloudData();
   });
@@ -733,6 +757,81 @@ async function signUpWithEmail() {
 
   elements.authMessage.textContent = "Cuenta creada. Si Supabase pide confirmacion, revisa el correo.";
   elements.authPassword.value = "";
+}
+
+async function sendPasswordResetEmail() {
+  const email = elements.authEmail.value.trim();
+  if (!email) {
+    elements.authMessage.textContent = "Escribe tu correo electronico para recuperar la contrasena.";
+    elements.authEmail.focus();
+    return;
+  }
+
+  if (!cloudState.client) {
+    elements.authMessage.textContent = "No se pudo conectar con Supabase. Revisa internet.";
+    return;
+  }
+
+  elements.authMessage.textContent = "Enviando correo de recuperacion...";
+  const redirectTo = window.location.href.split("#")[0].split("?")[0];
+
+  try {
+    const { error } = await cloudState.client.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) {
+      elements.authMessage.textContent = friendlyAuthError(error);
+      return;
+    }
+    elements.authMessage.textContent = "Correo enviado. Abre el enlace para crear una contrasena nueva.";
+  } catch (error) {
+    elements.authMessage.textContent = friendlyAuthError(error);
+  }
+}
+
+function showPasswordRecoveryForm() {
+  cloudState.recoveringPassword = true;
+  elements.passwordRecoveryPanel.hidden = false;
+  elements.authPassword.closest("label").hidden = true;
+  elements.signInButton.hidden = true;
+  elements.signUpButton.hidden = true;
+  elements.resetPasswordButton.hidden = true;
+  renderCloudState("Escribe tu nueva contrasena.");
+  elements.newPasswordInput.focus();
+}
+
+function hidePasswordRecoveryForm(message = "") {
+  cloudState.recoveringPassword = false;
+  elements.passwordRecoveryPanel.hidden = true;
+  elements.newPasswordInput.value = "";
+  elements.authPassword.closest("label").hidden = false;
+  elements.signInButton.hidden = false;
+  elements.signUpButton.hidden = false;
+  elements.resetPasswordButton.hidden = false;
+  renderCloudState(message);
+}
+
+async function updateRecoveredPassword() {
+  const password = elements.newPasswordInput.value;
+  if (password.length < 6) {
+    elements.authMessage.textContent = "La nueva contrasena debe tener minimo 6 caracteres.";
+    return;
+  }
+
+  if (!cloudState.client) {
+    elements.authMessage.textContent = "No se pudo conectar con Supabase. Revisa internet.";
+    return;
+  }
+
+  elements.authMessage.textContent = "Guardando nueva contrasena...";
+  try {
+    const { error } = await cloudState.client.auth.updateUser({ password });
+    if (error) {
+      elements.authMessage.textContent = friendlyAuthError(error);
+      return;
+    }
+    hidePasswordRecoveryForm("Contrasena actualizada.");
+  } catch (error) {
+    elements.authMessage.textContent = friendlyAuthError(error);
+  }
 }
 
 function friendlyAuthError(error) {
@@ -1723,6 +1822,10 @@ elements.authForm.addEventListener("submit", async (event) => {
 });
 
 elements.signUpButton.addEventListener("click", signUpWithEmail);
+elements.resetPasswordButton.addEventListener("click", sendPasswordResetEmail);
+elements.updatePasswordButton.addEventListener("click", updateRecoveredPassword);
+elements.cancelRecoveryButton.addEventListener("click", () => hidePasswordRecoveryForm());
+elements.openSignInButton.addEventListener("click", openSignInScreen);
 elements.signOutButton.addEventListener("click", signOut);
 
 elements.saveOrderButton.addEventListener("click", async () => {
@@ -1803,7 +1906,10 @@ window.addEventListener("beforeinstallprompt", (event) => {
 });
 
 elements.installAppButton.addEventListener("click", async () => {
-  if (!deferredInstallPrompt) return;
+  if (!deferredInstallPrompt) {
+    elements.installHelpDialog.showModal();
+    return;
+  }
   deferredInstallPrompt.prompt();
   await deferredInstallPrompt.userChoice;
   deferredInstallPrompt = null;

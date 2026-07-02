@@ -92,6 +92,20 @@ body {
   color: var(--dark);
 }
 
+.auth-actions button:nth-child(3) {
+  grid-column: 1 / -1;
+}
+
+.password-recovery-panel {
+  display: grid;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.password-recovery-panel[hidden] {
+  display: none;
+}
+
 .auth-message {
   min-height: 20px;
   color: var(--muted);
@@ -209,6 +223,7 @@ button {
   font-weight: 900;
 }
 
+.sign-in-top-button,
 .sign-out-button {
   min-height: 38px;
   padding: 0 12px;
@@ -217,6 +232,11 @@ button {
   background: #ffffff;
   color: var(--dark);
   font-weight: 900;
+}
+
+.sign-in-top-button[hidden],
+.sign-out-button[hidden] {
+  display: none;
 }
 
 .workspace {
@@ -430,6 +450,11 @@ textarea:focus {
 .status-pill.saved {
   background: #e9f8ef;
   color: var(--green);
+}
+
+.status-pill.pending {
+  background: #fff7e6;
+  color: #b45309;
 }
 
 .order-info {
@@ -679,6 +704,16 @@ textarea:focus {
   white-space: nowrap;
 }
 
+.sync-badge {
+  width: fit-content;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #fff7e6;
+  color: #b45309;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
 dialog {
   width: min(420px, calc(100% - 32px));
   border: 0;
@@ -783,6 +818,31 @@ dialog::backdrop {
 .editor-section h3 {
   margin: 0;
   font-size: 1rem;
+}
+
+.product-section-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.product-section-header p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.product-section-header button {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--green);
+  color: #ffffff;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
 .editor-category-list,
@@ -1087,6 +1147,10 @@ dialog::backdrop {
   .product-form-grid,
   .product-row {
     grid-template-columns: 1fr;
+  }
+
+  .product-section-header {
+    display: grid;
   }
 
   .monthly-table-row.header {
