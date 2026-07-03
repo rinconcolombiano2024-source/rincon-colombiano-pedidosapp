@@ -18,6 +18,7 @@ Funciones actuales que deben conservarse:
 - Nota general del pedido.
 - Nota individual por plato.
 - Ticket de cocina impreso con numero consecutivo.
+- PDF de recibo/ticket en ancho 80mm para imprimir sin formato carta.
 - Ticket diario reinicia cada dia.
 - Boton para cambiar manualmente el proximo numero de ticket.
 - Historial de tickets del dia.
@@ -54,7 +55,7 @@ Archivos importantes:
 Notas para telefono:
 - Si el telefono no muestra cambios nuevos, desinstalar la app vieja y volver a instalar desde la URL de Vercel.
 - El service worker debe subir version cada vez que cambie la app.
-- Version de cache actual al crear esta memoria: rincon-colombiano-v18.
+- Version de cache actual al crear esta memoria: rincon-colombiano-v19.
 
 Precaucion offline:
 - Si varias tablets trabajan sin internet al mismo tiempo, pueden repetirse numeros locales de ticket.

@@ -84,6 +84,7 @@ const elements = {
   newOrderButton: document.querySelector("#newOrderButton"),
   saveOrderButton: document.querySelector("#saveOrderButton"),
   printOrderButton: document.querySelector("#printOrderButton"),
+  downloadTicketPdfButton: document.querySelector("#downloadTicketPdfButton"),
   historyList: document.querySelector("#historyList"),
   printTicket: document.querySelector("#printTicket"),
   counterButton: document.querySelector("#counterButton"),
@@ -1348,6 +1349,7 @@ function renderOrder() {
 
   elements.saveOrderButton.disabled = currentOrder.items.length === 0;
   elements.printOrderButton.disabled = currentOrder.items.length === 0;
+  elements.downloadTicketPdfButton.disabled = currentOrder.items.length === 0;
 }
 
 async function upsertCurrentOrder() {
@@ -1472,6 +1474,128 @@ function renderPrintTicket(order) {
     <div class="receipt-divider"></div>
     <p class="receipt-total">FIN DEL TICKET</p>
   `;
+}
+
+function pdfSafeText(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\x20-\x7E]/g, "")
+    .replace(/\\/g, "\\\\")
+    .replace(/\(/g, "\\(")
+    .replace(/\)/g, "\\)");
+}
+
+function wrapReceiptText(text, maxLength = 31) {
+  const words = String(text || "").split(/\s+/).filter(Boolean);
+  const lines = [];
+  let current = "";
+
+  words.forEach((word) => {
+    const next = current ? `${current} ${word}` : word;
+    if (next.length <= maxLength) {
+      current = next;
+      return;
+    }
+    if (current) lines.push(current);
+    current = word.length > maxLength ? word.slice(0, maxLength) : word;
+  });
+
+  if (current) lines.push(current);
+  return lines.length ? lines : [""];
+}
+
+function buildTicketPdfLines(order) {
+  const created = new Date(order.createdAt);
+  const dateText = created.toLocaleDateString("es-US");
+  const timeText = created.toLocaleTimeString("es-US", { hour: "2-digit", minute: "2-digit" });
+  const orderType = normalizeOrderType(order.type);
+  const lines = [
+    "RINCON COLOMBIANO",
+    `COCINA ${formatTicket(order.ticketNumber)}`,
+    "-------------------------------",
+    "TIPO DE PEDIDO",
+    orderType.toUpperCase(),
+    "-------------------------------",
+    `Cliente: ${order.customer || "Sin mesa/cliente"}`,
+    `Tomo pedido: ${order.server || "No indicado"}`,
+    `Fecha: ${dateText}`,
+    `Hora: ${timeText}`,
+    "-------------------------------",
+  ];
+
+  order.items.forEach((item) => {
+    wrapReceiptText(`${item.qty} x ${item.name}`).forEach((line) => lines.push(line));
+    if (item.note) {
+      wrapReceiptText(`Nota: ${item.note}`).forEach((line) => lines.push(line));
+    }
+  });
+
+  if (order.notes) {
+    lines.push("-------------------------------");
+    wrapReceiptText(`Notas: ${order.notes}`).forEach((line) => lines.push(line));
+  }
+
+  lines.push("-------------------------------", "FIN DEL TICKET");
+  return lines;
+}
+
+function createReceiptPdfBlob(order) {
+  const pageWidth = 226.77; // 80mm in PDF points.
+  const margin = 10;
+  const lineHeight = 11;
+  const fontSize = 9;
+  const lines = buildTicketPdfLines(order);
+  const pageHeight = Math.max(260, margin * 2 + lines.length * lineHeight + 12);
+  const textCommands = [
+    "BT",
+    `/F1 ${fontSize} Tf`,
+    `${margin} ${pageHeight - margin - fontSize} Td`,
+    ...lines.flatMap((line) => [`(${pdfSafeText(line)}) Tj`, `0 -${lineHeight} Td`]),
+    "ET",
+  ].join("\n");
+
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth.toFixed(2)} ${pageHeight.toFixed(2)}] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>`,
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>",
+    `<< /Length ${textCommands.length} >>\nstream\n${textCommands}\nendstream`,
+  ];
+
+  let pdf = "%PDF-1.4\n";
+  const offsets = [0];
+  objects.forEach((object, index) => {
+    offsets.push(pdf.length);
+    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+  });
+
+  const xrefOffset = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  offsets.slice(1).forEach((offset) => {
+    pdf += `${String(offset).padStart(10, "0")} 00000 n \n`;
+  });
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+
+  return new Blob([pdf], { type: "application/pdf" });
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function downloadCurrentTicketPdf() {
+  if (!(await upsertCurrentOrder())) return;
+  const blob = createReceiptPdfBlob(currentOrder);
+  const ticketName = String(currentOrder.ticketNumber).padStart(4, "0");
+  downloadBlob(blob, `rincon-colombiano-ticket-${ticketName}.pdf`);
 }
 
 function renderHistory() {
@@ -1836,6 +1960,7 @@ elements.saveOrderButton.addEventListener("click", async () => {
 });
 
 elements.printOrderButton.addEventListener("click", printCurrentOrder);
+elements.downloadTicketPdfButton.addEventListener("click", downloadCurrentTicketPdf);
 elements.newOrderButton.addEventListener("click", startNewOrder);
 elements.clearOrderButton.addEventListener("click", clearCurrentOrder);
 
