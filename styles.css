@@ -771,7 +771,7 @@ dialog::backdrop {
 
 .settings-card {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(90px, 110px) minmax(120px, 140px) minmax(130px, 150px) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(90px, 110px) minmax(120px, 140px) minmax(130px, 150px) minmax(110px, 130px) auto;
   gap: 12px;
   align-items: end;
   padding: 12px;
@@ -1161,7 +1161,6 @@ dialog::backdrop {
 @media print {
   @page {
     margin: 0;
-    size: 80mm auto;
   }
 
   body {
@@ -1175,7 +1174,9 @@ dialog::backdrop {
 
   .print-ticket {
     display: block;
-    width: 76mm;
+    box-sizing: border-box;
+    width: auto;
+    max-width: 100%;
     margin: 0;
     padding: 4mm;
     color: #000000;

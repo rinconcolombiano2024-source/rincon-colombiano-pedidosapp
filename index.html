@@ -5,11 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>RINCON COLOMBIANO - Pedidos</title>
     <meta name="theme-color" content="#1f8f4d" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Rincon Colombiano" />
+    <meta name="format-detection" content="telephone=no" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="app-icon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="app-icon.svg" />
+    <link rel="apple-touch-icon" href="app-icon-192.png" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -121,7 +124,10 @@
             </label>
             <label>
               Tomo el pedido
-              <input id="serverName" type="text" placeholder="Nombre del empleado" autocomplete="off" />
+              <div class="customer-field-row">
+                <input id="serverName" type="text" placeholder="Nombre del empleado" autocomplete="off" />
+                <button class="customer-button" id="shiftButton" type="button">Turno</button>
+              </div>
             </label>
           </div>
 
@@ -195,6 +201,21 @@
       </form>
     </dialog>
 
+    <dialog id="shiftDialog">
+      <form method="dialog" class="counter-form">
+        <h2>Responsable del turno</h2>
+        <p>Este nombre se pondra automaticamente en cada pedido nuevo.</p>
+        <label>
+          Quien tomara pedidos
+          <input id="shiftServerInput" type="text" placeholder="Nombre del empleado" autocomplete="off" />
+        </label>
+        <div class="dialog-actions">
+          <button value="cancel" type="submit">Cancelar</button>
+          <button id="saveShiftButton" value="default" type="button">Guardar turno</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="customerDialog">
       <form method="dialog" class="counter-form">
         <h2>Nombre del cliente</h2>
@@ -245,7 +266,11 @@
               <option value="eu">1 234,56</option>
             </select>
           </label>
-          <button id="saveCurrencyButton" type="button">Guardar moneda</button>
+          <label>
+            Ancho ticket mm
+            <input id="receiptWidthInput" type="number" min="50" max="120" step="1" placeholder="80" />
+          </label>
+          <button id="saveCurrencyButton" type="button">Guardar ajustes</button>
         </section>
 
         <div class="menu-editor-layout">
@@ -303,7 +328,7 @@
     <dialog id="installHelpDialog" class="install-help-dialog">
       <form method="dialog" class="counter-form">
         <h2>Descargar app</h2>
-        <p>En computador, usa el boton Instalar del navegador si aparece. En telefono, abre el menu del navegador y toca Agregar a pantalla principal.</p>
+        <p>Android: menu de Chrome y Agregar a pantalla principal. iPhone/iPad: Safari, compartir y Agregar a pantalla de inicio. Windows/Mac: boton Instalar del navegador o guardar acceso directo.</p>
         <div class="dialog-actions">
           <button value="cancel" type="submit">Cerrar</button>
         </div>

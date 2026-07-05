@@ -15,10 +15,12 @@ Funciones actuales que deben conservarse:
 - Tipo de pedido: Comer en el punto, Para llevar, Domicilio.
 - Nombre del cliente o mesa.
 - Nombre de la persona que tomo el pedido.
+- Responsable del turno: se pide al iniciar sesion y se aplica automaticamente a pedidos nuevos.
+- Boton Turno para cambiar quien toma pedidos durante el dia.
 - Nota general del pedido.
 - Nota individual por plato.
 - Ticket de cocina impreso con numero consecutivo.
-- PDF de recibo/ticket en ancho 80mm para imprimir sin formato carta.
+- PDF de recibo/ticket con ancho configurable en milimetros para impresoras de distintos tamanos.
 - Ticket diario reinicia cada dia.
 - Boton para cambiar manualmente el proximo numero de ticket.
 - Historial de tickets del dia.
@@ -26,6 +28,7 @@ Funciones actuales que deben conservarse:
 - Cierre mensual con total vendido, tickets, productos, promedio, detalle por dia y productos vendidos.
 - Impresion del cierre mensual.
 - Moneda editable: simbolo, posicion y formato.
+- Ancho de ticket editable en milimetros para impresion/PDF.
 - Inicio de sesion por correo electronico y contrasena usando Supabase.
 - Crear cuenta principal.
 - Recuperar contrasena por correo electronico.
@@ -37,6 +40,8 @@ Funciones actuales que deben conservarse:
 - Boton Descargar app visible.
 - Ventana de ayuda para instalar/agregar a pantalla principal si el navegador no permite instalacion directa.
 - PWA con manifest, icono y service worker.
+- Compatibilidad PWA para Android, iOS/iPadOS, Windows, Mac y navegadores modernos.
+- Iconos PNG para instalacion en Android/iOS y SVG como respaldo.
 
 Configuracion Supabase actual:
 - URL del proyecto: https://ouulrehcgmfbettseibn.supabase.co
@@ -55,7 +60,7 @@ Archivos importantes:
 Notas para telefono:
 - Si el telefono no muestra cambios nuevos, desinstalar la app vieja y volver a instalar desde la URL de Vercel.
 - El service worker debe subir version cada vez que cambie la app.
-- Version de cache actual al crear esta memoria: rincon-colombiano-v19.
+- Version de cache actual al crear esta memoria: rincon-colombiano-v23.
 
 Precaucion offline:
 - Si varias tablets trabajan sin internet al mismo tiempo, pueden repetirse numeros locales de ticket.

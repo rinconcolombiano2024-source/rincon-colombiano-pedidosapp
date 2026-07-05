@@ -6,6 +6,8 @@ const STORAGE_KEYS = {
   currencySymbol: "rincon_colombiano_currency_symbol",
   currencyPosition: "rincon_colombiano_currency_position",
   moneyFormat: "rincon_colombiano_money_format",
+  receiptWidthMm: "rincon_colombiano_receipt_width_mm",
+  shiftServerName: "rincon_colombiano_shift_server_name",
   settingsPending: "rincon_colombiano_settings_pending",
   cloudSession: "rincon_colombiano_cloud_session",
 };
@@ -95,6 +97,10 @@ const elements = {
   itemNoteTitle: document.querySelector("#itemNoteTitle"),
   itemNoteTextarea: document.querySelector("#itemNoteTextarea"),
   saveItemNoteButton: document.querySelector("#saveItemNoteButton"),
+  shiftButton: document.querySelector("#shiftButton"),
+  shiftDialog: document.querySelector("#shiftDialog"),
+  shiftServerInput: document.querySelector("#shiftServerInput"),
+  saveShiftButton: document.querySelector("#saveShiftButton"),
   customerButton: document.querySelector("#customerButton"),
   customerDialog: document.querySelector("#customerDialog"),
   customerDialogInput: document.querySelector("#customerDialogInput"),
@@ -125,6 +131,7 @@ const elements = {
   currencySymbolInput: document.querySelector("#currencySymbolInput"),
   currencyPositionSelect: document.querySelector("#currencyPositionSelect"),
   moneyFormatSelect: document.querySelector("#moneyFormatSelect"),
+  receiptWidthInput: document.querySelector("#receiptWidthInput"),
   saveCurrencyButton: document.querySelector("#saveCurrencyButton"),
 };
 
@@ -133,12 +140,14 @@ let activeCategory = Object.keys(menuCatalog)[0];
 let todayKey = currentBusinessDate();
 let nextTicket = initializeDailyTicket();
 let savedOrders = readOrders();
+let shiftServerName = readShiftServerName();
 let currentOrder = createBlankOrder();
 let deferredInstallPrompt = null;
 let editingProduct = null;
 let currencySymbol = readCurrencySymbol();
 let currencyPosition = readCurrencyPosition();
 let moneyFormat = readMoneyFormat();
+let receiptWidthMm = readReceiptWidthMm();
 let editingNoteItemId = null;
 const cloudState = {
   client: null,
@@ -156,7 +165,7 @@ function createBlankOrder() {
     ticketNumber: null,
     type: "Comer en el punto",
     customer: "",
-    server: "",
+    server: shiftServerName,
     notes: "",
     items: [],
     createdAt: null,
@@ -398,6 +407,7 @@ function currentSettingsPayload() {
     currencySymbol,
     currencyPosition,
     moneyFormat,
+    receiptWidthMm,
   };
 }
 
@@ -405,9 +415,11 @@ function applySettingsPayload(settings = {}) {
   currencySymbol = settings.currencySymbol || currencySymbol || "$";
   currencyPosition = settings.currencyPosition === "after" ? "after" : "before";
   moneyFormat = settings.moneyFormat === "eu" ? "eu" : "us";
+  receiptWidthMm = normalizeReceiptWidth(settings.receiptWidthMm || receiptWidthMm);
   localStorage.setItem(STORAGE_KEYS.currencySymbol, currencySymbol);
   localStorage.setItem(STORAGE_KEYS.currencyPosition, currencyPosition);
   localStorage.setItem(STORAGE_KEYS.moneyFormat, moneyFormat);
+  localStorage.setItem(STORAGE_KEYS.receiptWidthMm, String(receiptWidthMm));
 }
 
 function updateCloudStatus(message = "") {
@@ -583,6 +595,7 @@ async function loadCloudData() {
     cloudState.ready = true;
     await syncPendingData({ silent: true, allowWhileLoading: true });
     updateCloudStatus();
+    maybeAskShiftServer();
   } catch (error) {
     console.error(error);
     updateCloudStatus(navigator.onLine ? "Error nube" : "");
@@ -945,14 +958,63 @@ function readMoneyFormat() {
   return format === "eu" ? "eu" : "us";
 }
 
+function normalizeReceiptWidth(value) {
+  const width = Number.parseInt(value, 10);
+  if (!Number.isFinite(width)) return 80;
+  return Math.min(120, Math.max(50, width));
+}
+
+function readReceiptWidthMm() {
+  return normalizeReceiptWidth(localStorage.getItem(STORAGE_KEYS.receiptWidthMm) || 80);
+}
+
+function readShiftServerName() {
+  return localStorage.getItem(STORAGE_KEYS.shiftServerName) || "";
+}
+
+function saveShiftServerName(name) {
+  shiftServerName = String(name || "").trim();
+  localStorage.setItem(STORAGE_KEYS.shiftServerName, shiftServerName);
+}
+
+function openShiftDialog(force = false) {
+  elements.shiftServerInput.value = shiftServerName || elements.serverName.value.trim();
+  elements.shiftDialog.dataset.force = force ? "1" : "0";
+  elements.shiftDialog.showModal();
+  elements.shiftServerInput.focus();
+}
+
+function saveShiftFromDialog() {
+  const name = elements.shiftServerInput.value.trim();
+  if (!name) {
+    alert("Escribe el nombre de quien tomara pedidos en este turno.");
+    return;
+  }
+
+  saveShiftServerName(name);
+  if (!currentOrder.saved || !currentOrder.server) {
+    currentOrder.server = shiftServerName;
+    elements.serverName.value = shiftServerName;
+  }
+  elements.shiftDialog.close();
+  renderOrder();
+}
+
+function maybeAskShiftServer() {
+  if (shiftServerName || elements.shiftDialog.open) return;
+  window.setTimeout(() => openShiftDialog(true), 250);
+}
+
 function saveCurrencySymbol() {
   const symbol = elements.currencySymbolInput.value.trim() || "$";
   currencySymbol = symbol;
   currencyPosition = elements.currencyPositionSelect.value === "after" ? "after" : "before";
   moneyFormat = elements.moneyFormatSelect.value === "eu" ? "eu" : "us";
+  receiptWidthMm = normalizeReceiptWidth(elements.receiptWidthInput.value);
   localStorage.setItem(STORAGE_KEYS.currencySymbol, currencySymbol);
   localStorage.setItem(STORAGE_KEYS.currencyPosition, currencyPosition);
   localStorage.setItem(STORAGE_KEYS.moneyFormat, moneyFormat);
+  localStorage.setItem(STORAGE_KEYS.receiptWidthMm, String(receiptWidthMm));
   renderCurrencySettings();
   renderMenu();
   renderOrder();
@@ -966,6 +1028,8 @@ function renderCurrencySettings() {
   elements.currencySymbolInput.value = currencySymbol;
   elements.currencyPositionSelect.value = currencyPosition;
   elements.moneyFormatSelect.value = moneyFormat;
+  elements.receiptWidthInput.value = receiptWidthMm;
+  applyReceiptPrintStyle();
 }
 
 function formatTicket(number) {
@@ -1432,7 +1496,30 @@ function structuredCloneOrder(order) {
 async function printCurrentOrder() {
   if (!(await upsertCurrentOrder())) return;
   renderPrintTicket(currentOrder);
+  applyReceiptPrintStyle();
   window.print();
+}
+
+function applyReceiptPrintStyle() {
+  const width = normalizeReceiptWidth(receiptWidthMm);
+  const contentWidth = Math.max(42, width - 4);
+  let style = document.querySelector("#receiptPrintStyle");
+  if (!style) {
+    style = document.createElement("style");
+    style.id = "receiptPrintStyle";
+    document.head.appendChild(style);
+  }
+
+  style.textContent = `
+    @media print {
+      @page { margin: 0; size: ${width}mm auto; }
+      .print-ticket {
+        box-sizing: border-box !important;
+        width: ${contentWidth}mm !important;
+        padding: 2mm !important;
+      }
+    }
+  `;
 }
 
 function renderPrintTicket(order) {
@@ -1505,47 +1592,49 @@ function wrapReceiptText(text, maxLength = 31) {
   return lines.length ? lines : [""];
 }
 
-function buildTicketPdfLines(order) {
+function buildTicketPdfLines(order, maxLineLength) {
   const created = new Date(order.createdAt);
   const dateText = created.toLocaleDateString("es-US");
   const timeText = created.toLocaleTimeString("es-US", { hour: "2-digit", minute: "2-digit" });
   const orderType = normalizeOrderType(order.type);
+  const divider = "-".repeat(Math.min(31, Math.max(18, maxLineLength)));
   const lines = [
     "RINCON COLOMBIANO",
     `COCINA ${formatTicket(order.ticketNumber)}`,
-    "-------------------------------",
+    divider,
     "TIPO DE PEDIDO",
     orderType.toUpperCase(),
-    "-------------------------------",
+    divider,
     `Cliente: ${order.customer || "Sin mesa/cliente"}`,
     `Tomo pedido: ${order.server || "No indicado"}`,
     `Fecha: ${dateText}`,
     `Hora: ${timeText}`,
-    "-------------------------------",
+    divider,
   ];
 
   order.items.forEach((item) => {
-    wrapReceiptText(`${item.qty} x ${item.name}`).forEach((line) => lines.push(line));
+    wrapReceiptText(`${item.qty} x ${item.name}`, maxLineLength).forEach((line) => lines.push(line));
     if (item.note) {
-      wrapReceiptText(`Nota: ${item.note}`).forEach((line) => lines.push(line));
+      wrapReceiptText(`Nota: ${item.note}`, maxLineLength).forEach((line) => lines.push(line));
     }
   });
 
   if (order.notes) {
-    lines.push("-------------------------------");
-    wrapReceiptText(`Notas: ${order.notes}`).forEach((line) => lines.push(line));
+    lines.push(divider);
+    wrapReceiptText(`Notas: ${order.notes}`, maxLineLength).forEach((line) => lines.push(line));
   }
 
-  lines.push("-------------------------------", "FIN DEL TICKET");
+  lines.push(divider, "FIN DEL TICKET");
   return lines;
 }
 
 function createReceiptPdfBlob(order) {
-  const pageWidth = 226.77; // 80mm in PDF points.
+  const pageWidth = normalizeReceiptWidth(receiptWidthMm) * 72 / 25.4;
   const margin = 10;
   const lineHeight = 11;
   const fontSize = 9;
-  const lines = buildTicketPdfLines(order);
+  const maxLineLength = Math.max(18, Math.floor((pageWidth - margin * 2) / 5.4));
+  const lines = buildTicketPdfLines(order, maxLineLength);
   const pageHeight = Math.max(260, margin * 2 + lines.length * lineHeight + 12);
   const textCommands = [
     "BT",
@@ -1772,6 +1861,7 @@ function printMonthlyClose() {
   }
 
   renderPrintMonthlyClose(report);
+  applyReceiptPrintStyle();
   window.print();
 }
 
@@ -1979,6 +2069,13 @@ elements.confirmCounterButton.addEventListener("click", () => {
   setNextTicket(elements.counterInput.value);
 });
 elements.saveItemNoteButton.addEventListener("click", saveItemNote);
+elements.shiftButton.addEventListener("click", () => openShiftDialog());
+elements.saveShiftButton.addEventListener("click", saveShiftFromDialog);
+elements.shiftServerInput.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  saveShiftFromDialog();
+});
 elements.customerButton.addEventListener("click", openCustomerDialog);
 elements.saveCustomerButton.addEventListener("click", saveCustomerFromDialog);
 
@@ -2067,6 +2164,7 @@ if ("serviceWorker" in navigator && window.location.protocol.startsWith("http"))
   navigator.serviceWorker.register("./service-worker.js").catch(() => {});
 }
 
+applyReceiptPrintStyle();
 renderCategories();
 renderMenu();
 renderOrder();

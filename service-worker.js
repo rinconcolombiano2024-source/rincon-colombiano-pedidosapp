@@ -1,4 +1,4 @@
-const CACHE_NAME = "rincon-colombiano-v19";
+const CACHE_NAME = "rincon-colombiano-v23";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -7,6 +7,8 @@ const APP_FILES = [
   "./supabase-config.js",
   "./manifest.webmanifest",
   "./app-icon.svg",
+  "./app-icon-192.png",
+  "./app-icon-512.png",
 ];
 
 self.addEventListener("install", (event) => {
