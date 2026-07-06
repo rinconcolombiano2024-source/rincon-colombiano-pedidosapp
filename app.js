@@ -10,6 +10,7 @@ const STORAGE_KEYS = {
   shiftServerName: "rincon_colombiano_shift_server_name",
   settingsPending: "rincon_colombiano_settings_pending",
   cloudSession: "rincon_colombiano_cloud_session",
+  deletedOrders: "rincon_colombiano_deleted_orders",
 };
 
 const DEFAULT_MENU_CATALOG = {
@@ -84,9 +85,11 @@ const elements = {
   orderNotes: document.querySelector("#orderNotes"),
   orderTotal: document.querySelector("#orderTotal"),
   newOrderButton: document.querySelector("#newOrderButton"),
+  correctOrderButton: document.querySelector("#correctOrderButton"),
   saveOrderButton: document.querySelector("#saveOrderButton"),
   printOrderButton: document.querySelector("#printOrderButton"),
   downloadTicketPdfButton: document.querySelector("#downloadTicketPdfButton"),
+  cancelOrderButton: document.querySelector("#cancelOrderButton"),
   historyList: document.querySelector("#historyList"),
   printTicket: document.querySelector("#printTicket"),
   counterButton: document.querySelector("#counterButton"),
@@ -407,6 +410,32 @@ function pendingOrdersCount() {
   return savedOrders.filter(needsCloudSync).length;
 }
 
+function readDeletedOrderIds() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEYS.deletedOrders) || "[]");
+    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveDeletedOrderIds(ids) {
+  localStorage.setItem(STORAGE_KEYS.deletedOrders, JSON.stringify(Array.from(new Set(ids.filter(Boolean)))));
+}
+
+function queueDeletedOrderId(orderId) {
+  if (!orderId || !shouldQueueForCloud()) return;
+  saveDeletedOrderIds([...readDeletedOrderIds(), orderId]);
+}
+
+function clearDeletedOrderId(orderId) {
+  saveDeletedOrderIds(readDeletedOrderIds().filter((id) => id !== orderId));
+}
+
+function pendingDeletedOrdersCount() {
+  return readDeletedOrderIds().length;
+}
+
 function hasPendingSettings() {
   return localStorage.getItem(STORAGE_KEYS.settingsPending) === "1";
 }
@@ -495,7 +524,7 @@ function updateCloudStatus(message = "") {
     return;
   }
 
-  const pending = pendingOrdersCount();
+  const pending = pendingOrdersCount() + pendingDeletedOrdersCount();
   if (!navigator.onLine) {
     elements.cloudStatus.textContent = pending ? `Sin internet (${pending} pendientes)` : "Sin internet";
     return;
@@ -597,7 +626,10 @@ async function loadCloudData() {
   cloudState.loading = true;
   elements.cloudStatus.textContent = "Cargando nube...";
   const localOrdersBeforeLoad = savedOrders.map(structuredCloneOrder);
-  const localPendingOrders = localOrdersBeforeLoad.filter(needsCloudSync);
+  const localDeletedOrderIds = readDeletedOrderIds();
+  const localPendingOrders = localOrdersBeforeLoad.filter(
+    (order) => needsCloudSync(order) && !localDeletedOrderIds.includes(order.id)
+  );
   const localSettingsPending = hasPendingSettings();
 
   try {
@@ -627,12 +659,14 @@ async function loadCloudData() {
 
     if (ordersError) throw ordersError;
 
-    const normalizedCloudOrders = (cloudOrders || []).map((row) => ({
-      ...row.order_json,
-      type: normalizeOrderType(row.order_json?.type),
-      businessDate: orderBusinessDate(row.order_json),
-      syncStatus: "synced",
-    }));
+    const normalizedCloudOrders = (cloudOrders || [])
+      .map((row) => ({
+        ...row.order_json,
+        type: normalizeOrderType(row.order_json?.type),
+        businessDate: orderBusinessDate(row.order_json),
+        syncStatus: "synced",
+      }))
+      .filter((order) => !localDeletedOrderIds.includes(order.id));
     savedOrders = mergeOrders(normalizedCloudOrders, localPendingOrders);
     saveOrders();
 
@@ -722,6 +756,18 @@ async function saveCloudOrder(order) {
   if (error) throw error;
 }
 
+async function deleteCloudOrder(orderId) {
+  if (!cloudState.client || !cloudState.user || !orderId) return;
+
+  const { error } = await cloudState.client
+    .from("orders")
+    .delete()
+    .eq("id", orderId)
+    .eq("user_id", cloudState.user.id);
+
+  if (error) throw error;
+}
+
 async function advanceCloudTicketCounter(minimumNextTicket) {
   if (!cloudState.client || !cloudState.user || !Number.isFinite(minimumNextTicket)) return;
 
@@ -746,9 +792,10 @@ async function syncPendingData(options = {}) {
   }
   if (cloudState.loading && !allowWhileLoading) return;
 
-  const pendingOrders = savedOrders.filter(needsCloudSync);
+  const pendingDeletedOrderIds = readDeletedOrderIds();
+  const pendingOrders = savedOrders.filter((order) => needsCloudSync(order) && !pendingDeletedOrderIds.includes(order.id));
   const shouldSyncSettings = hasPendingSettings();
-  if (!pendingOrders.length && !shouldSyncSettings) {
+  if (!pendingOrders.length && !pendingDeletedOrderIds.length && !shouldSyncSettings) {
     updateCloudStatus();
     return;
   }
@@ -760,6 +807,11 @@ async function syncPendingData(options = {}) {
     if (shouldSyncSettings) {
       await saveCloudSettings();
       clearSettingsPending();
+    }
+
+    for (const orderId of pendingDeletedOrderIds) {
+      await deleteCloudOrder(orderId);
+      clearDeletedOrderId(orderId);
     }
 
     for (const order of pendingOrders) {
@@ -1507,6 +1559,8 @@ function renderOrder() {
   elements.saveOrderButton.disabled = currentOrder.items.length === 0;
   elements.printOrderButton.disabled = currentOrder.items.length === 0;
   elements.downloadTicketPdfButton.disabled = currentOrder.items.length === 0;
+  elements.correctOrderButton.disabled = currentOrder.items.length === 0 && !currentOrder.saved;
+  elements.cancelOrderButton.disabled = currentOrder.items.length === 0 && !currentOrder.saved;
 }
 
 async function upsertCurrentOrder() {
@@ -2187,6 +2241,69 @@ function clearCurrentOrder() {
   renderOrder();
 }
 
+function beginCorrectCurrentOrder() {
+  if (!currentOrder.items.length && !currentOrder.saved) {
+    alert("No hay pedido para corregir. Abre un ticket guardado o agrega productos primero.");
+    return;
+  }
+
+  if (currentOrder.saved) {
+    showToast(`Corrigiendo ${formatTicket(currentOrder.ticketNumber)}. Cambia lo necesario y presiona Guardar pedido.`);
+  } else {
+    showToast("Corrige el pedido nuevo y presiona Guardar pedido.");
+  }
+
+  elements.orderNotes.focus();
+}
+
+async function cancelCurrentOrder() {
+  syncFormToOrder();
+
+  if (!currentOrder.items.length && !currentOrder.saved) {
+    alert("No hay pedido para cancelar.");
+    return;
+  }
+
+  const ticketLabel = currentOrder.ticketNumber ? formatTicket(currentOrder.ticketNumber) : "sin guardar";
+  const shouldCancel = confirm(
+    `Cancelar/eliminar el pedido ${ticketLabel}? Esto lo quitara del historial y de los cierres.`
+  );
+  if (!shouldCancel) return;
+
+  const cancelledOrderId = currentOrder.id;
+  const wasSaved = Boolean(currentOrder.saved && cancelledOrderId);
+
+  if (wasSaved) {
+    savedOrders = savedOrders.filter((order) => order.id !== cancelledOrderId);
+    saveOrders();
+
+    if (cloudState.user && navigator.onLine) {
+      try {
+        await deleteCloudOrder(cancelledOrderId);
+        clearDeletedOrderId(cancelledOrderId);
+      } catch (error) {
+        console.error(error);
+        queueDeletedOrderId(cancelledOrderId);
+      }
+    } else if (shouldQueueForCloud()) {
+      queueDeletedOrderId(cancelledOrderId);
+    }
+  }
+
+  currentOrder = createBlankOrder();
+  saveOrders();
+  renderOrder();
+  renderHistory();
+  if (elements.dailyCloseDialog.open) {
+    renderDailyClose(elements.closeDayInput.value || todayKey);
+  }
+  if (elements.monthlyCloseDialog.open) {
+    renderMonthlyClose(elements.closeMonthInput.value || currentMonthKey());
+  }
+  updateCloudStatus();
+  showToast(wasSaved ? `Pedido ${ticketLabel} cancelado/eliminado.` : "Pedido nuevo cancelado.");
+}
+
 function openItemNote(itemId) {
   const item = currentOrder.items.find((entry) => entry.id === itemId);
   if (!item) return;
@@ -2352,6 +2469,8 @@ elements.saveOrderButton.addEventListener("click", async () => {
 
 elements.printOrderButton.addEventListener("click", printCurrentOrder);
 elements.downloadTicketPdfButton.addEventListener("click", downloadCurrentTicketPdf);
+elements.correctOrderButton.addEventListener("click", beginCorrectCurrentOrder);
+elements.cancelOrderButton.addEventListener("click", cancelCurrentOrder);
 elements.newOrderButton.addEventListener("click", startNewOrder);
 elements.clearOrderButton.addEventListener("click", clearCurrentOrder);
 

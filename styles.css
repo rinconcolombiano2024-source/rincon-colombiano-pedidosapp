@@ -647,13 +647,14 @@ textarea:focus {
 
 .action-row {
   display: grid;
-  grid-template-columns: 0.65fr 1fr 1.1fr 1fr;
+  grid-template-columns: 0.65fr 0.85fr 1fr 1.1fr 1fr 1fr;
   gap: 10px;
   padding: 16px;
 }
 
 .primary-action,
-.secondary-action {
+.secondary-action,
+.danger-action {
   min-height: 48px;
   border-radius: 8px;
   font-weight: 900;
@@ -675,6 +676,12 @@ textarea:focus {
   border: 1px solid var(--line);
   background: #ffffff;
   color: var(--dark);
+}
+
+.danger-action {
+  border: 1px solid #f0c4c0;
+  background: #fff5f4;
+  color: var(--red);
 }
 
 .history-list {

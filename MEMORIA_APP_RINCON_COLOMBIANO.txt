@@ -20,6 +20,8 @@ Funciones actuales que deben conservarse:
 - Boton Turno para cambiar quien toma pedidos durante el dia.
 - Nota general del pedido.
 - Nota individual por plato.
+- Boton Corregir pedido para dejar claro que un pedido abierto puede editarse y guardarse otra vez.
+- Boton Cancelar pedido para eliminar/cancelar el pedido actual con confirmacion, quitandolo del historial y cierres.
 - Ticket de cocina impreso con numero consecutivo.
 - Impresion preparada como pagina/trabajo individual con avance final para ayudar al corte automatico si la impresora o driver lo tiene activado.
 - PDF de recibo/ticket con ancho configurable en milimetros para impresoras de distintos tamanos.
@@ -40,6 +42,7 @@ Funciones actuales que deben conservarse:
 - Sincronizacion con Supabase: menu, moneda, pedidos y contador de tickets.
 - Modo sin internet: permite seguir tomando pedidos y guardarlos localmente.
 - Pedidos sin internet quedan como Pendiente nube.
+- Cancelaciones sin internet quedan pendientes para eliminarse de la nube cuando vuelva la conexion.
 - Cuando vuelve internet, la app intenta sincronizar automaticamente.
 - Boton Descargar app visible.
 - Ventana de ayuda para instalar/agregar a pantalla principal si el navegador no permite instalacion directa.
@@ -64,7 +67,7 @@ Archivos importantes:
 Notas para telefono:
 - Si el telefono no muestra cambios nuevos, desinstalar la app vieja y volver a instalar desde la URL de Vercel.
 - El service worker debe subir version cada vez que cambie la app.
-- Version de cache actual al crear esta memoria: rincon-colombiano-v26.
+- Version de cache actual al crear esta memoria: rincon-colombiano-v27.
 
 Precaucion offline:
 - Si varias tablets trabajan sin internet al mismo tiempo, pueden repetirse numeros locales de ticket.
