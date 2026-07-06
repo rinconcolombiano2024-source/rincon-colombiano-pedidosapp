@@ -20,10 +20,11 @@ Funciones actuales que deben conservarse:
 - Boton Turno para cambiar quien toma pedidos durante el dia.
 - Nota general del pedido.
 - Nota individual por plato.
+- Notas del pedido y de cada plato siempre en MAYUSCULAS, resaltadas en negrita para cocina/ticket.
 - Boton Corregir pedido para dejar claro que un pedido abierto puede editarse y guardarse otra vez.
 - Boton Cancelar pedido para eliminar/cancelar el pedido actual con confirmacion, quitandolo del historial y cierres.
 - Ticket de cocina impreso con numero consecutivo.
-- Impresion preparada como pagina/trabajo individual con avance final para ayudar al corte automatico si la impresora o driver lo tiene activado.
+- Impresion preparada como pagina/trabajo individual con salto de pagina y avance final reforzado para ayudar al corte automatico si la impresora o driver lo tiene activado.
 - PDF de recibo/ticket con ancho configurable en milimetros para impresoras de distintos tamanos.
 - Ticket diario reinicia cada dia.
 - Boton para cambiar manualmente el proximo numero de ticket.
@@ -67,7 +68,7 @@ Archivos importantes:
 Notas para telefono:
 - Si el telefono no muestra cambios nuevos, desinstalar la app vieja y volver a instalar desde la URL de Vercel.
 - El service worker debe subir version cada vez que cambie la app.
-- Version de cache actual al crear esta memoria: rincon-colombiano-v27.
+- Version de cache actual al crear esta memoria: rincon-colombiano-v29.
 
 Precaucion offline:
 - Si varias tablets trabajan sin internet al mismo tiempo, pueden repetirse numeros locales de ticket.

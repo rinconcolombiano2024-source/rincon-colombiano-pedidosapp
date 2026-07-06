@@ -41,8 +41,9 @@ NOTAS DE USO
 - Si usas varias tablets al mismo tiempo, se necesita una version con base de datos para que no se repitan los tickets.
 
 IMPRESION Y CORTE DE PAPEL
-- La app imprime cada ticket como un trabajo/pagina individual y deja un pequeno avance final.
-- Para que la impresora corte el papel, activa en la impresora o en el driver la opcion de corte automatico al finalizar documento/pagina.
+- La app imprime cada ticket como un trabajo/pagina individual y deja un avance final reforzado para que el corte no quede pegado al texto.
+- Para que la impresora corte el papel, activa en la impresora o en el driver la opcion de corte automatico al finalizar documento/pagina/trabajo.
+- Busca opciones como Auto cut, Cut after document, Cut after page, Full cut, Partial cut o Corte automatico.
 - Desde navegador/PWA no siempre es posible enviar el comando interno de corte; el corte fisico depende del modelo de impresora, sistema operativo y controlador.
 
 LOGIN CON CORREO Y CONTRASENA

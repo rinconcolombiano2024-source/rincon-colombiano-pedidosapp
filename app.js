@@ -234,12 +234,14 @@ function readOrders() {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEYS.orders) || "[]");
     return Array.isArray(parsed)
-      ? parsed.map((order) => ({
-          ...order,
-          type: normalizeOrderType(order.type),
-          businessDate: orderBusinessDate(order),
-          syncStatus: order.syncStatus || "synced",
-        }))
+      ? parsed.map((order) =>
+          normalizeOrderNotes({
+            ...order,
+            type: normalizeOrderType(order.type),
+            businessDate: orderBusinessDate(order),
+            syncStatus: order.syncStatus || "synced",
+          })
+        )
       : [];
   } catch {
     return [];
@@ -459,11 +461,11 @@ function mergeOrders(cloudOrders, localOrders) {
     if (!order?.id) return;
     const current = ordersById.get(order.id);
     if (!current || needsCloudSync(order) || new Date(order.updatedAt || 0) > new Date(current.updatedAt || 0)) {
-      ordersById.set(order.id, {
+      ordersById.set(order.id, normalizeOrderNotes({
         ...order,
         type: normalizeOrderType(order.type),
         businessDate: orderBusinessDate(order),
-      });
+      }));
     }
   });
 
@@ -1202,11 +1204,37 @@ function normalizeOrderType(type) {
   return "Comer en el punto";
 }
 
+function normalizeNoteText(value) {
+  return String(value || "").trim().toUpperCase();
+}
+
+function uppercaseNoteInput(value) {
+  return String(value || "").toUpperCase();
+}
+
+function normalizeOrderNotes(order) {
+  return {
+    ...order,
+    notes: normalizeNoteText(order?.notes),
+    items: Array.isArray(order?.items)
+      ? order.items.map((item) => ({
+          ...item,
+          note: normalizeNoteText(item.note),
+        }))
+      : [],
+  };
+}
+
 function syncFormToOrder() {
   currentOrder.type = normalizeOrderType(elements.orderType.value);
   currentOrder.customer = elements.customerName.value.trim();
   currentOrder.server = elements.serverName.value.trim();
-  currentOrder.notes = elements.orderNotes.value.trim();
+  currentOrder.notes = normalizeNoteText(elements.orderNotes.value);
+  currentOrder.items = currentOrder.items.map((item) => ({
+    ...item,
+    note: normalizeNoteText(item.note),
+  }));
+  elements.orderNotes.value = uppercaseNoteInput(elements.orderNotes.value);
 }
 
 function renderCategories() {
@@ -1545,7 +1573,7 @@ function renderOrder() {
                 <span class="item-subtotal">${formatMoney(item.qty * item.price)}</span>
               </div>
               <div class="item-note-row">
-                <input class="item-note" type="text" value="${escapeHtml(item.note)}" data-action="note" placeholder="Nota para este plato" />
+                <input class="item-note" type="text" value="${escapeHtml(normalizeNoteText(item.note))}" data-action="note" placeholder="NOTA PARA ESTE PLATO" />
                 <button class="note-item-button" type="button" data-action="open-note">Nota</button>
               </div>
             </div>
@@ -1673,7 +1701,7 @@ function applyReceiptPrintStyle() {
       .print-ticket::after {
         content: "" !important;
         display: block !important;
-        height: 8mm !important;
+        height: 18mm !important;
       }
     }
   `;
@@ -1704,7 +1732,7 @@ function renderPrintTicket(order) {
           (item) => `
             <div class="receipt-item">
               <strong>${item.qty} x ${escapeHtml(item.name)}</strong>
-              ${item.note ? `<div class="receipt-note">Nota: ${escapeHtml(item.note)}</div>` : ""}
+              ${item.note ? `<div class="receipt-note">NOTA: ${escapeHtml(normalizeNoteText(item.note))}</div>` : ""}
             </div>
           `
         )
@@ -1712,7 +1740,7 @@ function renderPrintTicket(order) {
     </div>
     ${
       order.notes
-        ? `<div class="receipt-divider"></div><p><strong>Notas:</strong> ${escapeHtml(order.notes)}</p>`
+        ? `<div class="receipt-divider"></div><p class="receipt-note-block"><strong>NOTAS:</strong> ${escapeHtml(normalizeNoteText(order.notes))}</p>`
         : ""
     }
     <div class="receipt-divider"></div>
@@ -1772,13 +1800,13 @@ function buildTicketPdfLines(order, maxLineLength) {
   order.items.forEach((item) => {
     wrapReceiptText(`${item.qty} x ${item.name}`, maxLineLength).forEach((line) => lines.push(line));
     if (item.note) {
-      wrapReceiptText(`Nota: ${item.note}`, maxLineLength).forEach((line) => lines.push(line));
+      wrapReceiptText(`NOTA: ${normalizeNoteText(item.note)}`, maxLineLength).forEach((line) => lines.push(line));
     }
   });
 
   if (order.notes) {
     lines.push(divider);
-    wrapReceiptText(`Notas: ${order.notes}`, maxLineLength).forEach((line) => lines.push(line));
+    wrapReceiptText(`NOTAS: ${normalizeNoteText(order.notes)}`, maxLineLength).forEach((line) => lines.push(line));
   }
 
   lines.push(divider, "FIN DEL TICKET");
@@ -2310,7 +2338,7 @@ function openItemNote(itemId) {
 
   editingNoteItemId = item.id;
   elements.itemNoteTitle.textContent = item.name;
-  elements.itemNoteTextarea.value = item.note || "";
+  elements.itemNoteTextarea.value = normalizeNoteText(item.note);
   elements.itemNoteDialog.showModal();
   elements.itemNoteTextarea.focus();
 }
@@ -2319,7 +2347,8 @@ function saveItemNote() {
   const item = currentOrder.items.find((entry) => entry.id === editingNoteItemId);
   if (!item) return;
 
-  item.note = elements.itemNoteTextarea.value.trim();
+  item.note = normalizeNoteText(elements.itemNoteTextarea.value);
+  elements.itemNoteTextarea.value = item.note;
   markOrderChanged();
   renderOrder();
   elements.itemNoteDialog.close();
@@ -2434,7 +2463,8 @@ elements.lineItems.addEventListener("input", (event) => {
   }
 
   if (action === "note") {
-    item.note = event.target.value;
+    item.note = normalizeNoteText(event.target.value);
+    event.target.value = uppercaseNoteInput(event.target.value);
   }
 
   markOrderChanged();
