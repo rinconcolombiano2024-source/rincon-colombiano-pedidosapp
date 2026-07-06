@@ -113,6 +113,36 @@ body {
   font-weight: 800;
 }
 
+.toast-notice {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 50;
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 13px 16px;
+  border: 1px solid #b9e4c8;
+  border-left: 5px solid var(--green);
+  border-radius: 8px;
+  background: #f0fff5;
+  color: #14532d;
+  box-shadow: var(--shadow);
+  font-weight: 900;
+  line-height: 1.25;
+  transform: translateY(10px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.toast-notice.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.toast-notice[hidden] {
+  display: none;
+}
+
 button,
 input,
 select,
@@ -1179,9 +1209,17 @@ dialog::backdrop {
     max-width: 100%;
     margin: 0;
     padding: 4mm;
+    break-after: page;
+    page-break-after: always;
     color: #000000;
     font-family: "Courier New", Courier, monospace;
     font-size: 12px;
+  }
+
+  .print-ticket::after {
+    content: "";
+    display: block;
+    height: 8mm;
   }
 
   .print-ticket h1,

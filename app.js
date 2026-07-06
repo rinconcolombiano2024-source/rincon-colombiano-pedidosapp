@@ -105,6 +105,11 @@ const elements = {
   customerDialog: document.querySelector("#customerDialog"),
   customerDialogInput: document.querySelector("#customerDialogInput"),
   saveCustomerButton: document.querySelector("#saveCustomerButton"),
+  dailyCloseButton: document.querySelector("#dailyCloseButton"),
+  dailyCloseDialog: document.querySelector("#dailyCloseDialog"),
+  closeDayInput: document.querySelector("#closeDayInput"),
+  dailyCloseContent: document.querySelector("#dailyCloseContent"),
+  printDailyCloseButton: document.querySelector("#printDailyCloseButton"),
   monthlyCloseButton: document.querySelector("#monthlyCloseButton"),
   monthlyCloseDialog: document.querySelector("#monthlyCloseDialog"),
   closeMonthInput: document.querySelector("#closeMonthInput"),
@@ -133,6 +138,7 @@ const elements = {
   moneyFormatSelect: document.querySelector("#moneyFormatSelect"),
   receiptWidthInput: document.querySelector("#receiptWidthInput"),
   saveCurrencyButton: document.querySelector("#saveCurrencyButton"),
+  toastNotice: document.querySelector("#toastNotice"),
 };
 
 let menuCatalog = readMenuCatalog();
@@ -149,6 +155,7 @@ let currencyPosition = readCurrencyPosition();
 let moneyFormat = readMoneyFormat();
 let receiptWidthMm = readReceiptWidthMm();
 let editingNoteItemId = null;
+let toastTimer = null;
 const cloudState = {
   client: null,
   configured: false,
@@ -247,6 +254,10 @@ function todaysOrders() {
   return savedOrders.filter((order) => orderBusinessDate(order) === todayKey);
 }
 
+function ordersForDay(day) {
+  return savedOrders.filter((order) => orderBusinessDate(order) === day);
+}
+
 function currentMonthKey(date = new Date()) {
   return currentBusinessDate(date).slice(0, 7);
 }
@@ -270,6 +281,57 @@ function formatDayLabel(day) {
 
 function ordersForMonth(month) {
   return savedOrders.filter((order) => orderBusinessDate(order).startsWith(`${month}-`));
+}
+
+function buildDailyClose(day) {
+  const dayOrders = ordersForDay(day);
+  const products = new Map();
+  const orderTypes = new Map();
+  const servers = new Map();
+
+  dayOrders.forEach((order) => {
+    const total = orderTotal(order);
+    const type = normalizeOrderType(order.type);
+    const typeRecord = orderTypes.get(type) || { label: type, tickets: 0, total: 0 };
+    typeRecord.tickets += 1;
+    typeRecord.total += total;
+    orderTypes.set(type, typeRecord);
+
+    const server = order.server || "No indicado";
+    const serverRecord = servers.get(server) || { name: server, tickets: 0, total: 0 };
+    serverRecord.tickets += 1;
+    serverRecord.total += total;
+    servers.set(server, serverRecord);
+
+    order.items.forEach((item) => {
+      const key = item.name.toLowerCase();
+      const product = products.get(key) || { name: item.name, qty: 0, total: 0 };
+      product.qty += item.qty;
+      product.total += item.qty * item.price;
+      products.set(key, product);
+    });
+  });
+
+  const total = dayOrders.reduce((sum, order) => sum + orderTotal(order), 0);
+  const items = dayOrders.reduce(
+    (sum, order) => sum + order.items.reduce((count, item) => count + item.qty, 0),
+    0
+  );
+  const ticketNumbers = dayOrders.map((order) => order.ticketNumber).filter(Number.isFinite).sort((a, b) => a - b);
+
+  return {
+    day,
+    label: formatDayLabel(day),
+    tickets: dayOrders.length,
+    items,
+    total,
+    average: dayOrders.length ? total / dayOrders.length : 0,
+    firstTicket: ticketNumbers[0] || null,
+    lastTicket: ticketNumbers[ticketNumbers.length - 1] || null,
+    orderTypes: Array.from(orderTypes.values()).sort((a, b) => b.total - a.total),
+    servers: Array.from(servers.values()).sort((a, b) => b.total - a.total),
+    products: Array.from(products.values()).sort((a, b) => b.qty - a.qty || b.total - a.total),
+  };
 }
 
 function buildMonthlyClose(month) {
@@ -1005,6 +1067,21 @@ function maybeAskShiftServer() {
   window.setTimeout(() => openShiftDialog(true), 250);
 }
 
+function showToast(message) {
+  if (!elements.toastNotice) return;
+  window.clearTimeout(toastTimer);
+  elements.toastNotice.textContent = message;
+  elements.toastNotice.hidden = false;
+  window.requestAnimationFrame?.(() => elements.toastNotice.classList.add("show"));
+  if (!window.requestAnimationFrame) elements.toastNotice.classList.add("show");
+  toastTimer = window.setTimeout(() => {
+    elements.toastNotice.classList.remove("show");
+    window.setTimeout(() => {
+      elements.toastNotice.hidden = true;
+    }, 180);
+  }, 2600);
+}
+
 function saveCurrencySymbol() {
   const symbol = elements.currencySymbolInput.value.trim() || "$";
   currencySymbol = symbol;
@@ -1020,8 +1097,10 @@ function saveCurrencySymbol() {
   renderOrder();
   renderHistory();
   if (elements.menuEditorDialog.open) renderMenuEditor();
+  if (elements.dailyCloseDialog.open) renderDailyClose(elements.closeDayInput.value || todayKey);
   if (elements.monthlyCloseDialog.open) renderMonthlyClose(elements.closeMonthInput.value || currentMonthKey());
   saveSettingsWhenPossible();
+  showToast("Ajustes guardados.");
 }
 
 function renderCurrencySettings() {
@@ -1211,6 +1290,7 @@ function addCategory() {
     return;
   }
 
+  const existed = Boolean(menuCatalog[category]);
   if (menuCatalog[category]) {
     activeCategory = category;
   } else {
@@ -1221,6 +1301,7 @@ function addCategory() {
   saveMenuCatalog();
   clearProductForm();
   renderMenuEditor();
+  showToast(existed ? `Categoria "${category}" seleccionada.` : `Categoria "${category}" agregada.`);
 }
 
 function renameCategory() {
@@ -1230,12 +1311,16 @@ function renameCategory() {
     return;
   }
 
-  if (newName === activeCategory) return;
+  if (newName === activeCategory) {
+    showToast("No hubo cambios en la categoria.");
+    return;
+  }
   if (menuCatalog[newName]) {
     alert("Ya existe una categoria con ese nombre.");
     return;
   }
 
+  const previousName = activeCategory;
   const renamed = {};
   Object.entries(menuCatalog).forEach(([category, products]) => {
     renamed[category === activeCategory ? newName : category] = products;
@@ -1245,6 +1330,7 @@ function renameCategory() {
   saveMenuCatalog();
   clearProductForm();
   renderMenuEditor();
+  showToast(`Categoria "${previousName}" cambiada a "${newName}".`);
 }
 
 function deleteCategory() {
@@ -1257,11 +1343,13 @@ function deleteCategory() {
   const shouldDelete = confirm(`Eliminar la categoria "${activeCategory}" y todos sus productos?`);
   if (!shouldDelete) return;
 
+  const deletedCategory = activeCategory;
   delete menuCatalog[activeCategory];
   activeCategory = Object.keys(menuCatalog)[0];
   saveMenuCatalog();
   clearProductForm();
   renderMenuEditor();
+  showToast(`Categoria "${deletedCategory}" eliminada.`);
 }
 
 function saveProduct() {
@@ -1280,6 +1368,7 @@ function saveProduct() {
   }
 
   const product = { name, price };
+  const wasEditing = Boolean(editingProduct);
 
   if (editingProduct) {
     const oldList = menuCatalog[editingProduct.category] || [];
@@ -1291,6 +1380,7 @@ function saveProduct() {
   saveMenuCatalog();
   clearProductForm();
   renderMenuEditor();
+  showToast(wasEditing ? `Producto "${name}" actualizado.` : `Producto "${name}" agregado.`);
 }
 
 function editProduct(index) {
@@ -1304,6 +1394,7 @@ function editProduct(index) {
   elements.saveProductButton.textContent = "Guardar cambios";
   elements.cancelEditProductButton.hidden = false;
   elements.productNameInput.focus();
+  showToast(`Editando "${product.name}". Cambia los datos y presiona Guardar cambios.`);
 }
 
 function deleteProduct(index) {
@@ -1317,6 +1408,7 @@ function deleteProduct(index) {
   saveMenuCatalog();
   clearProductForm();
   renderMenuEditor();
+  showToast(`Producto "${product.name}" eliminado.`);
 }
 
 function resetMenu() {
@@ -1328,6 +1420,7 @@ function resetMenu() {
   saveMenuCatalog();
   clearProductForm();
   renderMenuEditor();
+  showToast("Menu base restaurado.");
 }
 
 function addItem(name, price) {
@@ -1483,6 +1576,9 @@ async function upsertCurrentOrder() {
   saveTicketState();
   renderOrder();
   renderHistory();
+  if (elements.dailyCloseDialog.open) {
+    renderDailyClose(elements.closeDayInput.value || todayKey);
+  }
   if (elements.monthlyCloseDialog.open) {
     renderMonthlyClose(elements.closeMonthInput.value || currentMonthKey());
   }
@@ -1517,6 +1613,13 @@ function applyReceiptPrintStyle() {
         box-sizing: border-box !important;
         width: ${contentWidth}mm !important;
         padding: 2mm !important;
+        break-after: page !important;
+        page-break-after: always !important;
+      }
+      .print-ticket::after {
+        content: "" !important;
+        display: block !important;
+        height: 8mm !important;
       }
     }
   `;
@@ -1803,6 +1906,204 @@ function renderMonthlyClose(month = currentMonthKey()) {
   return report;
 }
 
+function renderDailyClose(day = todayKey) {
+  const report = buildDailyClose(day);
+  elements.closeDayInput.value = day;
+  elements.printDailyCloseButton.disabled = report.tickets === 0;
+
+  if (!report.tickets) {
+    elements.dailyCloseContent.innerHTML = `
+      <div class="monthly-empty">No hay pedidos guardados para ${escapeHtml(report.label)}.</div>
+    `;
+    return report;
+  }
+
+  const ticketRange =
+    report.firstTicket && report.lastTicket
+      ? `${formatTicket(report.firstTicket)} - ${formatTicket(report.lastTicket)}`
+      : "Sin rango";
+
+  elements.dailyCloseContent.innerHTML = `
+    <div class="monthly-summary-grid">
+      <div class="monthly-metric">
+        <span>Total caja</span>
+        <strong>${formatMoney(report.total)}</strong>
+      </div>
+      <div class="monthly-metric">
+        <span>Tickets</span>
+        <strong>${report.tickets}</strong>
+      </div>
+      <div class="monthly-metric">
+        <span>Productos</span>
+        <strong>${report.items}</strong>
+      </div>
+      <div class="monthly-metric">
+        <span>Promedio</span>
+        <strong>${formatMoney(report.average)}</strong>
+      </div>
+    </div>
+
+    <h3 class="monthly-section-title">Resumen del dia</h3>
+    <div class="monthly-table">
+      <div class="monthly-table-row">
+        <strong>Dia</strong>
+        <span>${escapeHtml(report.label)}</span>
+        <strong>Rango tickets</strong>
+        <span>${escapeHtml(ticketRange)}</span>
+      </div>
+    </div>
+
+    <h3 class="monthly-section-title">Ventas por tipo de pedido</h3>
+    <div class="monthly-table">
+      <div class="monthly-table-row header">
+        <span>Tipo</span>
+        <span>Tickets</span>
+        <span></span>
+        <span>Total</span>
+      </div>
+      ${report.orderTypes
+        .map(
+          (type) => `
+            <div class="monthly-table-row">
+              <strong>${escapeHtml(type.label)}</strong>
+              <span>${type.tickets}</span>
+              <span></span>
+              <strong>${formatMoney(type.total)}</strong>
+            </div>
+          `
+        )
+        .join("")}
+    </div>
+
+    <h3 class="monthly-section-title">Quien tomo pedidos</h3>
+    <div class="monthly-table">
+      <div class="monthly-table-row header">
+        <span>Nombre</span>
+        <span>Tickets</span>
+        <span></span>
+        <span>Total</span>
+      </div>
+      ${report.servers
+        .map(
+          (server) => `
+            <div class="monthly-table-row">
+              <strong>${escapeHtml(server.name)}</strong>
+              <span>${server.tickets}</span>
+              <span></span>
+              <strong>${formatMoney(server.total)}</strong>
+            </div>
+          `
+        )
+        .join("")}
+    </div>
+
+    <h3 class="monthly-section-title">Productos vendidos</h3>
+    <div class="monthly-table">
+      <div class="monthly-table-row header">
+        <span>Producto</span>
+        <span>Cantidad</span>
+        <span></span>
+        <span>Total</span>
+      </div>
+      ${report.products
+        .map(
+          (product) => `
+            <div class="monthly-table-row">
+              <strong>${escapeHtml(product.name)}</strong>
+              <span>${product.qty}</span>
+              <span></span>
+              <strong>${formatMoney(product.total)}</strong>
+            </div>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+
+  return report;
+}
+
+function renderPrintDailyClose(report) {
+  const printedAt = new Date();
+  const dateText = printedAt.toLocaleDateString("es-US");
+  const timeText = printedAt.toLocaleTimeString("es-US", { hour: "2-digit", minute: "2-digit" });
+  const ticketRange =
+    report.firstTicket && report.lastTicket
+      ? `${formatTicket(report.firstTicket)} - ${formatTicket(report.lastTicket)}`
+      : "Sin rango";
+
+  elements.printTicket.innerHTML = `
+    <div class="receipt-brand">RINCON COLOMBIANO</div>
+    <div class="receipt-number">CIERRE DIA</div>
+    <div class="receipt-divider"></div>
+    <div class="receipt-row"><strong>Dia:</strong><span>${escapeHtml(report.label)}</span></div>
+    <div class="receipt-row"><strong>Impreso:</strong><span>${escapeHtml(dateText)}</span></div>
+    <div class="receipt-row"><strong>Hora:</strong><span>${escapeHtml(timeText)}</span></div>
+    <div class="receipt-row"><strong>Tickets:</strong><span>${escapeHtml(ticketRange)}</span></div>
+    <div class="receipt-divider"></div>
+    <div class="receipt-row"><strong>Total caja:</strong><span>${formatMoney(report.total)}</span></div>
+    <div class="receipt-row"><strong>Cant tickets:</strong><span>${report.tickets}</span></div>
+    <div class="receipt-row"><strong>Productos:</strong><span>${report.items}</span></div>
+    <div class="receipt-row"><strong>Promedio:</strong><span>${formatMoney(report.average)}</span></div>
+    <div class="receipt-divider"></div>
+    <p><strong>TIPO DE PEDIDO</strong></p>
+    <div class="receipt-items">
+      ${report.orderTypes
+        .map(
+          (type) => `
+            <div class="receipt-item">
+              <strong>${escapeHtml(type.label)}: ${formatMoney(type.total)}</strong>
+              <div>${type.tickets} tickets</div>
+            </div>
+          `
+        )
+        .join("")}
+    </div>
+    <div class="receipt-divider"></div>
+    <p><strong>TOMARON PEDIDOS</strong></p>
+    <div class="receipt-items">
+      ${report.servers
+        .map(
+          (server) => `
+            <div class="receipt-item">
+              <strong>${escapeHtml(server.name)}: ${formatMoney(server.total)}</strong>
+              <div>${server.tickets} tickets</div>
+            </div>
+          `
+        )
+        .join("")}
+    </div>
+    <div class="receipt-divider"></div>
+    <p><strong>PRODUCTOS</strong></p>
+    <div class="receipt-items">
+      ${report.products
+        .map(
+          (product) => `
+            <div class="receipt-item">
+              <strong>${product.qty} x ${escapeHtml(product.name)}</strong>
+              <div>${formatMoney(product.total)}</div>
+            </div>
+          `
+        )
+        .join("")}
+    </div>
+    <div class="receipt-divider"></div>
+    <p class="receipt-total">FIN DEL CIERRE DIA</p>
+  `;
+}
+
+function printDailyClose() {
+  const report = renderDailyClose(elements.closeDayInput.value || todayKey);
+  if (!report.tickets) {
+    alert("No hay pedidos guardados para imprimir en ese dia.");
+    return;
+  }
+
+  renderPrintDailyClose(report);
+  applyReceiptPrintStyle();
+  window.print();
+}
+
 function renderPrintMonthlyClose(report) {
   const printedAt = new Date();
   const dateText = printedAt.toLocaleDateString("es-US");
@@ -2078,6 +2379,17 @@ elements.shiftServerInput.addEventListener("keydown", (event) => {
 });
 elements.customerButton.addEventListener("click", openCustomerDialog);
 elements.saveCustomerButton.addEventListener("click", saveCustomerFromDialog);
+
+elements.dailyCloseButton.addEventListener("click", () => {
+  renderDailyClose(todayKey);
+  elements.dailyCloseDialog.showModal();
+});
+
+elements.closeDayInput.addEventListener("change", () => {
+  renderDailyClose(elements.closeDayInput.value || todayKey);
+});
+
+elements.printDailyCloseButton.addEventListener("click", printDailyClose);
 
 elements.monthlyCloseButton.addEventListener("click", () => {
   renderMonthlyClose(currentMonthKey());

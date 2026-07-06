@@ -10,6 +10,7 @@ Funciones actuales que deben conservarse:
 - Tomar pedidos desde categorias y productos.
 - Categorias editables: agregar, cambiar nombre y eliminar.
 - Productos editables dentro de cada categoria: agregar, editar precio, editar nombre y eliminar.
+- Aviso visual pequeno cuando se agregan, editan, guardan, restauran o eliminan categorias/productos/ajustes.
 - Categorias base: Entradas, Platos principales, Bebidas, Postres, Extras, Porciones.
 - Producto especial/manual con precio.
 - Tipo de pedido: Comer en el punto, Para llevar, Domicilio.
@@ -20,11 +21,14 @@ Funciones actuales que deben conservarse:
 - Nota general del pedido.
 - Nota individual por plato.
 - Ticket de cocina impreso con numero consecutivo.
+- Impresion preparada como pagina/trabajo individual con avance final para ayudar al corte automatico si la impresora o driver lo tiene activado.
 - PDF de recibo/ticket con ancho configurable en milimetros para impresoras de distintos tamanos.
 - Ticket diario reinicia cada dia.
 - Boton para cambiar manualmente el proximo numero de ticket.
 - Historial de tickets del dia.
 - Abrir y reimprimir tickets guardados.
+- Cierre de caja diario con total caja, tickets, productos, promedio, tipo de pedido, responsable y productos vendidos.
+- Impresion del cierre de caja diario.
 - Cierre mensual con total vendido, tickets, productos, promedio, detalle por dia y productos vendidos.
 - Impresion del cierre mensual.
 - Moneda editable: simbolo, posicion y formato.
@@ -60,7 +64,7 @@ Archivos importantes:
 Notas para telefono:
 - Si el telefono no muestra cambios nuevos, desinstalar la app vieja y volver a instalar desde la URL de Vercel.
 - El service worker debe subir version cada vez que cambie la app.
-- Version de cache actual al crear esta memoria: rincon-colombiano-v23.
+- Version de cache actual al crear esta memoria: rincon-colombiano-v26.
 
 Precaucion offline:
 - Si varias tablets trabajan sin internet al mismo tiempo, pueden repetirse numeros locales de ticket.

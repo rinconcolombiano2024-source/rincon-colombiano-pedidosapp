@@ -36,8 +36,14 @@ Cada vez que cambies algo y lo subas a GitHub, Vercel publica la nueva version a
 NOTAS DE USO
 - El consecutivo se guarda en el navegador de la tablet.
 - Cada dia se reinicia en #0001.
+- El cierre de caja diario suma los pedidos guardados del dia seleccionado.
 - El cierre de mes suma los pedidos guardados en esa misma tablet.
 - Si usas varias tablets al mismo tiempo, se necesita una version con base de datos para que no se repitan los tickets.
+
+IMPRESION Y CORTE DE PAPEL
+- La app imprime cada ticket como un trabajo/pagina individual y deja un pequeno avance final.
+- Para que la impresora corte el papel, activa en la impresora o en el driver la opcion de corte automatico al finalizar documento/pagina.
+- Desde navegador/PWA no siempre es posible enviar el comando interno de corte; el corte fisico depende del modelo de impresora, sistema operativo y controlador.
 
 LOGIN CON CORREO Y CONTRASENA
 La app ya esta preparada para Supabase.

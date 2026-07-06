@@ -1,4 +1,4 @@
-const CACHE_NAME = "rincon-colombiano-v23";
+const CACHE_NAME = "rincon-colombiano-v26";
 const APP_FILES = [
   "./",
   "./index.html",

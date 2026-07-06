@@ -158,6 +158,7 @@
               <h2>Tickets de hoy</h2>
             </div>
             <div class="header-actions">
+              <button class="close-month-button" id="dailyCloseButton" type="button">Cierre dia</button>
               <button class="close-month-button" id="monthlyCloseButton" type="button">Cierre mes</button>
               <button class="icon-button" id="counterButton" type="button" title="Cambiar proximo numero" aria-label="Cambiar proximo numero">
                 <span aria-hidden="true">#</span>
@@ -335,6 +336,29 @@
       </form>
     </dialog>
 
+    <dialog id="dailyCloseDialog" class="monthly-dialog">
+      <form method="dialog" class="monthly-form">
+        <div class="monthly-dialog-header">
+          <div>
+            <p class="eyebrow">Caja</p>
+            <h2>Cierre de caja diario</h2>
+          </div>
+          <button class="icon-button" value="cancel" type="submit" title="Cerrar" aria-label="Cerrar">
+            <span aria-hidden="true">x</span>
+          </button>
+        </div>
+        <label>
+          Dia
+          <input id="closeDayInput" type="date" />
+        </label>
+        <div class="monthly-close-content" id="dailyCloseContent"></div>
+        <div class="dialog-actions">
+          <button value="cancel" type="submit">Cerrar</button>
+          <button id="printDailyCloseButton" value="default" type="button">Imprimir cierre dia</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="monthlyCloseDialog" class="monthly-dialog">
       <form method="dialog" class="monthly-form">
         <div class="monthly-dialog-header">
@@ -357,6 +381,8 @@
         </div>
       </form>
     </dialog>
+
+    <div class="toast-notice" id="toastNotice" role="status" aria-live="polite" hidden></div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
