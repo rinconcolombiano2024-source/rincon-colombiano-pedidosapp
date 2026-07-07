@@ -9,8 +9,10 @@ Funciones actuales que deben conservarse:
 - App de pedidos para restaurante RINCON COLOMBIANO.
 - Tomar pedidos desde categorias y productos.
 - Categorias editables: agregar, cambiar nombre y eliminar.
+- Categorias repetidas por mayusculas, espacios o acentos se limpian desde Eliminar: queda una sola categoria con sus productos y se guarda.
 - Productos editables dentro de cada categoria: agregar, editar precio, editar nombre y eliminar.
 - Aviso visual pequeno cuando se agregan, editan, guardan, restauran o eliminan categorias/productos/ajustes.
+- Al guardar un producto, el aviso debe decir: Producto guardado.
 - Categorias base: Entradas, Platos principales, Bebidas, Postres, Extras, Porciones.
 - Producto especial/manual con precio.
 - Tipo de pedido: Comer en el punto, Para llevar, Domicilio.
@@ -68,7 +70,7 @@ Archivos importantes:
 Notas para telefono:
 - Si el telefono no muestra cambios nuevos, desinstalar la app vieja y volver a instalar desde la URL de Vercel.
 - El service worker debe subir version cada vez que cambie la app.
-- Version de cache actual al crear esta memoria: rincon-colombiano-v29.
+- Version de cache actual al crear esta memoria: rincon-colombiano-v32.
 
 Precaucion offline:
 - Si varias tablets trabajan sin internet al mismo tiempo, pueden repetirse numeros locales de ticket.

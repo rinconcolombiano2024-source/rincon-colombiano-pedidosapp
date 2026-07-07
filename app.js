@@ -991,26 +991,45 @@ function readMenuCatalog() {
   }
 }
 
+function cleanCategoryName(value) {
+  const cleanName = String(value || "").trim().replace(/\s+/g, " ");
+  return cleanName === "Fuertes" ? "Platos principales" : cleanName;
+}
+
+function categoryIdentityKey(value) {
+  return cleanCategoryName(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function findCategoryByName(name) {
+  const key = categoryIdentityKey(name);
+  return Object.keys(menuCatalog).find((category) => categoryIdentityKey(category) === key) || "";
+}
+
 function normalizeMenuCatalog(menu) {
   const normalized = {};
+  const categoriesByKey = new Map();
 
   Object.entries(menu || {}).forEach(([category, dishes]) => {
-    const cleanCategory = category === "Fuertes" ? "Platos principales" : String(category || "").trim();
+    const cleanCategory = cleanCategoryName(category);
     if (!cleanCategory) return;
-    if (!normalized[cleanCategory]) normalized[cleanCategory] = [];
+    const categoryKey = categoryIdentityKey(cleanCategory);
+    const finalCategory = categoriesByKey.get(categoryKey) || cleanCategory;
+    categoriesByKey.set(categoryKey, finalCategory);
+    if (!normalized[finalCategory]) normalized[finalCategory] = [];
 
     if (Array.isArray(dishes)) {
       dishes.forEach((dish) => {
         const name = String(dish?.name || "").trim();
         const price = Number.parseFloat(dish?.price) || 0;
-        if (name) normalized[cleanCategory].push({ name, price });
+        if (name) normalized[finalCategory].push({ name, price });
       });
     }
   });
 
-  Object.keys(DEFAULT_MENU_CATALOG).forEach((category) => {
-    if (!normalized[category]) normalized[category] = [];
-  });
+  if (!Object.keys(normalized).length) normalized.Entradas = [];
 
   return normalized;
 }
@@ -1339,8 +1358,9 @@ function openMenuEditor() {
 }
 
 function selectEditorCategory(category) {
-  if (!menuCatalog[category]) return;
-  activeCategory = category;
+  const resolvedCategory = menuCatalog[category] ? category : findCategoryByName(category);
+  if (!resolvedCategory) return;
+  activeCategory = resolvedCategory;
   editingProduct = null;
   clearProductForm();
   renderCategories();
@@ -1364,15 +1384,16 @@ function startNewProduct() {
 }
 
 function addCategory() {
-  const category = elements.categoryNameInput.value.trim();
+  const category = cleanCategoryName(elements.categoryNameInput.value);
   if (!category) {
     alert("Escribe el nombre de la categoria.");
     return;
   }
 
-  const existed = Boolean(menuCatalog[category]);
-  if (menuCatalog[category]) {
-    activeCategory = category;
+  const existingCategory = findCategoryByName(category);
+  const existed = Boolean(existingCategory);
+  if (existingCategory) {
+    activeCategory = existingCategory;
   } else {
     menuCatalog[category] = [];
     activeCategory = category;
@@ -1381,26 +1402,37 @@ function addCategory() {
   saveMenuCatalog();
   clearProductForm();
   renderMenuEditor();
-  showToast(existed ? `Categoria "${category}" seleccionada.` : `Categoria "${category}" agregada.`);
+  showToast(existed ? `Categoria "${activeCategory}" seleccionada.` : `Categoria "${category}" agregada.`);
 }
 
 function renameCategory() {
-  const newName = elements.categoryNameInput.value.trim();
+  const newName = cleanCategoryName(elements.categoryNameInput.value);
   if (!newName) {
     alert("Escribe el nuevo nombre de la categoria.");
     return;
   }
 
-  if (newName === activeCategory) {
+  const existingCategory = findCategoryByName(newName);
+  if (existingCategory === activeCategory && newName === activeCategory) {
     showToast("No hubo cambios en la categoria.");
-    return;
-  }
-  if (menuCatalog[newName]) {
-    alert("Ya existe una categoria con ese nombre.");
     return;
   }
 
   const previousName = activeCategory;
+  if (existingCategory && existingCategory !== activeCategory) {
+    const shouldMerge = confirm(`Ya existe una categoria parecida: "${existingCategory}". Unir los productos en esa categoria?`);
+    if (!shouldMerge) return;
+
+    menuCatalog[existingCategory] = [...(menuCatalog[existingCategory] || []), ...(menuCatalog[activeCategory] || [])];
+    delete menuCatalog[activeCategory];
+    activeCategory = existingCategory;
+    saveMenuCatalog();
+    clearProductForm();
+    renderMenuEditor();
+    showToast(`Categorias unidas en "${existingCategory}".`);
+    return;
+  }
+
   const renamed = {};
   Object.entries(menuCatalog).forEach(([category, products]) => {
     renamed[category === activeCategory ? newName : category] = products;
@@ -1414,22 +1446,67 @@ function renameCategory() {
 }
 
 function deleteCategory() {
+  const originalCatalog = menuCatalog || {};
+  const typedCategory = cleanCategoryName(elements.categoryNameInput.value);
+  const targetCategory = findCategoryByName(typedCategory) || findCategoryByName(activeCategory);
+  if (!targetCategory) {
+    alert("Selecciona la categoria que quieres eliminar.");
+    return;
+  }
+  activeCategory = targetCategory;
+
+  const targetKey = categoryIdentityKey(targetCategory);
+  const repeatedCategories = Object.keys(originalCatalog).filter((category) => categoryIdentityKey(category) === targetKey);
+  if (repeatedCategories.length > 1) {
+    const shouldCleanDuplicates = confirm(
+      `Eliminar categorias repetidas de "${targetCategory}" y dejar una sola con sus productos?`
+    );
+    if (!shouldCleanDuplicates) return;
+
+    const cleanedCatalog = {};
+    Object.entries(originalCatalog).forEach(([category, products]) => {
+      const cleanCategory = cleanCategoryName(category);
+      if (!cleanCategory) return;
+      const finalCategory = categoryIdentityKey(cleanCategory) === targetKey ? targetCategory : cleanCategory;
+      if (!cleanedCatalog[finalCategory]) cleanedCatalog[finalCategory] = [];
+      if (Array.isArray(products)) cleanedCatalog[finalCategory].push(...products);
+    });
+
+    menuCatalog = normalizeMenuCatalog(cleanedCatalog);
+    activeCategory = findCategoryByName(targetCategory) || Object.keys(menuCatalog)[0];
+    saveMenuCatalog();
+    clearProductForm();
+    renderMenuEditor();
+    showToast(`Duplicadas de "${targetCategory}" eliminadas y guardadas.`);
+    return;
+  }
+
+  menuCatalog = normalizeMenuCatalog(menuCatalog);
   const categories = Object.keys(menuCatalog);
-  if (categories.length <= 1) {
+  const activeKey = categoryIdentityKey(targetCategory);
+  const categoriesToDelete = categories.filter((category) => categoryIdentityKey(category) === activeKey);
+
+  if (categories.length - categoriesToDelete.length < 1) {
     alert("Debe quedar al menos una categoria.");
     return;
   }
 
-  const shouldDelete = confirm(`Eliminar la categoria "${activeCategory}" y todos sus productos?`);
+  const deletedCategory = targetCategory;
+  const deleteLabel =
+    categoriesToDelete.length > 1 ? `${deletedCategory} (${categoriesToDelete.length} categorias repetidas)` : deletedCategory;
+  const shouldDelete = confirm(`Eliminar la categoria "${deleteLabel}" y todos sus productos?`);
   if (!shouldDelete) return;
 
-  const deletedCategory = activeCategory;
-  delete menuCatalog[activeCategory];
+  categoriesToDelete.forEach((category) => delete menuCatalog[category]);
   activeCategory = Object.keys(menuCatalog)[0];
   saveMenuCatalog();
   clearProductForm();
   renderMenuEditor();
-  showToast(`Categoria "${deletedCategory}" eliminada.`);
+  showToast(
+    categoriesToDelete.length > 1
+      ? `Categorias repetidas de "${deletedCategory}" eliminadas.`
+      : `Categoria "${deletedCategory}" eliminada.`
+  );
 }
 
 function saveProduct() {
@@ -1460,7 +1537,7 @@ function saveProduct() {
   saveMenuCatalog();
   clearProductForm();
   renderMenuEditor();
-  showToast(wasEditing ? `Producto "${name}" actualizado.` : `Producto "${name}" agregado.`);
+  showToast("Producto guardado.");
 }
 
 function editProduct(index) {
@@ -2407,7 +2484,9 @@ async function setNextTicket(value) {
 elements.categoryTabs.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-category]");
   if (!button) return;
-  activeCategory = button.dataset.category;
+  const resolvedCategory = menuCatalog[button.dataset.category] ? button.dataset.category : findCategoryByName(button.dataset.category);
+  if (!resolvedCategory) return;
+  activeCategory = resolvedCategory;
   renderCategories();
   renderMenu();
 });
