@@ -33,6 +33,7 @@ Funciones actuales que deben conservarse:
 - Historial de tickets del dia.
 - Abrir y reimprimir tickets guardados.
 - Cierre de caja diario con total caja, tickets, productos, promedio, tipo de pedido, responsable y productos vendidos.
+- Los reportes diario/mensual convierten cantidades y precios a numero antes de sumar para evitar fallas de cuentas.
 - Impresion del cierre de caja diario.
 - Cierre mensual con total vendido, tickets, productos, promedio, detalle por dia y productos vendidos.
 - Impresion del cierre mensual.
@@ -70,7 +71,7 @@ Archivos importantes:
 Notas para telefono:
 - Si el telefono no muestra cambios nuevos, desinstalar la app vieja y volver a instalar desde la URL de Vercel.
 - El service worker debe subir version cada vez que cambie la app.
-- Version de cache actual al crear esta memoria: rincon-colombiano-v32.
+- Version de cache actual al crear esta memoria: rincon-colombiano-v33.
 
 Precaucion offline:
 - Si varias tablets trabajan sin internet al mismo tiempo, pueden repetirse numeros locales de ticket.

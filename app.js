@@ -308,20 +308,17 @@ function buildDailyClose(day) {
     serverRecord.total += total;
     servers.set(server, serverRecord);
 
-    order.items.forEach((item) => {
-      const key = item.name.toLowerCase();
-      const product = products.get(key) || { name: item.name, qty: 0, total: 0 };
-      product.qty += item.qty;
-      product.total += item.qty * item.price;
+    orderItemsList(order).forEach((item) => {
+      const key = itemReportKey(item);
+      const product = products.get(key) || { name: itemReportName(item), qty: 0, total: 0 };
+      product.qty += itemQuantity(item);
+      product.total += itemLineTotal(item);
       products.set(key, product);
     });
   });
 
   const total = dayOrders.reduce((sum, order) => sum + orderTotal(order), 0);
-  const items = dayOrders.reduce(
-    (sum, order) => sum + order.items.reduce((count, item) => count + item.qty, 0),
-    0
-  );
+  const items = dayOrders.reduce((sum, order) => sum + orderItemsCount(order), 0);
   const ticketNumbers = dayOrders.map((order) => order.ticketNumber).filter(Number.isFinite).sort((a, b) => a - b);
 
   return {
@@ -347,7 +344,7 @@ function buildMonthlyClose(month) {
   monthOrders.forEach((order) => {
     const day = orderBusinessDate(order);
     const dayRecord = days.get(day) || { day, tickets: 0, items: 0, total: 0 };
-    const orderItems = order.items.reduce((count, item) => count + item.qty, 0);
+    const orderItems = orderItemsCount(order);
     const total = orderTotal(order);
 
     dayRecord.tickets += 1;
@@ -355,20 +352,17 @@ function buildMonthlyClose(month) {
     dayRecord.total += total;
     days.set(day, dayRecord);
 
-    order.items.forEach((item) => {
-      const key = item.name.toLowerCase();
-      const product = products.get(key) || { name: item.name, qty: 0, total: 0 };
-      product.qty += item.qty;
-      product.total += item.qty * item.price;
+    orderItemsList(order).forEach((item) => {
+      const key = itemReportKey(item);
+      const product = products.get(key) || { name: itemReportName(item), qty: 0, total: 0 };
+      product.qty += itemQuantity(item);
+      product.total += itemLineTotal(item);
       products.set(key, product);
     });
   });
 
   const total = monthOrders.reduce((sum, order) => sum + orderTotal(order), 0);
-  const items = monthOrders.reduce(
-    (sum, order) => sum + order.items.reduce((count, item) => count + item.qty, 0),
-    0
-  );
+  const items = monthOrders.reduce((sum, order) => sum + orderItemsCount(order), 0);
 
   return {
     month,
@@ -1213,8 +1207,41 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function orderItemsList(order = currentOrder) {
+  return Array.isArray(order?.items) ? order.items : [];
+}
+
+function itemQuantity(item) {
+  const quantity = Number.parseFloat(item?.qty);
+  return Number.isFinite(quantity) ? quantity : 0;
+}
+
+function itemPrice(item) {
+  const price = Number.parseFloat(item?.price);
+  return Number.isFinite(price) ? price : 0;
+}
+
+function itemLineTotal(item) {
+  return itemQuantity(item) * itemPrice(item);
+}
+
+function itemReportName(item) {
+  return String(item?.name || "Producto sin nombre").trim() || "Producto sin nombre";
+}
+
+function itemReportKey(item) {
+  return itemReportName(item)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function orderItemsCount(order = currentOrder) {
+  return orderItemsList(order).reduce((count, item) => count + itemQuantity(item), 0);
+}
+
 function orderTotal(order = currentOrder) {
-  return order.items.reduce((total, item) => total + item.qty * item.price, 0);
+  return orderItemsList(order).reduce((total, item) => total + itemLineTotal(item), 0);
 }
 
 function normalizeOrderType(type) {
@@ -1641,13 +1668,13 @@ function renderOrder() {
           <article class="line-item" data-id="${escapeHtml(item.id)}">
             <div class="qty-controls" aria-label="Cantidad de ${escapeHtml(item.name)}">
               <button type="button" data-action="minus" aria-label="Restar">-</button>
-              <input type="number" min="1" step="1" value="${item.qty}" data-action="qty" aria-label="Cantidad" />
+              <input type="number" min="1" step="1" value="${itemQuantity(item)}" data-action="qty" aria-label="Cantidad" />
               <button type="button" data-action="plus" aria-label="Sumar">+</button>
             </div>
             <div class="item-main">
               <div class="item-title">
                 <strong>${escapeHtml(item.name)}</strong>
-                <span class="item-subtotal">${formatMoney(item.qty * item.price)}</span>
+                <span class="item-subtotal">${formatMoney(itemLineTotal(item))}</span>
               </div>
               <div class="item-note-row">
                 <input class="item-note" type="text" value="${escapeHtml(normalizeNoteText(item.note))}" data-action="note" placeholder="NOTA PARA ESTE PLATO" />
@@ -1804,11 +1831,11 @@ function renderPrintTicket(order) {
     <div class="receipt-row"><strong>Hora:</strong><span>${escapeHtml(timeText)}</span></div>
     <div class="receipt-divider"></div>
     <div class="receipt-items">
-      ${order.items
+      ${orderItemsList(order)
         .map(
           (item) => `
             <div class="receipt-item">
-              <strong>${item.qty} x ${escapeHtml(item.name)}</strong>
+              <strong>${itemQuantity(item)} x ${escapeHtml(itemReportName(item))}</strong>
               ${item.note ? `<div class="receipt-note">NOTA: ${escapeHtml(normalizeNoteText(item.note))}</div>` : ""}
             </div>
           `
@@ -1874,8 +1901,8 @@ function buildTicketPdfLines(order, maxLineLength) {
     divider,
   ];
 
-  order.items.forEach((item) => {
-    wrapReceiptText(`${item.qty} x ${item.name}`, maxLineLength).forEach((line) => lines.push(line));
+  orderItemsList(order).forEach((item) => {
+    wrapReceiptText(`${itemQuantity(item)} x ${itemReportName(item)}`, maxLineLength).forEach((line) => lines.push(line));
     if (item.note) {
       wrapReceiptText(`NOTA: ${normalizeNoteText(item.note)}`, maxLineLength).forEach((line) => lines.push(line));
     }
@@ -1962,7 +1989,7 @@ function renderHistory() {
     .map((order) => {
       const created = new Date(order.createdAt);
       const timeText = created.toLocaleTimeString("es-US", { hour: "2-digit", minute: "2-digit" });
-      const itemCount = order.items.reduce((count, item) => count + item.qty, 0);
+      const itemCount = orderItemsCount(order);
       return `
         <article class="history-item">
           <div class="history-title">
@@ -2538,7 +2565,7 @@ elements.lineItems.addEventListener("input", (event) => {
     item.qty = Math.max(1, Number.parseInt(event.target.value, 10) || 1);
     event.target.value = item.qty;
     const subtotal = itemElement.querySelector(".item-subtotal");
-    if (subtotal) subtotal.textContent = formatMoney(item.qty * item.price);
+    if (subtotal) subtotal.textContent = formatMoney(itemLineTotal(item));
   }
 
   if (action === "note") {
