@@ -2,7 +2,7 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>RINCON COLOMBIANO - Pedidos</title>
     <meta name="theme-color" content="#1f8f4d" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -19,7 +19,7 @@
     <section class="auth-screen" id="authScreen" hidden>
       <form class="auth-card" id="authForm">
         <p class="eyebrow">Acceso privado</p>
-        <h1>RINCON COLOMBIANO</h1>
+        <h1 id="authBusinessName">RINCON COLOMBIANO</h1>
         <p>Usa la cuenta del restaurante para compartir menu, tickets y cierres en todos los dispositivos.</p>
         <label>
           Correo electronico
@@ -52,12 +52,17 @@
       <header class="topbar">
         <div>
           <p class="eyebrow">Sistema de pedidos</p>
-          <h1>RINCON COLOMBIANO</h1>
+          <h1 id="appBusinessName">RINCON COLOMBIANO</h1>
         </div>
         <div class="topbar-actions">
           <span class="cloud-status" id="cloudStatus">Modo local</span>
           <button class="sign-in-top-button" id="openSignInButton" type="button">Iniciar sesion</button>
           <button class="sign-out-button" id="signOutButton" type="button" hidden>Cerrar sesion</button>
+          <button class="sign-in-top-button" id="qrButton" type="button">QR cliente</button>
+          <button class="sign-in-top-button" id="clientAlarmButton" type="button">Activar alarma</button>
+          <button class="sign-in-top-button client-orders-button" id="clientOrdersButton" type="button">
+            Pedidos cliente <span id="clientOrdersBadge" hidden>0</span>
+          </button>
           <button class="install-button" id="installAppButton" type="button">Descargar app</button>
           <div class="ticket-counter" aria-live="polite">
             <span>Proximo ticket</span>
@@ -111,8 +116,17 @@
               Tipo de pedido
               <select id="orderType">
                 <option value="Comer en el punto">Comer en el punto</option>
-                <option value="Para llevar">Para llevar</option>
-                <option value="Domicilio">Domicilio</option>
+                <option value="Recoger en el punto">Para llevar / recoger en el punto</option>
+                <option value="Domicilio">Envio a domicilio</option>
+              </select>
+            </label>
+            <label>
+              Metodo de pago
+              <select id="paymentMethod">
+                <option value="Pago en caja">Pago en caja</option>
+                <option value="Efectivo">Efectivo</option>
+                <option value="Transferencia">Transferencia</option>
+                <option value="Datafono">Datafono / tarjeta</option>
               </select>
             </label>
             <label>
@@ -251,6 +265,10 @@
             <h3>Moneda</h3>
             <p>Este simbolo se usa en precios, pedidos, tickets y cierres.</p>
           </div>
+          <label class="settings-wide-field">
+            Nombre del restaurante
+            <input id="businessNameInput" type="text" placeholder="RINCON COLOMBIANO" autocomplete="organization" />
+          </label>
           <label>
             Simbolo
             <input id="currencySymbolInput" type="text" maxlength="8" placeholder="zł" autocomplete="off" />
@@ -274,6 +292,34 @@
             <input id="receiptWidthInput" type="number" min="50" max="120" step="1" placeholder="80" />
           </label>
           <button id="saveCurrencyButton" type="button">Guardar ajustes</button>
+        </section>
+
+        <section class="settings-card customer-settings-card">
+          <div>
+            <h3>Pedidos cliente</h3>
+            <p>Usado en QR, domicilio y pagos en caja.</p>
+          </div>
+          <label>
+            Recargo fijo opcional
+            <input id="deliveryFeeInput" type="number" min="0" step="0.01" placeholder="0.00" />
+          </label>
+          <label class="settings-wide-field">
+            Direccion restaurante
+            <input id="restaurantAddressInput" type="text" placeholder="Direccion completa del restaurante" autocomplete="street-address" />
+          </label>
+          <label class="settings-wide-field">
+            Google Maps API key
+            <input id="googleMapsApiKeyInput" type="text" placeholder="AIza..." autocomplete="off" />
+          </label>
+          <label class="settings-wide-field">
+            Cuenta transferencia
+            <input id="bankAccountInput" type="text" placeholder="IBAN / numero de cuenta de la empresa" autocomplete="off" />
+          </label>
+          <label class="settings-wide-field">
+            Texto transferencia
+            <input id="bankTransferNoteInput" type="text" placeholder="Ej: Enviar comprobante por WhatsApp" autocomplete="off" />
+          </label>
+          <button id="saveCustomerSettingsButton" type="button">Guardar cliente</button>
         </section>
 
         <div class="menu-editor-layout">
@@ -311,6 +357,22 @@
               <label class="product-name-field">
                 Nombre del producto
                 <input id="productNameInput" type="text" placeholder="Ej: Jugo de guanabana" autocomplete="off" />
+              </label>
+              <label class="product-name-field">
+                Descripcion para el cliente
+                <textarea id="productDescriptionInput" rows="3" placeholder="Ej: Pulpa natural, agua o leche, azucar al gusto"></textarea>
+              </label>
+              <label class="product-name-field">
+                Foto del producto
+                <input id="productImageUrlInput" type="text" placeholder="Pega link de foto o carga una foto pequena" autocomplete="off" />
+              </label>
+              <label class="product-name-field">
+                Cargar foto pequena
+                <input id="productImageFileInput" type="file" accept="image/*" />
+              </label>
+              <label class="product-available-field">
+                <input id="productAvailableInput" type="checkbox" checked />
+                Disponible para vender
               </label>
             </div>
             <div class="editor-actions">
@@ -380,6 +442,56 @@
         <div class="dialog-actions">
           <button value="cancel" type="submit">Cerrar</button>
           <button id="printCloseButton" value="default" type="button">Imprimir cierre</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="qrDialog" class="monthly-dialog">
+      <form method="dialog" class="monthly-form">
+        <div class="monthly-dialog-header">
+          <div>
+            <p class="eyebrow">Cliente QR</p>
+            <h2>Codigo para pedir</h2>
+          </div>
+          <button class="icon-button" value="cancel" type="submit" title="Cerrar" aria-label="Cerrar">
+            <span aria-hidden="true">x</span>
+          </button>
+        </div>
+        <label>
+          Mesa o ubicacion opcional
+          <input id="qrTableInput" type="text" placeholder="Dejalo vacio para QR general" autocomplete="off" />
+        </label>
+        <div class="qr-preview">
+          <img id="qrImage" alt="Codigo QR para clientes" />
+        </div>
+        <label>
+          Link del cliente
+          <input id="qrLinkInput" type="text" readonly />
+        </label>
+        <p id="qrHint" class="auth-message"></p>
+        <div class="dialog-actions">
+          <button id="copyQrLinkButton" value="default" type="button">Copiar link</button>
+          <button id="openClientPageButton" value="default" type="button">Abrir cliente</button>
+          <button value="cancel" type="submit">Cerrar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="clientOrdersDialog" class="monthly-dialog">
+      <form method="dialog" class="monthly-form">
+        <div class="monthly-dialog-header">
+          <div>
+            <p class="eyebrow">Pedidos recibidos</p>
+            <h2>Pedidos de clientes</h2>
+          </div>
+          <button class="icon-button" value="cancel" type="submit" title="Cerrar" aria-label="Cerrar">
+            <span aria-hidden="true">x</span>
+          </button>
+        </div>
+        <div class="client-orders-list" id="clientOrdersList"></div>
+        <div class="dialog-actions">
+          <button id="refreshClientOrdersButton" value="default" type="button">Actualizar</button>
+          <button value="cancel" type="submit">Cerrar</button>
         </div>
       </form>
     </dialog>

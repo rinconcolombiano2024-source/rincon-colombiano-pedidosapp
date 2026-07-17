@@ -11,12 +11,21 @@ Funciones actuales que deben conservarse:
 - Categorias editables: agregar, cambiar nombre y eliminar.
 - Categorias repetidas por mayusculas, espacios o acentos se limpian desde Eliminar: queda una sola categoria con sus productos y se guarda.
 - Productos editables dentro de cada categoria: agregar, editar precio, editar nombre y eliminar.
+- Productos tienen disponibilidad editable: Disponible / No disponible.
+- Productos pueden tener foto mediante link o foto pequena cargada en el editor.
+- Productos pueden tener descripcion/explicacion para el cliente; se muestra en el menu del restaurante y en cliente QR.
+- Fotos cargadas de productos se optimizan/comprimen antes de guardarse para que el menu del cliente sea mas rapido y profesional.
 - Aviso visual pequeno cuando se agregan, editan, guardan, restauran o eliminan categorias/productos/ajustes.
 - Al guardar un producto, el aviso debe decir: Producto guardado.
 - Categorias base: Entradas, Platos principales, Bebidas, Postres, Extras, Porciones.
 - Producto especial/manual con precio.
-- Tipo de pedido: Comer en el punto, Para llevar, Domicilio.
+- Tipo de pedido cliente/restaurante: Comer en el punto, Para llevar / recoger en el punto, Envio a domicilio.
+- Metodo de pago por pedido: Pago en caja, Efectivo, Transferencia y Datafono / tarjeta.
 - Nombre del cliente o mesa.
+- Domicilio puede guardar nombre, telefono, direccion, barrio/ciudad, referencia, distancia km y costo estimado.
+- Domicilio calcula tarifa por km: 4.50 PLN hasta 1.5 km; de 1.5 a 6 km suma 1.50 PLN/km; de 6 a 8 km suma 2.50 PLN/km; mas de 8 km suma 3.50 PLN/km.
+- Domicilio puede calcular distancia real con Google Maps si se configura direccion del restaurante y Google Maps API key.
+- Cliente puede permitir ubicacion para calcular domicilio con Google Maps desde su posicion real.
 - Nombre de la persona que tomo el pedido.
 - Responsable del turno: se pide al iniciar sesion y se aplica automaticamente a pedidos nuevos.
 - Boton Turno para cambiar quien toma pedidos durante el dia.
@@ -33,12 +42,45 @@ Funciones actuales que deben conservarse:
 - Historial de tickets del dia.
 - Abrir y reimprimir tickets guardados.
 - Cierre de caja diario con total caja, tickets, productos, promedio, tipo de pedido, responsable y productos vendidos.
+- Cierre de caja diario incluye resumen por metodo de pago.
 - Los reportes diario/mensual convierten cantidades y precios a numero antes de sumar para evitar fallas de cuentas.
 - Impresion del cierre de caja diario.
 - Cierre mensual con total vendido, tickets, productos, promedio, detalle por dia y productos vendidos.
 - Impresion del cierre mensual.
+- Modulo cliente por QR: cliente.html permite ver menu, armar carrito y enviar pedido pendiente.
+- Modulo cliente por QR tiene selector de idioma: Espanol, Polski e English.
+- El selector de idioma traduce textos, botones, mensajes, domicilio, pago, notificaciones y chat del cliente QR.
+- Los mensajes de acceso del cliente tambien respetan el idioma seleccionado.
+- Cliente QR tiene cuenta propia con correo electronico y contrasena usando Supabase Auth.
+- Cliente puede crear cuenta, iniciar sesion y cerrar sesion desde cliente.html.
+- Para enviar pedido desde cliente QR se requiere cuenta de cliente iniciada; asi el pedido queda guardado en su historial.
+- Cliente tiene seccion Mis pedidos con historial, estado, total, ticket si ya fue aceptado y boton para abrir estado/chat del pedido.
+- Cliente tiene perfil basico guardado: nombre, telefono, direccion preferida, referencia, distancia e idioma.
+- Los pedidos QR guardan customer_user_id para asociar pedidos a la cuenta del cliente sin mezclar clientes.
+- Los nombres de productos/categorias escritos por el restaurante no se traducen automaticamente; se muestran tal como se guardaron en el menu.
+- App restaurante tiene QR cliente y bandeja Pedidos cliente para aceptar, generar ticket consecutivo e imprimir cocina.
+- QR cliente es general por defecto; la mesa/ubicacion es opcional.
+- Cliente puede elegir metodo de pago, poner notas, pedir domicilio con datos completos y ver costo estimado.
+- Cliente ve modulo de pago despues de enviar: total exacto, referencia del pedido y metodo elegido.
+- Si cliente escoge transferencia, la app muestra cuenta bancaria y texto de comprobante configurados por el restaurante.
+- Si cliente escoge efectivo o datafono, la app muestra total y referencia para pagar en caja o al recibir.
+- Chat basico por pedido entre cliente y restaurante.
+- Cliente puede enviar mensaje y foto del comprobante de transferencia en el chat del pedido.
+- Cajero puede ver el comprobante en Pedidos cliente y responder con texto o imagen.
+- Las imagenes del chat se comprimen antes de enviarse para no guardar fotos pesadas.
+- Cliente puede activar notificaciones del navegador para recibir aviso de estado del pedido.
+- Restaurante puede activar notificaciones del navegador junto con alarma sonora para pedidos nuevos.
+- Cliente puede ver estado del pedido: pendiente, aceptado o cancelado, usando referencia publica segura en Supabase.
+- La app cliente muestra advertencia de app de prueba y confirmacion de ajustes ante errores.
+- La app restaurante tiene alarma sonora para pedidos cliente pendientes; el cajero debe tocar Activar alarma una vez por restricciones del navegador.
+- Nombre del restaurante editable: por defecto RINCON COLOMBIANO, pero cada cuenta de restaurante puede guardar su propio nombre para pantalla, cliente QR, tickets, PDF y cierres.
 - Moneda editable: simbolo, posicion y formato.
 - Ancho de ticket editable en milimetros para impresion/PDF.
+- Recargo fijo opcional de domicilio editable para el modulo cliente.
+- Direccion del restaurante y Google Maps API key editables para calcular distancia real.
+- Cuenta de transferencia y texto de comprobante editables para el modulo cliente.
+- Cobro externo por tienda desactivado por decision del restaurante hasta confirmar una integracion real con proveedor de pago.
+- La app no cobra comisiones: los pagos se manejan por caja, efectivo, transferencia o datafono segun el restaurante.
 - Inicio de sesion por correo electronico y contrasena usando Supabase.
 - Crear cuenta principal.
 - Recuperar contrasena por correo electronico.
@@ -52,6 +94,8 @@ Funciones actuales que deben conservarse:
 - Ventana de ayuda para instalar/agregar a pantalla principal si el navegador no permite instalacion directa.
 - PWA con manifest, icono y service worker.
 - Compatibilidad PWA para Android, iOS/iPadOS, Windows, Mac y navegadores modernos.
+- Pantallas responsive: cliente QR se reorganiza a una columna en telefono y mantiene selector de idioma visible.
+- Metadatos PWA/iOS/Android reforzados con viewport-fit, manifest y apple-touch-icon.
 - Iconos PNG para instalacion en Android/iOS y SVG como respaldo.
 
 Configuracion Supabase actual:
@@ -62,16 +106,18 @@ Configuracion Supabase actual:
 
 Archivos importantes:
 - index.html: estructura de pantalla, login, pedidos, dialogos.
-- app.js: logica de pedidos, tickets, Supabase, offline, cierre mensual.
+- app.js: logica de pedidos, tickets, Supabase, offline, cierre mensual y pedidos cliente.
+- cliente.html / cliente.js: modulo para que el cliente pida desde QR.
 - styles.css: diseno responsive para PC y telefono.
 - service-worker.js: cache de PWA.
 - supabase-config.js: URL y publishable key.
 - supabase-schema.sql: tablas, politicas RLS y funciones RPC.
+- Supabase requiere ejecutar el SQL actualizado cuando se agreguen cuentas de cliente, customer_profiles, customer_user_id o historial.
 
 Notas para telefono:
 - Si el telefono no muestra cambios nuevos, desinstalar la app vieja y volver a instalar desde la URL de Vercel.
 - El service worker debe subir version cada vez que cambie la app.
-- Version de cache actual al crear esta memoria: rincon-colombiano-v33.
+- Version de cache actual al crear esta memoria: rincon-colombiano-v45.
 
 Precaucion offline:
 - Si varias tablets trabajan sin internet al mismo tiempo, pueden repetirse numeros locales de ticket.

@@ -1,0 +1,67 @@
+MODULO CLIENTE POR QR - RINCON COLOMBIANO
+
+1. En Supabase
+- Abrir SQL Editor.
+- Ejecutar el archivo supabase-schema.sql actualizado.
+- Esto crea customer_profiles, customer_orders, customer_order_messages, customer_user_id, historial del cliente y los permisos para pedidos/chat.
+
+2. En Vercel / GitHub
+- Subir la version nueva de la app.
+- Deben quedar publicados estos archivos:
+  - index.html
+  - app.js
+  - cliente.html
+  - cliente.js
+  - styles.css
+  - supabase-config.js
+  - service-worker.js
+
+3. En la app del restaurante
+- Iniciar sesion con correo y contrasena.
+- Presionar Activar alarma para que suene cuando llegue un pedido nuevo.
+- Si el navegador pregunta, permitir notificaciones para recibir aviso visual de pedido nuevo.
+- Presionar QR cliente.
+- Dejar vacia la mesa para usar QR general del restaurante.
+- Si quieres un QR especifico, escribir mesa o ubicacion, por ejemplo Mesa 4.
+- Mostrar o imprimir el codigo QR.
+- Configurar recargo fijo opcional de domicilio, direccion del restaurante, Google Maps API key, cuenta de transferencia y texto de comprobante en Editar menu > Pedidos cliente.
+
+4. Cliente
+- Escanea el QR.
+- Puede cambiar idioma entre Espanol, Polski e English desde la parte superior.
+- Crea cuenta cliente o inicia sesion con correo y contrasena.
+- La cuenta del cliente guarda su historial y datos basicos para proximos pedidos.
+- Ve el menu.
+- Ve nombre, precio, foto, disponibilidad y descripcion de cada plato cuando el restaurante la agregue.
+- Agrega productos.
+- Escribe nombre, notas y metodo de pago.
+- Puede elegir Comer en el punto, Para llevar / recoger en el punto o Envio a domicilio.
+- Si elige Domicilio, escribe telefono, direccion, barrio/ciudad, referencia y distancia aproximada en kilometros.
+- Si permite ubicacion, la app puede usar su posicion para calcular la distancia real con Google Maps.
+- Si Google Maps esta configurado, puede presionar Calcular con Google Maps para obtener distancia real por carretera.
+- La tarifa de domicilio se calcula asi: 4.50 PLN hasta 1.5 km; de 1.5 a 6 km suma 1.50 PLN/km; de 6 a 8 km suma 2.50 PLN/km; mas de 8 km suma 3.50 PLN/km.
+- Si elige Transferencia, la app muestra cuenta bancaria, total y referencia del pedido.
+- Si elige Efectivo o Datafono, la app muestra el total y la referencia para pagar en caja o al recibir.
+- Despues de enviar el pedido, puede usar el chat para escribir al restaurante o enviar foto del comprobante de transferencia.
+- Puede activar notificaciones para recibir aviso cuando el restaurante acepte o cancele el pedido.
+- Presiona Enviar pedido. La app exige sesion de cliente para guardar el pedido en Mis pedidos.
+- En Mis pedidos puede ver historial, estado, total, ticket si ya fue aceptado y abrir el chat de pedidos anteriores.
+
+5. Cajero / restaurante
+- Presiona Pedidos cliente.
+- Revisa el pedido.
+- Revisa el chat y el comprobante de transferencia si el cliente lo envio.
+- Si el pago esta correcto, registra la venta en la caja fiscal y envia el paragon dentro de la bolsa o con el pedido.
+- Puede responder al cliente desde el chat del pedido con texto o imagen.
+- Presiona Aceptar e imprimir.
+- En ese momento la app crea el numero consecutivo de ticket y manda a cocina.
+
+Importante:
+- El pedido del cliente necesita internet para llegar al restaurante.
+- Si no hay internet, el cajero puede seguir tomando pedidos manualmente en la app del restaurante.
+- El numero de ticket solo se crea cuando el cajero acepta el pedido, no cuando el cliente lo envia.
+- La alarma sonora depende del navegador: el cajero debe tocar Activar alarma una vez.
+- El seguimiento de estado, chat e historial del cliente dependen de ejecutar el supabase-schema.sql actualizado.
+- La app no cobra desde tienda externa. El cajero confirma efectivo, transferencia o datafono.
+- La app no cobra comisiones por pedido. Los cobros los maneja directamente el restaurante.
+- Google Maps requiere activar Maps JavaScript API y Distance Matrix API en Google Cloud, con facturacion y restricciones de dominio para proteger la API key.

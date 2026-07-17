@@ -1,9 +1,11 @@
-const CACHE_NAME = "rincon-colombiano-v33";
+const CACHE_NAME = "rincon-colombiano-v45";
 const APP_FILES = [
   "./",
   "./index.html",
+  "./cliente.html",
   "./styles.css",
   "./app.js",
+  "./cliente.js",
   "./supabase-config.js",
   "./manifest.webmanifest",
   "./app-icon.svg",

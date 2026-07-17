@@ -1,8 +1,8 @@
 {
-  "name": "RINCON COLOMBIANO - Pedidos",
-  "short_name": "Rincon",
+  "name": "Sistema de Pedidos Restaurante",
+  "short_name": "Pedidos",
   "id": "/",
-  "description": "Pedidos, tickets de cocina y cierre mensual para RINCON COLOMBIANO.",
+  "description": "Pedidos, tickets de cocina, cliente QR, historial y cierres para restaurantes.",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",

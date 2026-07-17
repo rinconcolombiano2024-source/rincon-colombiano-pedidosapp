@@ -1,0 +1,1954 @@
+const CUSTOMER_DEFAULT_MENU = {
+  Entradas: [],
+};
+
+const customerElements = {
+  languageSelect: document.querySelector("#customerLanguageSelect"),
+  status: document.querySelector("#customerStatus"),
+  trackingStatus: document.querySelector("#customerTrackingStatus"),
+  businessName: document.querySelector("#customerBusinessName"),
+  accountSummary: document.querySelector("#customerAccountSummary"),
+  authFields: document.querySelector("#customerAuthFields"),
+  authEmail: document.querySelector("#customerAuthEmail"),
+  authPassword: document.querySelector("#customerAuthPassword"),
+  authMessage: document.querySelector("#customerAuthMessage"),
+  signInButton: document.querySelector("#customerSignInButton"),
+  signUpButton: document.querySelector("#customerSignUpButton"),
+  signOutButton: document.querySelector("#customerSignOutButton"),
+  historyList: document.querySelector("#customerHistoryList"),
+  refreshHistoryButton: document.querySelector("#customerRefreshHistoryButton"),
+  tableLabel: document.querySelector("#customerTableLabel"),
+  categoryTabs: document.querySelector("#customerCategoryTabs"),
+  menuGrid: document.querySelector("#customerMenuGrid"),
+  cartItems: document.querySelector("#customerCartItems"),
+  cartTotal: document.querySelector("#customerCartTotal"),
+  notifyButton: document.querySelector("#customerNotifyButton"),
+  orderType: document.querySelector("#customerOrderType"),
+  paymentMethod: document.querySelector("#customerPaymentMethod"),
+  nameInput: document.querySelector("#customerNameInput"),
+  tableInput: document.querySelector("#customerTableInput"),
+  deliveryFields: document.querySelector("#customerDeliveryFields"),
+  phoneInput: document.querySelector("#customerPhoneInput"),
+  addressInput: document.querySelector("#customerAddressInput"),
+  neighborhoodInput: document.querySelector("#customerNeighborhoodInput"),
+  referenceInput: document.querySelector("#customerReferenceInput"),
+  distanceInput: document.querySelector("#customerDistanceInput"),
+  useLocationButton: document.querySelector("#customerUseLocationButton"),
+  calculateDistanceButton: document.querySelector("#customerCalculateDistanceButton"),
+  mapResult: document.querySelector("#customerMapResult"),
+  notesInput: document.querySelector("#customerOrderNotes"),
+  deliveryFeeRow: document.querySelector("#customerDeliveryFeeRow"),
+  deliveryFeeLabel: document.querySelector("#customerDeliveryFeeLabel"),
+  paymentBox: document.querySelector("#customerPaymentBox"),
+  chatPanel: document.querySelector("#customerChatPanel"),
+  chatMessages: document.querySelector("#customerChatMessages"),
+  chatInput: document.querySelector("#customerChatInput"),
+  chatImageInput: document.querySelector("#customerChatImageInput"),
+  chatSendButton: document.querySelector("#customerSendChatButton"),
+  chatStatus: document.querySelector("#customerChatStatus"),
+  sendButton: document.querySelector("#sendCustomerOrderButton"),
+};
+
+const CUSTOMER_LANGUAGE_KEY = "rincon_colombiano_customer_language";
+const CUSTOMER_I18N = {
+  es: {
+    heroEyebrow: "Pedido del cliente",
+    languageLabel: "Idioma",
+    heroSubtitle: "Escanea, elige y envia tu pedido.",
+    warning: "App de prueba: si algo sale diferente, el restaurante confirmara el pedido y cualquier ajuste antes de prepararlo.",
+    accountPanelAria: "Cuenta del cliente",
+    accountTitle: "Mi cuenta",
+    accountGuest: "Inicia sesion o crea una cuenta para enviar pedidos y ver tu historial.",
+    accountSignedIn: "Conectado como {email}. Tus pedidos quedaran guardados en tu historial.",
+    emailLabel: "Correo electronico",
+    emailPlaceholder: "correo@ejemplo.com",
+    passwordLabel: "Contrasena",
+    passwordPlaceholder: "Minimo 6 caracteres",
+    signIn: "Iniciar sesion",
+    signUp: "Crear cuenta cliente",
+    signOut: "Cerrar sesion",
+    signingIn: "Iniciando sesion...",
+    signingUp: "Creando cuenta...",
+    signedIn: "Sesion iniciada.",
+    signedOut: "Sesion cerrada.",
+    accountCreated: "Cuenta creada. Si Supabase pide confirmacion, revisa tu correo.",
+    accountRequired: "Inicia sesion o crea una cuenta para enviar el pedido y guardar tu historial.",
+    authMissing: "Escribe correo y contrasena.",
+    authPasswordShort: "La contrasena debe tener minimo 6 caracteres.",
+    authError: "No se pudo completar el acceso.",
+    authInvalidCredentials: "Correo o contrasena incorrectos.",
+    authEmailConfirm: "Confirma tu correo electronico antes de iniciar sesion.",
+    authAlreadyRegistered: "Ese correo ya tiene cuenta. Intenta iniciar sesion.",
+    historyPanelAria: "Historial del cliente",
+    historyTitle: "Mis pedidos",
+    refreshHistory: "Actualizar",
+    historySignIn: "Inicia sesion para ver tus pedidos anteriores.",
+    historyEmpty: "Todavia no tienes pedidos guardados.",
+    historyLoadError: "No se pudo cargar el historial. Ejecuta el SQL actualizado.",
+    historyOpenOrder: "Ver estado y chat",
+    historyTicket: "Ticket",
+    historyNoTicket: "Sin ticket",
+    historyItems: "{count} producto(s)",
+    loadingMenu: "Cargando menu...",
+    menuPanelAria: "Menu del restaurante",
+    cartPanelAria: "Pedido del cliente",
+    yourOrder: "Tu pedido",
+    enableNotifications: "Activar notificaciones",
+    orderTypeLabel: "Tipo de pedido",
+    eatHere: "Comer en el punto",
+    pickup: "Para llevar / recoger en el punto",
+    delivery: "Envio a domicilio",
+    nameLabel: "Nombre",
+    namePlaceholder: "Tu nombre",
+    tableLabel: "Mesa / ubicacion",
+    tablePlaceholder: "Mesa, punto de entrega o ubicacion",
+    deliveryTablePlaceholder: "Nombre del barrio o punto de referencia",
+    paymentMethodLabel: "Metodo de pago",
+    cash: "Efectivo",
+    transfer: "Transferencia",
+    cardTerminal: "Datafono / tarjeta al recibir",
+    phoneLabel: "Telefono",
+    phonePlaceholder: "Numero de contacto",
+    addressLabel: "Direccion completa",
+    addressPlaceholder: "Calle, numero, apartamento",
+    neighborhoodLabel: "Barrio / ciudad",
+    neighborhoodPlaceholder: "Barrio o ciudad",
+    referenceLabel: "Referencia",
+    referencePlaceholder: "Piso, timbre, instrucciones",
+    distanceLabel: "Distancia aproximada km",
+    distancePlaceholder: "Ej: 3.4",
+    useLocation: "Usar mi ubicacion",
+    calculateMaps: "Calcular con Google Maps",
+    deliveryHelp: "Tarifa: 4.50 PLN hasta 1.5 km; luego 1.50 PLN/km hasta 6 km, 2.50 PLN/km hasta 8 km y 3.50 PLN/km despues de 8 km.",
+    kitchenNotesLabel: "Notas para cocina",
+    kitchenNotesPlaceholder: "Ej: sin cebolla, salsa aparte...",
+    estimatedTotal: "Total estimado",
+    estimatedDelivery: "Domicilio estimado",
+    chatTitle: "Chat con el restaurante",
+    chatMessageLabel: "Mensaje",
+    chatPlaceholder: "Escribe aqui. Puedes enviar comprobante de transferencia.",
+    imageLabel: "Imagen",
+    sendChat: "Enviar chat",
+    sendOrder: "Enviar pedido",
+    missingStore: "Falta el codigo del restaurante en el QR.",
+    appNotConfigured: "La conexion de la app no esta configurada.",
+    menuLoadError: "No se pudo cargar el menu. Avisa al restaurante.",
+    noMenu: "Este QR no tiene menu disponible.",
+    menuReady: "Menu listo. Elige tus productos.",
+    openMenuError: "No se pudo abrir el menu del restaurante.",
+    orderFor: "Pedido para {table}",
+    emptyCategory: "No hay productos en esta categoria.",
+    emptyCart: "Agrega productos del menu.",
+    unavailable: "No disponible",
+    remove: "Quitar",
+    itemNotePlaceholder: "NOTA PARA ESTE PLATO",
+    noConnection: "No hay conexion con el restaurante.",
+    addProductFirst: "Agrega al menos un producto.",
+    sendingOrder: "Enviando pedido...",
+    sendOrderError: "No se pudo enviar. Revisa internet o avisa al restaurante.",
+    orderSent: "Pedido enviado. Espera confirmacion del restaurante.",
+    orderSentWaiting: "Pedido enviado. Esperando que el restaurante lo acepte.",
+    orderSentCashier: "Pedido enviado. El restaurante confirmara el estado en caja.",
+    accepted: "Pedido aceptado por el restaurante.{ticket}",
+    cancelled: "Pedido cancelado. Comunicate con el restaurante para confirmar.",
+    ticketSuffix: " Ticket #{ticket}.",
+    nameRequired: "Escribe tu nombre para enviar el pedido.",
+    phoneRequired: "Escribe un telefono para el domicilio.",
+    addressRequired: "Escribe la direccion completa para el domicilio.",
+    distanceRequired: "Escribe la distancia aproximada en kilometros para calcular el domicilio.",
+    locationDeliveryOnly: "La ubicacion se usa solo para pedidos a domicilio.",
+    locationUnsupported: "Este navegador no permite compartir ubicacion.",
+    locationRequest: "Solicitando permiso de ubicacion...",
+    locationReceived: "Ubicacion recibida. Calculando distancia...",
+    locationError: "No se pudo obtener la ubicacion. Puedes escribir la direccion y kilometros manualmente.",
+    mapsNeedAddress: "El restaurante debe configurar su direccion para usar Google Maps.",
+    mapsNeedKey: "Falta configurar Google Maps API key. Puedes escribir km manualmente.",
+    mapsNeedDestination: "Escribe la direccion o permite usar tu ubicacion antes de calcular.",
+    mapsCalculating: "Calculando distancia con Google Maps...",
+    mapsResult: "Google Maps: {distance}{duration}. Domicilio: {fee}",
+    mapsManual: "{error} Puedes escribir km manualmente.",
+    mapsFallback: "No se pudo calcular con Google Maps.",
+    manualDistanceHelp: "Puedes escribir kilometros manualmente. Google Maps funciona cuando el restaurante configure la API key y direccion.",
+    mapsLoadError: "No se pudo cargar Google Maps.",
+    mapsResponseError: "Google Maps respondio: {status}",
+    mapsRouteError: "No se pudo calcular ruta: {status}",
+    paymentTitle: "Pago del pedido",
+    totalLabel: "Total",
+    referencePaymentLabel: "Referencia",
+    bankAccountMissing: "Cuenta bancaria no configurada por el restaurante.",
+    transferNoteDefault: "Usa la referencia del pedido en el comprobante.",
+    bankAccountLabel: "Cuenta",
+    transferNoteLabel: "Nota",
+    payOnDelivery: "Paga {amount} en {method} cuando el restaurante confirme.",
+    cashLower: "efectivo",
+    cardLower: "datafono/tarjeta",
+    notificationUnsupported: "Este navegador no permite notificaciones.",
+    notificationsOn: "Notificaciones activadas para avisarte el estado del pedido.",
+    notificationsOff: "Notificaciones no activadas. Puedes ver el estado en esta pantalla.",
+    notificationEnableError: "No se pudieron activar las notificaciones.",
+    notificationStatusTitle: "Estado de tu pedido",
+    restaurantMessageTitle: "Mensaje del restaurante",
+    restaurantMessageBody: "Tienes una respuesta en el chat del pedido.",
+    chatEmpty: "Chat listo. Puedes enviar el comprobante o una pregunta.",
+    restaurantSender: "Restaurante",
+    customerSender: "Cliente",
+    chatImageAlt: "Imagen enviada en chat",
+    chatLoadError: "No se pudo cargar el chat. Ejecuta el SQL actualizado.",
+    chatFirstOrder: "Primero envia el pedido para activar el chat.",
+    chatNeedMessage: "Escribe un mensaje o selecciona una imagen.",
+    chatSending: "Enviando chat...",
+    chatSent: "Mensaje enviado.",
+    chatSendError: "No se pudo enviar el mensaje.",
+    imageInvalid: "Selecciona una imagen valida.",
+    imageTooLarge: "La imagen es muy pesada. Usa una foto menor a 5 MB.",
+    imageReadError: "No se pudo leer la imagen.",
+    imagePrepareError: "No se pudo preparar la imagen.",
+    imageStillLarge: "La imagen sigue muy pesada. Recorta la foto o baja la calidad.",
+  },
+  pl: {
+    heroEyebrow: "Zamowienie klienta",
+    languageLabel: "Jezyk",
+    heroSubtitle: "Zeskanuj, wybierz i wyslij zamowienie.",
+    warning: "Aplikacja testowa: jesli cos bedzie nie tak, restauracja potwierdzi zamowienie i korekty przed przygotowaniem.",
+    accountPanelAria: "Konto klienta",
+    accountTitle: "Moje konto",
+    accountGuest: "Zaloguj sie albo utworz konto, aby wysylac zamowienia i widziec historie.",
+    accountSignedIn: "Zalogowano jako {email}. Twoje zamowienia beda zapisane w historii.",
+    emailLabel: "E-mail",
+    emailPlaceholder: "email@przyklad.com",
+    passwordLabel: "Haslo",
+    passwordPlaceholder: "Minimum 6 znakow",
+    signIn: "Zaloguj",
+    signUp: "Utworz konto klienta",
+    signOut: "Wyloguj",
+    signingIn: "Logowanie...",
+    signingUp: "Tworzenie konta...",
+    signedIn: "Zalogowano.",
+    signedOut: "Wylogowano.",
+    accountCreated: "Konto utworzone. Jesli Supabase wymaga potwierdzenia, sprawdz e-mail.",
+    accountRequired: "Zaloguj sie albo utworz konto, aby wyslac zamowienie i zapisac historie.",
+    authMissing: "Wpisz e-mail i haslo.",
+    authPasswordShort: "Haslo musi miec minimum 6 znakow.",
+    authError: "Nie udalo sie zakonczyc logowania.",
+    authInvalidCredentials: "Nieprawidlowy e-mail lub haslo.",
+    authEmailConfirm: "Potwierdz e-mail przed zalogowaniem.",
+    authAlreadyRegistered: "Ten e-mail ma juz konto. Sprobuj sie zalogowac.",
+    historyPanelAria: "Historia klienta",
+    historyTitle: "Moje zamowienia",
+    refreshHistory: "Odswiez",
+    historySignIn: "Zaloguj sie, aby zobaczyc poprzednie zamowienia.",
+    historyEmpty: "Nie masz jeszcze zapisanych zamowien.",
+    historyLoadError: "Nie udalo sie zaladowac historii. Wykonaj zaktualizowany SQL.",
+    historyOpenOrder: "Zobacz status i czat",
+    historyTicket: "Bilet",
+    historyNoTicket: "Bez biletu",
+    historyItems: "{count} produkt(y)",
+    loadingMenu: "Ladowanie menu...",
+    menuPanelAria: "Menu restauracji",
+    cartPanelAria: "Zamowienie klienta",
+    yourOrder: "Twoje zamowienie",
+    enableNotifications: "Wlacz powiadomienia",
+    orderTypeLabel: "Typ zamowienia",
+    eatHere: "Na miejscu",
+    pickup: "Na wynos / odbior w lokalu",
+    delivery: "Dostawa",
+    nameLabel: "Imie",
+    namePlaceholder: "Twoje imie",
+    tableLabel: "Stolik / lokalizacja",
+    tablePlaceholder: "Stolik, punkt odbioru lub lokalizacja",
+    deliveryTablePlaceholder: "Dzielnica lub punkt orientacyjny",
+    paymentMethodLabel: "Metoda platnosci",
+    cash: "Gotowka",
+    transfer: "Przelew",
+    cardTerminal: "Terminal / karta przy odbiorze",
+    phoneLabel: "Telefon",
+    phonePlaceholder: "Numer kontaktowy",
+    addressLabel: "Pelny adres",
+    addressPlaceholder: "Ulica, numer, mieszkanie",
+    neighborhoodLabel: "Dzielnica / miasto",
+    neighborhoodPlaceholder: "Dzielnica lub miasto",
+    referenceLabel: "Wskazowki",
+    referencePlaceholder: "Pietro, domofon, instrukcje",
+    distanceLabel: "Przyblizona odleglosc km",
+    distancePlaceholder: "Np. 3.4",
+    useLocation: "Uzyj mojej lokalizacji",
+    calculateMaps: "Oblicz w Google Maps",
+    deliveryHelp: "Stawka: 4.50 PLN do 1.5 km; potem 1.50 PLN/km do 6 km, 2.50 PLN/km do 8 km i 3.50 PLN/km powyzej 8 km.",
+    kitchenNotesLabel: "Uwagi do kuchni",
+    kitchenNotesPlaceholder: "Np. bez cebuli, sos osobno...",
+    estimatedTotal: "Suma szacunkowa",
+    estimatedDelivery: "Dostawa szacunkowa",
+    chatTitle: "Czat z restauracja",
+    chatMessageLabel: "Wiadomosc",
+    chatPlaceholder: "Napisz tutaj. Mozesz wyslac potwierdzenie przelewu.",
+    imageLabel: "Obraz",
+    sendChat: "Wyslij czat",
+    sendOrder: "Wyslij zamowienie",
+    missingStore: "Brakuje kodu restauracji w QR.",
+    appNotConfigured: "Polaczenie aplikacji nie jest skonfigurowane.",
+    menuLoadError: "Nie udalo sie zaladowac menu. Powiadom restauracje.",
+    noMenu: "Ten QR nie ma dostepnego menu.",
+    menuReady: "Menu gotowe. Wybierz produkty.",
+    openMenuError: "Nie udalo sie otworzyc menu restauracji.",
+    orderFor: "Zamowienie dla {table}",
+    emptyCategory: "Brak produktow w tej kategorii.",
+    emptyCart: "Dodaj produkty z menu.",
+    unavailable: "Niedostepne",
+    remove: "Usun",
+    itemNotePlaceholder: "UWAGA DO TEGO DANIA",
+    noConnection: "Brak polaczenia z restauracja.",
+    addProductFirst: "Dodaj przynajmniej jeden produkt.",
+    sendingOrder: "Wysylanie zamowienia...",
+    sendOrderError: "Nie udalo sie wyslac. Sprawdz internet albo powiadom restauracje.",
+    orderSent: "Zamowienie wyslane. Poczekaj na potwierdzenie restauracji.",
+    orderSentWaiting: "Zamowienie wyslane. Oczekiwanie na akceptacje restauracji.",
+    orderSentCashier: "Zamowienie wyslane. Restauracja potwierdzi status w kasie.",
+    accepted: "Zamowienie zaakceptowane przez restauracje.{ticket}",
+    cancelled: "Zamowienie anulowane. Skontaktuj sie z restauracja, aby potwierdzic.",
+    ticketSuffix: " Bilet #{ticket}.",
+    nameRequired: "Wpisz imie, aby wyslac zamowienie.",
+    phoneRequired: "Wpisz telefon do dostawy.",
+    addressRequired: "Wpisz pelny adres dostawy.",
+    distanceRequired: "Wpisz przyblizona odleglosc w kilometrach, aby obliczyc dostawe.",
+    locationDeliveryOnly: "Lokalizacja jest uzywana tylko dla dostawy.",
+    locationUnsupported: "Ta przegladarka nie pozwala udostepnic lokalizacji.",
+    locationRequest: "Prosba o pozwolenie na lokalizacje...",
+    locationReceived: "Lokalizacja odebrana. Obliczanie odleglosci...",
+    locationError: "Nie udalo sie pobrac lokalizacji. Mozesz wpisac adres i kilometry recznie.",
+    mapsNeedAddress: "Restauracja musi skonfigurowac adres, aby uzyc Google Maps.",
+    mapsNeedKey: "Brakuje klucza Google Maps API. Mozesz wpisac km recznie.",
+    mapsNeedDestination: "Wpisz adres albo pozwol uzyc lokalizacji przed obliczeniem.",
+    mapsCalculating: "Obliczanie odleglosci w Google Maps...",
+    mapsResult: "Google Maps: {distance}{duration}. Dostawa: {fee}",
+    mapsManual: "{error} Mozesz wpisac km recznie.",
+    mapsFallback: "Nie udalo sie obliczyc w Google Maps.",
+    manualDistanceHelp: "Mozesz wpisac kilometry recznie. Google Maps dziala, gdy restauracja ustawi API key i adres.",
+    mapsLoadError: "Nie udalo sie zaladowac Google Maps.",
+    mapsResponseError: "Google Maps odpowiedzial: {status}",
+    mapsRouteError: "Nie udalo sie obliczyc trasy: {status}",
+    paymentTitle: "Platnosc za zamowienie",
+    totalLabel: "Suma",
+    referencePaymentLabel: "Referencja",
+    bankAccountMissing: "Restauracja nie skonfigurowala konta bankowego.",
+    transferNoteDefault: "Uzyj referencji zamowienia w potwierdzeniu.",
+    bankAccountLabel: "Konto",
+    transferNoteLabel: "Notatka",
+    payOnDelivery: "Zapalc {amount} metoda {method}, gdy restauracja potwierdzi.",
+    cashLower: "gotowka",
+    cardLower: "terminal/karta",
+    notificationUnsupported: "Ta przegladarka nie obsluguje powiadomien.",
+    notificationsOn: "Powiadomienia wlaczone dla statusu zamowienia.",
+    notificationsOff: "Powiadomienia nie sa wlaczone. Status widac na tej stronie.",
+    notificationEnableError: "Nie udalo sie wlaczyc powiadomien.",
+    notificationStatusTitle: "Status zamowienia",
+    restaurantMessageTitle: "Wiadomosc z restauracji",
+    restaurantMessageBody: "Masz odpowiedz w czacie zamowienia.",
+    chatEmpty: "Czat gotowy. Mozesz wyslac potwierdzenie lub pytanie.",
+    restaurantSender: "Restauracja",
+    customerSender: "Klient",
+    chatImageAlt: "Obraz wyslany w czacie",
+    chatLoadError: "Nie udalo sie zaladowac czatu. Wykonaj zaktualizowany SQL.",
+    chatFirstOrder: "Najpierw wyslij zamowienie, aby wlaczyc czat.",
+    chatNeedMessage: "Napisz wiadomosc albo wybierz obraz.",
+    chatSending: "Wysylanie czatu...",
+    chatSent: "Wiadomosc wyslana.",
+    chatSendError: "Nie udalo sie wyslac wiadomosci.",
+    imageInvalid: "Wybierz poprawny obraz.",
+    imageTooLarge: "Obraz jest za duzy. Uzyj zdjecia mniejszego niz 5 MB.",
+    imageReadError: "Nie udalo sie odczytac obrazu.",
+    imagePrepareError: "Nie udalo sie przygotowac obrazu.",
+    imageStillLarge: "Obraz nadal jest za duzy. Przytnij zdjecie albo obniz jakosc.",
+  },
+  en: {
+    heroEyebrow: "Customer order",
+    languageLabel: "Language",
+    heroSubtitle: "Scan, choose, and send your order.",
+    warning: "Test app: if something is different, the restaurant will confirm the order and any adjustment before preparing it.",
+    accountPanelAria: "Customer account",
+    accountTitle: "My account",
+    accountGuest: "Sign in or create an account to send orders and see your history.",
+    accountSignedIn: "Signed in as {email}. Your orders will be saved in your history.",
+    emailLabel: "Email",
+    emailPlaceholder: "email@example.com",
+    passwordLabel: "Password",
+    passwordPlaceholder: "Minimum 6 characters",
+    signIn: "Sign in",
+    signUp: "Create customer account",
+    signOut: "Sign out",
+    signingIn: "Signing in...",
+    signingUp: "Creating account...",
+    signedIn: "Signed in.",
+    signedOut: "Signed out.",
+    accountCreated: "Account created. If Supabase asks for confirmation, check your email.",
+    accountRequired: "Sign in or create an account to send the order and save your history.",
+    authMissing: "Enter email and password.",
+    authPasswordShort: "Password must be at least 6 characters.",
+    authError: "Could not complete account access.",
+    authInvalidCredentials: "Email or password is incorrect.",
+    authEmailConfirm: "Confirm your email before signing in.",
+    authAlreadyRegistered: "That email already has an account. Try signing in.",
+    historyPanelAria: "Customer history",
+    historyTitle: "My orders",
+    refreshHistory: "Refresh",
+    historySignIn: "Sign in to see your previous orders.",
+    historyEmpty: "You do not have saved orders yet.",
+    historyLoadError: "Could not load history. Run the updated SQL.",
+    historyOpenOrder: "View status and chat",
+    historyTicket: "Ticket",
+    historyNoTicket: "No ticket",
+    historyItems: "{count} item(s)",
+    loadingMenu: "Loading menu...",
+    menuPanelAria: "Restaurant menu",
+    cartPanelAria: "Customer order",
+    yourOrder: "Your order",
+    enableNotifications: "Enable notifications",
+    orderTypeLabel: "Order type",
+    eatHere: "Eat in",
+    pickup: "Takeaway / pickup",
+    delivery: "Delivery",
+    nameLabel: "Name",
+    namePlaceholder: "Your name",
+    tableLabel: "Table / location",
+    tablePlaceholder: "Table, pickup point, or location",
+    deliveryTablePlaceholder: "Neighborhood or reference point",
+    paymentMethodLabel: "Payment method",
+    cash: "Cash",
+    transfer: "Bank transfer",
+    cardTerminal: "Card terminal on delivery",
+    phoneLabel: "Phone",
+    phonePlaceholder: "Contact number",
+    addressLabel: "Full address",
+    addressPlaceholder: "Street, number, apartment",
+    neighborhoodLabel: "Neighborhood / city",
+    neighborhoodPlaceholder: "Neighborhood or city",
+    referenceLabel: "Reference",
+    referencePlaceholder: "Floor, doorbell, instructions",
+    distanceLabel: "Approximate distance km",
+    distancePlaceholder: "Ex: 3.4",
+    useLocation: "Use my location",
+    calculateMaps: "Calculate with Google Maps",
+    deliveryHelp: "Rate: 4.50 PLN up to 1.5 km; then 1.50 PLN/km up to 6 km, 2.50 PLN/km up to 8 km, and 3.50 PLN/km after 8 km.",
+    kitchenNotesLabel: "Kitchen notes",
+    kitchenNotesPlaceholder: "Ex: no onion, sauce on the side...",
+    estimatedTotal: "Estimated total",
+    estimatedDelivery: "Estimated delivery",
+    chatTitle: "Chat with restaurant",
+    chatMessageLabel: "Message",
+    chatPlaceholder: "Write here. You can send a transfer receipt.",
+    imageLabel: "Image",
+    sendChat: "Send chat",
+    sendOrder: "Send order",
+    missingStore: "Restaurant code is missing from the QR.",
+    appNotConfigured: "The app connection is not configured.",
+    menuLoadError: "Could not load the menu. Please tell the restaurant.",
+    noMenu: "This QR has no menu available.",
+    menuReady: "Menu ready. Choose your products.",
+    openMenuError: "Could not open the restaurant menu.",
+    orderFor: "Order for {table}",
+    emptyCategory: "There are no products in this category.",
+    emptyCart: "Add products from the menu.",
+    unavailable: "Unavailable",
+    remove: "Remove",
+    itemNotePlaceholder: "NOTE FOR THIS DISH",
+    noConnection: "No connection with the restaurant.",
+    addProductFirst: "Add at least one product.",
+    sendingOrder: "Sending order...",
+    sendOrderError: "Could not send. Check internet or tell the restaurant.",
+    orderSent: "Order sent. Wait for restaurant confirmation.",
+    orderSentWaiting: "Order sent. Waiting for the restaurant to accept it.",
+    orderSentCashier: "Order sent. The restaurant will confirm the status at the register.",
+    accepted: "Order accepted by the restaurant.{ticket}",
+    cancelled: "Order cancelled. Contact the restaurant to confirm.",
+    ticketSuffix: " Ticket #{ticket}.",
+    nameRequired: "Enter your name to send the order.",
+    phoneRequired: "Enter a phone number for delivery.",
+    addressRequired: "Enter the full delivery address.",
+    distanceRequired: "Enter the approximate distance in kilometers to calculate delivery.",
+    locationDeliveryOnly: "Location is only used for delivery orders.",
+    locationUnsupported: "This browser does not allow location sharing.",
+    locationRequest: "Requesting location permission...",
+    locationReceived: "Location received. Calculating distance...",
+    locationError: "Could not get location. You can enter address and kilometers manually.",
+    mapsNeedAddress: "The restaurant must configure its address to use Google Maps.",
+    mapsNeedKey: "Google Maps API key is missing. You can enter km manually.",
+    mapsNeedDestination: "Enter the address or allow location before calculating.",
+    mapsCalculating: "Calculating distance with Google Maps...",
+    mapsResult: "Google Maps: {distance}{duration}. Delivery: {fee}",
+    mapsManual: "{error} You can enter km manually.",
+    mapsFallback: "Could not calculate with Google Maps.",
+    manualDistanceHelp: "You can enter kilometers manually. Google Maps works when the restaurant configures API key and address.",
+    mapsLoadError: "Could not load Google Maps.",
+    mapsResponseError: "Google Maps responded: {status}",
+    mapsRouteError: "Could not calculate route: {status}",
+    paymentTitle: "Order payment",
+    totalLabel: "Total",
+    referencePaymentLabel: "Reference",
+    bankAccountMissing: "Bank account not configured by the restaurant.",
+    transferNoteDefault: "Use the order reference in the receipt.",
+    bankAccountLabel: "Account",
+    transferNoteLabel: "Note",
+    payOnDelivery: "Pay {amount} by {method} when the restaurant confirms.",
+    cashLower: "cash",
+    cardLower: "card terminal/card",
+    notificationUnsupported: "This browser does not support notifications.",
+    notificationsOn: "Notifications enabled for order status.",
+    notificationsOff: "Notifications not enabled. You can see the status on this screen.",
+    notificationEnableError: "Could not enable notifications.",
+    notificationStatusTitle: "Order status",
+    restaurantMessageTitle: "Restaurant message",
+    restaurantMessageBody: "You have a reply in the order chat.",
+    chatEmpty: "Chat ready. You can send a receipt or a question.",
+    restaurantSender: "Restaurant",
+    customerSender: "Customer",
+    chatImageAlt: "Image sent in chat",
+    chatLoadError: "Could not load chat. Run the updated SQL.",
+    chatFirstOrder: "Send the order first to activate chat.",
+    chatNeedMessage: "Write a message or select an image.",
+    chatSending: "Sending chat...",
+    chatSent: "Message sent.",
+    chatSendError: "Could not send the message.",
+    imageInvalid: "Select a valid image.",
+    imageTooLarge: "The image is too heavy. Use a photo under 5 MB.",
+    imageReadError: "Could not read the image.",
+    imagePrepareError: "Could not prepare the image.",
+    imageStillLarge: "The image is still too heavy. Crop the photo or lower the quality.",
+  },
+};
+
+const customerParams = new URLSearchParams(window.location.search);
+const customerStoreId = String(customerParams.get("store") || "").trim();
+const customerTableFromQr = String(customerParams.get("mesa") || customerParams.get("table") || "").trim();
+
+function customerInitialLanguage() {
+  const fromUrl = String(customerParams.get("lang") || "").toLowerCase();
+  const saved = String(localStorage.getItem(CUSTOMER_LANGUAGE_KEY) || "").toLowerCase();
+  const browser = String(navigator.language || "").toLowerCase();
+  if (CUSTOMER_I18N[fromUrl]) return fromUrl;
+  if (CUSTOMER_I18N[saved]) return saved;
+  if (browser.startsWith("pl")) return "pl";
+  if (browser.startsWith("en")) return "en";
+  return "es";
+}
+
+let customerLanguage = customerInitialLanguage();
+
+function customerT(key, values = {}) {
+  const dictionary = CUSTOMER_I18N[customerLanguage] || CUSTOMER_I18N.es;
+  const fallback = CUSTOMER_I18N.es[key] || key;
+  return String(dictionary[key] || fallback).replace(/\{(\w+)\}/g, (_, name) => values[name] ?? "");
+}
+
+function customerApplyTranslations() {
+  document.documentElement.lang = customerLanguage;
+  if (customerElements.languageSelect) customerElements.languageSelect.value = customerLanguage;
+
+  document.querySelectorAll("[data-i18n]").forEach((node) => {
+    node.textContent = customerT(node.dataset.i18n);
+  });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((node) => {
+    node.setAttribute("placeholder", customerT(node.dataset.i18nPlaceholder));
+  });
+  document.querySelectorAll("[data-i18n-aria-label]").forEach((node) => {
+    node.setAttribute("aria-label", customerT(node.dataset.i18nAriaLabel));
+  });
+}
+
+function customerSetLanguage(language) {
+  if (!CUSTOMER_I18N[language]) return;
+  customerLanguage = language;
+  localStorage.setItem(CUSTOMER_LANGUAGE_KEY, language);
+  customerApplyTranslations();
+  if (customerTableFromQr) {
+    customerElements.tableLabel.textContent = customerT("orderFor", { table: customerTableFromQr });
+  }
+  customerRenderDeliveryFields();
+  customerRenderCategories();
+  customerRenderMenu();
+  customerRenderCart();
+  customerRenderAccount();
+  customerRenderHistory();
+}
+
+function customerOrderTypeText(value) {
+  if (value === "Recoger en el punto") return customerT("pickup");
+  if (value === "Domicilio") return customerT("delivery");
+  return customerT("eatHere");
+}
+
+function customerPaymentMethodText(value) {
+  if (value === "Transferencia") return customerT("transfer");
+  if (value === "Datafono") return customerT("cardTerminal");
+  return customerT("cash");
+}
+
+let customerClient = null;
+let customerAuthInitialized = false;
+let customerUser = null;
+let customerHistoryRows = [];
+let customerMenu = CUSTOMER_DEFAULT_MENU;
+let customerActiveCategory = "Entradas";
+let customerCart = [];
+let customerSettings = {
+  businessName: "RINCON COLOMBIANO",
+  currencySymbol: "$",
+  currencyPosition: "before",
+  moneyFormat: "us",
+  deliveryFee: 0,
+  restaurantAddress: "",
+  googleMapsApiKey: "",
+  bankAccount: "",
+  bankTransferNote: "",
+};
+
+let customerMapDistance = null;
+let googleMapsScriptPromise = null;
+let customerLocationCoords = null;
+let customerTrackedOrder = null;
+let customerStatusTimer = null;
+let customerChatTimer = null;
+let customerKnownChatMessageIds = new Set();
+let customerChatLoadedOnce = false;
+
+const CUSTOMER_DELIVERY_RATES = {
+  baseKm: 1.5,
+  baseFee: 4.5,
+  intermediateLimitKm: 6,
+  intermediatePerKm: 1.5,
+  longLimitKm: 8,
+  longPerKm: 2.5,
+  extraLongPerKm: 3.5,
+};
+
+function customerSupabaseConfig() {
+  const config = window.RINCON_SUPABASE || {};
+  const rawUrl = String(config.url || "").trim();
+  let cleanUrl = rawUrl;
+
+  try {
+    const parsed = new URL(rawUrl);
+    cleanUrl = `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    cleanUrl = rawUrl.replace(/\/rest\/v1\/?.*$/i, "").replace(/\/+$/, "");
+  }
+
+  return {
+    url: cleanUrl,
+    anonKey: String(config.anonKey || "").trim(),
+  };
+}
+
+function customerFriendlyAuthError(error) {
+  const message = String(error?.message || "");
+  if (/invalid login credentials/i.test(message)) return customerT("authInvalidCredentials");
+  if (/email not confirmed/i.test(message)) return customerT("authEmailConfirm");
+  if (/already registered|already exists|user already/i.test(message)) return customerT("authAlreadyRegistered");
+  return message || customerT("authError");
+}
+
+function customerSetAuthMessage(message, type = "") {
+  if (!customerElements.authMessage) return;
+  customerElements.authMessage.textContent = message;
+  customerElements.authMessage.dataset.type = type;
+  customerElements.authMessage.hidden = !message;
+}
+
+function customerEnsureClient() {
+  if (customerClient) return customerClient;
+  const config = customerSupabaseConfig();
+  if (!config.url || !config.anonKey || !window.supabase?.createClient) return null;
+  customerClient = window.supabase.createClient(config.url, config.anonKey, {
+    auth: { persistSession: true, autoRefreshToken: true },
+  });
+  return customerClient;
+}
+
+function customerRenderAccount() {
+  const email = customerUser?.email || "";
+  if (customerElements.accountSummary) {
+    customerElements.accountSummary.removeAttribute("data-i18n");
+    customerElements.accountSummary.textContent = customerUser
+      ? customerT("accountSignedIn", { email })
+      : customerT("accountGuest");
+  }
+  if (customerElements.authFields) customerElements.authFields.hidden = Boolean(customerUser);
+  if (customerElements.signOutButton) customerElements.signOutButton.hidden = !customerUser;
+  if (customerElements.sendButton) customerElements.sendButton.disabled = customerCart.length === 0 || !customerUser;
+
+  if (customerUser && !customerElements.nameInput.value.trim()) {
+    const fallbackName = String(customerUser.user_metadata?.full_name || email.split("@")[0] || "").trim();
+    if (fallbackName) customerElements.nameInput.value = fallbackName;
+  }
+}
+
+async function customerInitializeAuth() {
+  const client = customerEnsureClient();
+  if (!client || customerAuthInitialized) return;
+  customerAuthInitialized = true;
+  const { data } = await client.auth.getSession();
+  customerUser = data.session?.user || null;
+  customerRenderAccount();
+  if (customerUser) {
+    await customerLoadProfile();
+    await customerLoadHistory();
+  } else {
+    customerRenderHistory();
+  }
+  client.auth.onAuthStateChange(async (_event, session) => {
+    customerUser = session?.user || null;
+    customerRenderAccount();
+    if (customerUser) {
+      await customerLoadProfile();
+      await customerLoadHistory();
+    } else {
+      customerHistoryRows = [];
+      customerRenderHistory();
+    }
+  });
+}
+
+async function customerSignInWithEmail() {
+  const client = customerEnsureClient();
+  const email = customerElements.authEmail.value.trim();
+  const password = customerElements.authPassword.value;
+  if (!client) {
+    customerSetAuthMessage(customerT("appNotConfigured"), "error");
+    return;
+  }
+  if (!email || !password) {
+    customerSetAuthMessage(customerT("authMissing"), "error");
+    return;
+  }
+  customerSetAuthMessage(customerT("signingIn"));
+  const { error } = await client.auth.signInWithPassword({ email, password });
+  if (error) {
+    customerSetAuthMessage(customerFriendlyAuthError(error), "error");
+    return;
+  }
+  customerElements.authPassword.value = "";
+  customerSetAuthMessage(customerT("signedIn"), "ok");
+}
+
+async function customerSignUpWithEmail() {
+  const client = customerEnsureClient();
+  const email = customerElements.authEmail.value.trim();
+  const password = customerElements.authPassword.value;
+  if (!client) {
+    customerSetAuthMessage(customerT("appNotConfigured"), "error");
+    return;
+  }
+  if (!email || !password) {
+    customerSetAuthMessage(customerT("authMissing"), "error");
+    return;
+  }
+  if (password.length < 6) {
+    customerSetAuthMessage(customerT("authPasswordShort"), "error");
+    return;
+  }
+  customerSetAuthMessage(customerT("signingUp"));
+  const fullName = customerElements.nameInput.value.trim();
+  const { error } = await client.auth.signUp({
+    email,
+    password,
+    options: { data: { full_name: fullName } },
+  });
+  if (error) {
+    customerSetAuthMessage(customerFriendlyAuthError(error), "error");
+    return;
+  }
+  customerElements.authPassword.value = "";
+  customerSetAuthMessage(customerT("accountCreated"), "ok");
+}
+
+async function customerSignOut() {
+  if (!customerClient) return;
+  await customerClient.auth.signOut();
+  customerSetAuthMessage(customerT("signedOut"), "ok");
+}
+
+function customerProfilePayload() {
+  return {
+    user_id: customerUser.id,
+    full_name: customerElements.nameInput.value.trim(),
+    phone: customerElements.phoneInput.value.trim(),
+    default_address: {
+      table: customerElements.tableInput.value.trim(),
+      address: customerElements.addressInput.value.trim(),
+      neighborhood: customerElements.neighborhoodInput.value.trim(),
+      reference: customerElements.referenceInput.value.trim(),
+      distanceKm: customerElements.distanceInput.value.trim(),
+    },
+    language: customerLanguage,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+async function customerLoadProfile() {
+  if (!customerClient || !customerUser) return;
+  const { data, error } = await customerClient
+    .from("customer_profiles")
+    .select("full_name, phone, default_address, language")
+    .eq("user_id", customerUser.id)
+    .maybeSingle();
+  if (error || !data) return;
+  if (data.language && CUSTOMER_I18N[data.language]) customerSetLanguage(data.language);
+  if (data.full_name && !customerElements.nameInput.value.trim()) customerElements.nameInput.value = data.full_name;
+  if (data.phone && !customerElements.phoneInput.value.trim()) customerElements.phoneInput.value = data.phone;
+  const address = data.default_address || {};
+  if (address.table && !customerElements.tableInput.value.trim()) customerElements.tableInput.value = address.table;
+  if (address.address && !customerElements.addressInput.value.trim()) customerElements.addressInput.value = address.address;
+  if (address.neighborhood && !customerElements.neighborhoodInput.value.trim()) customerElements.neighborhoodInput.value = address.neighborhood;
+  if (address.reference && !customerElements.referenceInput.value.trim()) customerElements.referenceInput.value = address.reference;
+  if (address.distanceKm && !customerElements.distanceInput.value.trim()) customerElements.distanceInput.value = address.distanceKm;
+  customerRenderDeliveryFields();
+}
+
+async function customerSaveProfile() {
+  if (!customerClient || !customerUser) return;
+  await customerClient.from("customer_profiles").upsert(customerProfilePayload());
+}
+
+function customerHistoryItems(row) {
+  return Array.isArray(row?.order_json?.items) ? row.order_json.items : [];
+}
+
+function customerHistoryItemCount(row) {
+  return customerHistoryItems(row).reduce((count, item) => count + (Number.parseInt(item.qty, 10) || 1), 0);
+}
+
+function customerRenderHistory() {
+  if (!customerElements.historyList) return;
+  if (!customerUser) {
+    customerElements.historyList.innerHTML = `<div class="customer-empty">${customerEscapeHtml(customerT("historySignIn"))}</div>`;
+    return;
+  }
+  if (!customerHistoryRows.length) {
+    customerElements.historyList.innerHTML = `<div class="customer-empty">${customerEscapeHtml(customerT("historyEmpty"))}</div>`;
+    return;
+  }
+  customerElements.historyList.innerHTML = customerHistoryRows
+    .map((row) => {
+      const created = new Date(row.created_at);
+      const dateText = Number.isNaN(created.getTime())
+        ? ""
+        : `${created.toLocaleDateString()} ${created.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+      const ticketText = row.ticket_number
+        ? `${customerT("historyTicket")} #${String(row.ticket_number).padStart(4, "0")}`
+        : customerT("historyNoTicket");
+      const itemsText = customerT("historyItems", { count: customerHistoryItemCount(row) });
+      const statusType = row.status === "accepted" ? "ok" : row.status === "cancelled" ? "error" : "";
+      return `
+        <article class="customer-history-item" data-order-id="${customerEscapeHtml(row.id)}">
+          <div class="customer-history-main">
+            <strong>${customerEscapeHtml(row.restaurant_name || customerSettings.businessName)}</strong>
+            <span>${customerEscapeHtml(dateText)}</span>
+          </div>
+          <div class="customer-history-meta">
+            <span data-type="${customerEscapeHtml(statusType)}">${customerEscapeHtml(customerStatusText(row))}</span>
+            <span>${customerEscapeHtml(ticketText)}</span>
+            <span>${customerEscapeHtml(row.order_type || "")}</span>
+            <span>${customerEscapeHtml(itemsText)}</span>
+          </div>
+          <div class="customer-history-total">
+            <strong>${customerEscapeHtml(customerFormatMoney(row.total))}</strong>
+            <button class="customer-map-button" type="button" data-action="open-history-order">
+              ${customerEscapeHtml(customerT("historyOpenOrder"))}
+            </button>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+async function customerLoadHistory() {
+  if (!customerClient || !customerUser) {
+    customerHistoryRows = [];
+    customerRenderHistory();
+    return;
+  }
+  const { data, error } = await customerClient.rpc("get_customer_order_history");
+  if (error) {
+    customerElements.historyList.innerHTML = `<div class="customer-empty">${customerEscapeHtml(customerT("historyLoadError"))}</div>`;
+    return;
+  }
+  customerHistoryRows = Array.isArray(data) ? data : [];
+  customerRenderHistory();
+}
+
+function customerOpenHistoryOrder(orderId) {
+  const row = customerHistoryRows.find((item) => item.id === orderId);
+  if (!row) return;
+  customerStartStatusTracking(row.id, row.public_token, row.order_json?.paymentMethod || "", "");
+  customerSetTrackingStatus(customerStatusText(row), row.status === "accepted" ? "ok" : row.status === "cancelled" ? "error" : "");
+  customerRenderPaymentBox(row.id, Number(row.total) || 0, row.order_json || {});
+  customerElements.chatPanel?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function customerSetStatus(message, type = "") {
+  customerElements.status.removeAttribute("data-i18n");
+  customerElements.status.textContent = message;
+  customerElements.status.dataset.type = type;
+}
+
+function customerSetTrackingStatus(message, type = "") {
+  if (!customerElements.trackingStatus) return;
+  customerElements.trackingStatus.textContent = message;
+  customerElements.trackingStatus.dataset.type = type;
+  customerElements.trackingStatus.hidden = !message;
+}
+
+function customerEscapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function customerCleanCategoryName(value) {
+  const cleanName = String(value || "").trim().replace(/\s+/g, " ");
+  return cleanName || "Menu";
+}
+
+function customerCategoryKey(value) {
+  return customerCleanCategoryName(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function customerProductAvailable(product) {
+  return product?.available !== false;
+}
+
+function customerNormalizeProductDescription(value) {
+  return String(value || "").trim().replace(/\s+/g, " ").slice(0, 260);
+}
+
+function customerNormalizeMenu(menu) {
+  const normalized = {};
+  const categoriesByKey = new Map();
+
+  Object.entries(menu || {}).forEach(([category, dishes]) => {
+    const cleanCategory = customerCleanCategoryName(category);
+    const categoryKey = customerCategoryKey(cleanCategory);
+    const finalCategory = categoriesByKey.get(categoryKey) || cleanCategory;
+    categoriesByKey.set(categoryKey, finalCategory);
+    if (!normalized[finalCategory]) normalized[finalCategory] = [];
+
+    if (Array.isArray(dishes)) {
+      dishes.forEach((dish) => {
+        const name = String(dish?.name || "").trim();
+        const price = Number.parseFloat(dish?.price) || 0;
+        const imageUrl = String(dish?.imageUrl || dish?.image || dish?.photo || "").trim();
+        const description = customerNormalizeProductDescription(dish?.description || dish?.descripcion || dish?.details || "");
+        if (name) {
+          normalized[finalCategory].push({
+            name,
+            price,
+            available: dish?.available === false ? false : true,
+            imageUrl,
+            description,
+          });
+        }
+      });
+    }
+  });
+
+  if (!Object.keys(normalized).length) normalized.Entradas = [];
+  return normalized;
+}
+
+function customerFormatMoney(amount) {
+  const value = Number(amount) || 0;
+  const formatted = new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+  const localized =
+    customerSettings.moneyFormat === "eu" ? formatted.replaceAll(",", " ").replace(".", ",") : formatted;
+
+  if (customerSettings.currencyPosition === "after") {
+    return `${localized} ${customerSettings.currencySymbol}`;
+  }
+
+  const separator = /[A-Za-z0-9]$/.test(customerSettings.currencySymbol) ? " " : "";
+  return `${customerSettings.currencySymbol}${separator}${localized}`;
+}
+
+function customerNormalizeMoney(value) {
+  const number = Number.parseFloat(value);
+  return Number.isFinite(number) && number > 0 ? number : 0;
+}
+
+function customerNormalizeText(value) {
+  return String(value || "").trim();
+}
+
+function customerNormalizeBusinessName(value) {
+  const name = customerNormalizeText(value).replace(/\s+/g, " ");
+  return name || "RINCON COLOMBIANO";
+}
+
+function customerApplyBusinessName() {
+  const name = customerNormalizeBusinessName(customerSettings.businessName);
+  customerSettings.businessName = name;
+  if (customerElements.businessName) customerElements.businessName.textContent = name;
+  document.title = `${name} - Menu cliente`;
+  const appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+  if (appleTitle) appleTitle.setAttribute("content", name);
+}
+
+function customerNormalizeDistance(value) {
+  const number = Number.parseFloat(String(value || "").replace(",", "."));
+  return Number.isFinite(number) && number > 0 ? number : 0;
+}
+
+function customerCalculateDeliveryFee(distanceKm) {
+  const distance = customerNormalizeDistance(distanceKm);
+  if (distance <= 0) return 0;
+
+  const rates = CUSTOMER_DELIVERY_RATES;
+  let total = rates.baseFee;
+
+  if (distance > rates.baseKm) {
+    total += (Math.min(distance, rates.intermediateLimitKm) - rates.baseKm) * rates.intermediatePerKm;
+  }
+
+  if (distance > rates.intermediateLimitKm) {
+    total += (Math.min(distance, rates.longLimitKm) - rates.intermediateLimitKm) * rates.longPerKm;
+  }
+
+  if (distance > rates.longLimitKm) {
+    total += (distance - rates.longLimitKm) * rates.extraLongPerKm;
+  }
+
+  return Math.round(total * 100) / 100;
+}
+
+function customerSetMapResult(message, type = "") {
+  customerElements.mapResult.textContent = message;
+  customerElements.mapResult.dataset.type = type;
+  customerElements.mapResult.hidden = !message;
+}
+
+function customerMapDestinationLabel(destination) {
+  if (destination?.lat && destination?.lng) {
+    const lat = typeof destination.lat === "function" ? destination.lat() : destination.lat;
+    const lng = typeof destination.lng === "function" ? destination.lng() : destination.lng;
+    return `${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`;
+  }
+  return String(destination || "");
+}
+
+function customerDeliveryDestination() {
+  return [
+    customerElements.addressInput.value.trim(),
+    customerElements.neighborhoodInput.value.trim(),
+    "Poland",
+  ].filter(Boolean).join(", ");
+}
+
+function customerDeliveryDestinationForMaps() {
+  if (customerLocationCoords && window.google?.maps?.LatLng) {
+    return new google.maps.LatLng(customerLocationCoords.lat, customerLocationCoords.lng);
+  }
+  return customerDeliveryDestination();
+}
+
+function customerCanUseGoogleMaps() {
+  return Boolean(customerSettings.googleMapsApiKey && customerSettings.restaurantAddress && window.navigator.onLine);
+}
+
+function customerLoadGoogleMaps() {
+  if (window.google?.maps?.DistanceMatrixService) return Promise.resolve();
+  if (!customerSettings.googleMapsApiKey) return Promise.reject(new Error(customerT("mapsNeedKey")));
+  if (googleMapsScriptPromise) return googleMapsScriptPromise;
+
+  googleMapsScriptPromise = new Promise((resolve, reject) => {
+    const callbackName = `rinconGoogleMapsReady_${Date.now()}`;
+    const script = document.createElement("script");
+    window[callbackName] = () => {
+      delete window[callbackName];
+      resolve();
+    };
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(customerSettings.googleMapsApiKey)}&callback=${callbackName}`;
+    script.async = true;
+    script.defer = true;
+    script.addEventListener("error", () => {
+      delete window[callbackName];
+      googleMapsScriptPromise = null;
+      reject(new Error(customerT("mapsLoadError")));
+    });
+    document.head.appendChild(script);
+  });
+
+  return googleMapsScriptPromise;
+}
+
+function customerGetGoogleMapsDistance(origin, destination) {
+  return new Promise((resolve, reject) => {
+    const service = new google.maps.DistanceMatrixService();
+    service.getDistanceMatrix(
+      {
+        origins: [origin],
+        destinations: [destination],
+        travelMode: google.maps.TravelMode.DRIVING,
+        unitSystem: google.maps.UnitSystem.METRIC,
+      },
+      (response, status) => {
+        if (status !== "OK") {
+          reject(new Error(customerT("mapsResponseError", { status })));
+          return;
+        }
+        const element = response?.rows?.[0]?.elements?.[0];
+        if (!element || element.status !== "OK") {
+          reject(new Error(customerT("mapsRouteError", { status: element?.status || "sin resultado" })));
+          return;
+        }
+        resolve({
+          distanceKm: Math.round((element.distance.value / 1000) * 10) / 10,
+          distanceText: element.distance.text,
+          durationText: element.duration?.text || "",
+          origin,
+          destination: customerMapDestinationLabel(destination),
+        });
+      }
+    );
+  });
+}
+
+async function customerUseLocation() {
+  if (customerElements.orderType.value !== "Domicilio") {
+    customerSetMapResult(customerT("locationDeliveryOnly"), "error");
+    return;
+  }
+  if (!navigator.geolocation) {
+    customerSetMapResult(customerT("locationUnsupported"), "error");
+    return;
+  }
+
+  customerElements.useLocationButton.disabled = true;
+  customerSetMapResult(customerT("locationRequest"), "");
+
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      customerLocationCoords = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      };
+      customerSetMapResult(customerT("locationReceived"), "ok");
+      customerElements.useLocationButton.disabled = false;
+      if (customerCanUseGoogleMaps()) {
+        await customerCalculateDistanceWithMaps();
+      }
+    },
+    () => {
+      customerLocationCoords = null;
+      customerElements.useLocationButton.disabled = false;
+      customerSetMapResult(customerT("locationError"), "error");
+    },
+    { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
+  );
+}
+
+async function customerCalculateDistanceWithMaps() {
+  if (customerElements.orderType.value !== "Domicilio") return;
+  if (!customerSettings.restaurantAddress) {
+    customerSetMapResult(customerT("mapsNeedAddress"), "error");
+    return;
+  }
+  if (!customerSettings.googleMapsApiKey) {
+    customerSetMapResult(customerT("mapsNeedKey"), "error");
+    return;
+  }
+  if (!customerElements.addressInput.value.trim() && !customerLocationCoords) {
+    customerSetMapResult(customerT("mapsNeedDestination"), "error");
+    customerElements.addressInput.focus();
+    return;
+  }
+
+  const origin = customerSettings.restaurantAddress;
+  customerSetMapResult(customerT("mapsCalculating"), "");
+  customerElements.calculateDistanceButton.disabled = true;
+
+  try {
+    await customerLoadGoogleMaps();
+    const destination = customerDeliveryDestinationForMaps();
+    customerMapDistance = await customerGetGoogleMapsDistance(origin, destination);
+    customerElements.distanceInput.value = customerMapDistance.distanceKm;
+    customerSetMapResult(
+      customerT("mapsResult", {
+        distance: customerMapDistance.distanceText,
+        duration: customerMapDistance.durationText ? ` / ${customerMapDistance.durationText}` : "",
+        fee: customerFormatMoney(customerDeliveryFee()),
+      }),
+      "ok"
+    );
+    customerRenderCart();
+  } catch (error) {
+    customerMapDistance = null;
+    customerSetMapResult(customerT("mapsManual", { error: error.message || customerT("mapsFallback") }), "error");
+  } finally {
+    customerElements.calculateDistanceButton.disabled = false;
+  }
+}
+
+function customerDeliveryFee() {
+  if (customerElements.orderType.value !== "Domicilio") return 0;
+  return customerCalculateDeliveryFee(customerElements.distanceInput.value) + customerNormalizeMoney(customerSettings.deliveryFee);
+}
+
+function customerItemTotal(item) {
+  return (Number.parseFloat(item.qty) || 0) * (Number.parseFloat(item.price) || 0);
+}
+
+function customerCartTotal() {
+  return customerCart.reduce((total, item) => total + customerItemTotal(item), 0) + customerDeliveryFee();
+}
+
+function customerNormalizeNote(value) {
+  return String(value || "").trim().toUpperCase();
+}
+
+function customerRenderDeliveryFields() {
+  const isDelivery = customerElements.orderType.value === "Domicilio";
+  customerElements.deliveryFields.hidden = !isDelivery;
+  customerElements.tableInput.placeholder = isDelivery ? customerT("deliveryTablePlaceholder") : customerT("tablePlaceholder");
+  if (!isDelivery) {
+    customerMapDistance = null;
+    customerSetMapResult("");
+  } else if (!customerCanUseGoogleMaps()) {
+    customerSetMapResult(customerT("manualDistanceHelp"), "");
+  }
+  customerRenderCart();
+}
+
+function customerDeliveryPayload() {
+  if (customerElements.orderType.value !== "Domicilio") return null;
+  const distanceKm = customerNormalizeDistance(customerElements.distanceInput.value);
+  const calculatedFee = customerCalculateDeliveryFee(distanceKm);
+  const extraFee = customerNormalizeMoney(customerSettings.deliveryFee);
+  return {
+    name: customerElements.nameInput.value.trim(),
+    phone: customerElements.phoneInput.value.trim(),
+    address: customerElements.addressInput.value.trim(),
+    neighborhood: customerElements.neighborhoodInput.value.trim(),
+    reference: customerElements.referenceInput.value.trim(),
+    distanceKm,
+    calculatedFee,
+    extraFee,
+    fee: calculatedFee + extraFee,
+    mapDistanceText: customerMapDistance?.distanceText || "",
+    mapDurationText: customerMapDistance?.durationText || "",
+    mapOrigin: customerMapDistance?.origin || customerSettings.restaurantAddress || "",
+    mapDestination: customerMapDistance?.destination || customerDeliveryDestination(),
+    location: customerLocationCoords,
+    tariff: "BASE 1.5KM=4.50 PLN; 1.5-6KM=1.50 PLN/KM; 6-8KM=2.50 PLN/KM; +8KM=3.50 PLN/KM",
+  };
+}
+
+function customerOrderReference(orderId) {
+  return String(orderId || "").slice(0, 8).toUpperCase();
+}
+
+function customerClearPaymentBox() {
+  if (!customerElements.paymentBox) return;
+  customerElements.paymentBox.hidden = true;
+  customerElements.paymentBox.innerHTML = "";
+}
+
+function customerRenderPaymentBox(orderId, total, payload) {
+  if (!customerElements.paymentBox) return;
+  const reference = customerOrderReference(orderId);
+  const paymentMethod = payload.paymentMethod;
+  const amountText = customerFormatMoney(total);
+  const bankAccount = customerSettings.bankAccount || customerT("bankAccountMissing");
+  const transferNote = customerSettings.bankTransferNote || customerT("transferNoteDefault");
+  let actionHtml = "";
+
+  if (paymentMethod === "Transferencia") {
+    actionHtml = `
+      <p><strong>${customerEscapeHtml(customerT("bankAccountLabel"))}:</strong> ${customerEscapeHtml(bankAccount)}</p>
+      <p><strong>${customerEscapeHtml(customerT("transferNoteLabel"))}:</strong> ${customerEscapeHtml(transferNote)}</p>
+    `;
+  } else {
+    actionHtml = `<p>${customerEscapeHtml(
+      customerT("payOnDelivery", {
+        amount: amountText,
+        method: paymentMethod === "Datafono" ? customerT("cardLower") : customerT("cashLower"),
+      })
+    )}</p>`;
+  }
+
+  customerElements.paymentBox.innerHTML = `
+    <strong>${customerEscapeHtml(customerT("paymentTitle"))}</strong>
+    <p><strong>${customerEscapeHtml(customerT("totalLabel"))}:</strong> ${customerEscapeHtml(amountText)}</p>
+    <p><strong>${customerEscapeHtml(customerT("referencePaymentLabel"))}:</strong> ${customerEscapeHtml(reference)}</p>
+    ${actionHtml}
+  `;
+  customerElements.paymentBox.hidden = false;
+}
+
+async function customerRequestNotificationPermission() {
+  if (!("Notification" in window)) {
+    customerSetTrackingStatus(customerT("notificationUnsupported"), "error");
+    return "unsupported";
+  }
+
+  const permission = Notification.permission === "default" ? await Notification.requestPermission() : Notification.permission;
+  if (permission === "granted") {
+    customerSetTrackingStatus(customerT("notificationsOn"), "ok");
+  } else {
+    customerSetTrackingStatus(customerT("notificationsOff"), "");
+  }
+  return permission;
+}
+
+function customerShowNotification(title, body) {
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  try {
+    new Notification(title, {
+      body,
+      icon: "app-icon-192.png",
+      tag: "rincon-colombiano-order-status",
+    });
+  } catch {
+    // El estado visible en pantalla sigue funcionando aunque el navegador bloquee el aviso.
+  }
+}
+
+function customerSetChatStatus(message, type = "") {
+  if (!customerElements.chatStatus) return;
+  customerElements.chatStatus.textContent = message;
+  customerElements.chatStatus.dataset.type = type;
+  customerElements.chatStatus.hidden = !message;
+}
+
+function customerMessageImageHtml(message) {
+  const image = String(message?.image_data_url || "");
+  if (!image.startsWith("data:image/")) return "";
+  return `<a href="${customerEscapeHtml(image)}" target="_blank" rel="noopener"><img src="${customerEscapeHtml(image)}" alt="${customerEscapeHtml(customerT("chatImageAlt"))}" loading="lazy" /></a>`;
+}
+
+function customerRenderChatMessages(messages = []) {
+  if (!customerElements.chatMessages) return;
+  if (!messages.length) {
+    customerElements.chatMessages.innerHTML = `<div class="customer-empty">${customerEscapeHtml(customerT("chatEmpty"))}</div>`;
+    return;
+  }
+
+  customerElements.chatMessages.innerHTML = messages
+    .map((message) => {
+      const sender = message.sender === "restaurant" ? customerT("restaurantSender") : customerT("customerSender");
+      const side = message.sender === "restaurant" ? "restaurant" : "customer";
+      return `
+        <article class="customer-chat-message ${side}">
+          <strong>${customerEscapeHtml(sender)}</strong>
+          ${message.body ? `<p>${customerEscapeHtml(message.body)}</p>` : ""}
+          ${customerMessageImageHtml(message)}
+        </article>
+      `;
+    })
+    .join("");
+  customerElements.chatMessages.scrollTop = customerElements.chatMessages.scrollHeight;
+}
+
+async function customerImageFileToDataUrl(file) {
+  if (!file) return "";
+  if (!file.type.startsWith("image/")) {
+    throw new Error(customerT("imageInvalid"));
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error(customerT("imageTooLarge"));
+  }
+
+  const dataUrl = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => resolve(String(reader.result || "")));
+    reader.addEventListener("error", () => reject(new Error(customerT("imageReadError"))));
+    reader.readAsDataURL(file);
+  });
+
+  const image = await new Promise((resolve, reject) => {
+    const img = new Image();
+    img.addEventListener("load", () => resolve(img));
+    img.addEventListener("error", () => reject(new Error(customerT("imagePrepareError"))));
+    img.src = dataUrl;
+  });
+
+  const maxSide = 900;
+  const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.width * scale));
+  canvas.height = Math.max(1, Math.round(image.height * scale));
+  const context = canvas.getContext("2d");
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  const compressed = canvas.toDataURL("image/jpeg", 0.76);
+  if (compressed.length > 950000) {
+    throw new Error(customerT("imageStillLarge"));
+  }
+  return compressed;
+}
+
+async function customerLoadChatMessages(options = {}) {
+  const { silent = false } = options;
+  if (!customerTrackedOrder?.id || !customerTrackedOrder.publicToken || !customerClient) return;
+
+  const { data, error } = await customerClient.rpc("get_customer_order_messages", {
+    p_order_id: customerTrackedOrder.id,
+    p_public_token: customerTrackedOrder.publicToken,
+  });
+
+  if (error) {
+    if (!silent) customerSetChatStatus(customerT("chatLoadError"), "error");
+    return;
+  }
+
+  const messages = Array.isArray(data) ? data : [];
+  const newRestaurantMessage = messages.some(
+    (message) => message.sender === "restaurant" && customerChatLoadedOnce && !customerKnownChatMessageIds.has(message.id)
+  );
+  customerKnownChatMessageIds = new Set(messages.map((message) => message.id));
+  customerChatLoadedOnce = true;
+  customerRenderChatMessages(messages);
+  if (newRestaurantMessage) {
+    customerShowNotification(customerT("restaurantMessageTitle"), customerT("restaurantMessageBody"));
+  }
+}
+
+function customerStartChat(orderId, publicToken) {
+  if (!customerElements.chatPanel || !orderId || !publicToken) return;
+  if (customerChatTimer) window.clearInterval(customerChatTimer);
+  customerKnownChatMessageIds = new Set();
+  customerChatLoadedOnce = false;
+  customerElements.chatPanel.hidden = false;
+  customerRenderChatMessages([]);
+  customerSetChatStatus("");
+  customerLoadChatMessages().catch(() => {});
+  customerChatTimer = window.setInterval(() => {
+    customerLoadChatMessages({ silent: true }).catch(() => {});
+  }, 7000);
+}
+
+async function customerSendChatMessage() {
+  if (!customerTrackedOrder?.id || !customerTrackedOrder.publicToken || !customerClient) {
+    customerSetChatStatus(customerT("chatFirstOrder"), "error");
+    return;
+  }
+
+  const body = customerNormalizeText(customerElements.chatInput.value);
+  const file = customerElements.chatImageInput.files?.[0] || null;
+  if (!body && !file) {
+    customerSetChatStatus(customerT("chatNeedMessage"), "error");
+    return;
+  }
+
+  customerElements.chatSendButton.disabled = true;
+  customerSetChatStatus(customerT("chatSending"), "");
+
+  try {
+    const imageDataUrl = await customerImageFileToDataUrl(file);
+    const { error } = await customerClient.rpc("create_customer_message", {
+      p_order_id: customerTrackedOrder.id,
+      p_public_token: customerTrackedOrder.publicToken,
+      p_body: body,
+      p_image_data_url: imageDataUrl,
+    });
+
+    if (error) throw error;
+    customerElements.chatInput.value = "";
+    customerElements.chatImageInput.value = "";
+    customerSetChatStatus(customerT("chatSent"), "ok");
+    await customerLoadChatMessages({ silent: true });
+  } catch (error) {
+    customerSetChatStatus(error.message || customerT("chatSendError"), "error");
+  } finally {
+    customerElements.chatSendButton.disabled = false;
+  }
+}
+
+function customerValidateOrderData() {
+  const isDelivery = customerElements.orderType.value === "Domicilio";
+  if (!customerElements.nameInput.value.trim()) {
+    customerSetStatus(customerT("nameRequired"), "error");
+    customerElements.nameInput.focus();
+    return false;
+  }
+
+  if (!isDelivery) return true;
+
+  if (!customerElements.phoneInput.value.trim()) {
+    customerSetStatus(customerT("phoneRequired"), "error");
+    customerElements.phoneInput.focus();
+    return false;
+  }
+
+  if (!customerElements.addressInput.value.trim()) {
+    customerSetStatus(customerT("addressRequired"), "error");
+    customerElements.addressInput.focus();
+    return false;
+  }
+
+  if (customerNormalizeDistance(customerElements.distanceInput.value) <= 0) {
+    customerSetStatus(customerT("distanceRequired"), "error");
+    customerElements.distanceInput.focus();
+    return false;
+  }
+
+  return true;
+}
+
+function customerGenerateId() {
+  return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function customerNormalizeRpcRow(data) {
+  if (Array.isArray(data)) return data[0] || null;
+  return data || null;
+}
+
+async function customerCreateCustomerOrder(orderPayload, total, tableLabel, customerName, orderType) {
+  const orderId = customerGenerateId();
+  const publicToken = customerGenerateId();
+  const payloadWithToken = { ...orderPayload, publicToken };
+
+  const { data: rpcData, error: rpcError } = await customerClient.rpc("create_customer_order", {
+    p_id: orderId,
+    p_user_id: customerStoreId,
+    p_public_token: publicToken,
+    p_table_label: tableLabel,
+    p_customer_name: customerName,
+    p_order_type: orderType,
+    p_order_json: payloadWithToken,
+    p_total: total,
+  });
+
+  if (!rpcError) {
+    const row = customerNormalizeRpcRow(rpcData);
+    return {
+      id: row?.id || orderId,
+      publicToken: row?.public_token || publicToken,
+      payload: payloadWithToken,
+      trackingAvailable: true,
+    };
+  }
+
+  const insertPayload = {
+    id: orderId,
+    user_id: customerStoreId,
+    customer_user_id: customerUser?.id || null,
+    public_token: publicToken,
+    status: "pending",
+    table_label: tableLabel,
+    customer_name: customerName,
+    order_type: orderType,
+    order_json: payloadWithToken,
+    total,
+  };
+
+  let { error: insertError } = await customerClient.from("customer_orders").insert(insertPayload);
+  if (!insertError) {
+    return {
+      id: orderId,
+      publicToken,
+      payload: payloadWithToken,
+      trackingAvailable: true,
+    };
+  }
+
+  const legacyPayload = { ...insertPayload };
+  delete legacyPayload.public_token;
+  delete legacyPayload.customer_user_id;
+  legacyPayload.order_json = orderPayload;
+  ({ error: insertError } = await customerClient.from("customer_orders").insert(legacyPayload));
+  if (insertError) throw insertError;
+
+  return {
+    id: orderId,
+    publicToken: "",
+    payload: orderPayload,
+    trackingAvailable: false,
+  };
+}
+
+function customerStatusText(row) {
+  const ticket = row?.ticket_number ? customerT("ticketSuffix", { ticket: String(row.ticket_number).padStart(4, "0") }) : "";
+  if (row?.status === "accepted") return customerT("accepted", { ticket });
+  if (row?.status === "cancelled") return customerT("cancelled");
+  return customerT("orderSentWaiting");
+}
+
+async function customerPollOrderStatus() {
+  if (!customerTrackedOrder?.id || !customerTrackedOrder.publicToken || !customerClient) return;
+
+  const { data, error } = await customerClient.rpc("get_customer_order_status", {
+    p_order_id: customerTrackedOrder.id,
+    p_public_token: customerTrackedOrder.publicToken,
+  });
+
+  if (error) {
+    customerSetTrackingStatus(customerT("orderSentCashier"), "");
+    if (customerStatusTimer) window.clearInterval(customerStatusTimer);
+    customerStatusTimer = null;
+    return;
+  }
+
+  const row = customerNormalizeRpcRow(data);
+  if (!row) return;
+  const previousStatus = customerTrackedOrder.status;
+  customerTrackedOrder.status = row.status;
+  const message = customerStatusText(row);
+  const type = row.status === "accepted" ? "ok" : row.status === "cancelled" ? "error" : "";
+  customerSetTrackingStatus(message, type);
+
+  if (previousStatus && previousStatus !== row.status) {
+    customerShowNotification(customerT("notificationStatusTitle"), message);
+  }
+
+  if (row.status === "accepted" || row.status === "cancelled") {
+    if (customerStatusTimer) window.clearInterval(customerStatusTimer);
+    customerStatusTimer = null;
+  }
+}
+
+function customerStartStatusTracking(orderId, publicToken, paymentMethod, paymentUrl) {
+  if (customerStatusTimer) window.clearInterval(customerStatusTimer);
+  customerTrackedOrder = {
+    id: orderId,
+    publicToken,
+    paymentMethod,
+    paymentUrl,
+    status: "pending",
+  };
+  customerSetTrackingStatus(customerT("orderSentWaiting"), "");
+  customerPollOrderStatus().catch(() => {});
+  customerStatusTimer = window.setInterval(() => {
+    customerPollOrderStatus().catch(() => {});
+  }, 8000);
+  customerStartChat(orderId, publicToken);
+}
+
+function customerRenderCategories() {
+  const categories = Object.keys(customerMenu);
+  if (!categories.includes(customerActiveCategory)) {
+    customerActiveCategory = categories[0] || "Entradas";
+  }
+
+  customerElements.categoryTabs.innerHTML = categories
+    .map(
+      (category) => `
+        <button type="button" data-category="${customerEscapeHtml(category)}" aria-selected="${
+        category === customerActiveCategory
+      }">
+          ${customerEscapeHtml(category)}
+        </button>
+      `
+    )
+    .join("");
+}
+
+function customerRenderMenu() {
+  const dishes = customerMenu[customerActiveCategory] || [];
+  if (!dishes.length) {
+    customerElements.menuGrid.innerHTML = `<div class="customer-empty">${customerEscapeHtml(customerT("emptyCategory"))}</div>`;
+    return;
+  }
+
+  customerElements.menuGrid.innerHTML = dishes
+    .map(
+      (dish, index) => `
+        <button
+          class="customer-dish-button ${dish.imageUrl ? "has-product-image" : ""} ${customerProductAvailable(dish) ? "" : "is-unavailable"}"
+          type="button"
+          data-index="${index}"
+          ${customerProductAvailable(dish) ? "" : "disabled aria-disabled=\"true\""}
+        >
+          ${dish.imageUrl ? `<img src="${customerEscapeHtml(dish.imageUrl)}" alt="${customerEscapeHtml(dish.name)}" loading="lazy" />` : ""}
+          <strong>${customerEscapeHtml(dish.name)}</strong>
+          ${dish.description ? `<small>${customerEscapeHtml(dish.description)}</small>` : ""}
+          <span>${customerFormatMoney(dish.price)}</span>
+          ${customerProductAvailable(dish) ? "" : `<em>${customerEscapeHtml(customerT("unavailable"))}</em>`}
+        </button>
+      `
+    )
+    .join("");
+}
+
+function customerRenderCart() {
+  if (!customerCart.length) {
+    customerElements.cartItems.innerHTML = `<div class="customer-empty">${customerEscapeHtml(customerT("emptyCart"))}</div>`;
+  } else {
+    customerElements.cartItems.innerHTML = customerCart
+      .map(
+        (item) => `
+          <article class="customer-cart-item" data-id="${customerEscapeHtml(item.id)}">
+            <div>
+              <strong>${customerEscapeHtml(item.name)}</strong>
+              <span>${customerFormatMoney(customerItemTotal(item))}</span>
+            </div>
+            <div class="customer-qty-row">
+              <button type="button" data-action="minus">-</button>
+              <input type="number" min="1" step="1" value="${item.qty}" data-action="qty" />
+              <button type="button" data-action="plus">+</button>
+              <button type="button" data-action="remove">${customerEscapeHtml(customerT("remove"))}</button>
+            </div>
+            <input class="customer-note-input" type="text" value="${customerEscapeHtml(
+              item.note
+            )}" data-action="note" placeholder="${customerEscapeHtml(customerT("itemNotePlaceholder"))}" />
+          </article>
+        `
+      )
+      .join("");
+  }
+
+  customerElements.cartTotal.textContent = customerFormatMoney(customerCartTotal());
+  customerElements.deliveryFeeRow.hidden = customerElements.orderType.value !== "Domicilio";
+  customerElements.deliveryFeeLabel.textContent = customerFormatMoney(customerDeliveryFee());
+  customerElements.sendButton.disabled = customerCart.length === 0 || !customerUser;
+}
+
+function customerAddItem(dish) {
+  const existing = customerCart.find((item) => item.name.toLowerCase() === dish.name.toLowerCase() && !item.note);
+  if (existing) {
+    existing.qty += 1;
+  } else {
+    customerCart.push({
+      id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+      name: dish.name,
+      description: dish.description || "",
+      price: Number.parseFloat(dish.price) || 0,
+      qty: 1,
+      note: "",
+    });
+  }
+  customerRenderCart();
+}
+
+async function customerLoadMenu() {
+  if (!customerStoreId) {
+    customerSetStatus(customerT("missingStore"), "error");
+    return;
+  }
+
+  const config = customerSupabaseConfig();
+  if (!config.url || !config.anonKey || !window.supabase?.createClient) {
+    customerSetStatus(customerT("appNotConfigured"), "error");
+    return;
+  }
+
+  customerClient = customerEnsureClient();
+  await customerInitializeAuth();
+
+  const { data, error } = await customerClient
+    .from("app_settings")
+    .select("menu, settings")
+    .eq("user_id", customerStoreId)
+    .maybeSingle();
+
+  if (error) {
+    customerSetStatus(customerT("menuLoadError"), "error");
+    return;
+  }
+
+  if (!data) {
+    customerSetStatus(customerT("noMenu"), "error");
+    return;
+  }
+
+  customerMenu = customerNormalizeMenu(data.menu || CUSTOMER_DEFAULT_MENU);
+  customerSettings = {
+    businessName: customerNormalizeBusinessName(data.settings?.businessName),
+    currencySymbol: data.settings?.currencySymbol || "$",
+    currencyPosition: data.settings?.currencyPosition === "after" ? "after" : "before",
+    moneyFormat: data.settings?.moneyFormat === "eu" ? "eu" : "us",
+    deliveryFee: customerNormalizeMoney(data.settings?.deliveryFee),
+    restaurantAddress: customerNormalizeText(data.settings?.restaurantAddress),
+    googleMapsApiKey: customerNormalizeText(data.settings?.googleMapsApiKey),
+    bankAccount: customerNormalizeText(data.settings?.bankAccount),
+    bankTransferNote: customerNormalizeText(data.settings?.bankTransferNote),
+  };
+  customerApplyBusinessName();
+  customerActiveCategory = Object.keys(customerMenu)[0] || "Entradas";
+
+  if (customerTableFromQr) {
+    customerElements.tableInput.value = customerTableFromQr;
+    customerElements.tableLabel.textContent = customerT("orderFor", { table: customerTableFromQr });
+  }
+
+  customerSetStatus(customerT("menuReady"), "ok");
+  customerRenderCategories();
+  customerRenderMenu();
+  customerRenderDeliveryFields();
+  customerRenderCart();
+}
+
+async function customerSendOrder() {
+  if (!customerClient || !customerStoreId) {
+    customerSetStatus(customerT("noConnection"), "error");
+    return;
+  }
+
+  if (!customerUser) {
+    customerSetStatus(customerT("accountRequired"), "error");
+    customerElements.authEmail?.focus();
+    return;
+  }
+
+  if (!customerCart.length) {
+    customerSetStatus(customerT("addProductFirst"), "error");
+    return;
+  }
+
+  if (!customerValidateOrderData()) return;
+
+  const tableLabel = customerElements.tableInput.value.trim();
+  const customerName = customerElements.nameInput.value.trim();
+  const orderType = customerElements.orderType.value;
+  const paymentMethod = customerElements.paymentMethod.value;
+  const delivery = customerDeliveryPayload();
+  const notes = customerNormalizeNote(customerElements.notesInput.value);
+  const items = customerCart.map((item) => ({
+    name: item.name,
+    description: item.description || "",
+    price: Number.parseFloat(item.price) || 0,
+    qty: Number.parseInt(item.qty, 10) || 1,
+    note: customerNormalizeNote(item.note),
+  }));
+  const total = customerCartTotal();
+  const orderPayload = {
+    source: "cliente_qr",
+    customerUserId: customerUser.id,
+    customerEmail: customerUser.email || "",
+    customer: customerName,
+    table: tableLabel,
+    type: orderType,
+    paymentMethod,
+    delivery,
+    notes,
+    items,
+    total,
+    createdAt: new Date().toISOString(),
+  };
+
+  customerElements.sendButton.disabled = true;
+  customerSetStatus(customerT("sendingOrder"), "");
+  customerClearPaymentBox();
+
+  let insertedOrder;
+  try {
+    await customerSaveProfile();
+    insertedOrder = await customerCreateCustomerOrder(orderPayload, total, tableLabel, customerName, orderType);
+  } catch {
+    insertedOrder = null;
+  }
+
+  if (!insertedOrder) {
+    customerElements.sendButton.disabled = false;
+    customerSetStatus(customerT("sendOrderError"), "error");
+    return;
+  }
+
+  customerCart = [];
+  customerElements.notesInput.value = "";
+  customerRenderCart();
+  if (insertedOrder.trackingAvailable) {
+    customerStartStatusTracking(insertedOrder.id, insertedOrder.publicToken, paymentMethod, "");
+  } else {
+    customerTrackedOrder = {
+      id: insertedOrder.id,
+      publicToken: "",
+      paymentMethod,
+      paymentUrl: "",
+      status: "pending",
+    };
+    customerSetTrackingStatus(customerT("orderSentCashier"), "");
+  }
+  customerRenderPaymentBox(insertedOrder.id, total, insertedOrder.payload);
+  customerRenderCart();
+  customerSetStatus(customerT("orderSent"), "ok");
+  customerLoadHistory().catch(() => {});
+}
+
+customerElements.categoryTabs.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-category]");
+  if (!button) return;
+  customerActiveCategory = button.dataset.category;
+  customerRenderCategories();
+  customerRenderMenu();
+});
+
+customerElements.menuGrid.addEventListener("click", (event) => {
+  const button = event.target.closest(".customer-dish-button");
+  if (!button || button.disabled) return;
+  const dish = (customerMenu[customerActiveCategory] || [])[Number.parseInt(button.dataset.index, 10)];
+  if (dish) customerAddItem(dish);
+});
+
+customerElements.cartItems.addEventListener("click", (event) => {
+  const row = event.target.closest(".customer-cart-item");
+  const action = event.target.dataset.action;
+  if (!row || !action) return;
+  const item = customerCart.find((entry) => entry.id === row.dataset.id);
+  if (!item) return;
+
+  if (action === "plus") item.qty += 1;
+  if (action === "minus") item.qty = Math.max(1, item.qty - 1);
+  if (action === "remove") customerCart = customerCart.filter((entry) => entry.id !== item.id);
+  customerRenderCart();
+});
+
+customerElements.cartItems.addEventListener("input", (event) => {
+  const row = event.target.closest(".customer-cart-item");
+  const action = event.target.dataset.action;
+  if (!row || !action) return;
+  const item = customerCart.find((entry) => entry.id === row.dataset.id);
+  if (!item) return;
+
+  if (action === "qty") {
+    item.qty = Math.max(1, Number.parseInt(event.target.value, 10) || 1);
+    event.target.value = item.qty;
+  }
+  if (action === "note") {
+    item.note = customerNormalizeNote(event.target.value);
+    event.target.value = item.note;
+    return;
+  }
+  customerRenderCart();
+});
+
+customerElements.signInButton.addEventListener("click", customerSignInWithEmail);
+customerElements.signUpButton.addEventListener("click", customerSignUpWithEmail);
+customerElements.signOutButton.addEventListener("click", customerSignOut);
+customerElements.refreshHistoryButton.addEventListener("click", () => customerLoadHistory());
+customerElements.historyList.addEventListener("click", (event) => {
+  const button = event.target.closest('button[data-action="open-history-order"]');
+  const row = event.target.closest(".customer-history-item");
+  if (!button || !row) return;
+  customerOpenHistoryOrder(row.dataset.orderId);
+});
+
+customerElements.notesInput.addEventListener("input", () => {
+  customerElements.notesInput.value = customerNormalizeNote(customerElements.notesInput.value);
+});
+
+customerElements.orderType.addEventListener("change", customerRenderDeliveryFields);
+customerElements.paymentMethod.addEventListener("change", customerRenderCart);
+customerElements.distanceInput.addEventListener("input", customerRenderCart);
+customerElements.languageSelect.addEventListener("change", () => customerSetLanguage(customerElements.languageSelect.value));
+customerElements.notifyButton.addEventListener("click", () => {
+  customerRequestNotificationPermission().catch(() => {
+    customerSetTrackingStatus(customerT("notificationEnableError"), "error");
+  });
+});
+customerElements.useLocationButton.addEventListener("click", customerUseLocation);
+customerElements.calculateDistanceButton.addEventListener("click", customerCalculateDistanceWithMaps);
+customerElements.chatSendButton.addEventListener("click", customerSendChatMessage);
+customerElements.sendButton.addEventListener("click", customerSendOrder);
+
+customerApplyBusinessName();
+customerApplyTranslations();
+customerLoadMenu().catch(() => {
+  customerSetStatus(customerT("openMenuError"), "error");
+});

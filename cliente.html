@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>RINCON COLOMBIANO - Menu cliente</title>
+    <meta name="theme-color" content="#1f8f4d" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Rincon Colombiano" />
+    <meta name="format-detection" content="telephone=no" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="app-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="app-icon-192.png" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="customer-page">
+    <main class="customer-shell">
+      <header class="customer-hero">
+        <div class="customer-language-row">
+          <p class="eyebrow" data-i18n="heroEyebrow">Pedido del cliente</p>
+          <label class="customer-language-label">
+            <span data-i18n="languageLabel">Idioma</span>
+            <select id="customerLanguageSelect">
+              <option value="es">Espanol</option>
+              <option value="pl">Polski</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+        </div>
+        <h1 id="customerBusinessName">RINCON COLOMBIANO</h1>
+        <p id="customerTableLabel" data-i18n="heroSubtitle">Escanea, elige y envia tu pedido.</p>
+      </header>
+
+      <section class="customer-warning" data-i18n="warning">
+        App de prueba: si algo sale diferente, el restaurante confirmara el pedido y cualquier ajuste antes de prepararlo.
+      </section>
+
+      <section class="customer-account-panel" aria-label="Cuenta del cliente" data-i18n-aria-label="accountPanelAria">
+        <div class="customer-account-head">
+          <div>
+            <h2 data-i18n="accountTitle">Mi cuenta</h2>
+            <p id="customerAccountSummary" data-i18n="accountGuest">Inicia sesion o crea una cuenta para enviar pedidos y ver tu historial.</p>
+          </div>
+          <button class="customer-map-button" id="customerSignOutButton" type="button" hidden data-i18n="signOut">Cerrar sesion</button>
+        </div>
+        <div class="customer-auth-fields" id="customerAuthFields">
+          <label>
+            <span data-i18n="emailLabel">Correo electronico</span>
+            <input id="customerAuthEmail" type="email" placeholder="correo@ejemplo.com" data-i18n-placeholder="emailPlaceholder" autocomplete="email" />
+          </label>
+          <label>
+            <span data-i18n="passwordLabel">Contrasena</span>
+            <input id="customerAuthPassword" type="password" placeholder="Minimo 6 caracteres" data-i18n-placeholder="passwordPlaceholder" autocomplete="current-password" />
+          </label>
+          <div class="customer-auth-actions">
+            <button class="customer-map-button" id="customerSignInButton" type="button" data-i18n="signIn">Iniciar sesion</button>
+            <button class="customer-map-button" id="customerSignUpButton" type="button" data-i18n="signUp">Crear cuenta cliente</button>
+          </div>
+        </div>
+        <p class="customer-map-result" id="customerAuthMessage" hidden></p>
+      </section>
+
+      <section class="customer-status" id="customerStatus" role="status" data-i18n="loadingMenu">Cargando menu...</section>
+      <section class="customer-status customer-tracking-status" id="customerTrackingStatus" role="status" hidden></section>
+
+      <section class="customer-menu-layout">
+        <section class="customer-menu-panel" aria-label="Menu del restaurante" data-i18n-aria-label="menuPanelAria">
+          <div class="customer-tabs" id="customerCategoryTabs"></div>
+          <div class="customer-menu-grid" id="customerMenuGrid"></div>
+        </section>
+
+        <aside class="customer-cart-panel" aria-label="Pedido del cliente" data-i18n-aria-label="cartPanelAria">
+          <h2 data-i18n="yourOrder">Tu pedido</h2>
+          <button class="customer-map-button" id="customerNotifyButton" type="button" data-i18n="enableNotifications">Activar notificaciones</button>
+
+          <label>
+            <span data-i18n="orderTypeLabel">Tipo de pedido</span>
+            <select id="customerOrderType">
+              <option value="Comer en el punto" data-i18n="eatHere">Comer en el punto</option>
+              <option value="Recoger en el punto" data-i18n="pickup">Para llevar / recoger en el punto</option>
+              <option value="Domicilio" data-i18n="delivery">Envio a domicilio</option>
+            </select>
+          </label>
+
+          <label>
+            <span data-i18n="nameLabel">Nombre</span>
+            <input id="customerNameInput" type="text" placeholder="Tu nombre" data-i18n-placeholder="namePlaceholder" autocomplete="name" />
+          </label>
+
+          <label>
+            <span data-i18n="tableLabel">Mesa / ubicacion</span>
+            <input id="customerTableInput" type="text" placeholder="Mesa, punto de entrega o ubicacion" data-i18n-placeholder="tablePlaceholder" autocomplete="off" />
+          </label>
+
+          <label>
+            <span data-i18n="paymentMethodLabel">Metodo de pago</span>
+            <select id="customerPaymentMethod">
+              <option value="Efectivo" data-i18n="cash">Efectivo</option>
+              <option value="Transferencia" data-i18n="transfer">Transferencia</option>
+              <option value="Datafono" data-i18n="cardTerminal">Datafono / tarjeta al recibir</option>
+            </select>
+          </label>
+
+          <div class="customer-delivery-fields" id="customerDeliveryFields" hidden>
+            <label>
+              <span data-i18n="phoneLabel">Telefono</span>
+              <input id="customerPhoneInput" type="tel" placeholder="Numero de contacto" data-i18n-placeholder="phonePlaceholder" autocomplete="tel" />
+            </label>
+            <label>
+              <span data-i18n="addressLabel">Direccion completa</span>
+              <input id="customerAddressInput" type="text" placeholder="Calle, numero, apartamento" data-i18n-placeholder="addressPlaceholder" autocomplete="street-address" />
+            </label>
+            <label>
+              <span data-i18n="neighborhoodLabel">Barrio / ciudad</span>
+              <input id="customerNeighborhoodInput" type="text" placeholder="Barrio o ciudad" data-i18n-placeholder="neighborhoodPlaceholder" autocomplete="address-level2" />
+            </label>
+            <label>
+              <span data-i18n="referenceLabel">Referencia</span>
+              <input id="customerReferenceInput" type="text" placeholder="Piso, timbre, instrucciones" data-i18n-placeholder="referencePlaceholder" autocomplete="off" />
+            </label>
+            <label>
+              <span data-i18n="distanceLabel">Distancia aproximada km</span>
+              <input id="customerDistanceInput" type="number" min="0" step="0.1" placeholder="Ej: 3.4" data-i18n-placeholder="distancePlaceholder" inputmode="decimal" />
+            </label>
+            <button class="customer-map-button" id="customerUseLocationButton" type="button" data-i18n="useLocation">Usar mi ubicacion</button>
+            <button class="customer-map-button" id="customerCalculateDistanceButton" type="button" data-i18n="calculateMaps">Calcular con Google Maps</button>
+            <p class="customer-map-result" id="customerMapResult" hidden></p>
+            <p class="customer-delivery-help" data-i18n="deliveryHelp">Tarifa: 4.50 PLN hasta 1.5 km; luego 1.50 PLN/km hasta 6 km, 2.50 PLN/km hasta 8 km y 3.50 PLN/km despues de 8 km.</p>
+          </div>
+
+          <div class="customer-cart-items" id="customerCartItems"></div>
+
+          <label>
+            <span data-i18n="kitchenNotesLabel">Notas para cocina</span>
+            <textarea id="customerOrderNotes" rows="3" placeholder="Ej: sin cebolla, salsa aparte..." data-i18n-placeholder="kitchenNotesPlaceholder"></textarea>
+          </label>
+
+          <div class="customer-cart-total">
+            <span data-i18n="estimatedTotal">Total estimado</span>
+            <strong id="customerCartTotal">$0.00</strong>
+          </div>
+
+          <div class="customer-delivery-fee" id="customerDeliveryFeeRow" hidden>
+            <span data-i18n="estimatedDelivery">Domicilio estimado</span>
+            <strong id="customerDeliveryFeeLabel">$0.00</strong>
+          </div>
+
+          <div class="customer-payment-box" id="customerPaymentBox" hidden></div>
+
+          <section class="customer-chat-panel" id="customerChatPanel" hidden>
+            <h3 data-i18n="chatTitle">Chat con el restaurante</h3>
+            <div class="customer-chat-messages" id="customerChatMessages"></div>
+            <label>
+              <span data-i18n="chatMessageLabel">Mensaje</span>
+              <textarea id="customerChatInput" rows="2" placeholder="Escribe aqui. Puedes enviar comprobante de transferencia." data-i18n-placeholder="chatPlaceholder"></textarea>
+            </label>
+            <label>
+              <span data-i18n="imageLabel">Imagen</span>
+              <input id="customerChatImageInput" type="file" accept="image/*" />
+            </label>
+            <button class="customer-map-button" id="customerSendChatButton" type="button" data-i18n="sendChat">Enviar chat</button>
+            <p class="customer-map-result" id="customerChatStatus" hidden></p>
+          </section>
+
+          <button class="customer-submit-button" id="sendCustomerOrderButton" type="button" data-i18n="sendOrder">Enviar pedido</button>
+
+          <section class="customer-history-panel" aria-label="Historial del cliente" data-i18n-aria-label="historyPanelAria">
+            <div class="customer-history-head">
+              <h3 data-i18n="historyTitle">Mis pedidos</h3>
+              <button class="customer-map-button" id="customerRefreshHistoryButton" type="button" data-i18n="refreshHistory">Actualizar</button>
+            </div>
+            <div class="customer-history-list" id="customerHistoryList"></div>
+          </section>
+        </aside>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="cliente.js"></script>
+  </body>
+</html>
