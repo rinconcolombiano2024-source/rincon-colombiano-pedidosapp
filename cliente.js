@@ -181,6 +181,9 @@ const CUSTOMER_I18N = {
     menuLoadError: "No se pudo cargar el menu. Avisa al restaurante.",
     noMenu: "Este QR no tiene menu disponible.",
     menuReady: "Menu listo. Elige tus productos.",
+    menuRealtimeConnecting: "Sincronizando menu en vivo...",
+    menuRealtimeUpdated: "Menu actualizado automaticamente.",
+    menuRealtimeError: "No pude actualizar el menu en vivo. Usa Actualizar menu.",
     openMenuError: "No se pudo abrir el menu del restaurante.",
     orderFor: "Pedido para {table}",
     emptyCategory: "No hay productos en esta categoria.",
@@ -372,6 +375,9 @@ const CUSTOMER_I18N = {
     menuLoadError: "Nie udalo sie zaladowac menu. Powiadom restauracje.",
     noMenu: "Ten QR nie ma dostepnego menu.",
     menuReady: "Menu gotowe. Wybierz produkty.",
+    menuRealtimeConnecting: "Synchronizacja menu na zywo...",
+    menuRealtimeUpdated: "Menu zaktualizowane automatycznie.",
+    menuRealtimeError: "Nie udalo sie zaktualizowac menu na zywo. Uzyj Odswiez menu.",
     openMenuError: "Nie udalo sie otworzyc menu restauracji.",
     orderFor: "Zamowienie dla {table}",
     emptyCategory: "Brak produktow w tej kategorii.",
@@ -563,6 +569,9 @@ const CUSTOMER_I18N = {
     menuLoadError: "Could not load the menu. Please tell the restaurant.",
     noMenu: "This QR has no menu available.",
     menuReady: "Menu ready. Choose your products.",
+    menuRealtimeConnecting: "Syncing live menu...",
+    menuRealtimeUpdated: "Menu updated automatically.",
+    menuRealtimeError: "Could not update the live menu. Use Refresh menu.",
     openMenuError: "Could not open the restaurant menu.",
     orderFor: "Order for {table}",
     emptyCategory: "There are no products in this category.",
@@ -740,6 +749,9 @@ let customerStatusTimer = null;
 let customerChatTimer = null;
 let customerKnownChatMessageIds = new Set();
 let customerChatLoadedOnce = false;
+let customerMenuRealtimeChannel = null;
+let customerMenuRealtimeStoreId = "";
+let customerMenuRealtimeTimer = null;
 
 const CUSTOMER_DELIVERY_RATES = {
   baseKm: 1.5,
@@ -1027,8 +1039,22 @@ function customerHistoryItems(row) {
   return Array.isArray(row?.order_json?.items) ? row.order_json.items : [];
 }
 
+function customerLineQuantity(item) {
+  const quantity = Number.parseFloat(item?.qty ?? item?.quantity);
+  return Number.isFinite(quantity) && quantity > 0 ? quantity : 1;
+}
+
+function customerLinePrice(item) {
+  const price = Number.parseFloat(item?.price ?? item?.unit_price_snapshot);
+  return Number.isFinite(price) && price > 0 ? price : 0;
+}
+
+function customerLineName(item) {
+  return customerNormalizeText(item?.name || item?.product_name_snapshot || "Producto");
+}
+
 function customerHistoryItemCount(row) {
-  return customerHistoryItems(row).reduce((count, item) => count + (Number.parseInt(item.qty, 10) || 1), 0);
+  return customerHistoryItems(row).reduce((count, item) => count + customerLineQuantity(item), 0);
 }
 
 function customerRenderHistory() {
@@ -1265,6 +1291,7 @@ async function customerSelectRestaurant(storeId, options = {}) {
   const previousStoreId = customerStoreId;
   customerStoreId = nextStoreId;
   if (previousStoreId && previousStoreId !== customerStoreId) {
+    customerStopMenuRealtime();
     customerCart = [];
     customerMapDistance = null;
     customerLocationCoords = null;
@@ -1274,7 +1301,7 @@ async function customerSelectRestaurant(storeId, options = {}) {
   if (options.updateUrl !== false) {
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("store", customerStoreId);
-    nextUrl.searchParams.set("app", "v51");
+    nextUrl.searchParams.set("app", "v52");
     window.history.replaceState({}, "", nextUrl.toString());
   }
 
@@ -1302,6 +1329,69 @@ async function customerFetchPublicMenu(storeId) {
   return data;
 }
 
+function customerStopMenuRealtime() {
+  if (customerMenuRealtimeTimer) {
+    window.clearTimeout(customerMenuRealtimeTimer);
+    customerMenuRealtimeTimer = null;
+  }
+  const channel = customerMenuRealtimeChannel;
+  customerMenuRealtimeChannel = null;
+  customerMenuRealtimeStoreId = "";
+  if (channel && customerClient?.removeChannel) {
+    customerClient.removeChannel(channel).catch((error) => {
+      console.warn("No se pudo cerrar la sincronizacion en vivo del menu.", error);
+    });
+  }
+}
+
+function customerScheduleMenuRealtimeRefetch() {
+  if (!customerStoreId || !customerClient) return;
+  if (customerMenuRealtimeTimer) window.clearTimeout(customerMenuRealtimeTimer);
+  customerMenuRealtimeTimer = window.setTimeout(async () => {
+    customerMenuRealtimeTimer = null;
+    try {
+      await customerLoadMenu({ skipDirectory: true, fromRealtime: true });
+      if (customerMenuProductCount(customerMenu)) {
+        customerSetStatus(customerT("menuRealtimeUpdated"), "ok");
+      }
+    } catch (error) {
+      console.error(error);
+      customerSetStatus(customerT("menuRealtimeError"), "error");
+    }
+  }, 350);
+}
+
+function customerStartMenuRealtime() {
+  if (!customerClient?.channel || !customerStoreId) return;
+  if (customerMenuRealtimeChannel && customerMenuRealtimeStoreId === customerStoreId) return;
+
+  customerStopMenuRealtime();
+  const storeId = customerStoreId;
+  customerMenuRealtimeStoreId = storeId;
+  customerMenuRealtimeChannel = customerClient
+    .channel(`public-menu-${storeId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "app_settings",
+        filter: `user_id=eq.${storeId}`,
+      },
+      () => {
+        if (storeId !== customerStoreId) return;
+        customerSetStatus(customerT("menuRealtimeConnecting"), "");
+        customerScheduleMenuRealtimeRefetch();
+      }
+    )
+    .subscribe((status) => {
+      if (storeId !== customerStoreId) return;
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+        customerSetStatus(customerT("menuRealtimeError"), "error");
+      }
+    });
+}
+
 function customerMenuProductCount(menu = customerMenu) {
   return Object.values(menu || {}).reduce((count, dishes) => count + (Array.isArray(dishes) ? dishes.length : 0), 0);
 }
@@ -1312,6 +1402,25 @@ function customerProductAvailable(product) {
 
 function customerNormalizeProductDescription(value) {
   return String(value || "").trim().replace(/\s+/g, " ").slice(0, 260);
+}
+
+function customerHashText(value) {
+  let hash = 0;
+  const text = String(value || "");
+  for (let index = 0; index < text.length; index += 1) {
+    hash = (hash * 31 + text.charCodeAt(index)) | 0;
+  }
+  return Math.abs(hash).toString(36);
+}
+
+function customerNormalizeProductId(value) {
+  return String(value || "").trim().replace(/\s+/g, "-").slice(0, 90);
+}
+
+function customerStableProductId(category, name, description = "") {
+  const cleanCategory = customerCategoryKey(category) || "menu";
+  const cleanName = customerCategoryKey(name) || "producto";
+  return `prod-${cleanCategory}-${cleanName}-${customerHashText(`${category}|${name}|${description}`)}`;
 }
 
 function customerNormalizeMenu(menu) {
@@ -1333,6 +1442,7 @@ function customerNormalizeMenu(menu) {
         const description = customerNormalizeProductDescription(dish?.description || dish?.descripcion || dish?.details || "");
         if (name) {
           normalized[finalCategory].push({
+            id: customerNormalizeProductId(dish?.id || dish?.productId) || customerStableProductId(finalCategory, name, description),
             name,
             price,
             available: dish?.available === false ? false : true,
@@ -1655,7 +1765,7 @@ function customerDeliveryFee() {
 }
 
 function customerItemTotal(item) {
-  return (Number.parseFloat(item.qty) || 0) * (Number.parseFloat(item.price) || 0);
+  return customerLineQuantity(item) * customerLinePrice(item);
 }
 
 function customerCartTotal() {
@@ -2205,12 +2315,18 @@ function customerRenderCart() {
 }
 
 function customerAddItem(dish) {
-  const existing = customerCart.find((item) => item.name.toLowerCase() === dish.name.toLowerCase() && !item.note);
+  const productId =
+    customerNormalizeProductId(dish.id || dish.productId) ||
+    customerStableProductId(customerActiveCategory, dish.name, dish.description || "");
+  const existing = customerCart.find(
+    (item) => item.productId === productId && item.name.toLowerCase() === dish.name.toLowerCase() && !item.note
+  );
   if (existing) {
     existing.qty += 1;
   } else {
     customerCart.push({
       id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+      productId,
       name: dish.name,
       description: dish.description || "",
       price: Number.parseFloat(dish.price) || 0,
@@ -2236,6 +2352,7 @@ async function customerLoadMenu(options = {}) {
   }
 
   if (!customerStoreId) {
+    customerStopMenuRealtime();
     customerMenu = CUSTOMER_DEFAULT_MENU;
     customerCart = [];
     customerSetStatus(customerT("restaurantChooseFirst"), "");
@@ -2245,6 +2362,8 @@ async function customerLoadMenu(options = {}) {
     customerRenderCart();
     return;
   }
+
+  customerStartMenuRealtime();
 
   let data = null;
 
@@ -2345,13 +2464,29 @@ async function customerSendOrder() {
   const paymentMethod = customerElements.paymentMethod.value;
   const delivery = customerDeliveryPayload();
   const notes = customerNormalizeNote(customerElements.notesInput.value);
-  const items = customerCart.map((item) => ({
-    name: item.name,
-    description: item.description || "",
-    price: Number.parseFloat(item.price) || 0,
-    qty: Number.parseInt(item.qty, 10) || 1,
-    note: customerNormalizeNote(item.note),
-  }));
+  const items = customerCart.map((item) => {
+    const quantity = Math.max(1, Number.parseInt(item.qty, 10) || 1);
+    const unitPrice = Number.parseFloat(item.price) || 0;
+    const itemTotal = Math.round(unitPrice * quantity * 100) / 100;
+    const productName = customerLineName(item);
+    const itemNote = customerNormalizeNote(item.note);
+    return {
+      product_id: item.productId || item.id || "",
+      product_name_snapshot: productName,
+      unit_price_snapshot: unitPrice,
+      quantity,
+      options_snapshot: {
+        description: item.description || "",
+        note: itemNote,
+      },
+      total_snapshot: itemTotal,
+      name: productName,
+      description: item.description || "",
+      price: unitPrice,
+      qty: quantity,
+      note: itemNote,
+    };
+  });
   const total = customerCartTotal();
   const orderPayload = {
     source: "cliente_qr",
@@ -2514,6 +2649,18 @@ customerElements.useLocationButton.addEventListener("click", customerUseLocation
 customerElements.calculateDistanceButton.addEventListener("click", customerCalculateDistanceWithMaps);
 customerElements.chatSendButton.addEventListener("click", customerSendChatMessage);
 customerElements.sendButton.addEventListener("click", customerSendOrder);
+
+window.addEventListener("online", () => {
+  if (!customerStoreId) return;
+  customerStartMenuRealtime();
+  customerRefreshMenu().catch(() => {
+    customerSetStatus(customerT("menuRealtimeError"), "error");
+  });
+});
+
+window.addEventListener("offline", () => {
+  if (customerStoreId) customerSetStatus(customerT("noConnection"), "error");
+});
 
 let customerPullToRefreshStartY = 0;
 window.addEventListener(

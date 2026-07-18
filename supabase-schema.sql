@@ -172,6 +172,26 @@ revoke insert on public.customer_orders from anon;
 grant select, insert, update, delete on public.customer_orders to authenticated;
 grant select, insert, update, delete on public.customer_order_messages to authenticated;
 
+alter table public.app_settings replica identity full;
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_publication
+    where pubname = 'supabase_realtime'
+  ) and not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'app_settings'
+  ) then
+    alter publication supabase_realtime add table public.app_settings;
+  end if;
+end;
+$$;
+
 create index if not exists restaurant_profiles_active_name_idx
 on public.restaurant_profiles (active, business_name);
 

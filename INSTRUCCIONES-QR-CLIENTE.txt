@@ -3,7 +3,8 @@ MODULO CLIENTE POR QR - RINCON COLOMBIANO
 1. En Supabase
 - Abrir SQL Editor.
 - Ejecutar el archivo supabase-schema.sql actualizado.
-- Esto crea customer_profiles, customer_orders, customer_order_messages, customer_user_id, historial del cliente y los permisos para pedidos/chat.
+- Si ya ejecutaste el esquema completo antes, tambien puedes ejecutar solo MIGRACION-FASE2-REALTIME-MENU.sql para activar el menu en vivo.
+- Esto crea customer_profiles, customer_orders, customer_order_messages, customer_user_id, historial del cliente, permisos para pedidos/chat y activa Realtime para el menu publico del restaurante.
 - Esta version tambien permite los estados pending, accepted, sent, delivered y cancelled para avisar al cliente cuando el pedido fue aceptado, enviado, entregado o cancelado.
 
 1.1 Correo de confirmacion de cuenta
@@ -35,7 +36,7 @@ MODULO CLIENTE POR QR - RINCON COLOMBIANO
 - Si quieres un QR especifico, escribir mesa o ubicacion, por ejemplo Mesa 4.
 - Mostrar o imprimir el codigo QR.
 - Configurar nombre, logo, razon social, datos legales, moneda, recargo fijo opcional de domicilio, minimo de domicilio, direccion del restaurante, Google Maps API key, cuenta de transferencia y texto de comprobante en Editar menu.
-- Cuando el restaurante guarda categorias, productos, precios, fotos o disponibilidad, la app guarda el menu en Supabase. El cliente puede presionar Actualizar menu para traer el menu nuevo.
+- Cuando el restaurante guarda categorias, productos, precios, fotos o disponibilidad, la app guarda el menu en Supabase. El cliente intenta ver el cambio en vivo con Supabase Realtime y tambien puede presionar Actualizar menu.
 - Al guardar ajustes o abrir el QR, la app tambien publica el restaurante en el directorio de clientes con nombre comercial, logo, direccion publica y telefono.
 - En Editar menu > Pedidos cliente se puede presionar Usar ubicacion actual para guardar coordenadas reales del restaurante desde la tablet.
 - Para Google Maps API key:
@@ -55,7 +56,7 @@ MODULO CLIENTE POR QR - RINCON COLOMBIANO
 - Crea cuenta cliente o inicia sesion con correo y contrasena.
 - Al crear cuenta, escribe nombre completo, telefono, direccion, barrio/ciudad y referencia, y acepta el tratamiento de datos para pedidos, historial, entrega, chat y cookies tecnicas.
 - Despues de crear cuenta, debe revisar su correo electronico y confirmar la cuenta antes de iniciar sesion si Supabase tiene confirmacion activa.
-- Tiene boton Actualizar menu para recargar el menu real configurado por el restaurante.
+- Tiene boton Actualizar menu para recargar el menu real configurado por el restaurante y tambien recibe cambios en vivo cuando Supabase Realtime esta activo.
 - La cuenta del cliente guarda su historial y datos basicos para proximos pedidos.
 - Ve el menu.
 - Puede buscar productos por nombre, categoria o descripcion desde Buscar producto.
@@ -91,7 +92,7 @@ Importante:
 - Si no hay internet, el cajero puede seguir tomando pedidos manualmente en la app del restaurante.
 - El numero de ticket solo se crea cuando el cajero acepta el pedido, no cuando el cliente lo envia.
 - La alarma sonora depende del navegador: el cajero debe tocar Activar alarma una vez.
-- El seguimiento de estado, chat e historial del cliente dependen de ejecutar el supabase-schema.sql actualizado.
+- El seguimiento de estado, chat, historial del cliente y menu en vivo dependen de ejecutar el supabase-schema.sql actualizado.
 - La app no cobra desde tienda externa. El cajero confirma efectivo, transferencia o datafono.
 - La app no cobra comisiones por pedido. Los cobros los maneja directamente el restaurante.
 - Google Maps requiere activar Maps JavaScript API, Distance Matrix API y Geocoding API en Google Cloud, con facturacion y restricciones de dominio para proteger la API key.

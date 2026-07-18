@@ -72,6 +72,10 @@ Funciones actuales que deben conservarse:
 - Cliente tiene seccion Mis pedidos con historial, estado, total, ticket si ya fue aceptado y boton para abrir estado/chat del pedido.
 - Cliente QR tiene buscador de productos por nombre, categoria o descripcion.
 - Cliente QR tiene boton Actualizar menu para recargar el menu real configurado por el restaurante.
+- Cliente escucha cambios del menu en vivo con Supabase Realtime filtrado por el restaurante seleccionado.
+- Cuando el restaurante cambia precios, productos, categorias, fotos, descripciones o disponibilidad y guarda, el cliente intenta actualizar el menu automaticamente sin cerrar la app.
+- Si se pierde internet, al volver la conexion la app cliente vuelve a refrescar el menu y reactiva la sincronizacion en vivo.
+- Los pedidos cliente guardan snapshot de producto: product_id, product_name_snapshot, unit_price_snapshot, quantity, options_snapshot y total_snapshot, manteniendo campos viejos name/price/qty para compatibilidad.
 - Cliente tiene perfil basico guardado: nombre, telefono, direccion preferida, referencia, distancia e idioma.
 - Los pedidos QR guardan customer_user_id para asociar pedidos a la cuenta del cliente sin mezclar clientes.
 - Los nombres de productos/categorias escritos por el restaurante no se traducen automaticamente; se muestran tal como se guardaron en el menu.
@@ -134,12 +138,13 @@ Archivos importantes:
 - service-worker.js: cache de PWA.
 - supabase-config.js: URL y publishable key.
 - supabase-schema.sql: tablas, politicas RLS y funciones RPC.
+- MIGRACION-FASE2-REALTIME-MENU.sql: migracion corta para activar Supabase Realtime del menu sin reejecutar todo el esquema.
 - Supabase requiere ejecutar el SQL actualizado cuando se agreguen cuentas de cliente, customer_profiles, customer_user_id o historial.
 
 Notas para telefono:
 - Si el telefono no muestra cambios nuevos, desinstalar la app vieja y volver a instalar desde la URL de Vercel.
 - El service worker debe subir version cada vez que cambie la app.
-- Version de cache actual al crear esta memoria: rincon-colombiano-v51.
+- Version de cache actual al crear esta memoria: rincon-colombiano-v52.
 
 Precaucion offline:
 - Si varias tablets trabajan sin internet al mismo tiempo, pueden repetirse numeros locales de ticket.

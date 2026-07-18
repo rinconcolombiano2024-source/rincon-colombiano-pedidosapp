@@ -30,7 +30,7 @@ const STORAGE_KEYS = {
 
 const DEFAULT_BUSINESS_NAME = "RINCON COLOMBIANO";
 const DEFAULT_DELIVERY_MINIMUM_FEE = 20;
-const APP_VERSION = "v51";
+const APP_VERSION = "v52";
 
 const EMPTY_MENU_CATALOG = {
   Entradas: [],
@@ -1420,6 +1420,7 @@ function orderFromClientOrder(clientOrder) {
     items: clientOrderItems(clientOrder)
       .map((item) => ({
         id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+        productId: item.product_id || item.productId || "",
         name: itemReportName(item),
         price: itemPrice(item),
         qty: Math.max(1, Number.parseInt(itemQuantity(item), 10) || 1),
@@ -2042,6 +2043,30 @@ function normalizeProductDescription(value) {
   return String(value || "").trim().replace(/\s+/g, " ").slice(0, 260);
 }
 
+function hashText(value) {
+  let hash = 0;
+  const text = String(value || "");
+  for (let index = 0; index < text.length; index += 1) {
+    hash = (hash * 31 + text.charCodeAt(index)) | 0;
+  }
+  return Math.abs(hash).toString(36);
+}
+
+function normalizeProductId(value) {
+  return String(value || "").trim().replace(/\s+/g, "-").slice(0, 90);
+}
+
+function stableProductId(category, name, description = "") {
+  const cleanCategory = categoryIdentityKey(category) || "menu";
+  const cleanName = categoryIdentityKey(name) || "producto";
+  return `prod-${cleanCategory}-${cleanName}-${hashText(`${category}|${name}|${description}`)}`;
+}
+
+function createProductId() {
+  const rawId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return `prod-${rawId}`;
+}
+
 function productIsAvailable(product) {
   return product?.available !== false;
 }
@@ -2066,6 +2091,7 @@ function normalizeMenuCatalog(menu) {
         const description = normalizeProductDescription(dish?.description || dish?.descripcion || dish?.details || "");
         if (name) {
           normalized[finalCategory].push({
+            id: normalizeProductId(dish?.id || dish?.productId) || stableProductId(finalCategory, name, description),
             name,
             price,
             available: dish?.available === false ? false : true,
@@ -2431,12 +2457,12 @@ function orderItemsList(order = currentOrder) {
 }
 
 function itemQuantity(item) {
-  const quantity = Number.parseFloat(item?.qty);
+  const quantity = Number.parseFloat(item?.qty ?? item?.quantity);
   return Number.isFinite(quantity) ? quantity : 0;
 }
 
 function itemPrice(item) {
-  const price = Number.parseFloat(item?.price);
+  const price = Number.parseFloat(item?.price ?? item?.unit_price_snapshot);
   return Number.isFinite(price) ? price : 0;
 }
 
@@ -2445,7 +2471,7 @@ function itemLineTotal(item) {
 }
 
 function itemReportName(item) {
-  return String(item?.name || "Producto sin nombre").trim() || "Producto sin nombre";
+  return String(item?.name || item?.product_name_snapshot || "Producto sin nombre").trim() || "Producto sin nombre";
 }
 
 function itemReportKey(item) {
@@ -2899,7 +2925,15 @@ function saveProduct() {
     return;
   }
 
-  const product = { name, description, price, available, imageUrl };
+  const previousProduct = editingProduct ? (menuCatalog[editingProduct.category] || [])[editingProduct.index] : null;
+  const product = {
+    id: normalizeProductId(previousProduct?.id || previousProduct?.productId) || createProductId(),
+    name,
+    description,
+    price,
+    available,
+    imageUrl,
+  };
   const wasEditing = Boolean(editingProduct);
 
   if (editingProduct) {
