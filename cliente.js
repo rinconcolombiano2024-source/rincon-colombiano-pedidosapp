@@ -22,6 +22,11 @@ const customerElements = {
   signInButton: document.querySelector("#customerSignInButton"),
   signUpButton: document.querySelector("#customerSignUpButton"),
   signOutButton: document.querySelector("#customerSignOutButton"),
+  restaurantPanel: document.querySelector("#customerRestaurantPanel"),
+  selectedRestaurantText: document.querySelector("#customerSelectedRestaurantText"),
+  restaurantSearchInput: document.querySelector("#customerRestaurantSearchInput"),
+  restaurantList: document.querySelector("#customerRestaurantList"),
+  refreshRestaurantsButton: document.querySelector("#customerRefreshRestaurantsButton"),
   historyList: document.querySelector("#customerHistoryList"),
   refreshHistoryButton: document.querySelector("#customerRefreshHistoryButton"),
   refreshMenuButton: document.querySelector("#customerRefreshMenuButton"),
@@ -74,6 +79,21 @@ const CUSTOMER_I18N = {
     accountTitle: "Mi cuenta",
     accountGuest: "Inicia sesion o crea una cuenta para enviar pedidos y ver tu historial.",
     accountSignedIn: "Conectado como {email}. Tus pedidos quedaran guardados en tu historial.",
+    restaurantPanelAria: "Elegir restaurante",
+    restaurantTitle: "Elegir restaurante",
+    restaurantHelp: "Busca el restaurante donde quieres hacer tu pedido.",
+    restaurantSelected: "Restaurante seleccionado: {name}. Ya puedes revisar el menu y enviar tu pedido.",
+    restaurantSearchLabel: "Buscar restaurante",
+    restaurantSearchPlaceholder: "Nombre, ciudad o direccion",
+    restaurantRefresh: "Actualizar restaurantes",
+    restaurantLoading: "Cargando restaurantes...",
+    restaurantEmpty: "Todavia no hay restaurantes publicados.",
+    restaurantSearchEmpty: "No encontre restaurantes con \"{query}\".",
+    restaurantLoadError: "No se pudieron cargar restaurantes. Ejecuta el SQL actualizado o revisa internet.",
+    restaurantChoose: "Elegir",
+    restaurantCurrent: "Seleccionado",
+    restaurantChooseFirst: "Elige un restaurante para ver su menu.",
+    restaurantNoAddress: "Direccion no publicada",
     emailLabel: "Correo electronico",
     emailPlaceholder: "correo@ejemplo.com",
     passwordLabel: "Contrasena",
@@ -250,6 +270,21 @@ const CUSTOMER_I18N = {
     accountTitle: "Moje konto",
     accountGuest: "Zaloguj sie albo utworz konto, aby wysylac zamowienia i widziec historie.",
     accountSignedIn: "Zalogowano jako {email}. Twoje zamowienia beda zapisane w historii.",
+    restaurantPanelAria: "Wybierz restauracje",
+    restaurantTitle: "Wybierz restauracje",
+    restaurantHelp: "Znajdz restauracje, w ktorej chcesz zlozyc zamowienie.",
+    restaurantSelected: "Wybrana restauracja: {name}. Mozesz teraz zobaczyc menu i wyslac zamowienie.",
+    restaurantSearchLabel: "Szukaj restauracji",
+    restaurantSearchPlaceholder: "Nazwa, miasto lub adres",
+    restaurantRefresh: "Odswiez restauracje",
+    restaurantLoading: "Ladowanie restauracji...",
+    restaurantEmpty: "Nie ma jeszcze opublikowanych restauracji.",
+    restaurantSearchEmpty: "Nie znaleziono restauracji dla \"{query}\".",
+    restaurantLoadError: "Nie udalo sie zaladowac restauracji. Wykonaj zaktualizowany SQL albo sprawdz internet.",
+    restaurantChoose: "Wybierz",
+    restaurantCurrent: "Wybrano",
+    restaurantChooseFirst: "Wybierz restauracje, aby zobaczyc menu.",
+    restaurantNoAddress: "Adres nieopublikowany",
     emailLabel: "E-mail",
     emailPlaceholder: "email@przyklad.com",
     passwordLabel: "Haslo",
@@ -426,6 +461,21 @@ const CUSTOMER_I18N = {
     accountTitle: "My account",
     accountGuest: "Sign in or create an account to send orders and see your history.",
     accountSignedIn: "Signed in as {email}. Your orders will be saved in your history.",
+    restaurantPanelAria: "Choose restaurant",
+    restaurantTitle: "Choose restaurant",
+    restaurantHelp: "Find the restaurant where you want to place your order.",
+    restaurantSelected: "Selected restaurant: {name}. You can now review the menu and send your order.",
+    restaurantSearchLabel: "Search restaurant",
+    restaurantSearchPlaceholder: "Name, city, or address",
+    restaurantRefresh: "Refresh restaurants",
+    restaurantLoading: "Loading restaurants...",
+    restaurantEmpty: "No restaurants have been published yet.",
+    restaurantSearchEmpty: "No restaurants found for \"{query}\".",
+    restaurantLoadError: "Could not load restaurants. Run the updated SQL or check internet.",
+    restaurantChoose: "Choose",
+    restaurantCurrent: "Selected",
+    restaurantChooseFirst: "Choose a restaurant to see its menu.",
+    restaurantNoAddress: "Address not published",
     emailLabel: "Email",
     emailPlaceholder: "email@example.com",
     passwordLabel: "Password",
@@ -592,7 +642,7 @@ const CUSTOMER_I18N = {
 };
 
 const customerParams = new URLSearchParams(window.location.search);
-const customerStoreId = String(customerParams.get("store") || "").trim();
+let customerStoreId = String(customerParams.get("store") || "").trim();
 const customerTableFromQr = String(customerParams.get("mesa") || customerParams.get("table") || "").trim();
 
 function customerInitialLanguage() {
@@ -643,6 +693,7 @@ function customerSetLanguage(language) {
   customerRenderCart();
   customerRenderAccount();
   customerRenderHistory();
+  customerRenderRestaurantDirectory();
 }
 
 function customerOrderTypeText(value) {
@@ -661,6 +712,8 @@ let customerClient = null;
 let customerAuthInitialized = false;
 let customerUser = null;
 let customerHistoryRows = [];
+let customerRestaurants = [];
+let customerRestaurantSearchQuery = "";
 let customerMenu = CUSTOMER_DEFAULT_MENU;
 let customerActiveCategory = "Entradas";
 let customerSearchQuery = "";
@@ -1089,6 +1142,166 @@ function customerNormalizeSearchText(value) {
     .trim();
 }
 
+function customerNormalizeRestaurantProfile(row = {}) {
+  const userId = customerNormalizeText(row.user_id || row.userId);
+  const name = customerNormalizeText(row.business_name || row.businessName);
+  if (!userId || !name) return null;
+  return {
+    userId,
+    name,
+    logoUrl: customerNormalizeText(row.logo_url || row.logoUrl),
+    address: customerNormalizeText(row.public_address || row.publicAddress),
+    phone: customerNormalizeText(row.phone),
+    description: customerNormalizeText(row.description),
+  };
+}
+
+function customerSelectedRestaurant() {
+  return customerRestaurants.find((restaurant) => restaurant.userId === customerStoreId) || null;
+}
+
+function customerRenderRestaurantDirectory() {
+  if (!customerElements.restaurantList) return;
+
+  const selected = customerSelectedRestaurant();
+  if (customerElements.selectedRestaurantText) {
+    customerElements.selectedRestaurantText.removeAttribute("data-i18n");
+    if (customerStoreId) {
+      const name = selected?.name || customerSettings.businessName || "Restaurante";
+      customerElements.selectedRestaurantText.textContent = customerT("restaurantSelected", { name });
+    } else {
+      customerElements.selectedRestaurantText.textContent = customerT("restaurantHelp");
+    }
+  }
+
+  const query = customerNormalizeSearchText(customerRestaurantSearchQuery);
+  const visibleRestaurants = customerRestaurants.filter((restaurant) => {
+    if (!query) return true;
+    return customerNormalizeSearchText(
+      `${restaurant.name} ${restaurant.address} ${restaurant.phone} ${restaurant.description}`
+    ).includes(query);
+  });
+
+  if (!customerRestaurants.length) {
+    customerElements.restaurantList.innerHTML = `<div class="customer-empty">${customerEscapeHtml(
+      customerT("restaurantEmpty")
+    )}</div>`;
+    return;
+  }
+
+  if (!visibleRestaurants.length) {
+    customerElements.restaurantList.innerHTML = `<div class="customer-empty">${customerEscapeHtml(
+      customerT("restaurantSearchEmpty", { query: customerRestaurantSearchQuery })
+    )}</div>`;
+    return;
+  }
+
+  customerElements.restaurantList.innerHTML = visibleRestaurants
+    .map((restaurant) => {
+      const isSelected = restaurant.userId === customerStoreId;
+      const initials = restaurant.name
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase() || "")
+        .join("");
+      return `
+        <article class="customer-restaurant-card ${isSelected ? "is-selected" : ""}" data-store-id="${customerEscapeHtml(
+        restaurant.userId
+      )}">
+          ${
+            restaurant.logoUrl
+              ? `<img src="${customerEscapeHtml(restaurant.logoUrl)}" alt="${customerEscapeHtml(restaurant.name)}" loading="lazy" />`
+              : `<div class="customer-restaurant-initials">${customerEscapeHtml(initials || "R")}</div>`
+          }
+          <div class="customer-restaurant-info">
+            <strong>${customerEscapeHtml(restaurant.name)}</strong>
+            <span>${customerEscapeHtml(restaurant.address || customerT("restaurantNoAddress"))}</span>
+            ${restaurant.phone ? `<small>${customerEscapeHtml(restaurant.phone)}</small>` : ""}
+          </div>
+          <button class="customer-map-button" type="button" data-action="choose-restaurant" ${
+            isSelected ? "disabled" : ""
+          }>${customerEscapeHtml(isSelected ? customerT("restaurantCurrent") : customerT("restaurantChoose"))}</button>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+async function customerLoadRestaurantDirectory(options = {}) {
+  const { silent = false } = options;
+  const client = customerEnsureClient();
+  if (!client || !customerElements.restaurantList) return;
+
+  if (!silent) {
+    customerElements.restaurantList.innerHTML = `<div class="customer-empty">${customerEscapeHtml(
+      customerT("restaurantLoading")
+    )}</div>`;
+  }
+
+  const { data, error } = await client
+    .from("restaurant_profiles")
+    .select("user_id, business_name, logo_url, public_address, phone, description, updated_at")
+    .eq("active", true)
+    .order("business_name", { ascending: true });
+
+  if (error) {
+    customerElements.restaurantList.innerHTML = `<div class="customer-empty">${customerEscapeHtml(
+      customerT("restaurantLoadError")
+    )}</div>`;
+    return;
+  }
+
+  customerRestaurants = (Array.isArray(data) ? data : [])
+    .map(customerNormalizeRestaurantProfile)
+    .filter(Boolean);
+  customerRenderRestaurantDirectory();
+}
+
+async function customerSelectRestaurant(storeId, options = {}) {
+  const nextStoreId = customerNormalizeText(storeId);
+  if (!nextStoreId) return;
+
+  const previousStoreId = customerStoreId;
+  customerStoreId = nextStoreId;
+  if (previousStoreId && previousStoreId !== customerStoreId) {
+    customerCart = [];
+    customerMapDistance = null;
+    customerLocationCoords = null;
+    customerSetTrackingStatus("");
+  }
+
+  if (options.updateUrl !== false) {
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.set("store", customerStoreId);
+    nextUrl.searchParams.set("app", "v51");
+    window.history.replaceState({}, "", nextUrl.toString());
+  }
+
+  customerApplyMenuSearch("");
+  customerRenderRestaurantDirectory();
+  await customerLoadMenu({ skipDirectory: true });
+}
+
+async function customerFetchPublicMenu(storeId) {
+  const { data: rpcData, error: rpcError } = await customerClient.rpc("get_public_restaurant_menu", {
+    p_user_id: storeId,
+  });
+  if (!rpcError) {
+    const row = Array.isArray(rpcData) ? rpcData[0] : rpcData;
+    if (row) return row;
+  }
+
+  const { data, error } = await customerClient
+    .from("app_settings")
+    .select("menu, settings")
+    .eq("user_id", storeId)
+    .maybeSingle();
+
+  if (error) throw rpcError || error;
+  return data;
+}
+
 function customerMenuProductCount(menu = customerMenu) {
   return Object.values(menu || {}).reduce((count, dishes) => count + (Array.isArray(dishes) ? dishes.length : 0), 0);
 }
@@ -1187,6 +1400,7 @@ function customerApplyBusinessName() {
   document.title = `${name} - Menu cliente`;
   const appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
   if (appleTitle) appleTitle.setAttribute("content", name);
+  customerRenderRestaurantDirectory();
 }
 
 function customerNormalizeDistance(value) {
@@ -2007,12 +2221,7 @@ function customerAddItem(dish) {
   customerRenderCart();
 }
 
-async function customerLoadMenu() {
-  if (!customerStoreId) {
-    customerSetStatus(customerT("missingStore"), "error");
-    return;
-  }
-
+async function customerLoadMenu(options = {}) {
   const config = customerSupabaseConfig();
   if (!config.url || !config.anonKey || !window.supabase?.createClient) {
     customerSetStatus(customerT("appNotConfigured"), "error");
@@ -2022,13 +2231,27 @@ async function customerLoadMenu() {
   customerClient = customerEnsureClient();
   await customerInitializeAuth();
 
-  const { data, error } = await customerClient
-    .from("app_settings")
-    .select("menu, settings")
-    .eq("user_id", customerStoreId)
-    .maybeSingle();
+  if (!options.skipDirectory) {
+    await customerLoadRestaurantDirectory({ silent: true });
+  }
 
-  if (error) {
+  if (!customerStoreId) {
+    customerMenu = CUSTOMER_DEFAULT_MENU;
+    customerCart = [];
+    customerSetStatus(customerT("restaurantChooseFirst"), "");
+    customerRenderRestaurantDirectory();
+    customerRenderCategories();
+    customerRenderMenu();
+    customerRenderCart();
+    return;
+  }
+
+  let data = null;
+
+  try {
+    data = await customerFetchPublicMenu(customerStoreId);
+  } catch (error) {
+    console.error(error);
     customerSetStatus(customerT("menuLoadError"), "error");
     return;
   }
@@ -2090,7 +2313,7 @@ async function customerRefreshMenu() {
 
   try {
     await customerLoadMenu();
-    customerSetStatus(customerT("menuUpdated"), "ok");
+    customerSetStatus(customerStoreId ? customerT("menuUpdated") : customerT("restaurantChooseFirst"), customerStoreId ? "ok" : "");
   } catch (error) {
     console.error(error);
     customerSetStatus(customerT("menuLoadError"), "error");
@@ -2249,6 +2472,20 @@ customerElements.cartItems.addEventListener("input", (event) => {
 customerElements.signInButton.addEventListener("click", customerSignInWithEmail);
 customerElements.signUpButton.addEventListener("click", customerSignUpWithEmail);
 customerElements.signOutButton.addEventListener("click", customerSignOut);
+customerElements.restaurantSearchInput?.addEventListener("input", () => {
+  customerRestaurantSearchQuery = customerElements.restaurantSearchInput.value.trim();
+  customerRenderRestaurantDirectory();
+});
+customerElements.refreshRestaurantsButton?.addEventListener("click", () => customerLoadRestaurantDirectory());
+customerElements.restaurantList?.addEventListener("click", (event) => {
+  const button = event.target.closest('button[data-action="choose-restaurant"]');
+  const card = event.target.closest(".customer-restaurant-card");
+  if (!button || !card) return;
+  customerSelectRestaurant(card.dataset.storeId).catch((error) => {
+    console.error(error);
+    customerSetStatus(customerT("menuLoadError"), "error");
+  });
+});
 customerElements.refreshHistoryButton.addEventListener("click", () => customerLoadHistory());
 customerElements.historyList.addEventListener("click", (event) => {
   const button = event.target.closest('button[data-action="open-history-order"]');

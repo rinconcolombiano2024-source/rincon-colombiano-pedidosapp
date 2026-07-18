@@ -92,6 +92,23 @@
         <p class="customer-map-result" id="customerAuthMessage" hidden></p>
       </section>
 
+      <section class="customer-restaurant-panel" id="customerRestaurantPanel" aria-label="Elegir restaurante" data-i18n-aria-label="restaurantPanelAria">
+        <div class="customer-account-head">
+          <div>
+            <h2 data-i18n="restaurantTitle">Elegir restaurante</h2>
+            <p id="customerSelectedRestaurantText" data-i18n="restaurantHelp">Busca el restaurante donde quieres hacer tu pedido.</p>
+          </div>
+          <button class="customer-map-button" id="customerRefreshRestaurantsButton" type="button" data-i18n="restaurantRefresh">Actualizar restaurantes</button>
+        </div>
+        <div class="customer-restaurant-search">
+          <label>
+            <span data-i18n="restaurantSearchLabel">Buscar restaurante</span>
+            <input id="customerRestaurantSearchInput" type="search" placeholder="Nombre, ciudad o direccion" data-i18n-placeholder="restaurantSearchPlaceholder" autocomplete="off" />
+          </label>
+        </div>
+        <div class="customer-restaurant-list" id="customerRestaurantList"></div>
+      </section>
+
       <section class="customer-status" id="customerStatus" role="status" data-i18n="loadingMenu">Cargando menu...</section>
       <section class="customer-status customer-tracking-status" id="customerTrackingStatus" role="status" hidden></section>
 

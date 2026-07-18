@@ -30,7 +30,7 @@ const STORAGE_KEYS = {
 
 const DEFAULT_BUSINESS_NAME = "RINCON COLOMBIANO";
 const DEFAULT_DELIVERY_MINIMUM_FEE = 20;
-const APP_VERSION = "v50";
+const APP_VERSION = "v51";
 
 const EMPTY_MENU_CATALOG = {
   Entradas: [],
@@ -627,6 +627,20 @@ function currentSettingsPayload() {
   };
 }
 
+function currentRestaurantPublicProfilePayload() {
+  const publicAddress = normalizeTextSetting(restaurantAddress || legalAddress);
+  return {
+    user_id: cloudState.user.id,
+    business_name: normalizeBusinessName(businessName),
+    logo_url: normalizeProductImageUrl(businessLogoUrl),
+    public_address: publicAddress,
+    phone: normalizeTextSetting(businessPhone),
+    description: "",
+    active: true,
+    updated_at: new Date().toISOString(),
+  };
+}
+
 function restaurantSignupProfileFromInputs(email = "") {
   return {
     businessName: normalizeBusinessName(elements.authRestaurantNameInput?.value || businessName),
@@ -943,6 +957,20 @@ async function saveCloudSettings() {
   });
 
   if (error) throw error;
+
+  await saveRestaurantPublicProfile();
+}
+
+async function saveRestaurantPublicProfile() {
+  if (!cloudState.client || !cloudState.user) return;
+
+  const { error } = await cloudState.client
+    .from("restaurant_profiles")
+    .upsert(currentRestaurantPublicProfilePayload());
+
+  if (error) {
+    console.warn("No se pudo actualizar el perfil publico del restaurante.", error);
+  }
 }
 
 async function claimCloudTicket() {

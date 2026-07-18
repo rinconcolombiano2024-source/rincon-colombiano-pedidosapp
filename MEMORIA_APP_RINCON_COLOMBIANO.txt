@@ -63,6 +63,11 @@ Funciones actuales que deben conservarse:
 - Cliente puede crear cuenta, iniciar sesion y cerrar sesion desde cliente.html.
 - Al crear cuenta cliente, se pide nombre completo, telefono, direccion, barrio/ciudad, referencia y aceptacion del tratamiento de datos para pedidos, historial, entrega, chat y cookies tecnicas.
 - Despues del registro, la app avisa al cliente que debe revisar su correo electronico y confirmar la cuenta antes de iniciar sesion si Supabase tiene confirmacion activa.
+- La pantalla principal ahora muestra una entrada separada para cliente: Entrar / registrar cliente.
+- Cliente puede entrar sin QR, crear cuenta, buscar restaurante publicado, elegirlo y luego tomar el pedido.
+- Si el cliente entra por QR con store, la app abre directamente el restaurante del QR.
+- Restaurante publica perfil basico para busqueda de clientes: nombre comercial, logo, direccion publica, telefono y estado activo.
+- Al guardar ajustes o menu, la app del restaurante intenta actualizar su perfil publico sin borrar ni cambiar pedidos existentes.
 - Para enviar pedido desde cliente QR se requiere cuenta de cliente iniciada; asi el pedido queda guardado en su historial.
 - Cliente tiene seccion Mis pedidos con historial, estado, total, ticket si ya fue aceptado y boton para abrir estado/chat del pedido.
 - Cliente QR tiene buscador de productos por nombre, categoria o descripcion.
@@ -134,7 +139,7 @@ Archivos importantes:
 Notas para telefono:
 - Si el telefono no muestra cambios nuevos, desinstalar la app vieja y volver a instalar desde la URL de Vercel.
 - El service worker debe subir version cada vez que cambie la app.
-- Version de cache actual al crear esta memoria: rincon-colombiano-v49.
+- Version de cache actual al crear esta memoria: rincon-colombiano-v51.
 
 Precaucion offline:
 - Si varias tablets trabajan sin internet al mismo tiempo, pueden repetirse numeros locales de ticket.

@@ -36,6 +36,7 @@ MODULO CLIENTE POR QR - RINCON COLOMBIANO
 - Mostrar o imprimir el codigo QR.
 - Configurar nombre, logo, razon social, datos legales, moneda, recargo fijo opcional de domicilio, minimo de domicilio, direccion del restaurante, Google Maps API key, cuenta de transferencia y texto de comprobante en Editar menu.
 - Cuando el restaurante guarda categorias, productos, precios, fotos o disponibilidad, la app guarda el menu en Supabase. El cliente puede presionar Actualizar menu para traer el menu nuevo.
+- Al guardar ajustes o abrir el QR, la app tambien publica el restaurante en el directorio de clientes con nombre comercial, logo, direccion publica y telefono.
 - En Editar menu > Pedidos cliente se puede presionar Usar ubicacion actual para guardar coordenadas reales del restaurante desde la tablet.
 - Para Google Maps API key:
   1. Entrar a Google Cloud Console / Google Maps Platform.
@@ -49,6 +50,7 @@ MODULO CLIENTE POR QR - RINCON COLOMBIANO
 
 4. Cliente
 - Escanea el QR.
+- Si entra sin QR, puede abrir la app de cliente, crear cuenta, buscar restaurante, elegirlo y despues hacer el pedido.
 - Puede cambiar idioma entre Espanol, Polski e English desde la parte superior.
 - Crea cuenta cliente o inicia sesion con correo y contrasena.
 - Al crear cuenta, escribe nombre completo, telefono, direccion, barrio/ciudad y referencia, y acepta el tratamiento de datos para pedidos, historial, entrega, chat y cookies tecnicas.

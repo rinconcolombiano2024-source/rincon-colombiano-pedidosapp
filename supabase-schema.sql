@@ -7,6 +7,18 @@ create table if not exists public.app_settings (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.restaurant_profiles (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  business_name text not null default '',
+  logo_url text not null default '',
+  public_address text not null default '',
+  phone text not null default '',
+  description text not null default '',
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.orders (
   id uuid primary key,
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -63,6 +75,7 @@ create table if not exists public.customer_order_messages (
 );
 
 alter table public.app_settings enable row level security;
+alter table public.restaurant_profiles enable row level security;
 alter table public.orders enable row level security;
 alter table public.ticket_counters enable row level security;
 alter table public.customer_profiles enable row level security;
@@ -81,6 +94,19 @@ create policy "Public read app menu settings"
 on public.app_settings
 for select
 using (true);
+
+drop policy if exists "Public read active restaurant profiles" on public.restaurant_profiles;
+create policy "Public read active restaurant profiles"
+on public.restaurant_profiles
+for select
+using (active = true);
+
+drop policy if exists "Restaurants manage own public profile" on public.restaurant_profiles;
+create policy "Restaurants manage own public profile"
+on public.restaurant_profiles
+for all
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
 
 drop policy if exists "Users manage own orders" on public.orders;
 create policy "Users manage own orders"
@@ -139,10 +165,75 @@ using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
 grant select on public.app_settings to anon, authenticated;
+grant select on public.restaurant_profiles to anon, authenticated;
+grant insert, update, delete on public.restaurant_profiles to authenticated;
 grant select, insert, update, delete on public.customer_profiles to authenticated;
 revoke insert on public.customer_orders from anon;
 grant select, insert, update, delete on public.customer_orders to authenticated;
 grant select, insert, update, delete on public.customer_order_messages to authenticated;
+
+create index if not exists restaurant_profiles_active_name_idx
+on public.restaurant_profiles (active, business_name);
+
+insert into public.restaurant_profiles (
+  user_id,
+  business_name,
+  logo_url,
+  public_address,
+  phone,
+  description,
+  active,
+  updated_at
+)
+select
+  s.user_id,
+  coalesce(nullif(s.settings->>'businessName', ''), 'Restaurante') as business_name,
+  coalesce(s.settings->>'businessLogoUrl', '') as logo_url,
+  coalesce(nullif(s.settings->>'restaurantAddress', ''), nullif(s.settings->>'legalAddress', ''), '') as public_address,
+  coalesce(s.settings->>'businessPhone', '') as phone,
+  '' as description,
+  true as active,
+  now() as updated_at
+from public.app_settings s
+on conflict (user_id)
+do update set
+  business_name = excluded.business_name,
+  logo_url = excluded.logo_url,
+  public_address = excluded.public_address,
+  phone = excluded.phone,
+  updated_at = now();
+
+create or replace function public.get_public_restaurant_menu(p_user_id uuid)
+returns table(menu jsonb, settings jsonb)
+language sql
+security definer
+set search_path = public
+as $$
+  select
+    coalesce(s.menu, '{}'::jsonb) as menu,
+    jsonb_strip_nulls(
+      jsonb_build_object(
+        'businessName', coalesce(nullif(s.settings->>'businessName', ''), nullif(rp.business_name, ''), 'Restaurante'),
+        'businessLogoUrl', coalesce(nullif(s.settings->>'businessLogoUrl', ''), nullif(rp.logo_url, '')),
+        'currencySymbol', s.settings->>'currencySymbol',
+        'currencyPosition', s.settings->>'currencyPosition',
+        'moneyFormat', s.settings->>'moneyFormat',
+        'deliveryFee', s.settings->'deliveryFee',
+        'deliveryMinimumFee', s.settings->'deliveryMinimumFee',
+        'restaurantAddress', s.settings->>'restaurantAddress',
+        'googleMapsApiKey', s.settings->>'googleMapsApiKey',
+        'bankAccount', s.settings->>'bankAccount',
+        'bankTransferNote', s.settings->>'bankTransferNote'
+      )
+    ) as settings
+  from public.app_settings s
+  left join public.restaurant_profiles rp on rp.user_id = s.user_id
+  where s.user_id = p_user_id
+    and coalesce(rp.active, true) = true
+  limit 1;
+$$;
+
+grant execute on function public.get_public_restaurant_menu(uuid) to anon, authenticated;
 
 alter table public.customer_orders
 add column if not exists public_token text;
@@ -266,7 +357,7 @@ as $$
     co.id,
     co.public_token,
     co.user_id as restaurant_user_id,
-    coalesce(nullif(s.settings->>'businessName', ''), 'Restaurante') as restaurant_name,
+    coalesce(nullif(rp.business_name, ''), nullif(s.settings->>'businessName', ''), 'Restaurante') as restaurant_name,
     co.status,
     co.table_label,
     co.customer_name,
@@ -280,6 +371,7 @@ as $$
   from public.customer_orders co
   left join public.orders o on o.id = co.restaurant_order_id
   left join public.app_settings s on s.user_id = co.user_id
+  left join public.restaurant_profiles rp on rp.user_id = co.user_id
   where co.customer_user_id = auth.uid()
   order by co.created_at desc
   limit 100;

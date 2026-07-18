@@ -120,6 +120,17 @@
   box-shadow: var(--shadow);
 }
 
+.customer-restaurant-panel {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: var(--shadow);
+}
+
 .customer-account-head,
 .customer-history-head,
 .customer-history-total {
@@ -178,6 +189,82 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+}
+
+.customer-restaurant-search label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.customer-restaurant-search input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 850;
+}
+
+.customer-restaurant-list {
+  display: grid;
+  gap: 10px;
+}
+
+.customer-restaurant-card {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.customer-restaurant-card.is-selected {
+  border-color: rgba(31, 143, 77, 0.5);
+  background: #f0fff5;
+}
+
+.customer-restaurant-card img,
+.customer-restaurant-initials {
+  width: 58px;
+  height: 58px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  object-fit: cover;
+  background: #ffffff;
+}
+
+.customer-restaurant-initials {
+  display: grid;
+  place-items: center;
+  color: var(--green);
+  font-weight: 950;
+}
+
+.customer-restaurant-info {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.customer-restaurant-info strong,
+.customer-restaurant-info span,
+.customer-restaurant-info small {
+  overflow-wrap: anywhere;
+}
+
+.customer-restaurant-info span,
+.customer-restaurant-info small {
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 820;
+  line-height: 1.3;
 }
 
 .customer-history-panel {
@@ -791,7 +878,8 @@
     grid-template-columns: 1fr;
   }
 
-  .restaurant-signup-panel {
+  .restaurant-signup-panel,
+  .client-entry-panel {
     grid-template-columns: 1fr;
   }
 
@@ -804,6 +892,20 @@
   .customer-history-total {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .customer-restaurant-card {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+
+  .customer-restaurant-card button {
+    grid-column: 1 / -1;
+  }
+
+  .customer-restaurant-card img,
+  .customer-restaurant-initials {
+    width: 48px;
+    height: 48px;
   }
 
   .customer-menu-layout {
@@ -912,6 +1014,45 @@ body {
 .restaurant-signup-panel p {
   color: var(--muted);
   font-weight: 750;
+}
+
+.client-entry-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid rgba(45, 108, 223, 0.28);
+  border-radius: 8px;
+  background: #f2f7ff;
+}
+
+.client-entry-panel h2,
+.client-entry-panel p {
+  margin: 0;
+}
+
+.client-entry-panel h2 {
+  font-size: 1rem;
+}
+
+.client-entry-panel p {
+  color: var(--muted);
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.client-entry-button {
+  display: inline-grid;
+  place-items: center;
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 8px;
+  background: var(--blue);
+  color: #ffffff;
+  font-weight: 900;
+  text-align: center;
+  text-decoration: none;
 }
 
 .legal-checkbox,
