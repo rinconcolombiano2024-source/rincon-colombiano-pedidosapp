@@ -20,6 +20,7 @@
       <header class="customer-hero">
         <div class="customer-language-row">
           <p class="eyebrow" data-i18n="heroEyebrow">Pedido del cliente</p>
+          <button class="customer-map-button" id="customerRefreshMenuButton" type="button" data-i18n="refreshMenu">Actualizar menu</button>
           <label class="customer-language-label">
             <span data-i18n="languageLabel">Idioma</span>
             <select id="customerLanguageSelect">
@@ -29,12 +30,17 @@
             </select>
           </label>
         </div>
+        <img class="brand-logo customer-brand-logo" id="customerBusinessLogo" alt="Logo del restaurante" hidden />
         <h1 id="customerBusinessName">RINCON COLOMBIANO</h1>
         <p id="customerTableLabel" data-i18n="heroSubtitle">Escanea, elige y envia tu pedido.</p>
       </header>
 
       <section class="customer-warning" data-i18n="warning">
         App de prueba: si algo sale diferente, el restaurante confirmara el pedido y cualquier ajuste antes de prepararlo.
+      </section>
+
+      <section class="customer-legal-notice" data-i18n="legalNotice">
+        Usamos los datos que escribes para crear tu cuenta, preparar el pedido, entregarlo, guardar historial y responder por chat. La app puede usar almacenamiento local/cookies tecnicas para mantener sesion, idioma, carrito y funcionamiento.
       </section>
 
       <section class="customer-account-panel" aria-label="Cuenta del cliente" data-i18n-aria-label="accountPanelAria">
@@ -73,6 +79,10 @@
           <label>
             <span data-i18n="registerReferenceLabel">Referencia</span>
             <input id="customerRegisterReferenceInput" type="text" placeholder="Piso, timbre, instrucciones" data-i18n-placeholder="referencePlaceholder" autocomplete="off" />
+          </label>
+          <label class="customer-legal-checkbox">
+            <input id="customerPrivacyConsentInput" type="checkbox" />
+            <span data-i18n="privacyConsent">Acepto el tratamiento de mis datos para gestionar pedidos, historial, entrega, chat y cookies tecnicas necesarias.</span>
           </label>
           <div class="customer-auth-actions">
             <button class="customer-map-button" id="customerSignInButton" type="button" data-i18n="signIn">Iniciar sesion</button>
@@ -154,7 +164,7 @@
             <button class="customer-map-button" id="customerUseLocationButton" type="button" data-i18n="useLocation">Usar mi ubicacion</button>
             <button class="customer-map-button" id="customerCalculateDistanceButton" type="button" data-i18n="calculateMaps">Calcular con Google Maps</button>
             <p class="customer-map-result" id="customerMapResult" hidden></p>
-            <p class="customer-delivery-help" data-i18n="deliveryHelp">Tarifa: 4.50 PLN hasta 1.5 km; luego 1.50 PLN/km hasta 6 km, 2.50 PLN/km hasta 8 km y 3.50 PLN/km despues de 8 km.</p>
+            <p class="customer-delivery-help" data-i18n="deliveryHelp">Domicilio: minimo configurado por el restaurante; si la distancia supera ese valor, se calcula por tramos.</p>
           </div>
 
           <div class="customer-cart-items" id="customerCartItems"></div>

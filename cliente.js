@@ -6,6 +6,7 @@ const customerElements = {
   languageSelect: document.querySelector("#customerLanguageSelect"),
   status: document.querySelector("#customerStatus"),
   trackingStatus: document.querySelector("#customerTrackingStatus"),
+  businessLogo: document.querySelector("#customerBusinessLogo"),
   businessName: document.querySelector("#customerBusinessName"),
   accountSummary: document.querySelector("#customerAccountSummary"),
   authFields: document.querySelector("#customerAuthFields"),
@@ -16,12 +17,14 @@ const customerElements = {
   registerAddressInput: document.querySelector("#customerRegisterAddressInput"),
   registerNeighborhoodInput: document.querySelector("#customerRegisterNeighborhoodInput"),
   registerReferenceInput: document.querySelector("#customerRegisterReferenceInput"),
+  privacyConsentInput: document.querySelector("#customerPrivacyConsentInput"),
   authMessage: document.querySelector("#customerAuthMessage"),
   signInButton: document.querySelector("#customerSignInButton"),
   signUpButton: document.querySelector("#customerSignUpButton"),
   signOutButton: document.querySelector("#customerSignOutButton"),
   historyList: document.querySelector("#customerHistoryList"),
   refreshHistoryButton: document.querySelector("#customerRefreshHistoryButton"),
+  refreshMenuButton: document.querySelector("#customerRefreshMenuButton"),
   tableLabel: document.querySelector("#customerTableLabel"),
   categoryTabs: document.querySelector("#customerCategoryTabs"),
   menuSearchInput: document.querySelector("#customerMenuSearchInput"),
@@ -61,8 +64,12 @@ const CUSTOMER_I18N = {
   es: {
     heroEyebrow: "Pedido del cliente",
     languageLabel: "Idioma",
+    refreshMenu: "Actualizar menu",
+    refreshingMenu: "Actualizando menu...",
+    menuUpdated: "Menu actualizado.",
     heroSubtitle: "Escanea, elige y envia tu pedido.",
     warning: "App de prueba: si algo sale diferente, el restaurante confirmara el pedido y cualquier ajuste antes de prepararlo.",
+    legalNotice: "Usamos los datos que escribes para crear tu cuenta, preparar el pedido, entregarlo, guardar historial y responder por chat. La app usa cookies tecnicas/localStorage para mantener sesion, idioma, carrito y funcionamiento.",
     accountPanelAria: "Cuenta del cliente",
     accountTitle: "Mi cuenta",
     accountGuest: "Inicia sesion o crea una cuenta para enviar pedidos y ver tu historial.",
@@ -77,6 +84,7 @@ const CUSTOMER_I18N = {
     registerAddressLabel: "Direccion de registro",
     registerNeighborhoodLabel: "Barrio / ciudad de registro",
     registerReferenceLabel: "Referencia de direccion",
+    privacyConsent: "Acepto el tratamiento de mis datos para gestionar pedidos, historial, entrega, chat y cookies tecnicas necesarias.",
     signIn: "Iniciar sesion",
     signUp: "Crear cuenta cliente",
     signOut: "Cerrar sesion",
@@ -92,6 +100,7 @@ const CUSTOMER_I18N = {
     authInvalidCredentials: "Correo o contrasena incorrectos.",
     authEmailConfirm: "Confirma tu correo electronico antes de iniciar sesion.",
     authAlreadyRegistered: "Ese correo ya tiene cuenta. Intenta iniciar sesion.",
+    privacyRequired: "Acepta el tratamiento de datos para crear la cuenta.",
     historyPanelAria: "Historial del cliente",
     historyTitle: "Mis pedidos",
     refreshHistory: "Actualizar",
@@ -136,7 +145,7 @@ const CUSTOMER_I18N = {
     distancePlaceholder: "Ej: 3.4",
     useLocation: "Usar mi ubicacion",
     calculateMaps: "Calcular con Google Maps",
-    deliveryHelp: "Tarifa: 4.50 PLN hasta 1.5 km; luego 1.50 PLN/km hasta 6 km, 2.50 PLN/km hasta 8 km y 3.50 PLN/km despues de 8 km.",
+    deliveryHelp: "Domicilio: minimo configurado por el restaurante; si la distancia supera ese valor, se calcula por tramos con Google Maps o km aproximados.",
     kitchenNotesLabel: "Notas para cocina",
     kitchenNotesPlaceholder: "Ej: sin cebolla, salsa aparte...",
     estimatedTotal: "Total estimado",
@@ -231,8 +240,12 @@ const CUSTOMER_I18N = {
   pl: {
     heroEyebrow: "Zamowienie klienta",
     languageLabel: "Jezyk",
+    refreshMenu: "Odswiez menu",
+    refreshingMenu: "Odswiezanie menu...",
+    menuUpdated: "Menu zaktualizowane.",
     heroSubtitle: "Zeskanuj, wybierz i wyslij zamowienie.",
     warning: "Aplikacja testowa: jesli cos bedzie nie tak, restauracja potwierdzi zamowienie i korekty przed przygotowaniem.",
+    legalNotice: "Uzywamy podanych danych do utworzenia konta, przygotowania zamowienia, dostawy, historii i czatu. Aplikacja uzywa technicznego localStorage/cookies do sesji, jezyka, koszyka i dzialania.",
     accountPanelAria: "Konto klienta",
     accountTitle: "Moje konto",
     accountGuest: "Zaloguj sie albo utworz konto, aby wysylac zamowienia i widziec historie.",
@@ -247,6 +260,7 @@ const CUSTOMER_I18N = {
     registerAddressLabel: "Adres do rejestracji",
     registerNeighborhoodLabel: "Dzielnica / miasto do rejestracji",
     registerReferenceLabel: "Wskazowki do adresu",
+    privacyConsent: "Akceptuje przetwarzanie danych do obslugi zamowien, historii, dostawy, czatu i niezbednych cookies technicznych.",
     signIn: "Zaloguj",
     signUp: "Utworz konto klienta",
     signOut: "Wyloguj",
@@ -262,6 +276,7 @@ const CUSTOMER_I18N = {
     authInvalidCredentials: "Nieprawidlowy e-mail lub haslo.",
     authEmailConfirm: "Potwierdz e-mail przed zalogowaniem.",
     authAlreadyRegistered: "Ten e-mail ma juz konto. Sprobuj sie zalogowac.",
+    privacyRequired: "Zaakceptuj przetwarzanie danych, aby utworzyc konto.",
     historyPanelAria: "Historia klienta",
     historyTitle: "Moje zamowienia",
     refreshHistory: "Odswiez",
@@ -306,7 +321,7 @@ const CUSTOMER_I18N = {
     distancePlaceholder: "Np. 3.4",
     useLocation: "Uzyj mojej lokalizacji",
     calculateMaps: "Oblicz w Google Maps",
-    deliveryHelp: "Stawka: 4.50 PLN do 1.5 km; potem 1.50 PLN/km do 6 km, 2.50 PLN/km do 8 km i 3.50 PLN/km powyzej 8 km.",
+    deliveryHelp: "Dostawa: obowiazuje minimum ustawione przez restauracje; jesli dystans przekracza ten koszt, cena liczona jest progami z Google Maps albo przyblizonych km.",
     kitchenNotesLabel: "Uwagi do kuchni",
     kitchenNotesPlaceholder: "Np. bez cebuli, sos osobno...",
     estimatedTotal: "Suma szacunkowa",
@@ -401,8 +416,12 @@ const CUSTOMER_I18N = {
   en: {
     heroEyebrow: "Customer order",
     languageLabel: "Language",
+    refreshMenu: "Refresh menu",
+    refreshingMenu: "Refreshing menu...",
+    menuUpdated: "Menu updated.",
     heroSubtitle: "Scan, choose, and send your order.",
     warning: "Test app: if something is different, the restaurant will confirm the order and any adjustment before preparing it.",
+    legalNotice: "We use the data you enter to create your account, prepare the order, deliver it, keep history, and answer by chat. The app uses technical cookies/localStorage for session, language, cart, and operation.",
     accountPanelAria: "Customer account",
     accountTitle: "My account",
     accountGuest: "Sign in or create an account to send orders and see your history.",
@@ -417,6 +436,7 @@ const CUSTOMER_I18N = {
     registerAddressLabel: "Registration address",
     registerNeighborhoodLabel: "Neighborhood / city for registration",
     registerReferenceLabel: "Address reference",
+    privacyConsent: "I accept data processing for orders, history, delivery, chat, and necessary technical cookies.",
     signIn: "Sign in",
     signUp: "Create customer account",
     signOut: "Sign out",
@@ -432,6 +452,7 @@ const CUSTOMER_I18N = {
     authInvalidCredentials: "Email or password is incorrect.",
     authEmailConfirm: "Confirm your email before signing in.",
     authAlreadyRegistered: "That email already has an account. Try signing in.",
+    privacyRequired: "Accept data processing to create the account.",
     historyPanelAria: "Customer history",
     historyTitle: "My orders",
     refreshHistory: "Refresh",
@@ -476,7 +497,7 @@ const CUSTOMER_I18N = {
     distancePlaceholder: "Ex: 3.4",
     useLocation: "Use my location",
     calculateMaps: "Calculate with Google Maps",
-    deliveryHelp: "Rate: 4.50 PLN up to 1.5 km; then 1.50 PLN/km up to 6 km, 2.50 PLN/km up to 8 km, and 3.50 PLN/km after 8 km.",
+    deliveryHelp: "Delivery: the restaurant minimum applies; if distance is higher than that amount, the price is calculated by tiers using Google Maps or approximate km.",
     kitchenNotesLabel: "Kitchen notes",
     kitchenNotesPlaceholder: "Ex: no onion, sauce on the side...",
     estimatedTotal: "Estimated total",
@@ -646,10 +667,12 @@ let customerSearchQuery = "";
 let customerCart = [];
 let customerSettings = {
   businessName: "RINCON COLOMBIANO",
+  businessLogoUrl: "",
   currencySymbol: "$",
   currencyPosition: "before",
   moneyFormat: "us",
   deliveryFee: 0,
+  deliveryMinimumFee: 20,
   restaurantAddress: "",
   googleMapsApiKey: "",
   bankAccount: "",
@@ -862,6 +885,11 @@ async function customerSignUpWithEmail() {
     customerElements.registerNameInput?.focus();
     return;
   }
+  if (!customerElements.privacyConsentInput?.checked) {
+    customerSetAuthMessage(customerT("privacyRequired"), "error");
+    customerElements.privacyConsentInput?.focus();
+    return;
+  }
 
   if (!customerElements.registerNameInput.value.trim()) customerElements.registerNameInput.value = fullName;
   customerApplyRegisterFieldsToOrder();
@@ -876,6 +904,7 @@ async function customerSignUpWithEmail() {
         full_name: fullName,
         phone: customerInputValue(customerElements.registerPhoneInput),
         default_address: customerRegisteredAddressPayload(),
+        privacy_accepted_at: new Date().toISOString(),
       },
     },
   });
@@ -1128,6 +1157,11 @@ function customerNormalizeMoney(value) {
   return Number.isFinite(number) && number > 0 ? number : 0;
 }
 
+function customerNormalizeDeliveryMinimumFee(value) {
+  const number = Number.parseFloat(value);
+  return Number.isFinite(number) && number >= 0 ? number : 20;
+}
+
 function customerNormalizeText(value) {
   return String(value || "").trim();
 }
@@ -1141,6 +1175,15 @@ function customerApplyBusinessName() {
   const name = customerNormalizeBusinessName(customerSettings.businessName);
   customerSettings.businessName = name;
   if (customerElements.businessName) customerElements.businessName.textContent = name;
+  if (customerElements.businessLogo) {
+    if (customerSettings.businessLogoUrl) {
+      customerElements.businessLogo.src = customerSettings.businessLogoUrl;
+      customerElements.businessLogo.hidden = false;
+    } else {
+      customerElements.businessLogo.removeAttribute("src");
+      customerElements.businessLogo.hidden = true;
+    }
+  }
   document.title = `${name} - Menu cliente`;
   const appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
   if (appleTitle) appleTitle.setAttribute("content", name);
@@ -1391,7 +1434,10 @@ async function customerCalculateDistanceWithMaps() {
 
 function customerDeliveryFee() {
   if (customerElements.orderType.value !== "Domicilio") return 0;
-  return customerCalculateDeliveryFee(customerElements.distanceInput.value) + customerNormalizeMoney(customerSettings.deliveryFee);
+  const calculatedFee = customerCalculateDeliveryFee(customerElements.distanceInput.value);
+  const minimumFee = customerNormalizeDeliveryMinimumFee(customerSettings.deliveryMinimumFee);
+  const extraFee = customerNormalizeMoney(customerSettings.deliveryFee);
+  return Math.max(minimumFee, calculatedFee) + extraFee;
 }
 
 function customerItemTotal(item) {
@@ -1423,7 +1469,9 @@ function customerDeliveryPayload() {
   if (customerElements.orderType.value !== "Domicilio") return null;
   const distanceKm = customerNormalizeDistance(customerElements.distanceInput.value);
   const calculatedFee = customerCalculateDeliveryFee(distanceKm);
+  const minimumFee = customerNormalizeDeliveryMinimumFee(customerSettings.deliveryMinimumFee);
   const extraFee = customerNormalizeMoney(customerSettings.deliveryFee);
+  const feeBeforeExtra = Math.max(minimumFee, calculatedFee);
   return {
     name: customerElements.nameInput.value.trim(),
     phone: customerElements.phoneInput.value.trim(),
@@ -1432,14 +1480,15 @@ function customerDeliveryPayload() {
     reference: customerElements.referenceInput.value.trim(),
     distanceKm,
     calculatedFee,
+    minimumFee,
     extraFee,
-    fee: calculatedFee + extraFee,
+    fee: feeBeforeExtra + extraFee,
     mapDistanceText: customerMapDistance?.distanceText || "",
     mapDurationText: customerMapDistance?.durationText || "",
     mapOrigin: customerMapDistance?.origin || customerSettings.restaurantAddress || "",
     mapDestination: customerMapDistance?.destination || customerDeliveryDestination(),
     location: customerLocationCoords,
-    tariff: "BASE 1.5KM=4.50 PLN; 1.5-6KM=1.50 PLN/KM; 6-8KM=2.50 PLN/KM; +8KM=3.50 PLN/KM",
+    tariff: `MINIMO=${minimumFee} PLN; BASE 1.5KM=4.50 PLN; 1.5-6KM=1.50 PLN/KM; 6-8KM=2.50 PLN/KM; +8KM=3.50 PLN/KM`,
   };
 }
 
@@ -1991,10 +2040,12 @@ async function customerLoadMenu() {
 
   customerSettings = {
     businessName: customerNormalizeBusinessName(data.settings?.businessName),
+    businessLogoUrl: customerNormalizeText(data.settings?.businessLogoUrl),
     currencySymbol: data.settings?.currencySymbol || "$",
     currencyPosition: data.settings?.currencyPosition === "after" ? "after" : "before",
     moneyFormat: data.settings?.moneyFormat === "eu" ? "eu" : "us",
     deliveryFee: customerNormalizeMoney(data.settings?.deliveryFee),
+    deliveryMinimumFee: customerNormalizeDeliveryMinimumFee(data.settings?.deliveryMinimumFee),
     restaurantAddress: customerNormalizeText(data.settings?.restaurantAddress),
     googleMapsApiKey: customerNormalizeText(data.settings?.googleMapsApiKey),
     bankAccount: customerNormalizeText(data.settings?.bankAccount),
@@ -2024,6 +2075,26 @@ async function customerLoadMenu() {
   customerRenderMenu();
   customerRenderDeliveryFields();
   customerRenderCart();
+}
+
+async function customerRefreshMenu() {
+  customerSetStatus(customerT("refreshingMenu"), "");
+  try {
+    if ("serviceWorker" in navigator) {
+      const registration = await navigator.serviceWorker.getRegistration();
+      await registration?.update?.();
+    }
+  } catch (error) {
+    console.error(error);
+  }
+
+  try {
+    await customerLoadMenu();
+    customerSetStatus(customerT("menuUpdated"), "ok");
+  } catch (error) {
+    console.error(error);
+    customerSetStatus(customerT("menuLoadError"), "error");
+  }
 }
 
 async function customerSendOrder() {
@@ -2194,6 +2265,9 @@ customerElements.orderType.addEventListener("change", customerRenderDeliveryFiel
 customerElements.paymentMethod.addEventListener("change", customerRenderCart);
 customerElements.distanceInput.addEventListener("input", customerRenderCart);
 customerElements.languageSelect.addEventListener("change", () => customerSetLanguage(customerElements.languageSelect.value));
+if (customerElements.refreshMenuButton) {
+  customerElements.refreshMenuButton.addEventListener("click", customerRefreshMenu);
+}
 customerElements.notifyButton.addEventListener("click", () => {
   customerRequestNotificationPermission().catch(() => {
     customerSetTrackingStatus(customerT("notificationEnableError"), "error");
@@ -2204,8 +2278,30 @@ customerElements.calculateDistanceButton.addEventListener("click", customerCalcu
 customerElements.chatSendButton.addEventListener("click", customerSendChatMessage);
 customerElements.sendButton.addEventListener("click", customerSendOrder);
 
+let customerPullToRefreshStartY = 0;
+window.addEventListener(
+  "touchstart",
+  (event) => {
+    customerPullToRefreshStartY = event.touches?.[0]?.clientY || 0;
+  },
+  { passive: true }
+);
+window.addEventListener(
+  "touchmove",
+  (event) => {
+    const currentY = event.touches?.[0]?.clientY || 0;
+    if (window.scrollY <= 0 && currentY > customerPullToRefreshStartY + 8) {
+      event.preventDefault();
+    }
+  },
+  { passive: false }
+);
+
 customerApplyBusinessName();
 customerApplyTranslations();
+if ("serviceWorker" in navigator && window.location.protocol.startsWith("http")) {
+  navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+}
 customerLoadMenu().catch(() => {
   customerSetStatus(customerT("openMenuError"), "error");
 });

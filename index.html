@@ -19,8 +19,9 @@
     <section class="auth-screen" id="authScreen" hidden>
       <form class="auth-card" id="authForm">
         <p class="eyebrow">Acceso privado</p>
+        <img class="brand-logo auth-brand-logo" id="authLogoImage" alt="Logo del restaurante" hidden />
         <h1 id="authBusinessName">RINCON COLOMBIANO</h1>
-        <p>Usa la cuenta del restaurante para compartir menu, tickets y cierres en todos los dispositivos.</p>
+        <p>Usa la cuenta del restaurante para compartir menu, tickets, pedidos de clientes y cierres en todos los dispositivos.</p>
         <label>
           Correo electronico
           <input id="authEmail" type="email" autocomplete="email" placeholder="correo@ejemplo.com" />
@@ -31,9 +32,41 @@
         </label>
         <div class="auth-actions">
           <button id="signInButton" type="submit">Iniciar sesion</button>
-          <button id="signUpButton" type="button">Crear cuenta principal</button>
+          <button id="signUpButton" type="button">Registrar restaurante</button>
           <button id="resetPasswordButton" type="button">Recuperar contrasena</button>
         </div>
+        <section class="restaurant-signup-panel" aria-label="Registro profesional del restaurante">
+          <h2>Registro del restaurante</h2>
+          <p>Completa estos datos solo cuando vayas a crear una cuenta nueva.</p>
+          <label>
+            Nombre comercial
+            <input id="authRestaurantNameInput" type="text" placeholder="Nombre que vera el cliente" autocomplete="organization" />
+          </label>
+          <label>
+            Razon social / empresa
+            <input id="authLegalNameInput" type="text" placeholder="Nombre legal de la empresa" autocomplete="organization" />
+          </label>
+          <label>
+            NIP / identificacion fiscal
+            <input id="authTaxIdInput" type="text" placeholder="NIP, VAT o identificacion fiscal" autocomplete="off" />
+          </label>
+          <label>
+            Direccion legal / punto
+            <input id="authLegalAddressInput" type="text" placeholder="Direccion completa del restaurante" autocomplete="street-address" />
+          </label>
+          <label>
+            Telefono del restaurante
+            <input id="authBusinessPhoneInput" type="tel" placeholder="Telefono de contacto" autocomplete="tel" />
+          </label>
+          <label>
+            Responsable
+            <input id="authOwnerNameInput" type="text" placeholder="Nombre del administrador" autocomplete="name" />
+          </label>
+          <label class="legal-checkbox">
+            <input id="authLegalConsentInput" type="checkbox" />
+            Confirmo que puedo administrar este restaurante y acepto usar la app guardando datos de pedidos, clientes y cookies/localStorage necesarios para operar.
+          </label>
+        </section>
         <p class="auth-message" id="authMessage"></p>
         <div class="password-recovery-panel" id="passwordRecoveryPanel" hidden>
           <label>
@@ -50,12 +83,16 @@
 
     <main class="app-shell">
       <header class="topbar">
-        <div>
-          <p class="eyebrow">Sistema de pedidos</p>
-          <h1 id="appBusinessName">RINCON COLOMBIANO</h1>
+        <div class="brand-lockup">
+          <img class="brand-logo" id="appLogoImage" alt="Logo del restaurante" hidden />
+          <div>
+            <p class="eyebrow">Sistema de pedidos</p>
+            <h1 id="appBusinessName">RINCON COLOMBIANO</h1>
+          </div>
         </div>
         <div class="topbar-actions">
           <span class="cloud-status" id="cloudStatus">Modo local</span>
+          <button class="sign-in-top-button" id="refreshAppButton" type="button">Actualizar</button>
           <button class="sign-in-top-button" id="openSignInButton" type="button">Iniciar sesion</button>
           <button class="sign-out-button" id="signOutButton" type="button" hidden>Cerrar sesion</button>
           <button class="sign-in-top-button" id="qrButton" type="button">QR cliente</button>
@@ -270,12 +307,40 @@
 
         <section class="settings-card">
           <div>
-            <h3>Moneda</h3>
-            <p>Este simbolo se usa en precios, pedidos, tickets y cierres.</p>
+            <h3>Restaurante y moneda</h3>
+            <p>Estos datos se usan en la app, QR, tickets, reportes y pantalla del cliente.</p>
           </div>
           <label class="settings-wide-field">
             Nombre del restaurante
             <input id="businessNameInput" type="text" placeholder="RINCON COLOMBIANO" autocomplete="organization" />
+          </label>
+          <label class="settings-wide-field">
+            Logo del restaurante
+            <input id="businessLogoUrlInput" type="text" placeholder="Link del logo o carga una imagen" autocomplete="off" />
+          </label>
+          <label class="settings-wide-field">
+            Cargar logo
+            <input id="businessLogoFileInput" type="file" accept="image/*" />
+          </label>
+          <label class="settings-wide-field">
+            Razon social / empresa
+            <input id="legalBusinessNameInput" type="text" placeholder="Nombre legal de la empresa" autocomplete="organization" />
+          </label>
+          <label>
+            NIP / fiscal
+            <input id="taxIdInput" type="text" placeholder="NIP / VAT" autocomplete="off" />
+          </label>
+          <label>
+            Telefono
+            <input id="businessPhoneInput" type="tel" placeholder="Telefono" autocomplete="tel" />
+          </label>
+          <label class="settings-wide-field">
+            Correo empresa
+            <input id="businessEmailInput" type="email" placeholder="correo@empresa.com" autocomplete="email" />
+          </label>
+          <label class="settings-wide-field">
+            Direccion legal
+            <input id="legalAddressInput" type="text" placeholder="Direccion legal o fiscal" autocomplete="street-address" />
           </label>
           <label>
             Simbolo
@@ -310,6 +375,10 @@
           <label>
             Recargo fijo opcional
             <input id="deliveryFeeInput" type="number" min="0" step="0.01" placeholder="0.00" />
+          </label>
+          <label>
+            Minimo domicilio
+            <input id="deliveryMinimumFeeInput" type="number" min="0" step="0.01" placeholder="20.00" />
           </label>
           <label class="settings-wide-field">
             Direccion restaurante
@@ -393,7 +462,7 @@
         </div>
 
         <div class="dialog-actions">
-          <button id="resetMenuButton" value="default" type="button">Restaurar menu base</button>
+          <button id="resetMenuButton" value="default" type="button">Vaciar menu</button>
           <button value="cancel" type="submit">Cerrar</button>
         </div>
       </form>

@@ -18,58 +18,38 @@ const STORAGE_KEYS = {
   bankTransferNote: "rincon_colombiano_bank_transfer_note",
   clientAlarmEnabled: "rincon_colombiano_client_alarm_enabled",
   businessName: "rincon_colombiano_business_name",
+  businessLogoUrl: "rincon_colombiano_business_logo_url",
+  legalBusinessName: "rincon_colombiano_legal_business_name",
+  taxId: "rincon_colombiano_tax_id",
+  businessPhone: "rincon_colombiano_business_phone",
+  businessEmail: "rincon_colombiano_business_email",
+  legalAddress: "rincon_colombiano_legal_address",
+  deliveryMinimumFee: "rincon_colombiano_delivery_minimum_fee",
   currentOrderDraft: "rincon_colombiano_current_order_draft",
 };
 
 const DEFAULT_BUSINESS_NAME = "RINCON COLOMBIANO";
-const APP_VERSION = "v48";
+const DEFAULT_DELIVERY_MINIMUM_FEE = 20;
+const APP_VERSION = "v49";
 
-const DEFAULT_MENU_CATALOG = {
-  Entradas: [
-    { name: "Empanada colombiana", price: 2.5 },
-    { name: "Arepa con queso", price: 4.5 },
-    { name: "Patacon con hogao", price: 5.5 },
-    { name: "Chicharron", price: 6.5 },
-  ],
-  "Platos principales": [
-    { name: "Bandeja paisa", price: 17.99 },
-    { name: "Sancocho de gallina", price: 15.99 },
-    { name: "Ajiaco santafereño", price: 15.5 },
-    { name: "Sobrebarriga criolla", price: 16.99 },
-    { name: "Arroz con pollo", price: 13.99 },
-    { name: "Carne asada", price: 16.5 },
-  ],
-  Bebidas: [
-    { name: "Limonada natural", price: 4 },
-    { name: "Jugo de maracuya", price: 4.5 },
-    { name: "Jugo de mora", price: 4.5 },
-    { name: "Cafe colombiano", price: 2.5 },
-  ],
-  Postres: [
-    { name: "Tres leches", price: 5.5 },
-    { name: "Flan casero", price: 4.5 },
-    { name: "Arroz con leche", price: 4 },
-  ],
-  Extras: [
-    { name: "Arroz extra", price: 3 },
-    { name: "Aguacate", price: 3.5 },
-    { name: "Tostones extra", price: 4 },
-    { name: "Salsa aparte", price: 0 },
-  ],
-  Porciones: [
-    { name: "Porcion de arroz", price: 3 },
-    { name: "Porcion de frijoles", price: 4 },
-    { name: "Porcion de ensalada", price: 3 },
-    { name: "Porcion de maduro", price: 3.5 },
-  ],
+const EMPTY_MENU_CATALOG = {
+  Entradas: [],
 };
 
 const elements = {
   authScreen: document.querySelector("#authScreen"),
   authBusinessName: document.querySelector("#authBusinessName"),
+  authLogoImage: document.querySelector("#authLogoImage"),
   authForm: document.querySelector("#authForm"),
   authEmail: document.querySelector("#authEmail"),
   authPassword: document.querySelector("#authPassword"),
+  authRestaurantNameInput: document.querySelector("#authRestaurantNameInput"),
+  authLegalNameInput: document.querySelector("#authLegalNameInput"),
+  authTaxIdInput: document.querySelector("#authTaxIdInput"),
+  authLegalAddressInput: document.querySelector("#authLegalAddressInput"),
+  authBusinessPhoneInput: document.querySelector("#authBusinessPhoneInput"),
+  authOwnerNameInput: document.querySelector("#authOwnerNameInput"),
+  authLegalConsentInput: document.querySelector("#authLegalConsentInput"),
   signInButton: document.querySelector("#signInButton"),
   signUpButton: document.querySelector("#signUpButton"),
   resetPasswordButton: document.querySelector("#resetPasswordButton"),
@@ -80,6 +60,8 @@ const elements = {
   authMessage: document.querySelector("#authMessage"),
   cloudStatus: document.querySelector("#cloudStatus"),
   appBusinessName: document.querySelector("#appBusinessName"),
+  appLogoImage: document.querySelector("#appLogoImage"),
+  refreshAppButton: document.querySelector("#refreshAppButton"),
   openSignInButton: document.querySelector("#openSignInButton"),
   signOutButton: document.querySelector("#signOutButton"),
   qrButton: document.querySelector("#qrButton"),
@@ -171,12 +153,20 @@ const elements = {
   productList: document.querySelector("#productList"),
   resetMenuButton: document.querySelector("#resetMenuButton"),
   businessNameInput: document.querySelector("#businessNameInput"),
+  businessLogoUrlInput: document.querySelector("#businessLogoUrlInput"),
+  businessLogoFileInput: document.querySelector("#businessLogoFileInput"),
+  legalBusinessNameInput: document.querySelector("#legalBusinessNameInput"),
+  taxIdInput: document.querySelector("#taxIdInput"),
+  businessPhoneInput: document.querySelector("#businessPhoneInput"),
+  businessEmailInput: document.querySelector("#businessEmailInput"),
+  legalAddressInput: document.querySelector("#legalAddressInput"),
   currencySymbolInput: document.querySelector("#currencySymbolInput"),
   currencyPositionSelect: document.querySelector("#currencyPositionSelect"),
   moneyFormatSelect: document.querySelector("#moneyFormatSelect"),
   receiptWidthInput: document.querySelector("#receiptWidthInput"),
   saveCurrencyButton: document.querySelector("#saveCurrencyButton"),
   deliveryFeeInput: document.querySelector("#deliveryFeeInput"),
+  deliveryMinimumFeeInput: document.querySelector("#deliveryMinimumFeeInput"),
   restaurantAddressInput: document.querySelector("#restaurantAddressInput"),
   useRestaurantLocationButton: document.querySelector("#useRestaurantLocationButton"),
   googleMapsApiKeyInput: document.querySelector("#googleMapsApiKeyInput"),
@@ -202,10 +192,17 @@ let currencyPosition = readCurrencyPosition();
 let moneyFormat = readMoneyFormat();
 let receiptWidthMm = readReceiptWidthMm();
 let deliveryFee = readDeliveryFee();
+let deliveryMinimumFee = readDeliveryMinimumFee();
 let restaurantAddress = readRestaurantAddress();
 let googleMapsApiKey = readGoogleMapsApiKey();
 let bankAccount = readBankAccount();
 let bankTransferNote = readBankTransferNote();
+let businessLogoUrl = readBusinessLogoUrl();
+let legalBusinessName = readLegalBusinessName();
+let taxId = readTaxId();
+let businessPhone = readBusinessPhone();
+let businessEmail = readBusinessEmail();
+let legalAddress = readLegalAddress();
 let editingNoteItemId = null;
 let toastTimer = null;
 let pendingClientOrders = [];
@@ -616,30 +613,107 @@ function currentSettingsPayload() {
     moneyFormat,
     receiptWidthMm,
     deliveryFee,
+    deliveryMinimumFee,
     restaurantAddress,
     googleMapsApiKey,
     bankAccount,
     bankTransferNote,
+    businessLogoUrl,
+    legalBusinessName,
+    taxId,
+    businessPhone,
+    businessEmail,
+    legalAddress,
   };
+}
+
+function restaurantSignupProfileFromInputs(email = "") {
+  return {
+    businessName: normalizeBusinessName(elements.authRestaurantNameInput?.value || businessName),
+    legalBusinessName: normalizeTextSetting(elements.authLegalNameInput?.value || ""),
+    taxId: normalizeTextSetting(elements.authTaxIdInput?.value || ""),
+    legalAddress: normalizeTextSetting(elements.authLegalAddressInput?.value || ""),
+    businessPhone: normalizeTextSetting(elements.authBusinessPhoneInput?.value || ""),
+    businessEmail: normalizeTextSetting(email || elements.authEmail?.value || ""),
+    ownerName: normalizeTextSetting(elements.authOwnerNameInput?.value || ""),
+    legalConsent: Boolean(elements.authLegalConsentInput?.checked),
+  };
+}
+
+function restaurantProfileFromUserMetadata() {
+  const metadata = cloudState.user?.user_metadata || {};
+  const profile = metadata.restaurant_profile || {};
+  return {
+    businessName: profile.businessName || metadata.business_name || metadata.app_name || "",
+    legalBusinessName: profile.legalBusinessName || metadata.legal_business_name || "",
+    taxId: profile.taxId || metadata.tax_id || "",
+    legalAddress: profile.legalAddress || metadata.legal_address || "",
+    businessPhone: profile.businessPhone || metadata.business_phone || "",
+    businessEmail: profile.businessEmail || metadata.business_email || cloudState.user?.email || "",
+    ownerName: profile.ownerName || metadata.owner_name || "",
+  };
+}
+
+function applyRestaurantProfile(profile = {}, options = {}) {
+  const onlyIfEmpty = Boolean(options.onlyIfEmpty);
+  const assignText = (currentValue, nextValue) => {
+    const cleanValue = normalizeTextSetting(nextValue);
+    if (!cleanValue) return currentValue;
+    if (onlyIfEmpty && normalizeTextSetting(currentValue)) return currentValue;
+    return cleanValue;
+  };
+
+  businessName = onlyIfEmpty && businessName !== DEFAULT_BUSINESS_NAME
+    ? businessName
+    : normalizeBusinessName(profile.businessName || businessName);
+  legalBusinessName = assignText(legalBusinessName, profile.legalBusinessName);
+  taxId = assignText(taxId, profile.taxId);
+  legalAddress = assignText(legalAddress, profile.legalAddress);
+  restaurantAddress = assignText(restaurantAddress, profile.legalAddress);
+  businessPhone = assignText(businessPhone, profile.businessPhone);
+  businessEmail = assignText(businessEmail, profile.businessEmail);
+
+  localStorage.setItem(STORAGE_KEYS.businessName, businessName);
+  localStorage.setItem(STORAGE_KEYS.legalBusinessName, legalBusinessName);
+  localStorage.setItem(STORAGE_KEYS.taxId, taxId);
+  localStorage.setItem(STORAGE_KEYS.legalAddress, legalAddress);
+  localStorage.setItem(STORAGE_KEYS.restaurantAddress, restaurantAddress);
+  localStorage.setItem(STORAGE_KEYS.businessPhone, businessPhone);
+  localStorage.setItem(STORAGE_KEYS.businessEmail, businessEmail);
+  applyBusinessNameToUi();
 }
 
 function applySettingsPayload(settings = {}) {
   businessName = normalizeBusinessName(settings.businessName || businessName);
+  businessLogoUrl = normalizeProductImageUrl(settings.businessLogoUrl ?? businessLogoUrl);
+  legalBusinessName = normalizeTextSetting(settings.legalBusinessName ?? legalBusinessName);
+  taxId = normalizeTextSetting(settings.taxId ?? taxId);
+  businessPhone = normalizeTextSetting(settings.businessPhone ?? businessPhone);
+  businessEmail = normalizeTextSetting(settings.businessEmail ?? businessEmail);
+  legalAddress = normalizeTextSetting(settings.legalAddress ?? legalAddress);
   currencySymbol = settings.currencySymbol || currencySymbol || "$";
   currencyPosition = settings.currencyPosition === "after" ? "after" : "before";
   moneyFormat = settings.moneyFormat === "eu" ? "eu" : "us";
   receiptWidthMm = normalizeReceiptWidth(settings.receiptWidthMm || receiptWidthMm);
   deliveryFee = normalizeMoneyValue(settings.deliveryFee ?? deliveryFee);
-  restaurantAddress = normalizeTextSetting(settings.restaurantAddress || restaurantAddress);
-  googleMapsApiKey = normalizeTextSetting(settings.googleMapsApiKey || googleMapsApiKey);
+  deliveryMinimumFee = normalizeDeliveryMinimumFee(settings.deliveryMinimumFee ?? deliveryMinimumFee);
+  restaurantAddress = normalizeTextSetting(settings.restaurantAddress ?? restaurantAddress);
+  googleMapsApiKey = normalizeTextSetting(settings.googleMapsApiKey ?? googleMapsApiKey);
   bankAccount = normalizeTextSetting(settings.bankAccount ?? bankAccount);
   bankTransferNote = normalizeTextSetting(settings.bankTransferNote ?? bankTransferNote);
   localStorage.setItem(STORAGE_KEYS.businessName, businessName);
+  localStorage.setItem(STORAGE_KEYS.businessLogoUrl, businessLogoUrl);
+  localStorage.setItem(STORAGE_KEYS.legalBusinessName, legalBusinessName);
+  localStorage.setItem(STORAGE_KEYS.taxId, taxId);
+  localStorage.setItem(STORAGE_KEYS.businessPhone, businessPhone);
+  localStorage.setItem(STORAGE_KEYS.businessEmail, businessEmail);
+  localStorage.setItem(STORAGE_KEYS.legalAddress, legalAddress);
   localStorage.setItem(STORAGE_KEYS.currencySymbol, currencySymbol);
   localStorage.setItem(STORAGE_KEYS.currencyPosition, currencyPosition);
   localStorage.setItem(STORAGE_KEYS.moneyFormat, moneyFormat);
   localStorage.setItem(STORAGE_KEYS.receiptWidthMm, String(receiptWidthMm));
   localStorage.setItem(STORAGE_KEYS.deliveryFee, String(deliveryFee));
+  localStorage.setItem(STORAGE_KEYS.deliveryMinimumFee, String(deliveryMinimumFee));
   localStorage.setItem(STORAGE_KEYS.restaurantAddress, restaurantAddress);
   localStorage.setItem(STORAGE_KEYS.googleMapsApiKey, googleMapsApiKey);
   localStorage.setItem(STORAGE_KEYS.bankAccount, bankAccount);
@@ -792,11 +866,15 @@ async function loadCloudData() {
 
     if (settingsError) throw settingsError;
 
+    const restaurantProfile = restaurantProfileFromUserMetadata();
+
     if (settingsRow && !localSettingsPending) {
-      menuCatalog = normalizeMenuCatalog(settingsRow.menu || DEFAULT_MENU_CATALOG);
+      menuCatalog = normalizeMenuCatalog(settingsRow.menu || EMPTY_MENU_CATALOG);
       localStorage.setItem(STORAGE_KEYS.menu, JSON.stringify(menuCatalog));
       applySettingsPayload(settingsRow.settings || {});
+      applyRestaurantProfile(restaurantProfile, { onlyIfEmpty: true });
     } else if (!settingsRow || localSettingsPending) {
+      applyRestaurantProfile(restaurantProfile, { onlyIfEmpty: false });
       await saveCloudSettings();
       clearSettingsPending();
     }
@@ -1704,9 +1782,61 @@ async function signUpWithEmail() {
     return;
   }
 
+  const profile = restaurantSignupProfileFromInputs(email);
+  if (!normalizeTextSetting(elements.authRestaurantNameInput?.value || "")) {
+    elements.authMessage.textContent = "Escribe el nombre comercial del restaurante para registrarlo.";
+    elements.authRestaurantNameInput?.focus();
+    return;
+  }
+  if (!profile.legalBusinessName) {
+    elements.authMessage.textContent = "Escribe la razon social o nombre legal de la empresa.";
+    elements.authLegalNameInput?.focus();
+    return;
+  }
+  if (!profile.legalAddress) {
+    elements.authMessage.textContent = "Escribe la direccion legal o direccion del punto.";
+    elements.authLegalAddressInput?.focus();
+    return;
+  }
+  if (!profile.businessPhone) {
+    elements.authMessage.textContent = "Escribe el telefono del restaurante.";
+    elements.authBusinessPhoneInput?.focus();
+    return;
+  }
+  if (!profile.ownerName) {
+    elements.authMessage.textContent = "Escribe el nombre del responsable o administrador.";
+    elements.authOwnerNameInput?.focus();
+    return;
+  }
+  if (!profile.legalConsent) {
+    elements.authMessage.textContent = "Debes confirmar que puedes administrar el restaurante y aceptar el tratamiento tecnico de datos.";
+    elements.authLegalConsentInput?.focus();
+    return;
+  }
+
+  applyRestaurantProfile(profile, { onlyIfEmpty: false });
   elements.authMessage.textContent = "Creando cuenta...";
   try {
-    const { error } = await cloudState.client.auth.signUp({ email, password });
+    const { error } = await cloudState.client.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: window.location.href.split("#")[0].split("?")[0],
+        data: {
+          account_type: "restaurant",
+          app_name: profile.businessName,
+          business_name: profile.businessName,
+          legal_business_name: profile.legalBusinessName,
+          tax_id: profile.taxId,
+          legal_address: profile.legalAddress,
+          business_phone: profile.businessPhone,
+          business_email: profile.businessEmail,
+          owner_name: profile.ownerName,
+          privacy_accepted_at: new Date().toISOString(),
+          restaurant_profile: profile,
+        },
+      },
+    });
     if (error) {
       elements.authMessage.textContent = friendlyAuthError(error);
       return;
@@ -1716,7 +1846,7 @@ async function signUpWithEmail() {
     return;
   }
 
-  elements.authMessage.textContent = "Cuenta creada. Si Supabase pide confirmacion, revisa el correo.";
+  elements.authMessage.textContent = "Cuenta del restaurante creada. Revisa el correo para confirmar y poder iniciar sesion.";
   elements.authPassword.value = "";
 }
 
@@ -1745,6 +1875,39 @@ async function sendPasswordResetEmail() {
     elements.authMessage.textContent = "Correo enviado. Abre el enlace para crear una contrasena nueva.";
   } catch (error) {
     elements.authMessage.textContent = friendlyAuthError(error);
+  }
+}
+
+async function refreshRestaurantApp() {
+  syncFormToOrder();
+  saveCurrentOrderDraft();
+  showToast("Actualizando sin borrar el pedido actual...");
+
+  try {
+    if ("serviceWorker" in navigator) {
+      const registration = await navigator.serviceWorker.getRegistration();
+      await registration?.update?.();
+    }
+  } catch (error) {
+    console.error(error);
+  }
+
+  try {
+    if (cloudState.configured && cloudState.user && navigator.onLine) {
+      await syncPendingData({ silent: true });
+      await loadCloudData();
+      await refreshClientOrders({ silent: true });
+      showToast("App y nube actualizadas. Pedido actual conservado.");
+      return;
+    }
+    renderCategories();
+    renderMenu();
+    renderOrder();
+    renderHistory();
+    showToast("Pantalla actualizada. Pedido actual conservado.");
+  } catch (error) {
+    console.error(error);
+    showToast("No se pudo actualizar todo. El pedido actual sigue guardado.");
   }
 }
 
@@ -1820,9 +1983,9 @@ async function signOut() {
 function readMenuCatalog() {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEYS.menu) || "null");
-    return normalizeMenuCatalog(parsed || DEFAULT_MENU_CATALOG);
+    return normalizeMenuCatalog(parsed || EMPTY_MENU_CATALOG);
   } catch {
-    return normalizeMenuCatalog(DEFAULT_MENU_CATALOG);
+    return normalizeMenuCatalog(EMPTY_MENU_CATALOG);
   }
 }
 
@@ -1954,6 +2117,16 @@ function applyBusinessNameToUi() {
   businessName = name;
   if (elements.authBusinessName) elements.authBusinessName.textContent = name;
   if (elements.appBusinessName) elements.appBusinessName.textContent = name;
+  [elements.authLogoImage, elements.appLogoImage].forEach((image) => {
+    if (!image) return;
+    if (businessLogoUrl) {
+      image.src = businessLogoUrl;
+      image.hidden = false;
+    } else {
+      image.removeAttribute("src");
+      image.hidden = true;
+    }
+  });
   document.title = `${name} - Pedidos`;
   const appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
   if (appleTitle) appleTitle.setAttribute("content", name);
@@ -1988,8 +2161,42 @@ function readDeliveryFee() {
   return normalizeMoneyValue(localStorage.getItem(STORAGE_KEYS.deliveryFee) || 0);
 }
 
+function normalizeDeliveryMinimumFee(value) {
+  const number = Number.parseFloat(value);
+  return Number.isFinite(number) && number >= 0 ? number : DEFAULT_DELIVERY_MINIMUM_FEE;
+}
+
+function readDeliveryMinimumFee() {
+  const saved = localStorage.getItem(STORAGE_KEYS.deliveryMinimumFee);
+  return saved === null ? DEFAULT_DELIVERY_MINIMUM_FEE : normalizeDeliveryMinimumFee(saved);
+}
+
 function normalizeTextSetting(value) {
   return String(value || "").trim();
+}
+
+function readBusinessLogoUrl() {
+  return normalizeProductImageUrl(localStorage.getItem(STORAGE_KEYS.businessLogoUrl) || "");
+}
+
+function readLegalBusinessName() {
+  return normalizeTextSetting(localStorage.getItem(STORAGE_KEYS.legalBusinessName) || "");
+}
+
+function readTaxId() {
+  return normalizeTextSetting(localStorage.getItem(STORAGE_KEYS.taxId) || "");
+}
+
+function readBusinessPhone() {
+  return normalizeTextSetting(localStorage.getItem(STORAGE_KEYS.businessPhone) || "");
+}
+
+function readBusinessEmail() {
+  return normalizeTextSetting(localStorage.getItem(STORAGE_KEYS.businessEmail) || "");
+}
+
+function readLegalAddress() {
+  return normalizeTextSetting(localStorage.getItem(STORAGE_KEYS.legalAddress) || "");
 }
 
 function readRestaurantAddress() {
@@ -2066,22 +2273,36 @@ function showToast(message) {
 
 function saveCurrencySymbol() {
   businessName = normalizeBusinessName(elements.businessNameInput?.value || businessName);
+  businessLogoUrl = normalizeProductImageUrl(elements.businessLogoUrlInput?.value || "");
+  legalBusinessName = normalizeTextSetting(elements.legalBusinessNameInput?.value || "");
+  taxId = normalizeTextSetting(elements.taxIdInput?.value || "");
+  businessPhone = normalizeTextSetting(elements.businessPhoneInput?.value || "");
+  businessEmail = normalizeTextSetting(elements.businessEmailInput?.value || "");
+  legalAddress = normalizeTextSetting(elements.legalAddressInput?.value || "");
   const symbol = elements.currencySymbolInput.value.trim() || "$";
   currencySymbol = symbol;
   currencyPosition = elements.currencyPositionSelect.value === "after" ? "after" : "before";
   moneyFormat = elements.moneyFormatSelect.value === "eu" ? "eu" : "us";
   receiptWidthMm = normalizeReceiptWidth(elements.receiptWidthInput.value);
   deliveryFee = normalizeMoneyValue(elements.deliveryFeeInput.value);
+  deliveryMinimumFee = normalizeDeliveryMinimumFee(elements.deliveryMinimumFeeInput?.value);
   restaurantAddress = normalizeTextSetting(elements.restaurantAddressInput.value);
   googleMapsApiKey = normalizeTextSetting(elements.googleMapsApiKeyInput.value);
   bankAccount = normalizeTextSetting(elements.bankAccountInput.value);
   bankTransferNote = normalizeTextSetting(elements.bankTransferNoteInput.value);
   localStorage.setItem(STORAGE_KEYS.businessName, businessName);
+  localStorage.setItem(STORAGE_KEYS.businessLogoUrl, businessLogoUrl);
+  localStorage.setItem(STORAGE_KEYS.legalBusinessName, legalBusinessName);
+  localStorage.setItem(STORAGE_KEYS.taxId, taxId);
+  localStorage.setItem(STORAGE_KEYS.businessPhone, businessPhone);
+  localStorage.setItem(STORAGE_KEYS.businessEmail, businessEmail);
+  localStorage.setItem(STORAGE_KEYS.legalAddress, legalAddress);
   localStorage.setItem(STORAGE_KEYS.currencySymbol, currencySymbol);
   localStorage.setItem(STORAGE_KEYS.currencyPosition, currencyPosition);
   localStorage.setItem(STORAGE_KEYS.moneyFormat, moneyFormat);
   localStorage.setItem(STORAGE_KEYS.receiptWidthMm, String(receiptWidthMm));
   localStorage.setItem(STORAGE_KEYS.deliveryFee, String(deliveryFee));
+  localStorage.setItem(STORAGE_KEYS.deliveryMinimumFee, String(deliveryMinimumFee));
   localStorage.setItem(STORAGE_KEYS.restaurantAddress, restaurantAddress);
   localStorage.setItem(STORAGE_KEYS.googleMapsApiKey, googleMapsApiKey);
   localStorage.setItem(STORAGE_KEYS.bankAccount, bankAccount);
@@ -2128,11 +2349,18 @@ function useRestaurantCurrentLocation() {
 
 function renderCurrencySettings() {
   if (elements.businessNameInput) elements.businessNameInput.value = businessName;
+  if (elements.businessLogoUrlInput) elements.businessLogoUrlInput.value = businessLogoUrl;
+  if (elements.legalBusinessNameInput) elements.legalBusinessNameInput.value = legalBusinessName;
+  if (elements.taxIdInput) elements.taxIdInput.value = taxId;
+  if (elements.businessPhoneInput) elements.businessPhoneInput.value = businessPhone;
+  if (elements.businessEmailInput) elements.businessEmailInput.value = businessEmail;
+  if (elements.legalAddressInput) elements.legalAddressInput.value = legalAddress;
   elements.currencySymbolInput.value = currencySymbol;
   elements.currencyPositionSelect.value = currencyPosition;
   elements.moneyFormatSelect.value = moneyFormat;
   elements.receiptWidthInput.value = receiptWidthMm;
   elements.deliveryFeeInput.value = deliveryFee;
+  if (elements.deliveryMinimumFeeInput) elements.deliveryMinimumFeeInput.value = deliveryMinimumFee;
   elements.restaurantAddressInput.value = restaurantAddress;
   elements.googleMapsApiKeyInput.value = googleMapsApiKey;
   elements.bankAccountInput.value = bankAccount;
@@ -2692,15 +2920,15 @@ function deleteProduct(index) {
 }
 
 function resetMenu() {
-  const shouldReset = confirm("Restaurar el menu base? Esto reemplaza las categorias y productos actuales.");
+  const shouldReset = confirm("Vaciar el menu? Esto elimina categorias y productos actuales. Usa esta opcion solo si vas a crear el menu desde cero.");
   if (!shouldReset) return;
 
-  menuCatalog = normalizeMenuCatalog(DEFAULT_MENU_CATALOG);
+  menuCatalog = normalizeMenuCatalog(EMPTY_MENU_CATALOG);
   activeCategory = Object.keys(menuCatalog)[0];
   saveMenuCatalog();
   clearProductForm();
   renderMenuEditor();
-  showToast("Menu base restaurado.");
+  showToast("Menu vaciado. Ahora puedes crear categorias y productos.");
 }
 
 function addItem(name, price) {
@@ -3759,6 +3987,9 @@ elements.signUpButton.addEventListener("click", signUpWithEmail);
 elements.resetPasswordButton.addEventListener("click", sendPasswordResetEmail);
 elements.updatePasswordButton.addEventListener("click", updateRecoveredPassword);
 elements.cancelRecoveryButton.addEventListener("click", () => hidePasswordRecoveryForm());
+if (elements.refreshAppButton) {
+  elements.refreshAppButton.addEventListener("click", refreshRestaurantApp);
+}
 elements.openSignInButton.addEventListener("click", openSignInScreen);
 elements.signOutButton.addEventListener("click", signOut);
 elements.qrButton.addEventListener("click", openQrDialog);
@@ -3865,6 +4096,24 @@ if (elements.useRestaurantLocationButton) {
   elements.useRestaurantLocationButton.addEventListener("click", useRestaurantCurrentLocation);
 }
 
+if (elements.businessLogoFileInput) {
+  elements.businessLogoFileInput.addEventListener("change", async () => {
+    const file = elements.businessLogoFileInput.files?.[0];
+    if (!file) return;
+
+    try {
+      businessLogoUrl = await restaurantImageFileToDataUrl(file);
+      elements.businessLogoUrlInput.value = businessLogoUrl;
+      localStorage.setItem(STORAGE_KEYS.businessLogoUrl, businessLogoUrl);
+      applyBusinessNameToUi();
+      showToast("Logo optimizado. Presiona guardar ajustes para subirlo.");
+    } catch (error) {
+      alert(error.message || "No se pudo cargar el logo.");
+      elements.businessLogoFileInput.value = "";
+    }
+  });
+}
+
 elements.productImageFileInput.addEventListener("change", async () => {
   const file = elements.productImageFileInput.files?.[0];
   if (!file) return;
@@ -3914,6 +4163,25 @@ window.addEventListener("beforeunload", () => {
   syncFormToOrder();
   saveCurrentOrderDraft();
 });
+
+let pullToRefreshStartY = 0;
+window.addEventListener(
+  "touchstart",
+  (event) => {
+    pullToRefreshStartY = event.touches?.[0]?.clientY || 0;
+  },
+  { passive: true }
+);
+window.addEventListener(
+  "touchmove",
+  (event) => {
+    const currentY = event.touches?.[0]?.clientY || 0;
+    if (window.scrollY <= 0 && currentY > pullToRefreshStartY + 8) {
+      event.preventDefault();
+    }
+  },
+  { passive: false }
+);
 
 window.addEventListener("offline", () => {
   renderCloudState();

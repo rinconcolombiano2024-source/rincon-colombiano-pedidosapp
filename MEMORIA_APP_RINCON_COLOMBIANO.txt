@@ -19,19 +19,21 @@ Funciones actuales que deben conservarse:
 - Fotos cargadas de productos se optimizan/comprimen antes de guardarse para que el menu del cliente sea mas rapido y profesional.
 - Aviso visual pequeno cuando se agregan, editan, guardan, restauran o eliminan categorias/productos/ajustes.
 - Al guardar un producto, el aviso debe decir: Producto guardado.
-- Categorias base: Entradas, Platos principales, Bebidas, Postres, Extras, Porciones.
+- Menu base vacio para restaurantes nuevos: el restaurante crea categorias, productos, fotos, precios y disponibilidad.
 - Producto especial/manual con precio.
 - Tipo de pedido cliente/restaurante: Comer en el punto, Para llevar / recoger en el punto, Envio a domicilio.
 - Metodo de pago por pedido: Pago en caja, Efectivo, Transferencia y Datafono / tarjeta.
 - Nombre del cliente o mesa.
 - Domicilio puede guardar nombre, telefono, direccion, barrio/ciudad, referencia, distancia km y costo estimado.
-- Domicilio calcula tarifa por km: 4.50 PLN hasta 1.5 km; de 1.5 a 6 km suma 1.50 PLN/km; de 6 a 8 km suma 2.50 PLN/km; mas de 8 km suma 3.50 PLN/km.
+- Domicilio usa minimo configurable por restaurante, por defecto 20 PLN; si la tarifa por km supera ese minimo, usa 4.50 PLN hasta 1.5 km; de 1.5 a 6 km suma 1.50 PLN/km; de 6 a 8 km suma 2.50 PLN/km; mas de 8 km suma 3.50 PLN/km.
 - Domicilio puede calcular distancia real con Google Maps si se configura direccion del restaurante y Google Maps API key con Maps JavaScript API, Distance Matrix API y Geocoding API.
 - Cliente puede permitir ubicacion para calcular domicilio con Google Maps desde su posicion real.
 - Usar ubicacion del cliente obtiene coordenadas reales; con Google Maps API key tambien intenta completar direccion aproximada y calcular distancia real.
 - Restaurante puede guardar ubicacion actual desde la tablet como direccion/coordenadas exactas del local.
+- Restaurante puede subir logo y guardar datos legales/profesionales: nombre comercial, razon social, identificacion fiscal, telefono, correo y direccion legal.
 - Al abrir QR cliente, la app intenta sincronizar primero el menu real actual del restaurante a Supabase.
 - El link QR nuevo incluye version de app para ayudar a que telefonos con cache vieja abran la version nueva.
+- Boton Actualizar en restaurante: refresca app/nube sin borrar el pedido actual.
 - Nombre de la persona que tomo el pedido.
 - Responsable del turno: se pide al iniciar sesion y se aplica automaticamente a pedidos nuevos.
 - Boton Turno para cambiar quien toma pedidos durante el dia.
@@ -59,11 +61,12 @@ Funciones actuales que deben conservarse:
 - Los mensajes de acceso del cliente tambien respetan el idioma seleccionado.
 - Cliente QR tiene cuenta propia con correo electronico y contrasena usando Supabase Auth.
 - Cliente puede crear cuenta, iniciar sesion y cerrar sesion desde cliente.html.
-- Al crear cuenta cliente, se pide nombre completo, telefono, direccion, barrio/ciudad y referencia.
+- Al crear cuenta cliente, se pide nombre completo, telefono, direccion, barrio/ciudad, referencia y aceptacion del tratamiento de datos para pedidos, historial, entrega, chat y cookies tecnicas.
 - Despues del registro, la app avisa al cliente que debe revisar su correo electronico y confirmar la cuenta antes de iniciar sesion si Supabase tiene confirmacion activa.
 - Para enviar pedido desde cliente QR se requiere cuenta de cliente iniciada; asi el pedido queda guardado en su historial.
 - Cliente tiene seccion Mis pedidos con historial, estado, total, ticket si ya fue aceptado y boton para abrir estado/chat del pedido.
 - Cliente QR tiene buscador de productos por nombre, categoria o descripcion.
+- Cliente QR tiene boton Actualizar menu para recargar el menu real configurado por el restaurante.
 - Cliente tiene perfil basico guardado: nombre, telefono, direccion preferida, referencia, distancia e idioma.
 - Los pedidos QR guardan customer_user_id para asociar pedidos a la cuenta del cliente sin mezclar clientes.
 - Los nombres de productos/categorias escritos por el restaurante no se traducen automaticamente; se muestran tal como se guardaron en el menu.
@@ -83,17 +86,20 @@ Funciones actuales que deben conservarse:
 - Restaurante puede activar notificaciones del navegador junto con alarma sonora para pedidos nuevos.
 - Cliente puede ver estado del pedido: pendiente, aceptado, enviado, entregado o cancelado, usando referencia publica segura en Supabase.
 - La app cliente muestra advertencia de app de prueba y confirmacion de ajustes ante errores.
+- La app cliente muestra aviso de tratamiento de datos/cookies tecnicas y exige aceptacion al crear cuenta.
 - La app restaurante tiene alarma sonora para pedidos cliente pendientes; el cajero debe tocar Activar alarma una vez por restricciones del navegador.
 - Nombre del restaurante editable: por defecto RINCON COLOMBIANO, pero cada cuenta de restaurante puede guardar su propio nombre para pantalla, cliente QR, tickets, PDF y cierres.
+- Logo del restaurante editable y visible en restaurante y cliente QR.
 - Moneda editable: simbolo, posicion y formato.
 - Ancho de ticket editable en milimetros para impresion/PDF.
 - Recargo fijo opcional de domicilio editable para el modulo cliente.
+- Minimo de domicilio editable para el modulo cliente.
 - Direccion del restaurante y Google Maps API key editables para calcular distancia real.
 - Cuenta de transferencia y texto de comprobante editables para el modulo cliente.
 - Cobro externo por tienda desactivado por decision del restaurante hasta confirmar una integracion real con proveedor de pago.
 - La app no cobra comisiones: los pagos se manejan por caja, efectivo, transferencia o datafono segun el restaurante.
 - Inicio de sesion por correo electronico y contrasena usando Supabase.
-- Crear cuenta principal.
+- Registrar restaurante con datos legales y consentimiento tecnico.
 - Recuperar contrasena por correo electronico.
 - Guardar nueva contrasena desde enlace de recuperacion.
 - Sincronizacion con Supabase: menu, moneda, pedidos y contador de tickets.
@@ -128,7 +134,7 @@ Archivos importantes:
 Notas para telefono:
 - Si el telefono no muestra cambios nuevos, desinstalar la app vieja y volver a instalar desde la URL de Vercel.
 - El service worker debe subir version cada vez que cambie la app.
-- Version de cache actual al crear esta memoria: rincon-colombiano-v48.
+- Version de cache actual al crear esta memoria: rincon-colombiano-v49.
 
 Precaucion offline:
 - Si varias tablets trabajan sin internet al mismo tiempo, pueden repetirse numeros locales de ticket.

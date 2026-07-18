@@ -25,7 +25,8 @@ MODULO CLIENTE POR QR - RINCON COLOMBIANO
   - service-worker.js
 
 3. En la app del restaurante
-- Iniciar sesion con correo y contrasena.
+- Si es restaurante nuevo, usar Registrar restaurante y completar nombre comercial, razon social, identificacion fiscal, direccion, telefono, responsable y aceptacion tecnica de datos.
+- Si ya existe cuenta, iniciar sesion con correo y contrasena.
 - Presionar Activar alarma para que suene cuando llegue un pedido nuevo.
 - Si el navegador pregunta, permitir notificaciones para recibir aviso visual de pedido nuevo.
 - Presionar QR cliente.
@@ -33,7 +34,8 @@ MODULO CLIENTE POR QR - RINCON COLOMBIANO
 - Dejar vacia la mesa para usar QR general del restaurante.
 - Si quieres un QR especifico, escribir mesa o ubicacion, por ejemplo Mesa 4.
 - Mostrar o imprimir el codigo QR.
-- Configurar recargo fijo opcional de domicilio, direccion del restaurante, Google Maps API key, cuenta de transferencia y texto de comprobante en Editar menu > Pedidos cliente.
+- Configurar nombre, logo, razon social, datos legales, moneda, recargo fijo opcional de domicilio, minimo de domicilio, direccion del restaurante, Google Maps API key, cuenta de transferencia y texto de comprobante en Editar menu.
+- Cuando el restaurante guarda categorias, productos, precios, fotos o disponibilidad, la app guarda el menu en Supabase. El cliente puede presionar Actualizar menu para traer el menu nuevo.
 - En Editar menu > Pedidos cliente se puede presionar Usar ubicacion actual para guardar coordenadas reales del restaurante desde la tablet.
 - Para Google Maps API key:
   1. Entrar a Google Cloud Console / Google Maps Platform.
@@ -49,8 +51,9 @@ MODULO CLIENTE POR QR - RINCON COLOMBIANO
 - Escanea el QR.
 - Puede cambiar idioma entre Espanol, Polski e English desde la parte superior.
 - Crea cuenta cliente o inicia sesion con correo y contrasena.
-- Al crear cuenta, escribe nombre completo, telefono, direccion, barrio/ciudad y referencia.
+- Al crear cuenta, escribe nombre completo, telefono, direccion, barrio/ciudad y referencia, y acepta el tratamiento de datos para pedidos, historial, entrega, chat y cookies tecnicas.
 - Despues de crear cuenta, debe revisar su correo electronico y confirmar la cuenta antes de iniciar sesion si Supabase tiene confirmacion activa.
+- Tiene boton Actualizar menu para recargar el menu real configurado por el restaurante.
 - La cuenta del cliente guarda su historial y datos basicos para proximos pedidos.
 - Ve el menu.
 - Puede buscar productos por nombre, categoria o descripcion desde Buscar producto.
@@ -62,7 +65,7 @@ MODULO CLIENTE POR QR - RINCON COLOMBIANO
 - Si permite ubicacion, la app puede usar su posicion para calcular la distancia real con Google Maps y, si la API key esta configurada, completar direccion aproximada.
 - Si Google Maps esta configurado, puede presionar Calcular con Google Maps para obtener distancia real por carretera.
 - Usar ubicacion por si solo solo toma la posicion del cliente. Para calcular automaticamente la distancia se necesita direccion del restaurante, Google Maps API key y abrir la app desde HTTPS/Vercel.
-- La tarifa de domicilio se calcula asi: 4.50 PLN hasta 1.5 km; de 1.5 a 6 km suma 1.50 PLN/km; de 6 a 8 km suma 2.50 PLN/km; mas de 8 km suma 3.50 PLN/km.
+- La tarifa de domicilio usa un minimo configurable por restaurante, por defecto 20 PLN. Si la formula por distancia supera ese minimo, se usa la formula: 4.50 PLN hasta 1.5 km; de 1.5 a 6 km suma 1.50 PLN/km; de 6 a 8 km suma 2.50 PLN/km; mas de 8 km suma 3.50 PLN/km.
 - Si elige Transferencia, la app muestra cuenta bancaria, total y referencia del pedido.
 - Si elige Efectivo o Datafono, la app muestra el total y la referencia para pagar en caja o al recibir.
 - Despues de enviar el pedido, puede usar el chat para escribir al restaurante o enviar foto del comprobante de transferencia.
@@ -90,3 +93,4 @@ Importante:
 - La app no cobra desde tienda externa. El cajero confirma efectivo, transferencia o datafono.
 - La app no cobra comisiones por pedido. Los cobros los maneja directamente el restaurante.
 - Google Maps requiere activar Maps JavaScript API, Distance Matrix API y Geocoding API en Google Cloud, con facturacion y restricciones de dominio para proteger la API key.
+- En moviles compatibles se bloquea el gesto de bajar para actualizar. Usar el boton Actualizar / Actualizar menu para refrescar sin perder el pedido actual.
