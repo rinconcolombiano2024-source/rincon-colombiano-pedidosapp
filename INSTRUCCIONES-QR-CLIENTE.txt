@@ -4,6 +4,14 @@ MODULO CLIENTE POR QR - RINCON COLOMBIANO
 - Abrir SQL Editor.
 - Ejecutar el archivo supabase-schema.sql actualizado.
 - Esto crea customer_profiles, customer_orders, customer_order_messages, customer_user_id, historial del cliente y los permisos para pedidos/chat.
+- Esta version tambien permite los estados pending, accepted, sent, delivered y cancelled para avisar al cliente cuando el pedido fue aceptado, enviado, entregado o cancelado.
+
+1.1 Correo de confirmacion de cuenta
+- La app muestra al cliente el aviso: revisar correo para confirmar la cuenta antes de iniciar sesion.
+- Para que el correo diga claramente RINCON COLOMBIANO, configurarlo en Supabase:
+  Authentication / Auth > Emails o Email Templates > Confirm signup.
+- Cambiar asunto por ejemplo a: Confirma tu cuenta - RINCON COLOMBIANO.
+- En el cuerpo del correo escribir que es la confirmacion de la app RINCON COLOMBIANO y conservar el enlace de confirmacion que Supabase trae en la plantilla.
 
 2. En Vercel / GitHub
 - Subir la version nueva de la app.
@@ -21,29 +29,44 @@ MODULO CLIENTE POR QR - RINCON COLOMBIANO
 - Presionar Activar alarma para que suene cuando llegue un pedido nuevo.
 - Si el navegador pregunta, permitir notificaciones para recibir aviso visual de pedido nuevo.
 - Presionar QR cliente.
+- Al abrir QR cliente, la app intenta subir primero el menu actual a Supabase para que el cliente vea el menu real configurado por el restaurante.
 - Dejar vacia la mesa para usar QR general del restaurante.
 - Si quieres un QR especifico, escribir mesa o ubicacion, por ejemplo Mesa 4.
 - Mostrar o imprimir el codigo QR.
 - Configurar recargo fijo opcional de domicilio, direccion del restaurante, Google Maps API key, cuenta de transferencia y texto de comprobante en Editar menu > Pedidos cliente.
+- En Editar menu > Pedidos cliente se puede presionar Usar ubicacion actual para guardar coordenadas reales del restaurante desde la tablet.
+- Para Google Maps API key:
+  1. Entrar a Google Cloud Console / Google Maps Platform.
+  2. Crear o elegir un proyecto y activar facturacion.
+  3. Activar Maps JavaScript API, Distance Matrix API y Geocoding API.
+  4. Ir a Credentials / Credenciales.
+  5. Crear credencial tipo API key.
+  6. Restringir la key por sitio web, por ejemplo https://tu-dominio.vercel.app/* o https://rinconcolombiano.pl/*.
+  7. Restringir tambien por API para permitir solo Maps JavaScript API, Distance Matrix API y Geocoding API.
+  8. Pegar la key en Editar menu > Pedidos cliente > Google Maps API key y guardar.
 
 4. Cliente
 - Escanea el QR.
 - Puede cambiar idioma entre Espanol, Polski e English desde la parte superior.
 - Crea cuenta cliente o inicia sesion con correo y contrasena.
+- Al crear cuenta, escribe nombre completo, telefono, direccion, barrio/ciudad y referencia.
+- Despues de crear cuenta, debe revisar su correo electronico y confirmar la cuenta antes de iniciar sesion si Supabase tiene confirmacion activa.
 - La cuenta del cliente guarda su historial y datos basicos para proximos pedidos.
 - Ve el menu.
+- Puede buscar productos por nombre, categoria o descripcion desde Buscar producto.
 - Ve nombre, precio, foto, disponibilidad y descripcion de cada plato cuando el restaurante la agregue.
 - Agrega productos.
 - Escribe nombre, notas y metodo de pago.
 - Puede elegir Comer en el punto, Para llevar / recoger en el punto o Envio a domicilio.
 - Si elige Domicilio, escribe telefono, direccion, barrio/ciudad, referencia y distancia aproximada en kilometros.
-- Si permite ubicacion, la app puede usar su posicion para calcular la distancia real con Google Maps.
+- Si permite ubicacion, la app puede usar su posicion para calcular la distancia real con Google Maps y, si la API key esta configurada, completar direccion aproximada.
 - Si Google Maps esta configurado, puede presionar Calcular con Google Maps para obtener distancia real por carretera.
+- Usar ubicacion por si solo solo toma la posicion del cliente. Para calcular automaticamente la distancia se necesita direccion del restaurante, Google Maps API key y abrir la app desde HTTPS/Vercel.
 - La tarifa de domicilio se calcula asi: 4.50 PLN hasta 1.5 km; de 1.5 a 6 km suma 1.50 PLN/km; de 6 a 8 km suma 2.50 PLN/km; mas de 8 km suma 3.50 PLN/km.
 - Si elige Transferencia, la app muestra cuenta bancaria, total y referencia del pedido.
 - Si elige Efectivo o Datafono, la app muestra el total y la referencia para pagar en caja o al recibir.
 - Despues de enviar el pedido, puede usar el chat para escribir al restaurante o enviar foto del comprobante de transferencia.
-- Puede activar notificaciones para recibir aviso cuando el restaurante acepte o cancele el pedido.
+- Puede activar notificaciones para recibir aviso cuando el restaurante acepte, envie, entregue o cancele el pedido.
 - Presiona Enviar pedido. La app exige sesion de cliente para guardar el pedido en Mis pedidos.
 - En Mis pedidos puede ver historial, estado, total, ticket si ya fue aceptado y abrir el chat de pedidos anteriores.
 
@@ -55,6 +78,8 @@ MODULO CLIENTE POR QR - RINCON COLOMBIANO
 - Puede responder al cliente desde el chat del pedido con texto o imagen.
 - Presiona Aceptar e imprimir.
 - En ese momento la app crea el numero consecutivo de ticket y manda a cocina.
+- Despues puede presionar Pedido enviado para avisar al cliente que el pedido salio.
+- Cuando el cliente recibe o recoge el pedido, puede presionar Pedido entregado para cerrar ese pedido en la bandeja.
 
 Importante:
 - El pedido del cliente necesita internet para llegar al restaurante.
@@ -64,4 +89,4 @@ Importante:
 - El seguimiento de estado, chat e historial del cliente dependen de ejecutar el supabase-schema.sql actualizado.
 - La app no cobra desde tienda externa. El cajero confirma efectivo, transferencia o datafono.
 - La app no cobra comisiones por pedido. Los cobros los maneja directamente el restaurante.
-- Google Maps requiere activar Maps JavaScript API y Distance Matrix API en Google Cloud, con facturacion y restricciones de dominio para proteger la API key.
+- Google Maps requiere activar Maps JavaScript API, Distance Matrix API y Geocoding API en Google Cloud, con facturacion y restricciones de dominio para proteger la API key.

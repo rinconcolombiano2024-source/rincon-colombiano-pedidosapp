@@ -11,6 +11,11 @@ const customerElements = {
   authFields: document.querySelector("#customerAuthFields"),
   authEmail: document.querySelector("#customerAuthEmail"),
   authPassword: document.querySelector("#customerAuthPassword"),
+  registerNameInput: document.querySelector("#customerRegisterNameInput"),
+  registerPhoneInput: document.querySelector("#customerRegisterPhoneInput"),
+  registerAddressInput: document.querySelector("#customerRegisterAddressInput"),
+  registerNeighborhoodInput: document.querySelector("#customerRegisterNeighborhoodInput"),
+  registerReferenceInput: document.querySelector("#customerRegisterReferenceInput"),
   authMessage: document.querySelector("#customerAuthMessage"),
   signInButton: document.querySelector("#customerSignInButton"),
   signUpButton: document.querySelector("#customerSignUpButton"),
@@ -19,6 +24,8 @@ const customerElements = {
   refreshHistoryButton: document.querySelector("#customerRefreshHistoryButton"),
   tableLabel: document.querySelector("#customerTableLabel"),
   categoryTabs: document.querySelector("#customerCategoryTabs"),
+  menuSearchInput: document.querySelector("#customerMenuSearchInput"),
+  menuSearchClearButton: document.querySelector("#customerMenuSearchClearButton"),
   menuGrid: document.querySelector("#customerMenuGrid"),
   cartItems: document.querySelector("#customerCartItems"),
   cartTotal: document.querySelector("#customerCartTotal"),
@@ -64,6 +71,12 @@ const CUSTOMER_I18N = {
     emailPlaceholder: "correo@ejemplo.com",
     passwordLabel: "Contrasena",
     passwordPlaceholder: "Minimo 6 caracteres",
+    registerNameLabel: "Nombre completo para registro",
+    registerNamePlaceholder: "Nombre y apellido",
+    registerPhoneLabel: "Telefono de registro",
+    registerAddressLabel: "Direccion de registro",
+    registerNeighborhoodLabel: "Barrio / ciudad de registro",
+    registerReferenceLabel: "Referencia de direccion",
     signIn: "Iniciar sesion",
     signUp: "Crear cuenta cliente",
     signOut: "Cerrar sesion",
@@ -71,7 +84,7 @@ const CUSTOMER_I18N = {
     signingUp: "Creando cuenta...",
     signedIn: "Sesion iniciada.",
     signedOut: "Sesion cerrada.",
-    accountCreated: "Cuenta creada. Si Supabase pide confirmacion, revisa tu correo.",
+    accountCreated: "Cuenta creada. Revisa tu correo electronico para confirmar la cuenta antes de iniciar sesion.",
     accountRequired: "Inicia sesion o crea una cuenta para enviar el pedido y guardar tu historial.",
     authMissing: "Escribe correo y contrasena.",
     authPasswordShort: "La contrasena debe tener minimo 6 caracteres.",
@@ -91,6 +104,10 @@ const CUSTOMER_I18N = {
     historyItems: "{count} producto(s)",
     loadingMenu: "Cargando menu...",
     menuPanelAria: "Menu del restaurante",
+    searchLabel: "Buscar producto",
+    searchPlaceholder: "Ej: bandeja paisa",
+    searchClear: "Limpiar",
+    searchEmpty: "No encontre productos con \"{query}\".",
     cartPanelAria: "Pedido del cliente",
     yourOrder: "Tu pedido",
     enableNotifications: "Activar notificaciones",
@@ -150,8 +167,11 @@ const CUSTOMER_I18N = {
     orderSentWaiting: "Pedido enviado. Esperando que el restaurante lo acepte.",
     orderSentCashier: "Pedido enviado. El restaurante confirmara el estado en caja.",
     accepted: "Pedido aceptado por el restaurante.{ticket}",
+    sent: "Pedido enviado por el restaurante.{ticket}",
+    delivered: "Pedido entregado. Gracias por tu compra.{ticket}",
     cancelled: "Pedido cancelado. Comunicate con el restaurante para confirmar.",
     ticketSuffix: " Ticket #{ticket}.",
+    registerNameRequired: "Escribe tu nombre completo para crear la cuenta.",
     nameRequired: "Escribe tu nombre para enviar el pedido.",
     phoneRequired: "Escribe un telefono para el domicilio.",
     addressRequired: "Escribe la direccion completa para el domicilio.",
@@ -159,7 +179,10 @@ const CUSTOMER_I18N = {
     locationDeliveryOnly: "La ubicacion se usa solo para pedidos a domicilio.",
     locationUnsupported: "Este navegador no permite compartir ubicacion.",
     locationRequest: "Solicitando permiso de ubicacion...",
-    locationReceived: "Ubicacion recibida. Calculando distancia...",
+    locationReceived: "Ubicacion recibida. Intentando calcular distancia...",
+    locationReceivedManual: "Ubicacion recibida. Para calcular automaticamente falta configurar Google Maps; tambien puedes escribir los kilometros manualmente.",
+    locationAddressFilled: "Ubicacion recibida y direccion aproximada completada.",
+    locationAddressUnavailable: "Ubicacion recibida. No pude convertirla en direccion, pero puedo calcular la distancia con coordenadas.",
     locationError: "No se pudo obtener la ubicacion. Puedes escribir la direccion y kilometros manualmente.",
     mapsNeedAddress: "El restaurante debe configurar su direccion para usar Google Maps.",
     mapsNeedKey: "Falta configurar Google Maps API key. Puedes escribir km manualmente.",
@@ -218,6 +241,12 @@ const CUSTOMER_I18N = {
     emailPlaceholder: "email@przyklad.com",
     passwordLabel: "Haslo",
     passwordPlaceholder: "Minimum 6 znakow",
+    registerNameLabel: "Pelne imie i nazwisko do rejestracji",
+    registerNamePlaceholder: "Imie i nazwisko",
+    registerPhoneLabel: "Telefon do rejestracji",
+    registerAddressLabel: "Adres do rejestracji",
+    registerNeighborhoodLabel: "Dzielnica / miasto do rejestracji",
+    registerReferenceLabel: "Wskazowki do adresu",
     signIn: "Zaloguj",
     signUp: "Utworz konto klienta",
     signOut: "Wyloguj",
@@ -225,7 +254,7 @@ const CUSTOMER_I18N = {
     signingUp: "Tworzenie konta...",
     signedIn: "Zalogowano.",
     signedOut: "Wylogowano.",
-    accountCreated: "Konto utworzone. Jesli Supabase wymaga potwierdzenia, sprawdz e-mail.",
+    accountCreated: "Konto utworzone. Sprawdz e-mail i potwierdz konto przed logowaniem.",
     accountRequired: "Zaloguj sie albo utworz konto, aby wyslac zamowienie i zapisac historie.",
     authMissing: "Wpisz e-mail i haslo.",
     authPasswordShort: "Haslo musi miec minimum 6 znakow.",
@@ -245,6 +274,10 @@ const CUSTOMER_I18N = {
     historyItems: "{count} produkt(y)",
     loadingMenu: "Ladowanie menu...",
     menuPanelAria: "Menu restauracji",
+    searchLabel: "Szukaj produktu",
+    searchPlaceholder: "Np. bandeja paisa",
+    searchClear: "Wyczysc",
+    searchEmpty: "Nie znaleziono produktu: \"{query}\".",
     cartPanelAria: "Zamowienie klienta",
     yourOrder: "Twoje zamowienie",
     enableNotifications: "Wlacz powiadomienia",
@@ -304,8 +337,11 @@ const CUSTOMER_I18N = {
     orderSentWaiting: "Zamowienie wyslane. Oczekiwanie na akceptacje restauracji.",
     orderSentCashier: "Zamowienie wyslane. Restauracja potwierdzi status w kasie.",
     accepted: "Zamowienie zaakceptowane przez restauracje.{ticket}",
+    sent: "Zamowienie wyslane przez restauracje.{ticket}",
+    delivered: "Zamowienie dostarczone. Dziekujemy za zakup.{ticket}",
     cancelled: "Zamowienie anulowane. Skontaktuj sie z restauracja, aby potwierdzic.",
     ticketSuffix: " Bilet #{ticket}.",
+    registerNameRequired: "Wpisz pelne imie i nazwisko, aby utworzyc konto.",
     nameRequired: "Wpisz imie, aby wyslac zamowienie.",
     phoneRequired: "Wpisz telefon do dostawy.",
     addressRequired: "Wpisz pelny adres dostawy.",
@@ -313,7 +349,10 @@ const CUSTOMER_I18N = {
     locationDeliveryOnly: "Lokalizacja jest uzywana tylko dla dostawy.",
     locationUnsupported: "Ta przegladarka nie pozwala udostepnic lokalizacji.",
     locationRequest: "Prosba o pozwolenie na lokalizacje...",
-    locationReceived: "Lokalizacja odebrana. Obliczanie odleglosci...",
+    locationReceived: "Lokalizacja odebrana. Proba obliczenia odleglosci...",
+    locationReceivedManual: "Lokalizacja odebrana. Aby obliczyc automatycznie, trzeba skonfigurowac Google Maps; mozna tez wpisac kilometry recznie.",
+    locationAddressFilled: "Lokalizacja odebrana i przyblizony adres uzupelniony.",
+    locationAddressUnavailable: "Lokalizacja odebrana. Nie udalo sie zamienic jej na adres, ale mozna liczyc dystans z koordynatow.",
     locationError: "Nie udalo sie pobrac lokalizacji. Mozesz wpisac adres i kilometry recznie.",
     mapsNeedAddress: "Restauracja musi skonfigurowac adres, aby uzyc Google Maps.",
     mapsNeedKey: "Brakuje klucza Google Maps API. Mozesz wpisac km recznie.",
@@ -372,6 +411,12 @@ const CUSTOMER_I18N = {
     emailPlaceholder: "email@example.com",
     passwordLabel: "Password",
     passwordPlaceholder: "Minimum 6 characters",
+    registerNameLabel: "Full name for registration",
+    registerNamePlaceholder: "First and last name",
+    registerPhoneLabel: "Registration phone",
+    registerAddressLabel: "Registration address",
+    registerNeighborhoodLabel: "Neighborhood / city for registration",
+    registerReferenceLabel: "Address reference",
     signIn: "Sign in",
     signUp: "Create customer account",
     signOut: "Sign out",
@@ -379,7 +424,7 @@ const CUSTOMER_I18N = {
     signingUp: "Creating account...",
     signedIn: "Signed in.",
     signedOut: "Signed out.",
-    accountCreated: "Account created. If Supabase asks for confirmation, check your email.",
+    accountCreated: "Account created. Check your email to confirm the account before signing in.",
     accountRequired: "Sign in or create an account to send the order and save your history.",
     authMissing: "Enter email and password.",
     authPasswordShort: "Password must be at least 6 characters.",
@@ -399,6 +444,10 @@ const CUSTOMER_I18N = {
     historyItems: "{count} item(s)",
     loadingMenu: "Loading menu...",
     menuPanelAria: "Restaurant menu",
+    searchLabel: "Search product",
+    searchPlaceholder: "Ex: bandeja paisa",
+    searchClear: "Clear",
+    searchEmpty: "No products found for \"{query}\".",
     cartPanelAria: "Customer order",
     yourOrder: "Your order",
     enableNotifications: "Enable notifications",
@@ -458,8 +507,11 @@ const CUSTOMER_I18N = {
     orderSentWaiting: "Order sent. Waiting for the restaurant to accept it.",
     orderSentCashier: "Order sent. The restaurant will confirm the status at the register.",
     accepted: "Order accepted by the restaurant.{ticket}",
+    sent: "Order sent by the restaurant.{ticket}",
+    delivered: "Order delivered. Thank you for your purchase.{ticket}",
     cancelled: "Order cancelled. Contact the restaurant to confirm.",
     ticketSuffix: " Ticket #{ticket}.",
+    registerNameRequired: "Enter your full name to create the account.",
     nameRequired: "Enter your name to send the order.",
     phoneRequired: "Enter a phone number for delivery.",
     addressRequired: "Enter the full delivery address.",
@@ -467,7 +519,10 @@ const CUSTOMER_I18N = {
     locationDeliveryOnly: "Location is only used for delivery orders.",
     locationUnsupported: "This browser does not allow location sharing.",
     locationRequest: "Requesting location permission...",
-    locationReceived: "Location received. Calculating distance...",
+    locationReceived: "Location received. Trying to calculate distance...",
+    locationReceivedManual: "Location received. Google Maps must be configured for automatic distance; you can also enter kilometers manually.",
+    locationAddressFilled: "Location received and approximate address filled in.",
+    locationAddressUnavailable: "Location received. I could not convert it into an address, but distance can be calculated with coordinates.",
     locationError: "Could not get location. You can enter address and kilometers manually.",
     mapsNeedAddress: "The restaurant must configure its address to use Google Maps.",
     mapsNeedKey: "Google Maps API key is missing. You can enter km manually.",
@@ -587,6 +642,7 @@ let customerUser = null;
 let customerHistoryRows = [];
 let customerMenu = CUSTOMER_DEFAULT_MENU;
 let customerActiveCategory = "Entradas";
+let customerSearchQuery = "";
 let customerCart = [];
 let customerSettings = {
   businessName: "RINCON COLOMBIANO",
@@ -652,6 +708,59 @@ function customerSetAuthMessage(message, type = "") {
   customerElements.authMessage.hidden = !message;
 }
 
+function customerInputValue(input) {
+  return String(input?.value || "").trim();
+}
+
+function customerSetInputIfEmpty(input, value) {
+  const cleanValue = customerNormalizeText(value);
+  if (input && cleanValue && !input.value.trim()) input.value = cleanValue;
+}
+
+function customerRegisteredAddressPayload() {
+  return {
+    table: customerInputValue(customerElements.tableInput),
+    address: customerInputValue(customerElements.registerAddressInput) || customerInputValue(customerElements.addressInput),
+    neighborhood:
+      customerInputValue(customerElements.registerNeighborhoodInput) || customerInputValue(customerElements.neighborhoodInput),
+    reference: customerInputValue(customerElements.registerReferenceInput) || customerInputValue(customerElements.referenceInput),
+    distanceKm: customerInputValue(customerElements.distanceInput),
+  };
+}
+
+function customerApplyRegisterFieldsToOrder() {
+  customerSetInputIfEmpty(customerElements.nameInput, customerInputValue(customerElements.registerNameInput));
+  customerSetInputIfEmpty(customerElements.phoneInput, customerInputValue(customerElements.registerPhoneInput));
+  customerSetInputIfEmpty(customerElements.addressInput, customerInputValue(customerElements.registerAddressInput));
+  customerSetInputIfEmpty(customerElements.neighborhoodInput, customerInputValue(customerElements.registerNeighborhoodInput));
+  customerSetInputIfEmpty(customerElements.referenceInput, customerInputValue(customerElements.registerReferenceInput));
+}
+
+function customerApplyProfileFields(profile = {}) {
+  const address = profile.default_address || {};
+  customerSetInputIfEmpty(customerElements.registerNameInput, profile.full_name);
+  customerSetInputIfEmpty(customerElements.registerPhoneInput, profile.phone);
+  customerSetInputIfEmpty(customerElements.registerAddressInput, address.address);
+  customerSetInputIfEmpty(customerElements.registerNeighborhoodInput, address.neighborhood);
+  customerSetInputIfEmpty(customerElements.registerReferenceInput, address.reference);
+  customerSetInputIfEmpty(customerElements.nameInput, profile.full_name);
+  customerSetInputIfEmpty(customerElements.phoneInput, profile.phone);
+  customerSetInputIfEmpty(customerElements.tableInput, address.table);
+  customerSetInputIfEmpty(customerElements.addressInput, address.address);
+  customerSetInputIfEmpty(customerElements.neighborhoodInput, address.neighborhood);
+  customerSetInputIfEmpty(customerElements.referenceInput, address.reference);
+  customerSetInputIfEmpty(customerElements.distanceInput, address.distanceKm);
+}
+
+function customerProfileFromMetadata() {
+  const metadata = customerUser?.user_metadata || {};
+  return {
+    full_name: metadata.full_name || "",
+    phone: metadata.phone || "",
+    default_address: metadata.default_address || {},
+  };
+}
+
 function customerEnsureClient() {
   if (customerClient) return customerClient;
   const config = customerSupabaseConfig();
@@ -674,9 +783,12 @@ function customerRenderAccount() {
   if (customerElements.signOutButton) customerElements.signOutButton.hidden = !customerUser;
   if (customerElements.sendButton) customerElements.sendButton.disabled = customerCart.length === 0 || !customerUser;
 
-  if (customerUser && !customerElements.nameInput.value.trim()) {
-    const fallbackName = String(customerUser.user_metadata?.full_name || email.split("@")[0] || "").trim();
-    if (fallbackName) customerElements.nameInput.value = fallbackName;
+  if (customerUser) {
+    customerApplyProfileFields(customerProfileFromMetadata());
+    if (!customerElements.nameInput.value.trim()) {
+      const fallbackName = String(email.split("@")[0] || "").trim();
+      if (fallbackName) customerElements.nameInput.value = fallbackName;
+    }
   }
 }
 
@@ -732,6 +844,7 @@ async function customerSignUpWithEmail() {
   const client = customerEnsureClient();
   const email = customerElements.authEmail.value.trim();
   const password = customerElements.authPassword.value;
+  const fullName = customerInputValue(customerElements.registerNameInput) || customerInputValue(customerElements.nameInput);
   if (!client) {
     customerSetAuthMessage(customerT("appNotConfigured"), "error");
     return;
@@ -744,18 +857,38 @@ async function customerSignUpWithEmail() {
     customerSetAuthMessage(customerT("authPasswordShort"), "error");
     return;
   }
+  if (!fullName) {
+    customerSetAuthMessage(customerT("registerNameRequired"), "error");
+    customerElements.registerNameInput?.focus();
+    return;
+  }
+
+  if (!customerElements.registerNameInput.value.trim()) customerElements.registerNameInput.value = fullName;
+  customerApplyRegisterFieldsToOrder();
   customerSetAuthMessage(customerT("signingUp"));
-  const fullName = customerElements.nameInput.value.trim();
-  const { error } = await client.auth.signUp({
+  const { data, error } = await client.auth.signUp({
     email,
     password,
-    options: { data: { full_name: fullName } },
+    options: {
+      emailRedirectTo: window.location.href.split("#")[0],
+      data: {
+        app_name: customerSettings.businessName || "RINCON COLOMBIANO",
+        full_name: fullName,
+        phone: customerInputValue(customerElements.registerPhoneInput),
+        default_address: customerRegisteredAddressPayload(),
+      },
+    },
   });
   if (error) {
     customerSetAuthMessage(customerFriendlyAuthError(error), "error");
     return;
   }
   customerElements.authPassword.value = "";
+  if (data?.session?.user) {
+    customerUser = data.session.user;
+    await customerSaveProfile();
+    await customerLoadHistory();
+  }
   customerSetAuthMessage(customerT("accountCreated"), "ok");
 }
 
@@ -766,16 +899,17 @@ async function customerSignOut() {
 }
 
 function customerProfilePayload() {
+  const registeredAddress = customerRegisteredAddressPayload();
   return {
     user_id: customerUser.id,
-    full_name: customerElements.nameInput.value.trim(),
-    phone: customerElements.phoneInput.value.trim(),
+    full_name: customerInputValue(customerElements.nameInput) || customerInputValue(customerElements.registerNameInput),
+    phone: customerInputValue(customerElements.phoneInput) || customerInputValue(customerElements.registerPhoneInput),
     default_address: {
-      table: customerElements.tableInput.value.trim(),
-      address: customerElements.addressInput.value.trim(),
-      neighborhood: customerElements.neighborhoodInput.value.trim(),
-      reference: customerElements.referenceInput.value.trim(),
-      distanceKm: customerElements.distanceInput.value.trim(),
+      table: customerInputValue(customerElements.tableInput) || registeredAddress.table,
+      address: customerInputValue(customerElements.addressInput) || registeredAddress.address,
+      neighborhood: customerInputValue(customerElements.neighborhoodInput) || registeredAddress.neighborhood,
+      reference: customerInputValue(customerElements.referenceInput) || registeredAddress.reference,
+      distanceKm: customerInputValue(customerElements.distanceInput) || registeredAddress.distanceKm,
     },
     language: customerLanguage,
     updated_at: new Date().toISOString(),
@@ -789,16 +923,16 @@ async function customerLoadProfile() {
     .select("full_name, phone, default_address, language")
     .eq("user_id", customerUser.id)
     .maybeSingle();
-  if (error || !data) return;
+  if (error || !data) {
+    const metadataProfile = customerProfileFromMetadata();
+    customerApplyProfileFields(metadataProfile);
+    if (!error && (metadataProfile.full_name || metadataProfile.phone || Object.keys(metadataProfile.default_address || {}).length)) {
+      await customerSaveProfile();
+    }
+    return;
+  }
   if (data.language && CUSTOMER_I18N[data.language]) customerSetLanguage(data.language);
-  if (data.full_name && !customerElements.nameInput.value.trim()) customerElements.nameInput.value = data.full_name;
-  if (data.phone && !customerElements.phoneInput.value.trim()) customerElements.phoneInput.value = data.phone;
-  const address = data.default_address || {};
-  if (address.table && !customerElements.tableInput.value.trim()) customerElements.tableInput.value = address.table;
-  if (address.address && !customerElements.addressInput.value.trim()) customerElements.addressInput.value = address.address;
-  if (address.neighborhood && !customerElements.neighborhoodInput.value.trim()) customerElements.neighborhoodInput.value = address.neighborhood;
-  if (address.reference && !customerElements.referenceInput.value.trim()) customerElements.referenceInput.value = address.reference;
-  if (address.distanceKm && !customerElements.distanceInput.value.trim()) customerElements.distanceInput.value = address.distanceKm;
+  customerApplyProfileFields(data);
   customerRenderDeliveryFields();
 }
 
@@ -835,7 +969,7 @@ function customerRenderHistory() {
         ? `${customerT("historyTicket")} #${String(row.ticket_number).padStart(4, "0")}`
         : customerT("historyNoTicket");
       const itemsText = customerT("historyItems", { count: customerHistoryItemCount(row) });
-      const statusType = row.status === "accepted" ? "ok" : row.status === "cancelled" ? "error" : "";
+      const statusType = customerStatusType(row.status);
       return `
         <article class="customer-history-item" data-order-id="${customerEscapeHtml(row.id)}">
           <div class="customer-history-main">
@@ -879,7 +1013,7 @@ function customerOpenHistoryOrder(orderId) {
   const row = customerHistoryRows.find((item) => item.id === orderId);
   if (!row) return;
   customerStartStatusTracking(row.id, row.public_token, row.order_json?.paymentMethod || "", "");
-  customerSetTrackingStatus(customerStatusText(row), row.status === "accepted" ? "ok" : row.status === "cancelled" ? "error" : "");
+  customerSetTrackingStatus(customerStatusText(row), customerStatusType(row.status));
   customerRenderPaymentBox(row.id, Number(row.total) || 0, row.order_json || {});
   customerElements.chatPanel?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -916,6 +1050,18 @@ function customerCategoryKey(value) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
+}
+
+function customerNormalizeSearchText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function customerMenuProductCount(menu = customerMenu) {
+  return Object.values(menu || {}).reduce((count, dishes) => count + (Array.isArray(dishes) ? dishes.length : 0), 0);
 }
 
 function customerProductAvailable(product) {
@@ -1119,6 +1265,43 @@ function customerGetGoogleMapsDistance(origin, destination) {
   });
 }
 
+function customerAddressComponent(result, types = []) {
+  const components = result?.address_components || [];
+  const component = components.find((entry) => types.every((type) => entry.types.includes(type)));
+  return component?.long_name || "";
+}
+
+async function customerReverseGeocodeLocation(coords) {
+  if (!coords || !customerSettings.googleMapsApiKey) return false;
+  await customerLoadGoogleMaps();
+
+  return new Promise((resolve) => {
+    const geocoder = new google.maps.Geocoder();
+    geocoder.geocode({ location: coords }, (results, status) => {
+      if (status !== "OK" || !results?.length) {
+        resolve(false);
+        return;
+      }
+
+      const result = results[0];
+      const approximateAddress = String(result.formatted_address || "").replace(/,\s*Poland$/i, "").trim();
+      const neighborhood =
+        customerAddressComponent(result, ["sublocality"]) ||
+        customerAddressComponent(result, ["neighborhood"]) ||
+        customerAddressComponent(result, ["locality"]) ||
+        customerAddressComponent(result, ["administrative_area_level_2"]);
+
+      if (approximateAddress && !customerElements.addressInput.value.trim()) {
+        customerElements.addressInput.value = approximateAddress;
+      }
+      if (neighborhood && !customerElements.neighborhoodInput.value.trim()) {
+        customerElements.neighborhoodInput.value = neighborhood;
+      }
+      resolve(Boolean(approximateAddress || neighborhood));
+    });
+  });
+}
+
 async function customerUseLocation() {
   if (customerElements.orderType.value !== "Domicilio") {
     customerSetMapResult(customerT("locationDeliveryOnly"), "error");
@@ -1140,8 +1323,19 @@ async function customerUseLocation() {
       };
       customerSetMapResult(customerT("locationReceived"), "ok");
       customerElements.useLocationButton.disabled = false;
+
+      if (customerSettings.googleMapsApiKey) {
+        const addressFilled = await customerReverseGeocodeLocation(customerLocationCoords);
+        customerSetMapResult(
+          addressFilled ? customerT("locationAddressFilled") : customerT("locationAddressUnavailable"),
+          addressFilled ? "ok" : ""
+        );
+      }
+
       if (customerCanUseGoogleMaps()) {
         await customerCalculateDistanceWithMaps();
+      } else {
+        customerSetMapResult(customerT("locationReceivedManual"), "");
       }
     },
     () => {
@@ -1576,8 +1770,16 @@ async function customerCreateCustomerOrder(orderPayload, total, tableLabel, cust
 function customerStatusText(row) {
   const ticket = row?.ticket_number ? customerT("ticketSuffix", { ticket: String(row.ticket_number).padStart(4, "0") }) : "";
   if (row?.status === "accepted") return customerT("accepted", { ticket });
+  if (row?.status === "sent") return customerT("sent", { ticket });
+  if (row?.status === "delivered") return customerT("delivered", { ticket });
   if (row?.status === "cancelled") return customerT("cancelled");
   return customerT("orderSentWaiting");
+}
+
+function customerStatusType(status) {
+  if (status === "accepted" || status === "sent" || status === "delivered") return "ok";
+  if (status === "cancelled") return "error";
+  return "";
 }
 
 async function customerPollOrderStatus() {
@@ -1600,14 +1802,14 @@ async function customerPollOrderStatus() {
   const previousStatus = customerTrackedOrder.status;
   customerTrackedOrder.status = row.status;
   const message = customerStatusText(row);
-  const type = row.status === "accepted" ? "ok" : row.status === "cancelled" ? "error" : "";
+  const type = customerStatusType(row.status);
   customerSetTrackingStatus(message, type);
 
   if (previousStatus && previousStatus !== row.status) {
     customerShowNotification(customerT("notificationStatusTitle"), message);
   }
 
-  if (row.status === "accepted" || row.status === "cancelled") {
+  if (row.status === "delivered" || row.status === "cancelled") {
     if (customerStatusTimer) window.clearInterval(customerStatusTimer);
     customerStatusTimer = null;
   }
@@ -1640,7 +1842,7 @@ function customerRenderCategories() {
     .map(
       (category) => `
         <button type="button" data-category="${customerEscapeHtml(category)}" aria-selected="${
-        category === customerActiveCategory
+        !customerSearchQuery && category === customerActiveCategory
       }">
           ${customerEscapeHtml(category)}
         </button>
@@ -1649,25 +1851,55 @@ function customerRenderCategories() {
     .join("");
 }
 
+function customerMenuSearchEntries(query) {
+  const cleanQuery = customerNormalizeSearchText(query);
+  const entries = [];
+  Object.entries(customerMenu).forEach(([category, dishes]) => {
+    (dishes || []).forEach((dish, index) => {
+      const searchable = customerNormalizeSearchText(`${category} ${dish.name} ${dish.description || ""}`);
+      if (!cleanQuery || searchable.includes(cleanQuery)) entries.push({ category, dish, index });
+    });
+  });
+  return entries;
+}
+
+function customerApplyMenuSearch(value) {
+  customerSearchQuery = String(value || "").trim();
+  if (customerElements.menuSearchInput && customerElements.menuSearchInput.value !== customerSearchQuery) {
+    customerElements.menuSearchInput.value = customerSearchQuery;
+  }
+  if (customerElements.menuSearchClearButton) customerElements.menuSearchClearButton.hidden = !customerSearchQuery;
+  customerRenderCategories();
+  customerRenderMenu();
+}
+
 function customerRenderMenu() {
-  const dishes = customerMenu[customerActiveCategory] || [];
-  if (!dishes.length) {
-    customerElements.menuGrid.innerHTML = `<div class="customer-empty">${customerEscapeHtml(customerT("emptyCategory"))}</div>`;
+  const searchQuery = customerNormalizeSearchText(customerSearchQuery);
+  const entries = searchQuery
+    ? customerMenuSearchEntries(searchQuery)
+    : (customerMenu[customerActiveCategory] || []).map((dish, index) => ({ category: customerActiveCategory, dish, index }));
+
+  if (!entries.length) {
+    customerElements.menuGrid.innerHTML = `<div class="customer-empty">${customerEscapeHtml(
+      searchQuery ? customerT("searchEmpty", { query: customerSearchQuery }) : customerT("emptyCategory")
+    )}</div>`;
     return;
   }
 
-  customerElements.menuGrid.innerHTML = dishes
+  customerElements.menuGrid.innerHTML = entries
     .map(
-      (dish, index) => `
+      ({ category, dish, index }) => `
         <button
           class="customer-dish-button ${dish.imageUrl ? "has-product-image" : ""} ${customerProductAvailable(dish) ? "" : "is-unavailable"}"
           type="button"
+          data-category="${customerEscapeHtml(category)}"
           data-index="${index}"
           ${customerProductAvailable(dish) ? "" : "disabled aria-disabled=\"true\""}
         >
           ${dish.imageUrl ? `<img src="${customerEscapeHtml(dish.imageUrl)}" alt="${customerEscapeHtml(dish.name)}" loading="lazy" />` : ""}
           <strong>${customerEscapeHtml(dish.name)}</strong>
           ${dish.description ? `<small>${customerEscapeHtml(dish.description)}</small>` : ""}
+          ${searchQuery ? `<small>${customerEscapeHtml(category)}</small>` : ""}
           <span>${customerFormatMoney(dish.price)}</span>
           ${customerProductAvailable(dish) ? "" : `<em>${customerEscapeHtml(customerT("unavailable"))}</em>`}
         </button>
@@ -1757,7 +1989,6 @@ async function customerLoadMenu() {
     return;
   }
 
-  customerMenu = customerNormalizeMenu(data.menu || CUSTOMER_DEFAULT_MENU);
   customerSettings = {
     businessName: customerNormalizeBusinessName(data.settings?.businessName),
     currencySymbol: data.settings?.currencySymbol || "$",
@@ -1770,6 +2001,17 @@ async function customerLoadMenu() {
     bankTransferNote: customerNormalizeText(data.settings?.bankTransferNote),
   };
   customerApplyBusinessName();
+
+  const loadedMenu = customerNormalizeMenu(data.menu || {});
+  if (!customerMenuProductCount(loadedMenu)) {
+    customerMenu = loadedMenu;
+    customerSetStatus(customerT("noMenu"), "error");
+    customerRenderCategories();
+    customerRenderMenu();
+    return;
+  }
+
+  customerMenu = loadedMenu;
   customerActiveCategory = Object.keys(customerMenu)[0] || "Entradas";
 
   if (customerTableFromQr) {
@@ -1875,14 +2117,29 @@ customerElements.categoryTabs.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-category]");
   if (!button) return;
   customerActiveCategory = button.dataset.category;
+  customerApplyMenuSearch("");
   customerRenderCategories();
   customerRenderMenu();
 });
 
+if (customerElements.menuSearchInput) {
+  customerElements.menuSearchInput.addEventListener("input", () => {
+    customerApplyMenuSearch(customerElements.menuSearchInput.value);
+  });
+}
+
+if (customerElements.menuSearchClearButton) {
+  customerElements.menuSearchClearButton.addEventListener("click", () => {
+    customerApplyMenuSearch("");
+    if (customerElements.menuSearchInput) customerElements.menuSearchInput.focus();
+  });
+}
+
 customerElements.menuGrid.addEventListener("click", (event) => {
   const button = event.target.closest(".customer-dish-button");
   if (!button || button.disabled) return;
-  const dish = (customerMenu[customerActiveCategory] || [])[Number.parseInt(button.dataset.index, 10)];
+  const category = button.dataset.category || customerActiveCategory;
+  const dish = (customerMenu[category] || [])[Number.parseInt(button.dataset.index, 10)];
   if (dish) customerAddItem(dish);
 });
 

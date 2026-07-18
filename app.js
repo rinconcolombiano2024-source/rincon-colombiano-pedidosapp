@@ -18,9 +18,11 @@ const STORAGE_KEYS = {
   bankTransferNote: "rincon_colombiano_bank_transfer_note",
   clientAlarmEnabled: "rincon_colombiano_client_alarm_enabled",
   businessName: "rincon_colombiano_business_name",
+  currentOrderDraft: "rincon_colombiano_current_order_draft",
 };
 
 const DEFAULT_BUSINESS_NAME = "RINCON COLOMBIANO";
+const APP_VERSION = "v48";
 
 const DEFAULT_MENU_CATALOG = {
   Entradas: [
@@ -87,6 +89,8 @@ const elements = {
   nextTicketLabel: document.querySelector("#nextTicketLabel"),
   categoryTabs: document.querySelector("#categoryTabs"),
   menuGrid: document.querySelector("#menuGrid"),
+  menuSearchInput: document.querySelector("#menuSearchInput"),
+  menuSearchClearButton: document.querySelector("#menuSearchClearButton"),
   customItemForm: document.querySelector("#customItemForm"),
   customItemName: document.querySelector("#customItemName"),
   customItemPrice: document.querySelector("#customItemPrice"),
@@ -174,6 +178,7 @@ const elements = {
   saveCurrencyButton: document.querySelector("#saveCurrencyButton"),
   deliveryFeeInput: document.querySelector("#deliveryFeeInput"),
   restaurantAddressInput: document.querySelector("#restaurantAddressInput"),
+  useRestaurantLocationButton: document.querySelector("#useRestaurantLocationButton"),
   googleMapsApiKeyInput: document.querySelector("#googleMapsApiKeyInput"),
   bankAccountInput: document.querySelector("#bankAccountInput"),
   bankTransferNoteInput: document.querySelector("#bankTransferNoteInput"),
@@ -183,11 +188,12 @@ const elements = {
 
 let menuCatalog = readMenuCatalog();
 let activeCategory = Object.keys(menuCatalog)[0];
+let menuSearchQuery = "";
 let todayKey = currentBusinessDate();
 let nextTicket = initializeDailyTicket();
 let savedOrders = readOrders();
 let shiftServerName = readShiftServerName();
-let currentOrder = createBlankOrder();
+let currentOrder = readCurrentOrderDraft();
 let deferredInstallPrompt = null;
 let editingProduct = null;
 let businessName = readBusinessName();
@@ -236,6 +242,58 @@ function createBlankOrder() {
     saved: false,
     syncStatus: "local",
   };
+}
+
+function currentOrderHasContent(order = currentOrder) {
+  return Boolean(
+    order?.saved ||
+      (Array.isArray(order?.items) && order.items.length) ||
+      String(order?.customer || "").trim() ||
+      String(order?.notes || "").trim() ||
+      order?.delivery
+  );
+}
+
+function normalizeCurrentOrderDraft(order) {
+  const normalized = normalizeOrderNotes({
+    ...createBlankOrder(),
+    ...(order || {}),
+    items: Array.isArray(order?.items) ? order.items : [],
+  });
+  normalized.type = normalizeOrderType(normalized.type);
+  normalized.paymentMethod = normalizePaymentMethod(normalized.paymentMethod);
+  normalized.server = String(normalized.server || shiftServerName || "").trim();
+  normalized.businessDate = normalized.saved ? orderBusinessDate(normalized) : todayKey;
+  normalized.syncStatus = normalized.syncStatus || (normalized.saved ? "local" : "local");
+  return normalized;
+}
+
+function readCurrentOrderDraft() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEYS.currentOrderDraft) || "null");
+    if (!parsed) return createBlankOrder();
+    const draft = normalizeCurrentOrderDraft(parsed);
+    if (!draft.saved && draft.businessDate !== todayKey) return createBlankOrder();
+    return currentOrderHasContent(draft) ? draft : createBlankOrder();
+  } catch {
+    return createBlankOrder();
+  }
+}
+
+function saveCurrentOrderDraft() {
+  try {
+    if (!currentOrderHasContent(currentOrder)) {
+      localStorage.removeItem(STORAGE_KEYS.currentOrderDraft);
+      return;
+    }
+    localStorage.setItem(STORAGE_KEYS.currentOrderDraft, JSON.stringify(normalizeCurrentOrderDraft(currentOrder)));
+  } catch {
+    // Si el navegador no permite guardar el borrador, la toma de pedidos sigue funcionando.
+  }
+}
+
+function clearCurrentOrderDraft() {
+  localStorage.removeItem(STORAGE_KEYS.currentOrderDraft);
 }
 
 function currentBusinessDate(date = new Date()) {
@@ -507,6 +565,7 @@ function clearSettingsPending() {
 function setOrderSyncStatus(orderId, status) {
   savedOrders = savedOrders.map((order) => (order.id === orderId ? { ...order, syncStatus: status } : order));
   if (currentOrder.id === orderId) currentOrder.syncStatus = status;
+  saveCurrentOrderDraft();
 }
 
 function mergeOrders(cloudOrders, localOrders) {
@@ -717,6 +776,7 @@ async function loadCloudData() {
   cloudState.loading = true;
   elements.cloudStatus.textContent = "Cargando nube...";
   const localOrdersBeforeLoad = savedOrders.map(structuredCloneOrder);
+  const currentOrderBeforeLoad = normalizeCurrentOrderDraft(currentOrder);
   const localDeletedOrderIds = readDeletedOrderIds();
   const localPendingOrders = localOrdersBeforeLoad.filter(
     (order) => needsCloudSync(order) && !localDeletedOrderIds.includes(order.id)
@@ -773,7 +833,7 @@ async function loadCloudData() {
     nextTicket = counterRow?.next_ticket || 1;
     saveTicketState();
 
-    currentOrder = createBlankOrder();
+    currentOrder = currentOrderHasContent(currentOrderBeforeLoad) ? currentOrderBeforeLoad : createBlankOrder();
     renderCurrencySettings();
     renderCategories();
     renderMenu();
@@ -1042,7 +1102,7 @@ async function refreshClientOrders(options = {}) {
     .from("customer_orders")
     .select("id, status, table_label, customer_name, order_type, order_json, total, created_at")
     .eq("user_id", cloudState.user.id)
-    .in("status", ["pending", "accepted"])
+    .in("status", ["pending", "accepted", "sent"])
     .gte("created_at", startOfDay.toISOString())
     .order("created_at", { ascending: true })
     .limit(100);
@@ -1083,6 +1143,44 @@ function clientOrderTotal(row) {
   const total = Number.parseFloat(row?.total);
   if (Number.isFinite(total)) return total;
   return clientOrderItems(row).reduce((sum, item) => sum + itemLineTotal(item), 0);
+}
+
+function clientOrderStatusLabel(status) {
+  if (status === "accepted") return "Aceptado";
+  if (status === "sent") return "Enviado";
+  if (status === "delivered") return "Entregado";
+  if (status === "cancelled") return "Cancelado";
+  return "Pendiente";
+}
+
+function clientOrderActionsHtml(status) {
+  if (status === "pending") {
+    return `
+      <div class="client-order-actions">
+        <button type="button" data-action="accept-client-order">Aceptar e imprimir</button>
+        <button type="button" data-action="cancel-client-order">Cancelar</button>
+      </div>
+    `;
+  }
+
+  if (status === "accepted") {
+    return `
+      <div class="client-order-actions">
+        <button type="button" data-action="sent-client-order">Pedido enviado</button>
+        <button type="button" data-action="cancel-client-order">Cancelar</button>
+      </div>
+    `;
+  }
+
+  if (status === "sent") {
+    return `
+      <div class="client-order-actions">
+        <button type="button" data-action="delivered-client-order">Pedido entregado</button>
+      </div>
+    `;
+  }
+
+  return `<p class="client-order-note">Estado actualizado. El chat queda abierto durante el dia para soporte.</p>`;
 }
 
 async function loadRestaurantChatMessages(orderId) {
@@ -1159,7 +1257,6 @@ function renderClientOrders() {
       const customerLabel = [order.table_label, order.customer_name].filter(Boolean).join(" - ") || "Cliente QR";
       const paymentMethod = paymentMethodLabel(order.order_json?.paymentMethod);
       const deliverySummary = formatDeliverySummary(order.order_json?.delivery);
-      const isPending = order.status === "pending";
 
       return `
         <article class="client-order-card" data-client-order-id="${escapeHtml(order.id)}">
@@ -1167,7 +1264,7 @@ function renderClientOrders() {
             <div>
               <strong>${escapeHtml(customerLabel)}</strong>
               <span>${escapeHtml(orderTypeLabel(order.order_type))}${timeText ? ` / ${escapeHtml(timeText)}` : ""}</span>
-              <span>Estado: ${isPending ? "Pendiente" : "Aceptado"}</span>
+              <span>Estado: ${clientOrderStatusLabel(order.status)}</span>
               <span>Pago: ${escapeHtml(paymentMethod)}</span>
             </div>
             <strong>${formatMoney(clientOrderTotal(order))}</strong>
@@ -1191,14 +1288,7 @@ function renderClientOrders() {
           }
           ${deliverySummary ? `<p class="client-order-note">DOMICILIO: ${escapeHtml(deliverySummary)}</p>` : ""}
           ${renderClientChat(order)}
-          ${
-            isPending
-              ? `<div class="client-order-actions">
-                  <button type="button" data-action="accept-client-order">Aceptar e imprimir</button>
-                  <button type="button" data-action="cancel-client-order">Cancelar</button>
-                </div>`
-              : `<p class="client-order-note">Pedido aceptado. El chat queda abierto durante el dia para soporte.</p>`
-          }
+          ${clientOrderActionsHtml(order.status)}
         </article>
       `;
     })
@@ -1264,7 +1354,11 @@ async function acceptClientOrder(orderId) {
   if (error) {
     alert("El pedido se guardo, pero no se pudo marcar como aceptado en la bandeja.");
   } else {
-    pendingClientOrders = pendingClientOrders.filter((order) => order.id !== orderId);
+    pendingClientOrders = pendingClientOrders.map((order) =>
+      order.id === orderId
+        ? { ...order, status: "accepted", restaurant_order_id: acceptedOrderId, updated_at: new Date().toISOString() }
+        : order
+    );
     updateClientOrdersBadge();
     renderClientOrders();
   }
@@ -1273,6 +1367,53 @@ async function acceptClientOrder(orderId) {
   applyReceiptPrintStyle();
   window.print();
   showToast(`Pedido cliente aceptado como ${formatTicket(currentOrder.ticketNumber)}.`);
+}
+
+async function updateClientOrderStatus(orderId, nextStatus, successMessage, options = {}) {
+  const clientOrder = pendingClientOrders.find((order) => order.id === orderId);
+  if (!clientOrder) return;
+  if (!canUseCustomerModule() || !navigator.onLine) {
+    alert("Necesitas internet e iniciar sesion para actualizar pedidos de clientes.");
+    return;
+  }
+
+  const { error } = await cloudState.client
+    .from("customer_orders")
+    .update({ status: nextStatus, updated_at: new Date().toISOString() })
+    .eq("id", orderId)
+    .eq("user_id", cloudState.user.id);
+
+  if (error) {
+    alert("No se pudo actualizar el estado del pedido del cliente.");
+    return;
+  }
+
+  if (options.removeFromList) {
+    pendingClientOrders = pendingClientOrders.filter((order) => order.id !== orderId);
+  } else {
+    pendingClientOrders = pendingClientOrders.map((order) =>
+      order.id === orderId ? { ...order, status: nextStatus, updated_at: new Date().toISOString() } : order
+    );
+  }
+
+  updateClientOrdersBadge();
+  renderClientOrders();
+  showToast(successMessage);
+}
+
+async function markClientOrderSent(orderId) {
+  await updateClientOrderStatus(orderId, "sent", "Pedido marcado como enviado. El cliente sera notificado.");
+}
+
+async function markClientOrderDelivered(orderId) {
+  const clientOrder = pendingClientOrders.find((order) => order.id === orderId);
+  if (!clientOrder) return;
+  const label = [clientOrder.table_label, clientOrder.customer_name].filter(Boolean).join(" - ") || "Cliente QR";
+  const shouldMarkDelivered = confirm(`Marcar como entregado el pedido de ${label}?`);
+  if (!shouldMarkDelivered) return;
+  await updateClientOrderStatus(orderId, "delivered", "Pedido marcado como entregado. El cliente sera notificado.", {
+    removeFromList: true,
+  });
 }
 
 async function cancelClientOrder(orderId) {
@@ -1381,6 +1522,7 @@ function buildClientOrderLink() {
   if (!cloudState.user) return "";
   const url = new URL("./cliente.html", window.location.href);
   url.searchParams.set("store", cloudState.user.id);
+  url.searchParams.set("app", APP_VERSION);
   const tableLabel = elements.qrTableInput.value.trim();
   if (tableLabel) url.searchParams.set("mesa", tableLabel);
   return url.toString();
@@ -1401,7 +1543,28 @@ function updateQrPreview() {
     : "QR general del restaurante. El cliente escribira mesa, nombre o domicilio.";
 }
 
-function openQrDialog() {
+async function syncMenuBeforeQr() {
+  if (!cloudState.user) return false;
+  if (!navigator.onLine) {
+    alert("Para que el QR muestre el menu real actualizado, conecta internet y vuelve a abrir el QR.");
+    return false;
+  }
+
+  try {
+    await saveCloudSettings();
+    clearSettingsPending();
+    updateCloudStatus();
+    return true;
+  } catch (error) {
+    console.error(error);
+    markSettingsPending();
+    updateCloudStatus();
+    alert("No pude subir el menu actual a la nube. El QR podria mostrar un menu viejo hasta que vuelva a sincronizar.");
+    return false;
+  }
+}
+
+async function openQrDialog() {
   if (!cloudState.configured) {
     alert("Configura Supabase antes de usar pedidos por QR.");
     return;
@@ -1411,6 +1574,8 @@ function openQrDialog() {
     openSignInScreen();
     return;
   }
+  const synced = await syncMenuBeforeQr();
+  if (!synced) return;
   updateQrPreview();
   elements.qrDialog.showModal();
 }
@@ -1933,6 +2098,34 @@ function saveCurrencySymbol() {
   showToast("Ajustes guardados.");
 }
 
+function useRestaurantCurrentLocation() {
+  if (!navigator.geolocation) {
+    alert("Este dispositivo no permite obtener ubicacion.");
+    return;
+  }
+
+  elements.useRestaurantLocationButton.disabled = true;
+  showToast("Solicitando ubicacion del restaurante...");
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const lat = Number(position.coords.latitude).toFixed(6);
+      const lng = Number(position.coords.longitude).toFixed(6);
+      restaurantAddress = `${lat}, ${lng}`;
+      elements.restaurantAddressInput.value = restaurantAddress;
+      localStorage.setItem(STORAGE_KEYS.restaurantAddress, restaurantAddress);
+      saveSettingsWhenPossible();
+      updateQrPreview();
+      elements.useRestaurantLocationButton.disabled = false;
+      showToast("Ubicacion actual guardada para domicilio.");
+    },
+    () => {
+      elements.useRestaurantLocationButton.disabled = false;
+      alert("No pude obtener la ubicacion. Permite ubicacion en el navegador o escribe la direccion manualmente.");
+    },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+  );
+}
+
 function renderCurrencySettings() {
   if (elements.businessNameInput) elements.businessNameInput.value = businessName;
   elements.currencySymbolInput.value = currencySymbol;
@@ -2128,7 +2321,7 @@ function renderCategories() {
         <button
           type="button"
           role="tab"
-          aria-selected="${category === activeCategory}"
+          aria-selected="${!menuSearchQuery && category === activeCategory}"
           data-category="${escapeHtml(category)}"
         >${escapeHtml(category)}</button>
       `
@@ -2136,19 +2329,46 @@ function renderCategories() {
     .join("");
 }
 
+function normalizeSearchText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function menuSearchEntries(query) {
+  const cleanQuery = normalizeSearchText(query);
+  const entries = [];
+  Object.entries(menuCatalog).forEach(([category, dishes]) => {
+    (dishes || []).forEach((dish) => {
+      const searchable = normalizeSearchText(`${category} ${dish.name} ${dish.description || ""}`);
+      if (!cleanQuery || searchable.includes(cleanQuery)) entries.push({ category, dish });
+    });
+  });
+  return entries;
+}
+
 function renderMenu() {
-  const dishes = menuCatalog[activeCategory] || [];
-  if (!dishes.length) {
-    elements.menuGrid.innerHTML = `<div class="empty-menu-category">No hay productos en esta categoria.</div>`;
+  const searchQuery = normalizeSearchText(menuSearchQuery);
+  const entries = searchQuery
+    ? menuSearchEntries(searchQuery)
+    : (menuCatalog[activeCategory] || []).map((dish) => ({ category: activeCategory, dish }));
+
+  if (!entries.length) {
+    elements.menuGrid.innerHTML = `<div class="empty-menu-category">${
+      searchQuery ? `No encontre productos con "${escapeHtml(menuSearchQuery)}".` : "No hay productos en esta categoria."
+    }</div>`;
     return;
   }
 
-  elements.menuGrid.innerHTML = dishes
+  elements.menuGrid.innerHTML = entries
     .map(
-      (dish) => `
+      ({ category, dish }) => `
         <button
           class="dish-button ${dish.imageUrl ? "has-product-image" : ""} ${productIsAvailable(dish) ? "" : "is-unavailable"}"
           type="button"
+          data-category="${escapeHtml(category)}"
           data-name="${escapeHtml(dish.name)}"
           data-price="${dish.price}"
           ${productIsAvailable(dish) ? "" : "disabled aria-disabled=\"true\""}
@@ -2156,12 +2376,23 @@ function renderMenu() {
           ${dish.imageUrl ? `<img src="${escapeHtml(dish.imageUrl)}" alt="${escapeHtml(dish.name)}" loading="lazy" />` : ""}
           <strong>${escapeHtml(dish.name)}</strong>
           ${dish.description ? `<small>${escapeHtml(dish.description)}</small>` : ""}
+          ${searchQuery ? `<small>${escapeHtml(category)}</small>` : ""}
           <span>${formatMoney(dish.price)}</span>
           ${productIsAvailable(dish) ? "" : `<em>No disponible</em>`}
         </button>
       `
     )
     .join("");
+}
+
+function applyMenuSearch(value) {
+  menuSearchQuery = String(value || "").trim();
+  if (elements.menuSearchInput && elements.menuSearchInput.value !== menuSearchQuery) {
+    elements.menuSearchInput.value = menuSearchQuery;
+  }
+  if (elements.menuSearchClearButton) elements.menuSearchClearButton.hidden = !menuSearchQuery;
+  renderCategories();
+  renderMenu();
 }
 
 function renderMenuEditor() {
@@ -2501,6 +2732,7 @@ function markOrderChanged() {
   if (currentOrder.saved) {
     currentOrder.updatedAt = new Date().toISOString();
   }
+  saveCurrentOrderDraft();
 }
 
 function renderOrder() {
@@ -2559,6 +2791,7 @@ function renderOrder() {
   elements.downloadTicketPdfButton.disabled = currentOrder.items.length === 0;
   elements.correctOrderButton.disabled = currentOrder.items.length === 0 && !currentOrder.saved;
   elements.cancelOrderButton.disabled = currentOrder.items.length === 0 && !currentOrder.saved;
+  saveCurrentOrderDraft();
 }
 
 async function upsertCurrentOrder() {
@@ -3433,9 +3666,23 @@ elements.categoryTabs.addEventListener("click", (event) => {
   const resolvedCategory = menuCatalog[button.dataset.category] ? button.dataset.category : findCategoryByName(button.dataset.category);
   if (!resolvedCategory) return;
   activeCategory = resolvedCategory;
+  applyMenuSearch("");
   renderCategories();
   renderMenu();
 });
+
+if (elements.menuSearchInput) {
+  elements.menuSearchInput.addEventListener("input", () => {
+    applyMenuSearch(elements.menuSearchInput.value);
+  });
+}
+
+if (elements.menuSearchClearButton) {
+  elements.menuSearchClearButton.addEventListener("click", () => {
+    applyMenuSearch("");
+    if (elements.menuSearchInput) elements.menuSearchInput.focus();
+  });
+}
 
 elements.menuGrid.addEventListener("click", (event) => {
   const button = event.target.closest(".dish-button");
@@ -3527,6 +3774,8 @@ elements.clientOrdersList.addEventListener("click", (event) => {
   if (!button || !card) return;
   if (button.dataset.action === "accept-client-order") acceptClientOrder(card.dataset.clientOrderId);
   if (button.dataset.action === "cancel-client-order") cancelClientOrder(card.dataset.clientOrderId);
+  if (button.dataset.action === "sent-client-order") markClientOrderSent(card.dataset.clientOrderId);
+  if (button.dataset.action === "delivered-client-order") markClientOrderDelivered(card.dataset.clientOrderId);
   if (button.dataset.action === "send-client-message") sendRestaurantChatMessage(card.dataset.clientOrderId, card);
 });
 
@@ -3612,6 +3861,9 @@ elements.cancelEditProductButton.addEventListener("click", clearProductForm);
 elements.resetMenuButton.addEventListener("click", resetMenu);
 elements.saveCurrencyButton.addEventListener("click", saveCurrencySymbol);
 elements.saveCustomerSettingsButton.addEventListener("click", saveCurrencySymbol);
+if (elements.useRestaurantLocationButton) {
+  elements.useRestaurantLocationButton.addEventListener("click", useRestaurantCurrentLocation);
+}
 
 elements.productImageFileInput.addEventListener("change", async () => {
   const file = elements.productImageFileInput.files?.[0];
@@ -3656,6 +3908,11 @@ elements.installAppButton.addEventListener("click", async () => {
 window.addEventListener("appinstalled", () => {
   deferredInstallPrompt = null;
   elements.installAppButton.hidden = true;
+});
+
+window.addEventListener("beforeunload", () => {
+  syncFormToOrder();
+  saveCurrentOrderDraft();
 });
 
 window.addEventListener("offline", () => {

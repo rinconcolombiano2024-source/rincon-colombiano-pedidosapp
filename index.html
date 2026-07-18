@@ -86,6 +86,14 @@
             </div>
           </div>
 
+          <div class="menu-search-row">
+            <label>
+              Buscar producto
+              <input id="menuSearchInput" type="search" placeholder="Ej: bandeja paisa" autocomplete="off" />
+            </label>
+            <button id="menuSearchClearButton" type="button" hidden>Limpiar</button>
+          </div>
+
           <div class="category-tabs" id="categoryTabs" role="tablist" aria-label="Categorias"></div>
           <div class="menu-grid" id="menuGrid" aria-label="Platos disponibles"></div>
 
@@ -307,6 +315,7 @@
             Direccion restaurante
             <input id="restaurantAddressInput" type="text" placeholder="Direccion completa del restaurante" autocomplete="street-address" />
           </label>
+          <button id="useRestaurantLocationButton" type="button">Usar ubicacion actual</button>
           <label class="settings-wide-field">
             Google Maps API key
             <input id="googleMapsApiKeyInput" type="text" placeholder="AIza..." autocomplete="off" />

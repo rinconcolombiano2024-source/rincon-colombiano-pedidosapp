@@ -41,7 +41,7 @@ create table if not exists public.customer_orders (
   public_token text not null default encode(gen_random_bytes(16), 'hex'),
   user_id uuid not null references auth.users(id) on delete cascade,
   customer_user_id uuid null references auth.users(id) on delete set null,
-  status text not null default 'pending' check (status in ('pending', 'accepted', 'cancelled')),
+  status text not null default 'pending' check (status in ('pending', 'accepted', 'sent', 'delivered', 'cancelled')),
   table_label text not null default '',
   customer_name text not null default '',
   order_type text not null default 'Comer en el punto',
@@ -159,6 +159,13 @@ alter column public_token set default encode(gen_random_bytes(16), 'hex');
 
 alter table public.customer_orders
 alter column public_token set not null;
+
+alter table public.customer_orders
+drop constraint if exists customer_orders_status_check;
+
+alter table public.customer_orders
+add constraint customer_orders_status_check
+check (status in ('pending', 'accepted', 'sent', 'delivered', 'cancelled'));
 
 create or replace function public.create_customer_order(
   p_id uuid,
