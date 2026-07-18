@@ -30,7 +30,7 @@ const STORAGE_KEYS = {
 
 const DEFAULT_BUSINESS_NAME = "RINCON COLOMBIANO";
 const DEFAULT_DELIVERY_MINIMUM_FEE = 20;
-const APP_VERSION = "v49";
+const APP_VERSION = "v50";
 
 const EMPTY_MENU_CATALOG = {
   Entradas: [],

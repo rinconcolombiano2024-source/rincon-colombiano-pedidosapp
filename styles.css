@@ -1414,15 +1414,24 @@ textarea:focus {
 
 .order-info {
   display: grid;
-  grid-template-columns: minmax(130px, 0.75fr) minmax(150px, 0.85fr) minmax(180px, 1.1fr) minmax(180px, 1.1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   padding: 16px;
+}
+
+.order-info label {
+  min-width: 0;
 }
 
 .customer-field-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
+  min-width: 0;
+}
+
+.customer-field-row input {
+  min-width: 0;
 }
 
 .customer-button {
@@ -2142,6 +2151,12 @@ dialog::backdrop {
   .history-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     max-height: none;
+  }
+}
+
+@media (min-width: 1500px) {
+  .order-info {
+    grid-template-columns: minmax(130px, 0.75fr) minmax(150px, 0.85fr) minmax(190px, 1fr) minmax(190px, 1fr);
   }
 }
 
