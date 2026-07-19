@@ -72,6 +72,9 @@ Funciones actuales que deben conservarse:
 - Cliente tiene seccion Mis pedidos con historial, estado, total, ticket si ya fue aceptado y boton para abrir estado/chat del pedido.
 - Cliente QR tiene buscador de productos por nombre, categoria o descripcion.
 - Cliente QR tiene boton Actualizar menu para recargar el menu real configurado por el restaurante.
+- Cliente QR deduplica restaurantes publicados con el mismo nombre y la misma direccion para evitar ver dos veces la misma sede.
+- Si solo hay una sede publicada, Cliente QR entra directo al menu y muestra el restaurante en formato compacto tipo app.
+- La pantalla cliente en movil usa cabecera compacta, aviso legal desplegable y selector de restaurante reducido para verse mas como app instalada.
 - Cliente escucha cambios del menu en vivo con Supabase Realtime filtrado por el restaurante seleccionado.
 - Cuando el restaurante cambia precios, productos, categorias, fotos, descripciones o disponibilidad y guarda, el cliente intenta actualizar el menu automaticamente sin cerrar la app.
 - Si se pierde internet, al volver la conexion la app cliente vuelve a refrescar el menu y reactiva la sincronizacion en vivo.
@@ -153,7 +156,7 @@ Archivos importantes:
 Notas para telefono:
 - Si el telefono no muestra cambios nuevos, desinstalar la app vieja y volver a instalar desde la URL de Vercel.
 - El service worker debe subir version cada vez que cambie la app.
-- Version de cache actual al crear esta memoria: rincon-colombiano-v53.
+- Version de cache actual al crear esta memoria: rincon-colombiano-v54.
 
 Precaucion offline:
 - Si varias tablets trabajan sin internet al mismo tiempo, pueden repetirse numeros locales de ticket.

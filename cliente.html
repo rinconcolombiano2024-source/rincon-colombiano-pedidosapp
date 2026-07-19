@@ -39,9 +39,12 @@
         App de prueba: si algo sale diferente, el restaurante confirmara el pedido y cualquier ajuste antes de prepararlo.
       </section>
 
-      <section class="customer-legal-notice" data-i18n="legalNotice">
-        Usamos los datos que escribes para crear tu cuenta, preparar el pedido, entregarlo, guardar historial y responder por chat. La app puede usar almacenamiento local/cookies tecnicas para mantener sesion, idioma, carrito y funcionamiento.
-      </section>
+      <details class="customer-legal-notice">
+        <summary data-i18n="privacySummary">Privacidad y datos</summary>
+        <p data-i18n="legalNotice">
+          Usamos los datos que escribes para crear tu cuenta, preparar el pedido, entregarlo, guardar historial y responder por chat. La app puede usar almacenamiento local/cookies tecnicas para mantener sesion, idioma, carrito y funcionamiento.
+        </p>
+      </details>
 
       <section class="customer-account-panel" aria-label="Cuenta del cliente" data-i18n-aria-label="accountPanelAria">
         <div class="customer-account-head">
@@ -95,7 +98,7 @@
       <section class="customer-restaurant-panel" id="customerRestaurantPanel" aria-label="Elegir restaurante" data-i18n-aria-label="restaurantPanelAria">
         <div class="customer-account-head">
           <div>
-            <h2 data-i18n="restaurantTitle">Elegir restaurante</h2>
+            <h2 id="customerRestaurantTitle" data-i18n="restaurantTitle">Elegir restaurante</h2>
             <p id="customerSelectedRestaurantText" data-i18n="restaurantHelp">Busca el restaurante donde quieres hacer tu pedido.</p>
           </div>
           <button class="customer-map-button" id="customerRefreshRestaurantsButton" type="button" data-i18n="restaurantRefresh">Actualizar restaurantes</button>

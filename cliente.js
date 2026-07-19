@@ -23,6 +23,7 @@ const customerElements = {
   signUpButton: document.querySelector("#customerSignUpButton"),
   signOutButton: document.querySelector("#customerSignOutButton"),
   restaurantPanel: document.querySelector("#customerRestaurantPanel"),
+  restaurantTitle: document.querySelector("#customerRestaurantTitle"),
   selectedRestaurantText: document.querySelector("#customerSelectedRestaurantText"),
   restaurantSearchInput: document.querySelector("#customerRestaurantSearchInput"),
   restaurantList: document.querySelector("#customerRestaurantList"),
@@ -74,6 +75,7 @@ const CUSTOMER_I18N = {
     menuUpdated: "Menu actualizado.",
     heroSubtitle: "Escanea, elige y envia tu pedido.",
     warning: "App de prueba: si algo sale diferente, el restaurante confirmara el pedido y cualquier ajuste antes de prepararlo.",
+    privacySummary: "Privacidad y datos",
     legalNotice: "Usamos los datos que escribes para crear tu cuenta, preparar el pedido, entregarlo, guardar historial y responder por chat. La app usa cookies tecnicas/localStorage para mantener sesion, idioma, carrito y funcionamiento.",
     accountPanelAria: "Cuenta del cliente",
     accountTitle: "Mi cuenta",
@@ -83,6 +85,7 @@ const CUSTOMER_I18N = {
     restaurantTitle: "Elegir restaurante",
     restaurantHelp: "Busca el restaurante donde quieres hacer tu pedido.",
     restaurantSelected: "Restaurante seleccionado: {name}. Ya puedes revisar el menu y enviar tu pedido.",
+    restaurantSingleSelected: "{name} esta listo para recibir tu pedido.",
     restaurantSearchLabel: "Buscar restaurante",
     restaurantSearchPlaceholder: "Nombre, ciudad o direccion",
     restaurantRefresh: "Actualizar restaurantes",
@@ -268,6 +271,7 @@ const CUSTOMER_I18N = {
     menuUpdated: "Menu zaktualizowane.",
     heroSubtitle: "Zeskanuj, wybierz i wyslij zamowienie.",
     warning: "Aplikacja testowa: jesli cos bedzie nie tak, restauracja potwierdzi zamowienie i korekty przed przygotowaniem.",
+    privacySummary: "Prywatnosc i dane",
     legalNotice: "Uzywamy podanych danych do utworzenia konta, przygotowania zamowienia, dostawy, historii i czatu. Aplikacja uzywa technicznego localStorage/cookies do sesji, jezyka, koszyka i dzialania.",
     accountPanelAria: "Konto klienta",
     accountTitle: "Moje konto",
@@ -277,6 +281,7 @@ const CUSTOMER_I18N = {
     restaurantTitle: "Wybierz restauracje",
     restaurantHelp: "Znajdz restauracje, w ktorej chcesz zlozyc zamowienie.",
     restaurantSelected: "Wybrana restauracja: {name}. Mozesz teraz zobaczyc menu i wyslac zamowienie.",
+    restaurantSingleSelected: "{name} jest gotowe na Twoje zamowienie.",
     restaurantSearchLabel: "Szukaj restauracji",
     restaurantSearchPlaceholder: "Nazwa, miasto lub adres",
     restaurantRefresh: "Odswiez restauracje",
@@ -462,6 +467,7 @@ const CUSTOMER_I18N = {
     menuUpdated: "Menu updated.",
     heroSubtitle: "Scan, choose, and send your order.",
     warning: "Test app: if something is different, the restaurant will confirm the order and any adjustment before preparing it.",
+    privacySummary: "Privacy and data",
     legalNotice: "We use the data you enter to create your account, prepare the order, deliver it, keep history, and answer by chat. The app uses technical cookies/localStorage for session, language, cart, and operation.",
     accountPanelAria: "Customer account",
     accountTitle: "My account",
@@ -471,6 +477,7 @@ const CUSTOMER_I18N = {
     restaurantTitle: "Choose restaurant",
     restaurantHelp: "Find the restaurant where you want to place your order.",
     restaurantSelected: "Selected restaurant: {name}. You can now review the menu and send your order.",
+    restaurantSingleSelected: "{name} is ready for your order.",
     restaurantSearchLabel: "Search restaurant",
     restaurantSearchPlaceholder: "Name, city, or address",
     restaurantRefresh: "Refresh restaurants",
@@ -1236,7 +1243,41 @@ function customerNormalizeRestaurantProfile(row = {}) {
     address: customerNormalizeText(row.public_address || row.publicAddress),
     phone: customerNormalizeText(row.phone),
     description: customerNormalizeText(row.description),
+    updatedAt: customerNormalizeText(row.updated_at || row.updatedAt),
   };
+}
+
+function customerRestaurantDedupeKey(restaurant) {
+  const name = customerNormalizeSearchText(restaurant?.name || "");
+  const address = customerNormalizeSearchText(restaurant?.address || "");
+  if (!name || !address) return `id:${restaurant?.userId || ""}`;
+  return `${name}|${address}`;
+}
+
+function customerRestaurantIsNewer(candidate, current) {
+  const candidateTime = new Date(candidate?.updatedAt || 0).getTime();
+  const currentTime = new Date(current?.updatedAt || 0).getTime();
+  return Number.isFinite(candidateTime) && candidateTime > currentTime;
+}
+
+function customerDeduplicateRestaurants(restaurants = []) {
+  const byIdentity = new Map();
+  restaurants.forEach((restaurant) => {
+    const key = customerRestaurantDedupeKey(restaurant);
+    const current = byIdentity.get(key);
+    if (!current) {
+      byIdentity.set(key, restaurant);
+      return;
+    }
+    if (restaurant.userId === customerStoreId) {
+      byIdentity.set(key, restaurant);
+      return;
+    }
+    if (current.userId === customerStoreId) return;
+    if (customerRestaurantIsNewer(restaurant, current)) byIdentity.set(key, restaurant);
+  });
+
+  return Array.from(byIdentity.values()).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function customerSelectedRestaurant() {
@@ -1247,14 +1288,35 @@ function customerRenderRestaurantDirectory() {
   if (!customerElements.restaurantList) return;
 
   const selected = customerSelectedRestaurant();
+  const compactSingleRestaurant = Boolean(customerStoreId && selected && customerRestaurants.length === 1 && !customerRestaurantSearchQuery);
+  customerElements.restaurantPanel?.classList.toggle("is-compact", compactSingleRestaurant);
+
+  if (customerElements.restaurantTitle) {
+    if (compactSingleRestaurant) {
+      customerElements.restaurantTitle.removeAttribute("data-i18n");
+      customerElements.restaurantTitle.textContent = selected.name;
+    } else {
+      customerElements.restaurantTitle.dataset.i18n = "restaurantTitle";
+      customerElements.restaurantTitle.textContent = customerT("restaurantTitle");
+    }
+  }
+
   if (customerElements.selectedRestaurantText) {
     customerElements.selectedRestaurantText.removeAttribute("data-i18n");
-    if (customerStoreId) {
+    if (compactSingleRestaurant) {
+      const addressText = selected.address ? ` - ${selected.address}` : "";
+      customerElements.selectedRestaurantText.textContent = `${customerT("restaurantSingleSelected", { name: selected.name })}${addressText}`;
+    } else if (customerStoreId) {
       const name = selected?.name || customerSettings.businessName || "Restaurante";
       customerElements.selectedRestaurantText.textContent = customerT("restaurantSelected", { name });
     } else {
       customerElements.selectedRestaurantText.textContent = customerT("restaurantHelp");
     }
+  }
+
+  if (compactSingleRestaurant) {
+    customerElements.restaurantList.innerHTML = "";
+    return;
   }
 
   const query = customerNormalizeSearchText(customerRestaurantSearchQuery);
@@ -1335,9 +1397,9 @@ async function customerLoadRestaurantDirectory(options = {}) {
     return;
   }
 
-  customerRestaurants = (Array.isArray(data) ? data : [])
+  customerRestaurants = customerDeduplicateRestaurants((Array.isArray(data) ? data : [])
     .map(customerNormalizeRestaurantProfile)
-    .filter(Boolean);
+    .filter(Boolean));
   customerRenderRestaurantDirectory();
 }
 
@@ -1358,7 +1420,7 @@ async function customerSelectRestaurant(storeId, options = {}) {
   if (options.updateUrl !== false) {
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("store", customerStoreId);
-    nextUrl.searchParams.set("app", "v53");
+    nextUrl.searchParams.set("app", "v54");
     window.history.replaceState({}, "", nextUrl.toString());
   }
 
@@ -2406,6 +2468,11 @@ async function customerLoadMenu(options = {}) {
 
   if (!options.skipDirectory) {
     await customerLoadRestaurantDirectory({ silent: true });
+  }
+
+  if (!customerStoreId && customerRestaurants.length === 1) {
+    await customerSelectRestaurant(customerRestaurants[0].userId);
+    return;
   }
 
   if (!customerStoreId) {
