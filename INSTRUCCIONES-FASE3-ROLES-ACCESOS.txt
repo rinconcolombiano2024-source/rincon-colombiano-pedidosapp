@@ -1,0 +1,28 @@
+FASE 3 - ROLES, ACCESOS Y COLABORADOR
+
+Que se agrego:
+- Entrada separada para Cliente, Restaurante y Colaborador.
+- Tabla user_profiles para perfil general de cada cuenta.
+- Tabla user_roles para que un mismo correo pueda tener varios roles.
+- Tabla courier_profiles para solicitudes de colaboradores/domiciliarios independientes.
+- Funcion activate_user_role para activar customer, restaurant_owner o platform_courier sin duplicar correos.
+
+Como activar en Supabase:
+1. Entra a Supabase.
+2. Abre tu proyecto.
+3. Ve a SQL Editor.
+4. Abre el archivo MIGRACION-FASE3-ROLES-ACCESOS.sql.
+5. Copia todo el contenido.
+6. Pegalo en SQL Editor.
+7. Presiona Run.
+
+Despues de ejecutar:
+- Cliente: al iniciar sesion se activa el rol customer.
+- Restaurante: al iniciar sesion se activa el rol restaurant_owner.
+- Colaborador: al crear/iniciar sesion y enviar solicitud se activa platform_courier en pending_review.
+
+Importante:
+- No uses service_role ni secret key en la app.
+- La publishable key puede estar en supabase-config.js.
+- El colaborador no debe recibir pedidos hasta que una administracion lo apruebe.
+- Subida real de fotos/documentos requiere una fase posterior con Supabase Storage.

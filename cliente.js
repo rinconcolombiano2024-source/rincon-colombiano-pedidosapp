@@ -762,6 +762,7 @@ const CUSTOMER_DELIVERY_RATES = {
   longPerKm: 2.5,
   extraLongPerKm: 3.5,
 };
+const CUSTOMER_PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 
 function customerSupabaseConfig() {
   const config = window.RINCON_SUPABASE || {};
@@ -889,6 +890,7 @@ async function customerInitializeAuth() {
   customerRenderAccount();
   if (customerUser) {
     await customerLoadProfile();
+    await customerEnsureIdentity();
     await customerLoadHistory();
   } else {
     customerRenderHistory();
@@ -898,6 +900,7 @@ async function customerInitializeAuth() {
     customerRenderAccount();
     if (customerUser) {
       await customerLoadProfile();
+      await customerEnsureIdentity();
       await customerLoadHistory();
     } else {
       customerHistoryRows = [];
@@ -981,6 +984,7 @@ async function customerSignUpWithEmail() {
   if (data?.session?.user) {
     customerUser = data.session.user;
     await customerSaveProfile();
+    await customerEnsureIdentity();
     await customerLoadHistory();
   }
   customerSetAuthMessage(customerT("accountCreated"), "ok");
@@ -1008,6 +1012,59 @@ function customerProfilePayload() {
     language: customerLanguage,
     updated_at: new Date().toISOString(),
   };
+}
+
+function customerSplitName(fullName = "") {
+  const cleanName = customerNormalizeText(fullName);
+  if (!cleanName) return { firstName: "", lastName: "" };
+  const parts = cleanName.split(" ");
+  return {
+    firstName: parts.shift() || "",
+    lastName: parts.join(" "),
+  };
+}
+
+function customerGeneralProfilePayload() {
+  const profile = customerProfilePayload();
+  const nameParts = customerSplitName(profile.full_name);
+  const defaultAddress = profile.default_address || {};
+  return {
+    user_id: customerUser.id,
+    first_name: nameParts.firstName,
+    last_name: nameParts.lastName,
+    full_name: profile.full_name,
+    phone: profile.phone,
+    country: "",
+    city: customerNormalizeText(defaultAddress.neighborhood || ""),
+    preferred_language: customerLanguage,
+    status: "active",
+    updated_at: new Date().toISOString(),
+  };
+}
+
+async function customerActivateRole(role) {
+  if (!customerClient || !customerUser) return;
+  try {
+    const { error } = await customerClient.rpc("activate_user_role", {
+      p_role: role,
+      p_scope_type: "platform",
+      p_scope_id: CUSTOMER_PLATFORM_SCOPE_ID,
+    });
+    if (error) throw error;
+  } catch (error) {
+    console.warn("No se pudo activar el rol del cliente. Ejecuta la migracion de Fase 3 en Supabase.", error);
+  }
+}
+
+async function customerEnsureIdentity() {
+  if (!customerClient || !customerUser) return;
+  try {
+    const { error } = await customerClient.from("user_profiles").upsert(customerGeneralProfilePayload());
+    if (error) throw error;
+  } catch (error) {
+    console.warn("No se pudo actualizar el perfil general del cliente.", error);
+  }
+  await customerActivateRole("customer");
 }
 
 async function customerLoadProfile() {
@@ -1301,7 +1358,7 @@ async function customerSelectRestaurant(storeId, options = {}) {
   if (options.updateUrl !== false) {
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("store", customerStoreId);
-    nextUrl.searchParams.set("app", "v52");
+    nextUrl.searchParams.set("app", "v53");
     window.history.replaceState({}, "", nextUrl.toString());
   }
 

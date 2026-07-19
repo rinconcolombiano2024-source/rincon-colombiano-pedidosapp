@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Plataforma restaurantes - Colaborador</title>
+    <meta name="theme-color" content="#1f8f4d" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Colaborador" />
+    <meta name="format-detection" content="telephone=no" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="app-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="app-icon-192.png" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="customer-page collaborator-page">
+    <main class="customer-shell collaborator-shell">
+      <header class="customer-hero collaborator-hero">
+        <div class="customer-language-row">
+          <p class="eyebrow">Entorno de colaborador</p>
+          <nav class="role-link-row" aria-label="Cambiar entorno">
+            <a href="index.html">Restaurante</a>
+            <a href="cliente.html">Cliente</a>
+          </nav>
+        </div>
+        <h1>Colaborador</h1>
+        <p>Gestiona tu solicitud, disponibilidad y entregas asignadas.</p>
+      </header>
+
+      <section class="customer-warning">
+        App de prueba: el colaborador no recibe pedidos hasta que la administracion de la plataforma apruebe su perfil.
+      </section>
+
+      <section class="customer-account-panel" aria-label="Acceso colaborador">
+        <div class="customer-account-head">
+          <div>
+            <h2>Acceso</h2>
+            <p id="courierAccountSummary">Inicia sesion o crea una cuenta para enviar tu solicitud.</p>
+          </div>
+          <button class="customer-map-button" id="courierSignOutButton" type="button" hidden>Cerrar sesion</button>
+        </div>
+        <div class="customer-auth-fields" id="courierAuthFields">
+          <label>
+            Correo electronico
+            <input id="courierEmailInput" type="email" placeholder="correo@ejemplo.com" autocomplete="email" />
+          </label>
+          <label>
+            Contrasena
+            <input id="courierPasswordInput" type="password" placeholder="Minimo 6 caracteres" autocomplete="current-password" />
+          </label>
+          <div class="customer-auth-actions">
+            <button class="customer-map-button" id="courierSignInButton" type="button">Iniciar sesion</button>
+            <button class="customer-map-button" id="courierSignUpButton" type="button">Crear cuenta</button>
+          </div>
+        </div>
+        <p class="customer-map-result" id="courierAuthMessage" hidden></p>
+      </section>
+
+      <section class="customer-account-panel" aria-label="Solicitud de colaborador">
+        <div class="customer-account-head">
+          <div>
+            <h2>Solicitud</h2>
+            <p id="courierProfileStatus">Completa tus datos para revision.</p>
+          </div>
+          <span class="courier-status-badge" id="courierStatusBadge">Sin enviar</span>
+        </div>
+        <div class="collaborator-form-grid">
+          <label>
+            Nombre
+            <input id="courierFirstNameInput" type="text" placeholder="Nombre" autocomplete="given-name" />
+          </label>
+          <label>
+            Apellidos
+            <input id="courierLastNameInput" type="text" placeholder="Apellidos" autocomplete="family-name" />
+          </label>
+          <label>
+            Telefono
+            <input id="courierPhoneInput" type="tel" placeholder="Numero de contacto" autocomplete="tel" />
+          </label>
+          <label>
+            Fecha de nacimiento
+            <input id="courierBirthDateInput" type="date" autocomplete="bday" />
+          </label>
+          <label>
+            Pais
+            <input id="courierCountryInput" type="text" placeholder="Pais" autocomplete="country-name" />
+          </label>
+          <label>
+            Ciudad
+            <input id="courierCityInput" type="text" placeholder="Ciudad" autocomplete="address-level2" />
+          </label>
+          <label class="collaborator-wide-field">
+            Direccion
+            <input id="courierAddressInput" type="text" placeholder="Direccion completa" autocomplete="street-address" />
+          </label>
+          <label>
+            Documento de identidad
+            <input id="courierIdentityInput" type="text" placeholder="Numero o referencia del documento" autocomplete="off" />
+          </label>
+          <label>
+            Tipo de vehiculo
+            <select id="courierVehicleTypeInput">
+              <option value="">Seleccionar</option>
+              <option value="bicicleta">Bicicleta</option>
+              <option value="motocicleta">Motocicleta</option>
+              <option value="automovil">Automovil</option>
+              <option value="otro">Otro</option>
+            </select>
+          </label>
+          <label>
+            Matricula
+            <input id="courierVehiclePlateInput" type="text" placeholder="Si aplica" autocomplete="off" />
+          </label>
+          <label>
+            Licencia
+            <input id="courierDriverLicenseInput" type="text" placeholder="Si aplica" autocomplete="off" />
+          </label>
+          <label>
+            Seguro
+            <input id="courierInsuranceInput" type="text" placeholder="Si aplica" autocomplete="off" />
+          </label>
+          <label>
+            Cuenta bancaria
+            <input id="courierBankInput" type="text" placeholder="IBAN o datos de pago" autocomplete="off" />
+          </label>
+          <label>
+            Disponibilidad
+            <input id="courierAvailabilityInput" type="text" placeholder="Ej: lunes a viernes 12:00-20:00" autocomplete="off" />
+          </label>
+          <label>
+            Foto
+            <input id="courierPhotoUrlInput" type="url" placeholder="URL del archivo, si ya lo tienes" autocomplete="off" />
+          </label>
+          <label>
+            Selfie de verificacion
+            <input id="courierSelfieUrlInput" type="url" placeholder="URL del archivo, si ya lo tienes" autocomplete="off" />
+          </label>
+          <label class="collaborator-wide-field">
+            Permiso de trabajo
+            <input id="courierWorkPermitUrlInput" type="url" placeholder="URL del documento, si aplica" autocomplete="off" />
+          </label>
+          <label class="customer-legal-checkbox">
+            <input id="courierTermsInput" type="checkbox" />
+            <span>Acepto el contrato, terminos, politica de privacidad y tratamiento de datos para revision y entregas.</span>
+          </label>
+        </div>
+        <div class="collaborator-actions">
+          <button class="customer-map-button" id="courierSaveProfileButton" type="button">Enviar solicitud</button>
+        </div>
+        <p class="customer-map-result" id="courierProfileMessage" hidden></p>
+      </section>
+
+      <section class="customer-account-panel courier-dashboard" id="courierDashboard" aria-label="Panel del colaborador" hidden>
+        <div class="customer-account-head">
+          <div>
+            <h2>Panel</h2>
+            <p id="courierDashboardText">Cuando tu perfil sea aprobado, podras recibir pedidos.</p>
+          </div>
+          <button class="customer-map-button" id="courierAvailabilityButton" type="button" disabled>Disponible</button>
+        </div>
+        <div class="courier-steps">
+          <button type="button" disabled>Llegue al restaurante</button>
+          <button type="button" disabled>Pedido recogido</button>
+          <button type="button" disabled>Llegue al cliente</button>
+          <button type="button" disabled>Pedido entregado</button>
+        </div>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="colaborador.js"></script>
+  </body>
+</html>

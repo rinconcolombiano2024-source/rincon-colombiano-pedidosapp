@@ -109,6 +109,13 @@ Funciones actuales que deben conservarse:
 - La app no cobra comisiones: los pagos se manejan por caja, efectivo, transferencia o datafono segun el restaurante.
 - Inicio de sesion por correo electronico y contrasena usando Supabase.
 - Registrar restaurante con datos legales y consentimiento tecnico.
+- Acceso inicial tiene entrada separada para Cliente, Restaurante y Colaborador.
+- Nueva base de roles multiples: customer, restaurant_owner, restaurant_admin, restaurant_employee, restaurant_courier, platform_courier y platform_admin.
+- Una misma cuenta de Supabase Auth puede activar varios roles sin crear otro correo.
+- Cliente activa rol customer al iniciar sesion o crear cuenta.
+- Restaurante activa rol restaurant_owner al iniciar sesion.
+- Colaborador tiene pagina propia colaborador.html con registro, inicio de sesion, solicitud y estado pendiente de revision.
+- Colaborador independiente usa rol tecnico platform_courier y queda en pending_review hasta aprobacion administrativa.
 - Recuperar contrasena por correo electronico.
 - Guardar nueva contrasena desde enlace de recuperacion.
 - Sincronizacion con Supabase: menu, moneda, pedidos y contador de tickets.
@@ -134,17 +141,19 @@ Archivos importantes:
 - index.html: estructura de pantalla, login, pedidos, dialogos.
 - app.js: logica de pedidos, tickets, Supabase, offline, cierre mensual y pedidos cliente.
 - cliente.html / cliente.js: modulo para que el cliente pida desde QR.
+- colaborador.html / colaborador.js: modulo separado para registro e inicio de sesion de colaboradores.
 - styles.css: diseno responsive para PC y telefono.
 - service-worker.js: cache de PWA.
 - supabase-config.js: URL y publishable key.
 - supabase-schema.sql: tablas, politicas RLS y funciones RPC.
 - MIGRACION-FASE2-REALTIME-MENU.sql: migracion corta para activar Supabase Realtime del menu sin reejecutar todo el esquema.
+- MIGRACION-FASE3-ROLES-ACCESOS.sql: migracion segura para perfiles generales, roles multiples y colaboradores.
 - Supabase requiere ejecutar el SQL actualizado cuando se agreguen cuentas de cliente, customer_profiles, customer_user_id o historial.
 
 Notas para telefono:
 - Si el telefono no muestra cambios nuevos, desinstalar la app vieja y volver a instalar desde la URL de Vercel.
 - El service worker debe subir version cada vez que cambie la app.
-- Version de cache actual al crear esta memoria: rincon-colombiano-v52.
+- Version de cache actual al crear esta memoria: rincon-colombiano-v53.
 
 Precaucion offline:
 - Si varias tablets trabajan sin internet al mismo tiempo, pueden repetirse numeros locales de ticket.

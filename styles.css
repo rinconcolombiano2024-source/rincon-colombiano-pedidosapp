@@ -879,7 +879,9 @@
   }
 
   .restaurant-signup-panel,
-  .client-entry-panel {
+  .client-entry-panel,
+  .collaborator-form-grid,
+  .courier-steps {
     grid-template-columns: 1fr;
   }
 
@@ -1053,6 +1055,116 @@ body {
   font-weight: 900;
   text-align: center;
   text-decoration: none;
+}
+
+.collaborator-entry-panel {
+  border-color: rgba(240, 180, 41, 0.42);
+  background: #fff8e6;
+}
+
+.collaborator-entry-button {
+  background: #8a5a00;
+}
+
+.role-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.role-link-row a {
+  display: inline-grid;
+  place-items: center;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.collaborator-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.collaborator-form-grid label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.collaborator-form-grid input,
+.collaborator-form-grid select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #ffffff;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 850;
+}
+
+.collaborator-wide-field,
+.collaborator-actions {
+  grid-column: 1 / -1;
+}
+
+.collaborator-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.courier-status-badge {
+  display: inline-grid;
+  place-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.courier-status-badge[data-status="pending_review"] {
+  border-color: #f0d48a;
+  background: #fff8e6;
+  color: #7c4a03;
+}
+
+.courier-status-badge[data-status="approved"] {
+  border-color: rgba(31, 143, 77, 0.4);
+  background: #f0fff5;
+  color: #14532d;
+}
+
+.courier-status-badge[data-status="rejected"],
+.courier-status-badge[data-status="suspended"] {
+  border-color: rgba(199, 57, 47, 0.35);
+  background: #fff1f1;
+  color: var(--red);
+}
+
+.courier-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.courier-steps button {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--muted);
+  font-weight: 900;
 }
 
 .legal-checkbox,

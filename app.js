@@ -30,7 +30,8 @@ const STORAGE_KEYS = {
 
 const DEFAULT_BUSINESS_NAME = "RINCON COLOMBIANO";
 const DEFAULT_DELIVERY_MINIMUM_FEE = 20;
-const APP_VERSION = "v52";
+const APP_VERSION = "v53";
+const PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 
 const EMPTY_MENU_CATALOG = {
   Entradas: [],
@@ -668,6 +669,71 @@ function restaurantProfileFromUserMetadata() {
   };
 }
 
+function hasRestaurantOwnerRegistration(profile = {}, settingsRow = null) {
+  const metadata = cloudState.user?.user_metadata || {};
+  return Boolean(
+    settingsRow ||
+      metadata.account_type === "restaurant" ||
+      normalizeTextSetting(profile.legalBusinessName) ||
+      normalizeTextSetting(profile.taxId) ||
+      normalizeTextSetting(profile.legalAddress) ||
+      normalizeTextSetting(profile.businessPhone) ||
+      normalizeTextSetting(profile.ownerName)
+  );
+}
+
+function splitProfileName(fullName = "") {
+  const cleanName = normalizeTextSetting(fullName);
+  if (!cleanName) return { firstName: "", lastName: "" };
+  const parts = cleanName.split(" ");
+  return {
+    firstName: parts.shift() || "",
+    lastName: parts.join(" "),
+  };
+}
+
+function restaurantOwnerUserProfilePayload(profile = restaurantProfileFromUserMetadata()) {
+  const fullName = normalizeTextSetting(profile.ownerName || cloudState.user?.user_metadata?.full_name || "");
+  const nameParts = splitProfileName(fullName);
+  return {
+    user_id: cloudState.user.id,
+    first_name: nameParts.firstName,
+    last_name: nameParts.lastName,
+    full_name: fullName,
+    phone: normalizeTextSetting(profile.businessPhone || businessPhone),
+    country: "",
+    city: "",
+    preferred_language: "es",
+    status: "active",
+    updated_at: new Date().toISOString(),
+  };
+}
+
+async function activateCurrentUserRole(role) {
+  if (!cloudState.client || !cloudState.user) return;
+  try {
+    const { error } = await cloudState.client.rpc("activate_user_role", {
+      p_role: role,
+      p_scope_type: "platform",
+      p_scope_id: PLATFORM_SCOPE_ID,
+    });
+    if (error) throw error;
+  } catch (error) {
+    console.warn("No se pudo activar el rol de usuario. Ejecuta la migracion de Fase 3 en Supabase.", error);
+  }
+}
+
+async function ensureRestaurantOwnerIdentity(profile = restaurantProfileFromUserMetadata()) {
+  if (!cloudState.client || !cloudState.user) return;
+  try {
+    const { error } = await cloudState.client.from("user_profiles").upsert(restaurantOwnerUserProfilePayload(profile));
+    if (error) throw error;
+  } catch (error) {
+    console.warn("No se pudo actualizar el perfil general del propietario.", error);
+  }
+  await activateCurrentUserRole("restaurant_owner");
+}
+
 function applyRestaurantProfile(profile = {}, options = {}) {
   const onlyIfEmpty = Boolean(options.onlyIfEmpty);
   const assignText = (currentValue, nextValue) => {
@@ -881,6 +947,9 @@ async function loadCloudData() {
     if (settingsError) throw settingsError;
 
     const restaurantProfile = restaurantProfileFromUserMetadata();
+    if (hasRestaurantOwnerRegistration(restaurantProfile, settingsRow)) {
+      await ensureRestaurantOwnerIdentity(restaurantProfile);
+    }
 
     if (settingsRow && !localSettingsPending) {
       menuCatalog = normalizeMenuCatalog(settingsRow.menu || EMPTY_MENU_CATALOG);
