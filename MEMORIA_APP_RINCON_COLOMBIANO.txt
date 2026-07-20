@@ -108,11 +108,15 @@ Funciones actuales que deben conservarse:
 - Minimo de domicilio editable para el modulo cliente.
 - Direccion del restaurante y Google Maps API key editables para calcular distancia real.
 - Cuenta de transferencia y texto de comprobante editables para el modulo cliente.
+- Configuracion preparada para pagos en linea: proveedor desactivado/SumUp/Stripe/link externo y nota de pago. No cobra en linea hasta conectar proveedor real.
 - Cobro externo por tienda desactivado por decision del restaurante hasta confirmar una integracion real con proveedor de pago.
 - La app no cobra comisiones: los pagos se manejan por caja, efectivo, transferencia o datafono segun el restaurante.
 - Inicio de sesion por correo electronico y contrasena usando Supabase.
 - Registrar restaurante con datos legales y consentimiento tecnico.
 - Acceso inicial tiene entrada separada para Cliente, Restaurante y Colaborador.
+- Acceso inicial v55 queda limpio: solo muestra iniciar/registrar restaurante, iniciar/registrar cliente e iniciar/registrar colaborador.
+- Restaurante abre inicio de sesion o registro en ventana modal, no muestra formulario largo en la pantalla inicial.
+- Cliente abre inicio de sesion o registro en ventana modal dentro de cliente.html.
 - Nueva base de roles multiples: customer, restaurant_owner, restaurant_admin, restaurant_employee, restaurant_courier, platform_courier y platform_admin.
 - Una misma cuenta de Supabase Auth puede activar varios roles sin crear otro correo.
 - Cliente activa rol customer al iniciar sesion o crear cuenta.
@@ -151,12 +155,13 @@ Archivos importantes:
 - supabase-schema.sql: tablas, politicas RLS y funciones RPC.
 - MIGRACION-FASE2-REALTIME-MENU.sql: migracion corta para activar Supabase Realtime del menu sin reejecutar todo el esquema.
 - MIGRACION-FASE3-ROLES-ACCESOS.sql: migracion segura para perfiles generales, roles multiples y colaboradores.
+- MIGRACION-FASE4-V55-ACCESO-LIMPIO-CIERRE-RESTAURANTE.sql: migracion para solicitudes de privacidad/eliminacion y soporte del cierre seguro de restaurante.
 - Supabase requiere ejecutar el SQL actualizado cuando se agreguen cuentas de cliente, customer_profiles, customer_user_id o historial.
 
 Notas para telefono:
 - Si el telefono no muestra cambios nuevos, desinstalar la app vieja y volver a instalar desde la URL de Vercel.
 - El service worker debe subir version cada vez que cambie la app.
-- Version de cache actual al crear esta memoria: rincon-colombiano-v54.
+- Version de cache actual al crear esta memoria: rincon-colombiano-v55.
 
 Precaucion offline:
 - Si varias tablets trabajan sin internet al mismo tiempo, pueden repetirse numeros locales de ticket.

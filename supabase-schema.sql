@@ -148,6 +148,28 @@ create table if not exists public.courier_profiles (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.account_privacy_requests (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  request_type text not null check (
+    request_type in (
+      'account_deactivation',
+      'account_deletion',
+      'restaurant_closure',
+      'restaurant_deletion',
+      'courier_deactivation',
+      'customer_deletion'
+    )
+  ),
+  role_context text not null default '',
+  status text not null default 'requested' check (
+    status in ('requested', 'in_review', 'approved', 'rejected', 'completed', 'cancelled')
+  ),
+  details jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 alter table public.app_settings enable row level security;
 alter table public.restaurant_profiles enable row level security;
 alter table public.orders enable row level security;
@@ -158,6 +180,7 @@ alter table public.customer_order_messages enable row level security;
 alter table public.user_profiles enable row level security;
 alter table public.user_roles enable row level security;
 alter table public.courier_profiles enable row level security;
+alter table public.account_privacy_requests enable row level security;
 
 create or replace function public.user_has_active_role(p_role text)
 returns boolean
@@ -347,6 +370,25 @@ for all
 using (public.user_has_active_role('platform_admin'))
 with check (public.user_has_active_role('platform_admin'));
 
+drop policy if exists "Users create own privacy requests" on public.account_privacy_requests;
+create policy "Users create own privacy requests"
+on public.account_privacy_requests
+for insert
+with check (auth.uid() = user_id);
+
+drop policy if exists "Users read own privacy requests" on public.account_privacy_requests;
+create policy "Users read own privacy requests"
+on public.account_privacy_requests
+for select
+using (auth.uid() = user_id);
+
+drop policy if exists "Platform admins manage privacy requests" on public.account_privacy_requests;
+create policy "Platform admins manage privacy requests"
+on public.account_privacy_requests
+for all
+using (public.user_has_active_role('platform_admin'))
+with check (public.user_has_active_role('platform_admin'));
+
 grant select on public.app_settings to anon, authenticated;
 grant select on public.restaurant_profiles to anon, authenticated;
 grant insert, update, delete on public.restaurant_profiles to authenticated;
@@ -357,6 +399,7 @@ grant select, insert, update, delete on public.customer_order_messages to authen
 grant select, insert, update on public.user_profiles to authenticated;
 grant select on public.user_roles to authenticated;
 grant select, insert, update on public.courier_profiles to authenticated;
+grant select, insert on public.account_privacy_requests to authenticated;
 grant execute on function public.user_has_active_role(text) to authenticated;
 grant execute on function public.activate_user_role(text, text, uuid) to authenticated;
 
@@ -382,6 +425,9 @@ $$;
 
 create index if not exists restaurant_profiles_active_name_idx
 on public.restaurant_profiles (active, business_name);
+
+create index if not exists restaurant_profiles_active_business_name_idx
+on public.restaurant_profiles (active, lower(trim(business_name)));
 
 insert into public.restaurant_profiles (
   user_id,

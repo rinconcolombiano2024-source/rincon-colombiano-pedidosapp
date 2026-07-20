@@ -17,82 +17,98 @@
   </head>
   <body>
     <section class="auth-screen" id="authScreen" hidden>
-      <form class="auth-card" id="authForm">
-        <p class="eyebrow">Acceso privado</p>
+      <div class="auth-landing" aria-label="Acceso a la plataforma">
         <img class="brand-logo auth-brand-logo" id="authLogoImage" alt="Logo del restaurante" hidden />
+        <p class="eyebrow">Plataforma de pedidos</p>
         <h1 id="authBusinessName">RINCON COLOMBIANO</h1>
-        <p>Usa la cuenta del restaurante para compartir menu, tickets, pedidos de clientes y cierres en todos los dispositivos.</p>
-        <label>
-          Correo electronico
-          <input id="authEmail" type="email" autocomplete="email" placeholder="correo@ejemplo.com" />
-        </label>
-        <label>
-          Contrasena
-          <input id="authPassword" type="password" autocomplete="current-password" placeholder="Minimo 6 caracteres" />
-        </label>
-        <div class="auth-actions">
-          <button id="signInButton" type="submit">Iniciar sesion</button>
-          <button id="signUpButton" type="button">Registrar restaurante</button>
-          <button id="resetPasswordButton" type="button">Recuperar contrasena</button>
-        </div>
-        <section class="restaurant-signup-panel" aria-label="Registro profesional del restaurante">
-          <h2>Registro del restaurante</h2>
-          <p>Completa estos datos solo cuando vayas a crear una cuenta nueva.</p>
-          <label>
-            Nombre comercial
-            <input id="authRestaurantNameInput" type="text" placeholder="Nombre que vera el cliente" autocomplete="organization" />
-          </label>
-          <label>
-            Razon social / empresa
-            <input id="authLegalNameInput" type="text" placeholder="Nombre legal de la empresa" autocomplete="organization" />
-          </label>
-          <label>
-            NIP / identificacion fiscal
-            <input id="authTaxIdInput" type="text" placeholder="NIP, VAT o identificacion fiscal" autocomplete="off" />
-          </label>
-          <label>
-            Direccion legal / punto
-            <input id="authLegalAddressInput" type="text" placeholder="Direccion completa del restaurante" autocomplete="street-address" />
-          </label>
-          <label>
-            Telefono del restaurante
-            <input id="authBusinessPhoneInput" type="tel" placeholder="Telefono de contacto" autocomplete="tel" />
-          </label>
-          <label>
-            Responsable
-            <input id="authOwnerNameInput" type="text" placeholder="Nombre del administrador" autocomplete="name" />
-          </label>
-          <label class="legal-checkbox">
-            <input id="authLegalConsentInput" type="checkbox" />
-            Confirmo que puedo administrar este restaurante y acepto usar la app guardando datos de pedidos, clientes y cookies/localStorage necesarios para operar.
-          </label>
-        </section>
-        <section class="client-entry-panel" aria-label="Entrada de clientes">
-          <div>
+        <div class="role-access-grid">
+          <section class="role-access-card">
+            <h2>Restaurante</h2>
+            <button id="openRestaurantSignInButton" type="button">Iniciar sesion como restaurante</button>
+            <button id="openRestaurantSignupButton" type="button">Registrarse como restaurante</button>
+          </section>
+          <section class="role-access-card">
             <h2>Cliente</h2>
-            <p>El cliente puede crear su cuenta, guardar sus datos, buscar restaurante, revisar menu, enviar pedido y ver historial.</p>
-          </div>
-          <a class="client-entry-button" href="cliente.html">Entrar / registrar cliente</a>
-        </section>
-        <section class="client-entry-panel collaborator-entry-panel" aria-label="Entrada de colaboradores">
-          <div>
+            <a href="cliente.html?auth=login">Iniciar sesion como cliente</a>
+            <a href="cliente.html?auth=register">Registrarse como cliente</a>
+          </section>
+          <section class="role-access-card">
             <h2>Colaborador</h2>
-            <p>El domiciliario puede crear su perfil, enviar datos de revision y entrar a su entorno cuando sea aprobado.</p>
-          </div>
-          <a class="client-entry-button collaborator-entry-button" href="colaborador.html">Entrar / registrarme</a>
-        </section>
-        <p class="auth-message" id="authMessage"></p>
-        <div class="password-recovery-panel" id="passwordRecoveryPanel" hidden>
-          <label>
-            Nueva contrasena
-            <input id="newPasswordInput" type="password" autocomplete="new-password" placeholder="Minimo 6 caracteres" />
-          </label>
-          <div class="auth-actions">
-            <button id="updatePasswordButton" type="button">Guardar nueva contrasena</button>
-            <button id="cancelRecoveryButton" type="button">Cancelar</button>
-          </div>
+            <a href="colaborador.html?auth=login">Iniciar sesion como colaborador</a>
+            <a href="colaborador.html?auth=register">Registrarse como colaborador</a>
+          </section>
         </div>
-      </form>
+      </div>
+
+      <dialog id="restaurantAuthDialog" class="auth-dialog">
+        <form class="auth-card" id="authForm" data-mode="login">
+          <div class="monthly-dialog-header">
+            <div>
+              <p class="eyebrow">Restaurante</p>
+              <h2 id="restaurantAuthTitle">Iniciar sesion</h2>
+            </div>
+            <button class="icon-button" id="restaurantAuthCloseButton" type="button" title="Cerrar" aria-label="Cerrar">
+              <span aria-hidden="true">x</span>
+            </button>
+          </div>
+          <label>
+            Correo electronico
+            <input id="authEmail" type="email" autocomplete="email" placeholder="correo@ejemplo.com" />
+          </label>
+          <label>
+            Contrasena
+            <input id="authPassword" type="password" autocomplete="current-password" placeholder="Minimo 6 caracteres" />
+          </label>
+          <section class="restaurant-signup-panel" aria-label="Registro profesional del restaurante">
+            <h2>Datos del restaurante</h2>
+            <p>Completa estos datos solo cuando vayas a crear una cuenta nueva.</p>
+            <label>
+              Nombre comercial
+              <input id="authRestaurantNameInput" type="text" placeholder="Nombre que vera el cliente" autocomplete="organization" />
+            </label>
+            <label>
+              Razon social / empresa
+              <input id="authLegalNameInput" type="text" placeholder="Nombre legal de la empresa" autocomplete="organization" />
+            </label>
+            <label>
+              NIP / identificacion fiscal
+              <input id="authTaxIdInput" type="text" placeholder="NIP, VAT o identificacion fiscal" autocomplete="off" />
+            </label>
+            <label>
+              Direccion legal / punto
+              <input id="authLegalAddressInput" type="text" placeholder="Direccion completa del restaurante" autocomplete="street-address" />
+            </label>
+            <label>
+              Telefono del restaurante
+              <input id="authBusinessPhoneInput" type="tel" placeholder="Telefono de contacto" autocomplete="tel" />
+            </label>
+            <label>
+              Responsable
+              <input id="authOwnerNameInput" type="text" placeholder="Nombre del administrador" autocomplete="name" />
+            </label>
+            <label class="legal-checkbox">
+              <input id="authLegalConsentInput" type="checkbox" />
+              Confirmo que puedo administrar este restaurante y acepto usar la app guardando datos de pedidos, clientes y cookies/localStorage necesarios para operar.
+            </label>
+          </section>
+          <div class="auth-actions">
+            <button id="signInButton" type="submit">Iniciar sesion</button>
+            <button id="signUpButton" type="button">Registrar restaurante</button>
+            <button id="resetPasswordButton" type="button">Recuperar contrasena</button>
+          </div>
+          <p class="auth-message" id="authMessage"></p>
+          <div class="password-recovery-panel" id="passwordRecoveryPanel" hidden>
+            <label>
+              Nueva contrasena
+              <input id="newPasswordInput" type="password" autocomplete="new-password" placeholder="Minimo 6 caracteres" />
+            </label>
+            <div class="auth-actions">
+              <button id="updatePasswordButton" type="button">Guardar nueva contrasena</button>
+              <button id="cancelRecoveryButton" type="button">Cancelar</button>
+            </div>
+          </div>
+        </form>
+      </dialog>
     </section>
 
     <main class="app-shell">
@@ -411,7 +427,29 @@
             Texto transferencia
             <input id="bankTransferNoteInput" type="text" placeholder="Ej: Enviar comprobante por WhatsApp" autocomplete="off" />
           </label>
+          <label>
+            Pago en linea
+            <select id="onlinePaymentProviderSelect">
+              <option value="disabled">Desactivado</option>
+              <option value="sumup">SumUp preparado</option>
+              <option value="stripe">Stripe preparado</option>
+              <option value="manual_link">Link externo preparado</option>
+            </select>
+          </label>
+          <label class="settings-wide-field">
+            Nota / link de pago
+            <input id="onlinePaymentNoteInput" type="text" placeholder="Pendiente de conectar proveedor real" autocomplete="off" />
+          </label>
           <button id="saveCustomerSettingsButton" type="button">Guardar cliente</button>
+        </section>
+
+        <section class="settings-card restaurant-danger-card">
+          <div>
+            <h3>Estado del restaurante</h3>
+            <p id="restaurantStatusText">Restaurante activo para clientes.</p>
+          </div>
+          <button id="closeRestaurantButton" type="button">Cerrar restaurante</button>
+          <button id="requestRestaurantDeletionButton" type="button">Solicitar eliminar cuenta</button>
         </section>
 
         <div class="menu-editor-layout">

@@ -16,9 +16,12 @@ const STORAGE_KEYS = {
   googleMapsApiKey: "rincon_colombiano_google_maps_api_key",
   bankAccount: "rincon_colombiano_bank_account",
   bankTransferNote: "rincon_colombiano_bank_transfer_note",
+  onlinePaymentProvider: "rincon_colombiano_online_payment_provider",
+  onlinePaymentNote: "rincon_colombiano_online_payment_note",
   clientAlarmEnabled: "rincon_colombiano_client_alarm_enabled",
   businessName: "rincon_colombiano_business_name",
   businessLogoUrl: "rincon_colombiano_business_logo_url",
+  restaurantActive: "rincon_colombiano_restaurant_active",
   legalBusinessName: "rincon_colombiano_legal_business_name",
   taxId: "rincon_colombiano_tax_id",
   businessPhone: "rincon_colombiano_business_phone",
@@ -30,7 +33,7 @@ const STORAGE_KEYS = {
 
 const DEFAULT_BUSINESS_NAME = "RINCON COLOMBIANO";
 const DEFAULT_DELIVERY_MINIMUM_FEE = 20;
-const APP_VERSION = "v54";
+const APP_VERSION = "v55";
 const PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 
 const EMPTY_MENU_CATALOG = {
@@ -39,6 +42,11 @@ const EMPTY_MENU_CATALOG = {
 
 const elements = {
   authScreen: document.querySelector("#authScreen"),
+  restaurantAuthDialog: document.querySelector("#restaurantAuthDialog"),
+  restaurantAuthTitle: document.querySelector("#restaurantAuthTitle"),
+  restaurantAuthCloseButton: document.querySelector("#restaurantAuthCloseButton"),
+  openRestaurantSignInButton: document.querySelector("#openRestaurantSignInButton"),
+  openRestaurantSignupButton: document.querySelector("#openRestaurantSignupButton"),
   authBusinessName: document.querySelector("#authBusinessName"),
   authLogoImage: document.querySelector("#authLogoImage"),
   authForm: document.querySelector("#authForm"),
@@ -173,6 +181,11 @@ const elements = {
   googleMapsApiKeyInput: document.querySelector("#googleMapsApiKeyInput"),
   bankAccountInput: document.querySelector("#bankAccountInput"),
   bankTransferNoteInput: document.querySelector("#bankTransferNoteInput"),
+  onlinePaymentProviderSelect: document.querySelector("#onlinePaymentProviderSelect"),
+  onlinePaymentNoteInput: document.querySelector("#onlinePaymentNoteInput"),
+  restaurantStatusText: document.querySelector("#restaurantStatusText"),
+  closeRestaurantButton: document.querySelector("#closeRestaurantButton"),
+  requestRestaurantDeletionButton: document.querySelector("#requestRestaurantDeletionButton"),
   saveCustomerSettingsButton: document.querySelector("#saveCustomerSettingsButton"),
   toastNotice: document.querySelector("#toastNotice"),
 };
@@ -198,7 +211,10 @@ let restaurantAddress = readRestaurantAddress();
 let googleMapsApiKey = readGoogleMapsApiKey();
 let bankAccount = readBankAccount();
 let bankTransferNote = readBankTransferNote();
+let onlinePaymentProvider = readOnlinePaymentProvider();
+let onlinePaymentNote = readOnlinePaymentNote();
 let businessLogoUrl = readBusinessLogoUrl();
+let restaurantActive = readRestaurantActive();
 let legalBusinessName = readLegalBusinessName();
 let taxId = readTaxId();
 let businessPhone = readBusinessPhone();
@@ -619,7 +635,10 @@ function currentSettingsPayload() {
     googleMapsApiKey,
     bankAccount,
     bankTransferNote,
+    onlinePaymentProvider,
+    onlinePaymentNote,
     businessLogoUrl,
+    restaurantActive,
     legalBusinessName,
     taxId,
     businessPhone,
@@ -637,7 +656,7 @@ function currentRestaurantPublicProfilePayload() {
     public_address: publicAddress,
     phone: normalizeTextSetting(businessPhone),
     description: "",
-    active: true,
+    active: restaurantActive,
     updated_at: new Date().toISOString(),
   };
 }
@@ -781,8 +800,12 @@ function applySettingsPayload(settings = {}) {
   googleMapsApiKey = normalizeTextSetting(settings.googleMapsApiKey ?? googleMapsApiKey);
   bankAccount = normalizeTextSetting(settings.bankAccount ?? bankAccount);
   bankTransferNote = normalizeTextSetting(settings.bankTransferNote ?? bankTransferNote);
+  onlinePaymentProvider = normalizeOnlinePaymentProvider(settings.onlinePaymentProvider ?? onlinePaymentProvider);
+  onlinePaymentNote = normalizeTextSetting(settings.onlinePaymentNote ?? onlinePaymentNote);
+  restaurantActive = settings.restaurantActive === false ? false : restaurantActive;
   localStorage.setItem(STORAGE_KEYS.businessName, businessName);
   localStorage.setItem(STORAGE_KEYS.businessLogoUrl, businessLogoUrl);
+  localStorage.setItem(STORAGE_KEYS.restaurantActive, restaurantActive ? "1" : "0");
   localStorage.setItem(STORAGE_KEYS.legalBusinessName, legalBusinessName);
   localStorage.setItem(STORAGE_KEYS.taxId, taxId);
   localStorage.setItem(STORAGE_KEYS.businessPhone, businessPhone);
@@ -798,6 +821,9 @@ function applySettingsPayload(settings = {}) {
   localStorage.setItem(STORAGE_KEYS.googleMapsApiKey, googleMapsApiKey);
   localStorage.setItem(STORAGE_KEYS.bankAccount, bankAccount);
   localStorage.setItem(STORAGE_KEYS.bankTransferNote, bankTransferNote);
+  localStorage.setItem(STORAGE_KEYS.onlinePaymentProvider, onlinePaymentProvider);
+  localStorage.setItem(STORAGE_KEYS.onlinePaymentNote, onlinePaymentNote);
+  localStorage.setItem(STORAGE_KEYS.restaurantActive, restaurantActive ? "1" : "0");
   applyBusinessNameToUi();
 }
 
@@ -841,6 +867,7 @@ function renderCloudState(message = "") {
 
   const canWorkOffline = !cloudState.user && hasKnownCloudSession() && !navigator.onLine;
   elements.authScreen.hidden = cloudState.recoveringPassword ? false : Boolean(cloudState.user) || canWorkOffline;
+  if ((cloudState.user || canWorkOffline) && elements.restaurantAuthDialog?.open) closeRestaurantAuthDialog();
   elements.openSignInButton.hidden = Boolean(cloudState.user) || cloudState.recoveringPassword;
   elements.signOutButton.hidden = !cloudState.user;
   elements.qrButton.hidden = false;
@@ -849,17 +876,44 @@ function renderCloudState(message = "") {
   updateClientOrdersBadge();
   updateClientAlarmButton();
   updateCloudStatus(canWorkOffline ? "" : message);
-  elements.authMessage.textContent = message;
+  if (elements.authMessage) elements.authMessage.textContent = message;
 }
 
-function openSignInScreen() {
+function setRestaurantAuthMode(mode = "login") {
+  const normalizedMode = mode === "register" ? "register" : "login";
+  elements.authForm.dataset.mode = normalizedMode;
+  if (elements.restaurantAuthTitle) {
+    elements.restaurantAuthTitle.textContent = normalizedMode === "register" ? "Registrar restaurante" : "Iniciar sesion";
+  }
+  if (elements.signInButton) elements.signInButton.hidden = normalizedMode === "register";
+  if (elements.signUpButton) elements.signUpButton.hidden = normalizedMode !== "register";
+  if (elements.resetPasswordButton) elements.resetPasswordButton.hidden = normalizedMode === "register";
+  if (elements.authPassword) {
+    elements.authPassword.autocomplete = normalizedMode === "register" ? "new-password" : "current-password";
+  }
+  if (elements.authMessage) elements.authMessage.textContent = "";
+}
+
+function openRestaurantAuthDialog(mode = "login") {
   if (!cloudState.configured) {
     alert("La nube no esta configurada todavia.");
     return;
   }
   hidePasswordRecoveryForm();
   elements.authScreen.hidden = false;
-  elements.authEmail.focus();
+  setRestaurantAuthMode(mode);
+  if (elements.restaurantAuthDialog?.showModal && !elements.restaurantAuthDialog.open) {
+    elements.restaurantAuthDialog.showModal();
+  }
+  window.setTimeout(() => elements.authEmail?.focus(), 50);
+}
+
+function closeRestaurantAuthDialog() {
+  if (elements.restaurantAuthDialog?.open) elements.restaurantAuthDialog.close();
+}
+
+function openSignInScreen() {
+  openRestaurantAuthDialog("login");
 }
 
 function loadSupabaseLibrary() {
@@ -947,6 +1001,18 @@ async function loadCloudData() {
     if (settingsError) throw settingsError;
 
     const restaurantProfile = restaurantProfileFromUserMetadata();
+    const { data: publicProfileRow, error: publicProfileError } = await cloudState.client
+      .from("restaurant_profiles")
+      .select("active")
+      .eq("user_id", cloudState.user.id)
+      .maybeSingle();
+    if (!publicProfileError && typeof publicProfileRow?.active === "boolean") {
+      restaurantActive = publicProfileRow.active;
+      localStorage.setItem(STORAGE_KEYS.restaurantActive, restaurantActive ? "1" : "0");
+    } else if (publicProfileError) {
+      console.warn("No se pudo leer el estado publico del restaurante.", publicProfileError);
+    }
+
     if (hasRestaurantOwnerRegistration(restaurantProfile, settingsRow)) {
       await ensureRestaurantOwnerIdentity(restaurantProfile);
     }
@@ -1039,6 +1105,93 @@ async function saveRestaurantPublicProfile() {
 
   if (error) {
     console.warn("No se pudo actualizar el perfil publico del restaurante.", error);
+  }
+}
+
+async function restaurantNameAlreadyExists(name) {
+  if (!cloudState.client) return false;
+  const cleanName = normalizeBusinessName(name);
+  if (!cleanName) return false;
+  try {
+    const { data, error } = await cloudState.client
+      .from("restaurant_profiles")
+      .select("user_id, business_name")
+      .eq("active", true)
+      .ilike("business_name", cleanName)
+      .limit(1);
+    if (error) throw error;
+    return (data || []).some((row) => row.user_id !== cloudState.user?.id);
+  } catch (error) {
+    console.warn("No se pudo validar si el restaurante ya existe.", error);
+    return false;
+  }
+}
+
+async function setRestaurantActive(nextActive) {
+  if (!cloudState.client || !cloudState.user) {
+    showToast("Inicia sesion para cambiar el estado del restaurante.");
+    return;
+  }
+
+  const message = nextActive
+    ? "Reabrir restaurante para que aparezca en la app del cliente?"
+    : "Cerrar restaurante? Dejaremos de mostrarlo en la app del cliente, pero no se borran pedidos ni reportes.";
+  if (!confirm(message)) return;
+
+  restaurantActive = Boolean(nextActive);
+  localStorage.setItem(STORAGE_KEYS.restaurantActive, restaurantActive ? "1" : "0");
+  renderRestaurantStatus();
+  try {
+    await saveRestaurantPublicProfile();
+    await saveCloudSettings();
+    showToast(restaurantActive ? "Restaurante reabierto para clientes." : "Restaurante cerrado para clientes.");
+  } catch (error) {
+    console.error(error);
+    restaurantActive = !nextActive;
+    localStorage.setItem(STORAGE_KEYS.restaurantActive, restaurantActive ? "1" : "0");
+    renderRestaurantStatus();
+    alert("No se pudo cambiar el estado del restaurante. Revisa internet o Supabase.");
+  }
+}
+
+async function toggleRestaurantActive() {
+  await setRestaurantActive(!restaurantActive);
+}
+
+async function requestRestaurantDeletion() {
+  if (!cloudState.client || !cloudState.user) {
+    showToast("Inicia sesion para solicitar eliminacion.");
+    return;
+  }
+  const detail = prompt(
+    "Escribe ELIMINAR para solicitar eliminar/desactivar la cuenta del restaurante. No borraremos pedidos ni datos contables automaticamente."
+  );
+  if (detail !== "ELIMINAR") {
+    showToast("Solicitud cancelada.");
+    return;
+  }
+
+  try {
+    const { error } = await cloudState.client.from("account_privacy_requests").insert({
+      user_id: cloudState.user.id,
+      request_type: "restaurant_deletion",
+      role_context: "restaurant_owner",
+      status: "requested",
+      details: {
+        businessName,
+        requestedAt: new Date().toISOString(),
+      },
+    });
+    if (error) throw error;
+    restaurantActive = false;
+    localStorage.setItem(STORAGE_KEYS.restaurantActive, "0");
+    renderRestaurantStatus();
+    await saveRestaurantPublicProfile();
+    await saveCloudSettings();
+    showToast("Solicitud registrada. El restaurante quedo cerrado para clientes.");
+  } catch (error) {
+    console.error(error);
+    alert("No se pudo registrar la solicitud. Ejecuta la migracion v55 en Supabase y vuelve a intentar.");
   }
 }
 
@@ -1911,6 +2064,11 @@ async function signUpWithEmail() {
     elements.authLegalConsentInput?.focus();
     return;
   }
+  if (await restaurantNameAlreadyExists(profile.businessName)) {
+    elements.authMessage.textContent = "Ya existe un restaurante activo con ese nombre. Usa un nombre diferente o inicia sesion con la cuenta correcta.";
+    elements.authRestaurantNameInput?.focus();
+    return;
+  }
 
   applyRestaurantProfile(profile, { onlyIfEmpty: false });
   elements.authMessage.textContent = "Creando cuenta...";
@@ -2011,7 +2169,12 @@ async function refreshRestaurantApp() {
 
 function showPasswordRecoveryForm() {
   cloudState.recoveringPassword = true;
+  elements.authScreen.hidden = false;
+  if (elements.restaurantAuthDialog?.showModal && !elements.restaurantAuthDialog.open) {
+    elements.restaurantAuthDialog.showModal();
+  }
   elements.passwordRecoveryPanel.hidden = false;
+  if (elements.restaurantAuthTitle) elements.restaurantAuthTitle.textContent = "Nueva contrasena";
   elements.authPassword.closest("label").hidden = true;
   elements.signInButton.hidden = true;
   elements.signUpButton.hidden = true;
@@ -2025,9 +2188,7 @@ function hidePasswordRecoveryForm(message = "") {
   elements.passwordRecoveryPanel.hidden = true;
   elements.newPasswordInput.value = "";
   elements.authPassword.closest("label").hidden = false;
-  elements.signInButton.hidden = false;
-  elements.signUpButton.hidden = false;
-  elements.resetPasswordButton.hidden = false;
+  setRestaurantAuthMode(elements.authForm.dataset.mode || "login");
   renderCloudState(message);
 }
 
@@ -2302,6 +2463,10 @@ function readBusinessLogoUrl() {
   return normalizeProductImageUrl(localStorage.getItem(STORAGE_KEYS.businessLogoUrl) || "");
 }
 
+function readRestaurantActive() {
+  return localStorage.getItem(STORAGE_KEYS.restaurantActive) !== "0";
+}
+
 function readLegalBusinessName() {
   return normalizeTextSetting(localStorage.getItem(STORAGE_KEYS.legalBusinessName) || "");
 }
@@ -2336,6 +2501,18 @@ function readBankAccount() {
 
 function readBankTransferNote() {
   return normalizeTextSetting(localStorage.getItem(STORAGE_KEYS.bankTransferNote) || "");
+}
+
+function normalizeOnlinePaymentProvider(value) {
+  return ["disabled", "sumup", "stripe", "manual_link"].includes(value) ? value : "disabled";
+}
+
+function readOnlinePaymentProvider() {
+  return normalizeOnlinePaymentProvider(localStorage.getItem(STORAGE_KEYS.onlinePaymentProvider) || "disabled");
+}
+
+function readOnlinePaymentNote() {
+  return normalizeTextSetting(localStorage.getItem(STORAGE_KEYS.onlinePaymentNote) || "");
 }
 
 function readClientAlarmEnabled() {
@@ -2413,6 +2590,8 @@ function saveCurrencySymbol() {
   googleMapsApiKey = normalizeTextSetting(elements.googleMapsApiKeyInput.value);
   bankAccount = normalizeTextSetting(elements.bankAccountInput.value);
   bankTransferNote = normalizeTextSetting(elements.bankTransferNoteInput.value);
+  onlinePaymentProvider = normalizeOnlinePaymentProvider(elements.onlinePaymentProviderSelect?.value || "disabled");
+  onlinePaymentNote = normalizeTextSetting(elements.onlinePaymentNoteInput?.value || "");
   localStorage.setItem(STORAGE_KEYS.businessName, businessName);
   localStorage.setItem(STORAGE_KEYS.businessLogoUrl, businessLogoUrl);
   localStorage.setItem(STORAGE_KEYS.legalBusinessName, legalBusinessName);
@@ -2430,6 +2609,9 @@ function saveCurrencySymbol() {
   localStorage.setItem(STORAGE_KEYS.googleMapsApiKey, googleMapsApiKey);
   localStorage.setItem(STORAGE_KEYS.bankAccount, bankAccount);
   localStorage.setItem(STORAGE_KEYS.bankTransferNote, bankTransferNote);
+  localStorage.setItem(STORAGE_KEYS.onlinePaymentProvider, onlinePaymentProvider);
+  localStorage.setItem(STORAGE_KEYS.onlinePaymentNote, onlinePaymentNote);
+  localStorage.setItem(STORAGE_KEYS.restaurantActive, restaurantActive ? "1" : "0");
   applyBusinessNameToUi();
   renderCurrencySettings();
   renderMenu();
@@ -2488,8 +2670,22 @@ function renderCurrencySettings() {
   elements.googleMapsApiKeyInput.value = googleMapsApiKey;
   elements.bankAccountInput.value = bankAccount;
   elements.bankTransferNoteInput.value = bankTransferNote;
+  if (elements.onlinePaymentProviderSelect) elements.onlinePaymentProviderSelect.value = onlinePaymentProvider;
+  if (elements.onlinePaymentNoteInput) elements.onlinePaymentNoteInput.value = onlinePaymentNote;
+  renderRestaurantStatus();
   applyBusinessNameToUi();
   applyReceiptPrintStyle();
+}
+
+function renderRestaurantStatus() {
+  if (elements.restaurantStatusText) {
+    elements.restaurantStatusText.textContent = restaurantActive
+      ? "Restaurante activo para clientes."
+      : "Restaurante cerrado: no aparece en la app del cliente.";
+  }
+  if (elements.closeRestaurantButton) {
+    elements.closeRestaurantButton.textContent = restaurantActive ? "Cerrar restaurante" : "Reabrir restaurante";
+  }
 }
 
 function formatTicket(number) {
@@ -2636,6 +2832,10 @@ function uppercaseNoteInput(value) {
   return String(value || "").toUpperCase();
 }
 
+function normalizeNoteDraft(value) {
+  return uppercaseNoteInput(value);
+}
+
 function normalizeOrderNotes(order) {
   return {
     ...order,
@@ -2656,13 +2856,12 @@ function syncFormToOrder() {
   currentOrder.paymentMethod = normalizePaymentMethod(elements.paymentMethod.value);
   currentOrder.customer = elements.customerName.value.trim();
   currentOrder.server = elements.serverName.value.trim();
-  currentOrder.notes = normalizeNoteText(elements.orderNotes.value);
+  currentOrder.notes = normalizeNoteDraft(elements.orderNotes.value);
   currentOrder.delivery = normalizeDeliveryInfo(currentOrder.delivery);
   currentOrder.items = currentOrder.items.map((item) => ({
     ...item,
-    note: normalizeNoteText(item.note),
+    note: normalizeNoteDraft(item.note),
   }));
-  elements.orderNotes.value = uppercaseNoteInput(elements.orderNotes.value);
 }
 
 function renderCategories() {
@@ -4094,7 +4293,7 @@ elements.lineItems.addEventListener("input", (event) => {
   }
 
   if (action === "note") {
-    item.note = normalizeNoteText(event.target.value);
+    item.note = normalizeNoteDraft(event.target.value);
     event.target.value = uppercaseNoteInput(event.target.value);
   }
 
@@ -4115,6 +4314,10 @@ elements.authForm.addEventListener("submit", async (event) => {
 });
 
 elements.signUpButton.addEventListener("click", signUpWithEmail);
+elements.openRestaurantSignInButton?.addEventListener("click", () => openRestaurantAuthDialog("login"));
+elements.openRestaurantSignupButton?.addEventListener("click", () => openRestaurantAuthDialog("register"));
+elements.restaurantAuthCloseButton?.addEventListener("click", closeRestaurantAuthDialog);
+elements.restaurantAuthDialog?.addEventListener("cancel", () => hidePasswordRecoveryForm());
 elements.resetPasswordButton.addEventListener("click", sendPasswordResetEmail);
 elements.updatePasswordButton.addEventListener("click", updateRecoveredPassword);
 elements.cancelRecoveryButton.addEventListener("click", () => hidePasswordRecoveryForm());
@@ -4123,6 +4326,8 @@ if (elements.refreshAppButton) {
 }
 elements.openSignInButton.addEventListener("click", openSignInScreen);
 elements.signOutButton.addEventListener("click", signOut);
+elements.closeRestaurantButton?.addEventListener("click", toggleRestaurantActive);
+elements.requestRestaurantDeletionButton?.addEventListener("click", requestRestaurantDeletion);
 elements.qrButton.addEventListener("click", openQrDialog);
 elements.clientAlarmButton.addEventListener("click", toggleClientAlarm);
 elements.qrTableInput.addEventListener("input", updateQrPreview);

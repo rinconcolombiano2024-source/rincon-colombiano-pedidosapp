@@ -52,6 +52,10 @@
             <h2 data-i18n="accountTitle">Mi cuenta</h2>
             <p id="customerAccountSummary" data-i18n="accountGuest">Inicia sesion o crea una cuenta para enviar pedidos y ver tu historial.</p>
           </div>
+          <div class="customer-account-actions" id="customerAccountActions">
+            <button class="customer-map-button" id="customerOpenSignInButton" type="button" data-i18n="signIn">Iniciar sesion</button>
+            <button class="customer-map-button" id="customerOpenSignUpButton" type="button" data-i18n="signUp">Crear cuenta cliente</button>
+          </div>
           <button class="customer-map-button" id="customerSignOutButton" type="button" hidden data-i18n="signOut">Cerrar sesion</button>
         </div>
         <div class="customer-auth-fields" id="customerAuthFields">
@@ -94,6 +98,21 @@
         </div>
         <p class="customer-map-result" id="customerAuthMessage" hidden></p>
       </section>
+
+      <dialog id="customerAuthDialog" class="auth-dialog">
+        <form method="dialog" class="customer-auth-modal" id="customerAuthModalForm" data-mode="login">
+          <div class="monthly-dialog-header">
+            <div>
+              <p class="eyebrow" data-i18n="accountTitle">Mi cuenta</p>
+              <h2 id="customerAuthTitle" data-i18n="signIn">Iniciar sesion</h2>
+            </div>
+            <button class="icon-button" id="customerAuthCloseButton" type="button" title="Cerrar" aria-label="Cerrar">
+              <span aria-hidden="true">x</span>
+            </button>
+          </div>
+          <div id="customerAuthDialogBody"></div>
+        </form>
+      </dialog>
 
       <section class="customer-restaurant-panel" id="customerRestaurantPanel" aria-label="Elegir restaurante" data-i18n-aria-label="restaurantPanelAria">
         <div class="customer-account-head">

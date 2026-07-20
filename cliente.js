@@ -9,6 +9,14 @@ const customerElements = {
   businessLogo: document.querySelector("#customerBusinessLogo"),
   businessName: document.querySelector("#customerBusinessName"),
   accountSummary: document.querySelector("#customerAccountSummary"),
+  accountActions: document.querySelector("#customerAccountActions"),
+  openSignInButton: document.querySelector("#customerOpenSignInButton"),
+  openSignUpButton: document.querySelector("#customerOpenSignUpButton"),
+  authDialog: document.querySelector("#customerAuthDialog"),
+  authDialogBody: document.querySelector("#customerAuthDialogBody"),
+  authModalForm: document.querySelector("#customerAuthModalForm"),
+  authTitle: document.querySelector("#customerAuthTitle"),
+  authCloseButton: document.querySelector("#customerAuthCloseButton"),
   authFields: document.querySelector("#customerAuthFields"),
   authEmail: document.querySelector("#customerAuthEmail"),
   authPassword: document.querySelector("#customerAuthPassword"),
@@ -804,6 +812,43 @@ function customerSetAuthMessage(message, type = "") {
   customerElements.authMessage.hidden = !message;
 }
 
+function customerMountAuthDialog() {
+  if (!customerElements.authDialogBody || !customerElements.authFields) return;
+  if (customerElements.authFields.parentElement !== customerElements.authDialogBody) {
+    customerElements.authDialogBody.appendChild(customerElements.authFields);
+    if (customerElements.authMessage) customerElements.authDialogBody.appendChild(customerElements.authMessage);
+  }
+}
+
+function customerSetAuthMode(mode = "login") {
+  const normalizedMode = mode === "register" ? "register" : "login";
+  customerElements.authModalForm?.setAttribute("data-mode", normalizedMode);
+  if (customerElements.authTitle) {
+    customerElements.authTitle.removeAttribute("data-i18n");
+    customerElements.authTitle.textContent = normalizedMode === "register" ? customerT("signUp") : customerT("signIn");
+  }
+  const labels = Array.from(customerElements.authFields?.querySelectorAll("label") || []);
+  labels.forEach((label, index) => {
+    label.hidden = normalizedMode === "login" && index > 1;
+  });
+  if (customerElements.signInButton) customerElements.signInButton.hidden = normalizedMode === "register";
+  if (customerElements.signUpButton) customerElements.signUpButton.hidden = normalizedMode !== "register";
+  customerSetAuthMessage("");
+}
+
+function customerOpenAuthDialog(mode = "login") {
+  customerMountAuthDialog();
+  customerSetAuthMode(mode);
+  if (customerElements.authDialog?.showModal && !customerElements.authDialog.open) {
+    customerElements.authDialog.showModal();
+  }
+  window.setTimeout(() => customerElements.authEmail?.focus(), 50);
+}
+
+function customerCloseAuthDialog() {
+  if (customerElements.authDialog?.open) customerElements.authDialog.close();
+}
+
 function customerInputValue(input) {
   return String(input?.value || "").trim();
 }
@@ -875,9 +920,11 @@ function customerRenderAccount() {
       ? customerT("accountSignedIn", { email })
       : customerT("accountGuest");
   }
+  if (customerElements.accountActions) customerElements.accountActions.hidden = Boolean(customerUser);
   if (customerElements.authFields) customerElements.authFields.hidden = Boolean(customerUser);
   if (customerElements.signOutButton) customerElements.signOutButton.hidden = !customerUser;
   if (customerElements.sendButton) customerElements.sendButton.disabled = customerCart.length === 0 || !customerUser;
+  if (customerUser) customerCloseAuthDialog();
 
   if (customerUser) {
     customerApplyProfileFields(customerProfileFromMetadata());
@@ -1895,6 +1942,10 @@ function customerNormalizeNote(value) {
   return String(value || "").trim().toUpperCase();
 }
 
+function customerNormalizeNoteDraft(value) {
+  return String(value || "").toUpperCase();
+}
+
 function customerRenderDeliveryFields() {
   const isDelivery = customerElements.orderType.value === "Domicilio";
   customerElements.deliveryFields.hidden = !isDelivery;
@@ -2721,7 +2772,7 @@ customerElements.cartItems.addEventListener("input", (event) => {
     event.target.value = item.qty;
   }
   if (action === "note") {
-    item.note = customerNormalizeNote(event.target.value);
+    item.note = customerNormalizeNoteDraft(event.target.value);
     event.target.value = item.note;
     return;
   }
@@ -2731,6 +2782,9 @@ customerElements.cartItems.addEventListener("input", (event) => {
 customerElements.signInButton.addEventListener("click", customerSignInWithEmail);
 customerElements.signUpButton.addEventListener("click", customerSignUpWithEmail);
 customerElements.signOutButton.addEventListener("click", customerSignOut);
+customerElements.openSignInButton?.addEventListener("click", () => customerOpenAuthDialog("login"));
+customerElements.openSignUpButton?.addEventListener("click", () => customerOpenAuthDialog("register"));
+customerElements.authCloseButton?.addEventListener("click", customerCloseAuthDialog);
 customerElements.restaurantSearchInput?.addEventListener("input", () => {
   customerRestaurantSearchQuery = customerElements.restaurantSearchInput.value.trim();
   customerRenderRestaurantDirectory();
@@ -2754,7 +2808,7 @@ customerElements.historyList.addEventListener("click", (event) => {
 });
 
 customerElements.notesInput.addEventListener("input", () => {
-  customerElements.notesInput.value = customerNormalizeNote(customerElements.notesInput.value);
+  customerElements.notesInput.value = customerNormalizeNoteDraft(customerElements.notesInput.value);
 });
 
 customerElements.orderType.addEventListener("change", customerRenderDeliveryFields);
@@ -2805,6 +2859,7 @@ window.addEventListener(
   { passive: false }
 );
 
+customerMountAuthDialog();
 customerApplyBusinessName();
 customerApplyTranslations();
 if ("serviceWorker" in navigator && window.location.protocol.startsWith("http")) {
@@ -2813,3 +2868,6 @@ if ("serviceWorker" in navigator && window.location.protocol.startsWith("http"))
 customerLoadMenu().catch(() => {
   customerSetStatus(customerT("openMenuError"), "error");
 });
+if (customerParams.get("auth") === "login" || customerParams.get("auth") === "register") {
+  window.setTimeout(() => customerOpenAuthDialog(customerParams.get("auth")), 250);
+}
