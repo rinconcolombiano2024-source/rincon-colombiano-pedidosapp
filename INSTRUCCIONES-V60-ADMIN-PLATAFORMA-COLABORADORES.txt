@@ -1,0 +1,33 @@
+VERSION v60 - ADMINISTRACION DE PLATAFORMA SEPARADA
+
+Cambios incluidos:
+
+1. Restaurante
+- El boton Colaboradores ya no aparece en la pantalla del restaurante.
+- La toma de pedidos, caja, tickets y pedidos de clientes quedan separados de la aprobacion de colaboradores.
+
+2. Administracion de plataforma
+- Se agrego una pagina privada separada:
+  admin.html
+- Esta pagina no aparece como boton en el inicio principal.
+- Entras a admin.html con correo y contrasena de una cuenta autorizada como platform_admin.
+
+3. Aprobacion de colaboradores
+- Los documentos se pueden revisar manualmente desde el correo:
+  pedidosapprinconcolombiano@gmail.com
+- Despues de verificar, en admin.html puedes aprobar o rechazar.
+- Si el colaborador tambien subio archivos en la app, admin.html permite abrirlos desde Supabase Storage.
+
+4. Supabase obligatorio
+- Ejecutar en Supabase SQL Editor:
+  MIGRACION-FASE8-V60-ADMIN-PLATAFORMA-COLABORADORES.sql
+- Esa migracion hace que solo platform_admin pueda aprobar colaboradores.
+- Tambien intenta activar platform_admin para pedidosapprinconcolombiano@gmail.com si esa cuenta ya existe en Supabase Auth.
+- Si usas otro correo, cambia el correo dentro de la migracion antes de ejecutarla.
+
+5. Colaborador mas cercano
+- No queda terminado en esta fase.
+- La app necesita un modulo aparte para guardar ubicacion/disponibilidad en tiempo real, calcular distancia, crear oferta de entrega y notificar al colaborador disponible mas cercano.
+
+6. Cache
+- Cache actualizado a rincon-colombiano-v60.

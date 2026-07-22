@@ -899,6 +899,28 @@
   color: var(--muted);
 }
 
+.platform-admin-page {
+  background: #f3f6f8;
+}
+
+.platform-admin-shell {
+  max-width: 1120px;
+}
+
+.platform-admin-hero {
+  background:
+    linear-gradient(135deg, rgba(255, 205, 0, 0.18), rgba(0, 56, 168, 0.12)),
+    #ffffff;
+}
+
+.platform-courier-list {
+  margin-top: 12px;
+}
+
+.platform-courier-card .client-order-actions {
+  justify-content: flex-end;
+}
+
 .client-chat-box textarea,
 .client-chat-box input {
   width: 100%;
