@@ -161,7 +161,7 @@ Archivos importantes:
 Notas para telefono:
 - Si el telefono no muestra cambios nuevos, desinstalar la app vieja y volver a instalar desde la URL de Vercel.
 - El service worker debe subir version cada vez que cambie la app.
-- Version de cache actual: rincon-colombiano-v61.
+- Version de cache actual: rincon-colombiano-v62.
 
 Precaucion offline:
 - Si varias tablets trabajan sin internet al mismo tiempo, pueden repetirse numeros locales de ticket.
@@ -183,6 +183,14 @@ VERSION v61 - VALIDACION Y AJUSTES DE SINCRONIZACION
 - La descripcion del producto ya no se muestra en la lista interna del restaurante; sigue guardada para la app del cliente.
 - La migracion v58 quedo alineada para que solo platform_admin pueda revisar/aprobar colaboradores.
 - Cache actualizado a rincon-colombiano-v61.
+
+VERSION v62 - ADMIN UNICO, ARCHIVOS Y TRADUCCION
+- Administrador unico de plataforma: Jhon Jarolt Mendez, pedidosapprinconcolombiano@gmail.com.
+- Supabase queda preparado para que solo ese correo, con rol platform_admin activo, pueda revisar colaboradores y administrar perfiles/roles de plataforma.
+- Se agrego migracion MIGRACION-FASE9-V62-ADMIN-UNICO.sql.
+- En colaborador, los archivos subidos muestran estado visible aunque el campo del navegador diga ningun archivo seleccionado.
+- Traduccion de descripciones en cliente reforzada con servicio de respaldo y reintentos.
+- Cache actualizado a rincon-colombiano-v62.
 
 VERSION v59 - TRADUCCION DE DESCRIPCIONES EN CLIENTE
 

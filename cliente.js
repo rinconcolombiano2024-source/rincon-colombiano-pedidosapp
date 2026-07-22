@@ -877,7 +877,7 @@ function customerInitialLanguage() {
 let customerLanguage = customerInitialLanguage();
 let customerDescriptionTranslations = customerReadDescriptionTranslationCache();
 let customerDescriptionTranslationRequests = new Set();
-let customerDescriptionTranslationFailures = new Set();
+let customerDescriptionTranslationFailures = new Map();
 let customerDescriptionTranslationRenderTimer = null;
 
 function customerT(key, values = {}) {
@@ -957,13 +957,44 @@ function customerScheduleDescriptionRender() {
 }
 
 async function customerFetchDescriptionTranslation(text, language) {
-  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(
-    language
-  )}&dt=t&q=${encodeURIComponent(text)}`;
-  const response = await fetch(url);
-  if (!response.ok) throw new Error("translation unavailable");
-  const data = await response.json();
-  return String((data?.[0] || []).map((part) => part?.[0] || "").join("")).trim();
+  const description = customerNormalizeProductDescription(text);
+  const targetLanguage = language === "pl" ? "pl" : language === "en" ? "en" : "";
+  if (!description || !targetLanguage || targetLanguage === "es") return description;
+
+  const sources = [
+    async () => {
+      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=es&tl=${encodeURIComponent(
+        targetLanguage
+      )}&dt=t&q=${encodeURIComponent(description)}`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("google translation unavailable");
+      const data = await response.json();
+      return String((data?.[0] || []).map((part) => part?.[0] || "").join("")).trim();
+    },
+    async () => {
+      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(description)}&langpair=es|${encodeURIComponent(
+        targetLanguage
+      )}`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("backup translation unavailable");
+      const data = await response.json();
+      return String(data?.responseData?.translatedText || "").trim();
+    },
+  ];
+
+  let lastError = null;
+  for (const source of sources) {
+    try {
+      const translated = customerNormalizeProductDescription(await source());
+      if (translated && translated.toLowerCase() !== description.toLowerCase()) return translated;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  const fallback = customerFallbackDescriptionTranslation(description, targetLanguage);
+  if (fallback && fallback.toLowerCase() !== description.toLowerCase()) return fallback;
+  throw lastError || new Error("translation unavailable");
 }
 
 function customerQueueDescriptionTranslation(dish) {
@@ -971,10 +1002,16 @@ function customerQueueDescriptionTranslation(dish) {
   if (!description || customerLanguage === "es" || !window.navigator.onLine) return;
 
   const key = customerDescriptionTranslationKey(customerLanguage, description);
-  if (customerDescriptionTranslations[key] || customerDescriptionTranslationRequests.has(key) || customerDescriptionTranslationFailures.has(key)) {
+  const failedAt = customerDescriptionTranslationFailures.get(key);
+  if (
+    customerDescriptionTranslations[key] ||
+    customerDescriptionTranslationRequests.has(key) ||
+    (failedAt && Date.now() - failedAt < 120000)
+  ) {
     return;
   }
 
+  customerDescriptionTranslationFailures.delete(key);
   customerDescriptionTranslationRequests.add(key);
   customerFetchDescriptionTranslation(description, customerLanguage)
     .then((translated) => {
@@ -986,7 +1023,7 @@ function customerQueueDescriptionTranslation(dish) {
       }
     })
     .catch(() => {
-      customerDescriptionTranslationFailures.add(key);
+      customerDescriptionTranslationFailures.set(key, Date.now());
     })
     .finally(() => {
       customerDescriptionTranslationRequests.delete(key);
@@ -1011,7 +1048,7 @@ function customerApplyTranslations() {
 function customerSetLanguage(language) {
   if (!CUSTOMER_I18N[language]) return;
   customerLanguage = language;
-  customerDescriptionTranslationFailures = new Set();
+  customerDescriptionTranslationFailures = new Map();
   localStorage.setItem(CUSTOMER_LANGUAGE_KEY, language);
   customerApplyTranslations();
   if (customerTableFromQr) {
@@ -1897,7 +1934,7 @@ async function customerSelectRestaurant(storeId, options = {}) {
   if (options.updateUrl !== false) {
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("store", customerStoreId);
-    nextUrl.searchParams.set("app", "v61");
+    nextUrl.searchParams.set("app", "v62");
     window.history.replaceState({}, "", nextUrl.toString());
   }
 

@@ -1,4 +1,6 @@
 const PLATFORM_ADMIN_DOCUMENT_BUCKET = "courier-documents";
+const PLATFORM_OWNER_NAME = "Jhon Jarolt Mendez";
+const PLATFORM_OWNER_EMAIL = "pedidosapprinconcolombiano@gmail.com";
 
 const adminElements = {
   accountSummary: document.querySelector("#adminAccountSummary"),
@@ -46,6 +48,14 @@ function adminEnsureClient() {
 
 function adminInputValue(input) {
   return String(input?.value || "").trim();
+}
+
+function adminNormalizeEmail(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function adminIsPlatformOwnerEmail(email) {
+  return adminNormalizeEmail(email) === PLATFORM_OWNER_EMAIL;
 }
 
 function adminSetMessage(element, message, type = "") {
@@ -115,8 +125,8 @@ function adminRender() {
   const email = adminUser?.email || "";
   if (adminElements.accountSummary) {
     adminElements.accountSummary.textContent = adminUser
-      ? `Sesion activa: ${email}.`
-      : "Inicia sesion con una cuenta autorizada como administracion de plataforma.";
+      ? `Sesion activa: ${email}. Administrador autorizado: ${PLATFORM_OWNER_NAME}.`
+      : `Solo ${PLATFORM_OWNER_NAME} puede administrar la plataforma con ${PLATFORM_OWNER_EMAIL}.`;
   }
   if (adminElements.authFields) adminElements.authFields.hidden = Boolean(adminUser);
   if (adminElements.signOutButton) adminElements.signOutButton.hidden = !adminUser;
@@ -257,6 +267,14 @@ async function adminSignIn() {
     adminSetMessage(adminElements.authMessage, "Escribe correo y contrasena.", "error");
     return;
   }
+  if (!adminIsPlatformOwnerEmail(email)) {
+    adminSetMessage(
+      adminElements.authMessage,
+      `Acceso no autorizado. La administracion de plataforma es solo para ${PLATFORM_OWNER_NAME}: ${PLATFORM_OWNER_EMAIL}.`,
+      "error"
+    );
+    return;
+  }
 
   adminSetMessage(adminElements.authMessage, "Iniciando sesion...");
   const { error } = await client.auth.signInWithPassword({ email, password });
@@ -285,11 +303,29 @@ async function adminInitialize() {
 
   const { data } = await client.auth.getSession();
   adminUser = data.session?.user || null;
+  if (adminUser && !adminIsPlatformOwnerEmail(adminUser.email)) {
+    await client.auth.signOut();
+    adminUser = null;
+    adminSetMessage(
+      adminElements.authMessage,
+      `Sesion cerrada. La administracion de plataforma es solo para ${PLATFORM_OWNER_NAME}: ${PLATFORM_OWNER_EMAIL}.`,
+      "error"
+    );
+  }
   adminRender();
   if (adminUser) await adminLoadCouriers();
 
   client.auth.onAuthStateChange(async (_event, session) => {
     adminUser = session?.user || null;
+    if (adminUser && !adminIsPlatformOwnerEmail(adminUser.email)) {
+      await client.auth.signOut();
+      adminUser = null;
+      adminSetMessage(
+        adminElements.authMessage,
+        `Acceso no autorizado. Usa ${PLATFORM_OWNER_EMAIL}.`,
+        "error"
+      );
+    }
     adminRender();
     if (adminUser) await adminLoadCouriers();
     if (!adminUser && adminElements.courierList) {

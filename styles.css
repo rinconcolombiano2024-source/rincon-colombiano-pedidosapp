@@ -1452,6 +1452,23 @@ body {
   font-weight: 850;
 }
 
+.uploaded-file-status {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.uploaded-file-status[data-type="ok"] {
+  color: var(--green);
+}
+
+.uploaded-file-status[data-type="error"] {
+  color: var(--red);
+}
+
 .collaborator-wide-field,
 .collaborator-actions {
   grid-column: 1 / -1;

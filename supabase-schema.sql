@@ -206,6 +206,33 @@ as $$
   );
 $$;
 
+create or replace function public.platform_owner_email()
+returns text
+language sql
+immutable
+as $$
+  select 'pedidosapprinconcolombiano@gmail.com'::text;
+$$;
+
+create or replace function public.is_platform_owner()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from auth.users au
+    join public.user_roles ur on ur.user_id = au.id
+    where au.id = auth.uid()
+      and lower(au.email) = lower(public.platform_owner_email())
+      and ur.role = 'platform_admin'
+      and ur.scope_type = 'platform'
+      and ur.status = 'active'
+  );
+$$;
+
 create or replace function public.activate_user_role(
   p_role text,
   p_scope_type text default 'platform',
@@ -263,7 +290,7 @@ security definer
 set search_path = public
 as $$
   select auth.uid() is not null
-    and public.user_has_active_role('platform_admin');
+    and public.is_platform_owner();
 $$;
 
 create or replace function public.get_courier_review_queue()
@@ -490,8 +517,8 @@ drop policy if exists "Platform admins manage general profiles" on public.user_p
 create policy "Platform admins manage general profiles"
 on public.user_profiles
 for all
-using (public.user_has_active_role('platform_admin'))
-with check (public.user_has_active_role('platform_admin'));
+using (public.is_platform_owner())
+with check (public.is_platform_owner());
 
 drop policy if exists "Users read own roles" on public.user_roles;
 create policy "Users read own roles"
@@ -503,8 +530,8 @@ drop policy if exists "Platform admins manage roles" on public.user_roles;
 create policy "Platform admins manage roles"
 on public.user_roles
 for all
-using (public.user_has_active_role('platform_admin'))
-with check (public.user_has_active_role('platform_admin'));
+using (public.is_platform_owner())
+with check (public.is_platform_owner());
 
 drop policy if exists "Users manage own courier profile" on public.courier_profiles;
 create policy "Users manage own courier profile"
@@ -517,8 +544,8 @@ drop policy if exists "Platform admins manage courier profiles" on public.courie
 create policy "Platform admins manage courier profiles"
 on public.courier_profiles
 for all
-using (public.user_has_active_role('platform_admin'))
-with check (public.user_has_active_role('platform_admin'));
+using (public.is_platform_owner())
+with check (public.is_platform_owner());
 
 insert into storage.buckets (id, name, public)
 values ('courier-documents', 'courier-documents', false)
@@ -587,8 +614,8 @@ drop policy if exists "Platform admins manage privacy requests" on public.accoun
 create policy "Platform admins manage privacy requests"
 on public.account_privacy_requests
 for all
-using (public.user_has_active_role('platform_admin'))
-with check (public.user_has_active_role('platform_admin'));
+using (public.is_platform_owner())
+with check (public.is_platform_owner());
 
 grant select on public.app_settings to anon, authenticated;
 grant select on public.restaurant_profiles to anon, authenticated;
@@ -602,10 +629,36 @@ grant select on public.user_roles to authenticated;
 grant select, insert, update on public.courier_profiles to authenticated;
 grant select, insert on public.account_privacy_requests to authenticated;
 grant execute on function public.user_has_active_role(text) to authenticated;
+grant execute on function public.platform_owner_email() to authenticated;
+grant execute on function public.is_platform_owner() to authenticated;
 grant execute on function public.activate_user_role(text, text, uuid) to authenticated;
 grant execute on function public.user_can_review_couriers() to authenticated;
 grant execute on function public.get_courier_review_queue() to authenticated;
 grant execute on function public.review_courier_profile(uuid, text) to authenticated;
+
+update public.user_roles
+set status = 'revoked',
+    updated_at = now()
+where role = 'platform_admin'
+  and user_id not in (
+    select au.id
+    from auth.users au
+    where lower(au.email) = lower(public.platform_owner_email())
+  );
+
+insert into public.user_roles (user_id, role, scope_type, scope_id, status, updated_at)
+select
+  au.id,
+  'platform_admin',
+  'platform',
+  '00000000-0000-0000-0000-000000000000'::uuid,
+  'active',
+  now()
+from auth.users au
+where lower(au.email) = lower(public.platform_owner_email())
+on conflict (user_id, role, scope_type, scope_id)
+do update set status = 'active',
+              updated_at = now();
 
 alter table public.app_settings replica identity full;
 

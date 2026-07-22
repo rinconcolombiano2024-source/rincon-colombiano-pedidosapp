@@ -7,6 +7,33 @@ alter table public.courier_profiles
   add column if not exists driver_license_url text not null default '',
   add column if not exists insurance_url text not null default '';
 
+create or replace function public.platform_owner_email()
+returns text
+language sql
+immutable
+as $$
+  select 'pedidosapprinconcolombiano@gmail.com'::text;
+$$;
+
+create or replace function public.is_platform_owner()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from auth.users au
+    join public.user_roles ur on ur.user_id = au.id
+    where au.id = auth.uid()
+      and lower(au.email) = lower(public.platform_owner_email())
+      and ur.role = 'platform_admin'
+      and ur.scope_type = 'platform'
+      and ur.status = 'active'
+  );
+$$;
+
 create or replace function public.user_can_review_couriers()
 returns boolean
 language sql
@@ -15,7 +42,7 @@ security definer
 set search_path = public
 as $$
   select auth.uid() is not null
-    and public.user_has_active_role('platform_admin');
+    and public.is_platform_owner();
 $$;
 
 create or replace function public.get_courier_review_queue()
@@ -201,5 +228,7 @@ using (
 );
 
 grant execute on function public.user_can_review_couriers() to authenticated;
+grant execute on function public.platform_owner_email() to authenticated;
+grant execute on function public.is_platform_owner() to authenticated;
 grant execute on function public.get_courier_review_queue() to authenticated;
 grant execute on function public.review_courier_profile(uuid, text) to authenticated;

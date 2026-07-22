@@ -1,0 +1,28 @@
+VERSION v62 - ADMIN UNICO, ARCHIVOS Y TRADUCCION
+
+Administrador unico de plataforma:
+- Nombre: Jhon Jarolt Mendez.
+- Correo autorizado: pedidosapprinconcolombiano@gmail.com.
+- Ese correo debe existir en Supabase Auth y debe confirmar el correo.
+- Ejecuta MIGRACION-FASE9-V62-ADMIN-UNICO.sql en Supabase SQL Editor.
+- La migracion activa platform_admin solo para ese correo y revoca platform_admin en otros correos.
+
+Como queda claro:
+- El panel admin.html muestra que la administracion es solo para Jhon Jarolt Mendez.
+- admin.html bloquea visualmente otros correos.
+- Supabase tambien lo bloquea con is_platform_owner(), aunque alguien intente acceder por fuera.
+
+Archivos de colaborador:
+- Al subir un archivo aparece un texto verde como "Documento subido".
+- Si el navegador sigue mostrando "ningun archivo seleccionado", no significa que se haya perdido.
+- El estado real queda en el mensaje verde y en el campo interno de archivo guardado.
+
+Traduccion de descripciones:
+- Cliente usa el idioma elegido.
+- Primero intenta Google Translate.
+- Si falla, intenta un servicio de respaldo.
+- Si internet o el navegador bloquean la traduccion, reintenta despues y usa traduccion parcial local cuando sea posible.
+
+Despues de subir esta version:
+- En telefono/tablet toca el boton Actualizar de la app.
+- Si sigue abriendo una version vieja, cerrar la app del navegador y abrir de nuevo.

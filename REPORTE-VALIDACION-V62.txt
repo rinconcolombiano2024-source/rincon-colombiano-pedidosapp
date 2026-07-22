@@ -1,0 +1,32 @@
+REPORTE DE VALIDACION v62
+
+Cambios realizados:
+- Administrador unico de plataforma:
+  Jhon Jarolt Mendez / pedidosapprinconcolombiano@gmail.com.
+- Supabase ahora usa public.is_platform_owner() para administracion de plataforma.
+- Supabase revoca platform_admin a cualquier correo distinto al autorizado.
+- admin.html muestra claramente el administrador autorizado.
+- admin.js bloquea visualmente otros correos antes de entrar.
+- Colaborador muestra estado visible de archivo subido.
+- Cliente traduce descripciones con Google Translate y servicio de respaldo.
+- Cliente reintenta traducciones si el navegador o internet fallan temporalmente.
+- Cache actualizado a rincon-colombiano-v62.
+
+Archivos importantes:
+- MIGRACION-FASE9-V62-ADMIN-UNICO.sql
+- INSTRUCCIONES-V62-ADMIN-UNICO-ARCHIVOS-TRADUCCION.txt
+
+Validacion:
+- app.js OK.
+- cliente.js OK.
+- colaborador.js OK.
+- admin.js OK.
+- service-worker.js OK.
+- HTML sin IDs duplicados.
+- Selectores JavaScript conectados.
+- Enlaces internos correctos.
+- Supabase schema usa administrador unico.
+- La migracion v62 revoca otros administradores de plataforma.
+
+Nota:
+- Para que Supabase aplique el administrador unico, hay que ejecutar MIGRACION-FASE9-V62-ADMIN-UNICO.sql en Supabase SQL Editor.

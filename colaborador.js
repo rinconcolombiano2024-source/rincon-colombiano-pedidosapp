@@ -74,6 +74,14 @@ let courierLastLocation = null;
 let courierRecoveringPassword = false;
 
 const COURIER_VERIFICATION_EMAIL = "pedidosapprinconcolombiano@gmail.com";
+const COURIER_FILE_FIELDS = [
+  ["identityFileUrlInput", "Documento de identidad"],
+  ["driverLicenseFileUrlInput", "Licencia"],
+  ["insuranceFileUrlInput", "Seguro"],
+  ["photoUrlInput", "Foto"],
+  ["selfieUrlInput", "Selfie de verificacion"],
+  ["workPermitUrlInput", "Permiso de trabajo"],
+];
 
 function courierNormalizeText(value) {
   return String(value || "").trim().replace(/\s+/g, " ");
@@ -115,6 +123,35 @@ function courierDocumentStorageRef(path) {
   return path ? `storage:${COURIER_DOCUMENT_BUCKET}/${path}` : "";
 }
 
+function courierReadableFileRef(value) {
+  const text = courierNormalizeText(value);
+  if (!text) return "";
+  const clean = text.replace(/^storage:[^/]+\//i, "");
+  return clean.split("/").pop() || "archivo guardado";
+}
+
+function courierSetFileStatus(targetInput, message = "", type = "") {
+  if (!targetInput?.parentElement) return;
+  let status = targetInput.parentElement.querySelector(`[data-upload-status-for="${targetInput.id}"]`);
+  if (!status) {
+    status = document.createElement("small");
+    status.className = "uploaded-file-status";
+    status.dataset.uploadStatusFor = targetInput.id;
+    targetInput.insertAdjacentElement("afterend", status);
+  }
+  status.textContent = message;
+  status.dataset.type = type;
+  status.hidden = !message;
+}
+
+function courierRefreshFileStatuses() {
+  COURIER_FILE_FIELDS.forEach(([targetKey, label]) => {
+    const targetInput = courierElements[targetKey];
+    const ref = courierInputValue(targetInput);
+    courierSetFileStatus(targetInput, ref ? `${label} ya subido: ${courierReadableFileRef(ref)}` : "", ref ? "ok" : "");
+  });
+}
+
 function courierFileExtension(file) {
   const nameExtension = String(file?.name || "").split(".").pop().toLowerCase();
   const cleanNameExtension = nameExtension.replace(/[^a-z0-9]/g, "");
@@ -152,8 +189,10 @@ async function courierHandleFileUpload(fileInput, targetInput, kind, label) {
   courierSetMessage(courierElements.profileMessage, `Subiendo ${label}...`);
   try {
     targetInput.value = await courierUploadDocument(file, kind);
+    courierSetFileStatus(targetInput, `${label} subido: ${file.name || courierReadableFileRef(targetInput.value)}`, "ok");
     courierSetMessage(courierElements.profileMessage, `${label} subido correctamente. Presiona Enviar solicitud para guardar.`, "ok");
   } catch (error) {
+    courierSetFileStatus(targetInput, `${label} no subio. Intenta de nuevo.`, "error");
     courierSetMessage(
       courierElements.profileMessage,
       error.message || "No se pudo subir el archivo. Ejecuta la migracion v58 o revisa permisos de Storage.",
@@ -383,6 +422,7 @@ function courierApplyProfileFields(profile = {}) {
   courierElements.selfieUrlInput.value = profile.verification_selfie_url || "";
   courierElements.workPermitUrlInput.value = profile.work_permit_url || "";
   courierElements.termsInput.checked = Boolean(profile.terms_accepted_at);
+  courierRefreshFileStatuses();
   courierRenderVehicleRequirements();
 }
 
