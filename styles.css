@@ -873,6 +873,32 @@
   color: var(--red);
 }
 
+.courier-documents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.courier-documents button,
+.courier-documents a,
+.courier-documents span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--ink);
+  font-size: 0.86rem;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.courier-documents span {
+  color: var(--muted);
+}
+
 .client-chat-box textarea,
 .client-chat-box input {
   width: 100%;

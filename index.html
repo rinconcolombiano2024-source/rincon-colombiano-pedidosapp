@@ -100,6 +100,7 @@
             <button id="signInButton" type="submit">Iniciar sesion</button>
             <button id="signUpButton" type="button">Registrar restaurante</button>
             <button id="resetPasswordButton" type="button">Recuperar contrasena</button>
+            <button id="resendVerificationButton" type="button">Reenviar verificacion</button>
           </div>
           <p class="auth-message" id="authMessage"></p>
           <div class="password-recovery-panel" id="passwordRecoveryPanel" hidden>
@@ -135,6 +136,7 @@
           <button class="sign-in-top-button client-orders-button" id="clientOrdersButton" type="button">
             Pedidos cliente <span id="clientOrdersBadge" hidden>0</span>
           </button>
+          <button class="sign-in-top-button" id="courierReviewButton" type="button">Colaboradores</button>
           <button class="install-button" id="installAppButton" type="button">Descargar app</button>
           <div class="ticket-counter" aria-live="polite">
             <span>Proximo ticket</span>
@@ -626,6 +628,32 @@
         <div class="client-orders-list" id="clientOrdersList"></div>
         <div class="dialog-actions">
           <button id="refreshClientOrdersButton" value="default" type="button">Actualizar</button>
+          <button value="cancel" type="submit">Cerrar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="courierReviewDialog" class="monthly-dialog">
+      <form method="dialog" class="monthly-form courier-review-form">
+        <div class="monthly-dialog-header">
+          <div>
+            <p class="eyebrow">Revision</p>
+            <h2>Colaboradores</h2>
+          </div>
+          <button class="icon-button" value="cancel" type="submit" title="Cerrar" aria-label="Cerrar">
+            <span aria-hidden="true">x</span>
+          </button>
+        </div>
+        <p class="auth-message">
+          Revisa documentos y aprueba solo cuando la persona pueda empezar a trabajar.
+        </p>
+        <div class="client-order-actions">
+          <button id="refreshCouriersButton" value="default" type="button">Actualizar colaboradores</button>
+        </div>
+        <div class="client-orders-list courier-review-list" id="courierReviewList">
+          <div class="monthly-empty">Cargando colaboradores...</div>
+        </div>
+        <div class="dialog-actions">
           <button value="cancel" type="submit">Cerrar</button>
         </div>
       </form>

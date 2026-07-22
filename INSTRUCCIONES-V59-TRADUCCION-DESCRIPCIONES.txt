@@ -1,0 +1,17 @@
+VERSION v59 - TRADUCCION DE DESCRIPCIONES DEL MENU CLIENTE
+
+Cambios incluidos:
+
+1. Pantalla del cliente
+- La descripcion de cada producto ahora se muestra en el idioma elegido por el cliente cuando selecciona espanol, polaco o ingles.
+- La app sigue intentando usar traduccion automatica online y guarda el resultado en cache local.
+- Si la traduccion online falla, se usa un respaldo local con palabras y frases comunes de restaurante colombiano.
+
+2. Importante
+- No se modifican platos, categorias ni precios.
+- No se agregan productos programados.
+- La descripcion original sigue guardada en el pedido para el restaurante/cocina.
+
+3. Cache
+- Cache actualizado a rincon-colombiano-v59.
+- Si el telefono no muestra el cambio, cerrar la app instalada y volver a abrirla. Si sigue igual, borrar cache o reinstalar desde la URL publicada.

@@ -131,13 +131,16 @@ create table if not exists public.courier_profiles (
   city text not null default '',
   address text not null default '',
   identity_document text not null default '',
+  identity_document_url text not null default '',
   photo_url text not null default '',
   verification_selfie_url text not null default '',
   work_permit_url text not null default '',
   vehicle_type text not null default '',
   vehicle_plate text not null default '',
   driver_license text not null default '',
+  driver_license_url text not null default '',
   insurance_info text not null default '',
+  insurance_url text not null default '',
   bank_account text not null default '',
   availability jsonb not null default '{}'::jsonb,
   status text not null default 'draft' check (
@@ -147,6 +150,11 @@ create table if not exists public.courier_profiles (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.courier_profiles
+  add column if not exists identity_document_url text not null default '',
+  add column if not exists driver_license_url text not null default '',
+  add column if not exists insurance_url text not null default '';
 
 create table if not exists public.account_privacy_requests (
   id uuid primary key default gen_random_uuid(),
@@ -244,6 +252,151 @@ begin
       else excluded.status
     end,
     updated_at = now();
+end;
+$$;
+
+create or replace function public.user_can_review_couriers()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select auth.uid() is not null
+    and (
+      public.user_has_active_role('platform_admin')
+      or public.user_has_active_role('restaurant_owner')
+    );
+$$;
+
+create or replace function public.get_courier_review_queue()
+returns table (
+  user_id uuid,
+  email text,
+  first_name text,
+  last_name text,
+  phone text,
+  birth_date date,
+  country text,
+  city text,
+  address text,
+  identity_document text,
+  identity_document_url text,
+  photo_url text,
+  verification_selfie_url text,
+  work_permit_url text,
+  vehicle_type text,
+  vehicle_plate text,
+  driver_license text,
+  driver_license_url text,
+  insurance_info text,
+  insurance_url text,
+  bank_account text,
+  availability jsonb,
+  status text,
+  created_at timestamptz,
+  updated_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.user_can_review_couriers() then
+    raise exception 'Not authorized to review couriers';
+  end if;
+
+  return query
+  select
+    cp.user_id,
+    au.email::text,
+    cp.first_name,
+    cp.last_name,
+    cp.phone,
+    cp.birth_date,
+    cp.country,
+    cp.city,
+    cp.address,
+    cp.identity_document,
+    cp.identity_document_url,
+    cp.photo_url,
+    cp.verification_selfie_url,
+    cp.work_permit_url,
+    cp.vehicle_type,
+    cp.vehicle_plate,
+    cp.driver_license,
+    cp.driver_license_url,
+    cp.insurance_info,
+    cp.insurance_url,
+    cp.bank_account,
+    cp.availability,
+    cp.status,
+    cp.created_at,
+    cp.updated_at
+  from public.courier_profiles cp
+  left join auth.users au on au.id = cp.user_id
+  order by
+    case cp.status
+      when 'pending_review' then 0
+      when 'draft' then 1
+      when 'rejected' then 2
+      when 'approved' then 3
+      else 4
+    end,
+    cp.updated_at desc;
+end;
+$$;
+
+create or replace function public.review_courier_profile(
+  p_user_id uuid,
+  p_status text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_status text := lower(trim(coalesce(p_status, '')));
+  v_role_status text;
+begin
+  if not public.user_can_review_couriers() then
+    raise exception 'Not authorized to review couriers';
+  end if;
+
+  if v_status not in ('approved', 'rejected', 'suspended', 'inactive', 'pending_review') then
+    raise exception 'Invalid courier status';
+  end if;
+
+  if not exists (select 1 from public.courier_profiles cp where cp.user_id = p_user_id) then
+    raise exception 'Courier profile not found';
+  end if;
+
+  update public.courier_profiles
+  set status = v_status,
+      updated_at = now()
+  where user_id = p_user_id;
+
+  v_role_status := case v_status
+    when 'approved' then 'active'
+    when 'rejected' then 'revoked'
+    when 'suspended' then 'suspended'
+    when 'inactive' then 'inactive'
+    else 'pending_review'
+  end;
+
+  insert into public.user_roles (user_id, role, scope_type, scope_id, status, updated_at)
+  values (
+    p_user_id,
+    'platform_courier',
+    'platform',
+    '00000000-0000-0000-0000-000000000000'::uuid,
+    v_role_status,
+    now()
+  )
+  on conflict (user_id, role, scope_type, scope_id)
+  do update set status = excluded.status,
+                updated_at = now();
 end;
 $$;
 
@@ -370,6 +523,57 @@ for all
 using (public.user_has_active_role('platform_admin'))
 with check (public.user_has_active_role('platform_admin'));
 
+insert into storage.buckets (id, name, public)
+values ('courier-documents', 'courier-documents', false)
+on conflict (id) do update set public = false;
+
+drop policy if exists "Couriers upload own documents" on storage.objects;
+create policy "Couriers upload own documents"
+on storage.objects
+for insert
+to authenticated
+with check (
+  bucket_id = 'courier-documents'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists "Couriers read own documents" on storage.objects;
+create policy "Couriers read own documents"
+on storage.objects
+for select
+to authenticated
+using (
+  bucket_id = 'courier-documents'
+  and (
+    (storage.foldername(name))[1] = auth.uid()::text
+    or public.user_can_review_couriers()
+  )
+);
+
+drop policy if exists "Couriers update own documents" on storage.objects;
+create policy "Couriers update own documents"
+on storage.objects
+for update
+to authenticated
+using (
+  bucket_id = 'courier-documents'
+  and (storage.foldername(name))[1] = auth.uid()::text
+)
+with check (
+  bucket_id = 'courier-documents'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists "Couriers delete own documents" on storage.objects;
+create policy "Couriers delete own documents"
+on storage.objects
+for delete
+to authenticated
+using (
+  bucket_id = 'courier-documents'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
 drop policy if exists "Users create own privacy requests" on public.account_privacy_requests;
 create policy "Users create own privacy requests"
 on public.account_privacy_requests
@@ -402,6 +606,9 @@ grant select, insert, update on public.courier_profiles to authenticated;
 grant select, insert on public.account_privacy_requests to authenticated;
 grant execute on function public.user_has_active_role(text) to authenticated;
 grant execute on function public.activate_user_role(text, text, uuid) to authenticated;
+grant execute on function public.user_can_review_couriers() to authenticated;
+grant execute on function public.get_courier_review_queue() to authenticated;
+grant execute on function public.review_courier_profile(uuid, text) to authenticated;
 
 alter table public.app_settings replica identity full;
 

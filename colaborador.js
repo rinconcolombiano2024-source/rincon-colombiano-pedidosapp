@@ -1,4 +1,5 @@
 const COURIER_PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
+const COURIER_DOCUMENT_BUCKET = "courier-documents";
 
 const courierElements = {
   accountSummary: document.querySelector("#courierAccountSummary"),
@@ -8,6 +9,7 @@ const courierElements = {
   signInButton: document.querySelector("#courierSignInButton"),
   signUpButton: document.querySelector("#courierSignUpButton"),
   resetPasswordButton: document.querySelector("#courierResetPasswordButton"),
+  resendVerificationButton: document.querySelector("#courierResendVerificationButton"),
   passwordRecoveryPanel: document.querySelector("#courierPasswordRecoveryPanel"),
   newPasswordInput: document.querySelector("#courierNewPasswordInput"),
   updatePasswordButton: document.querySelector("#courierUpdatePasswordButton"),
@@ -24,14 +26,23 @@ const courierElements = {
   cityInput: document.querySelector("#courierCityInput"),
   addressInput: document.querySelector("#courierAddressInput"),
   identityInput: document.querySelector("#courierIdentityInput"),
+  identityFileInput: document.querySelector("#courierIdentityFileInput"),
+  identityFileUrlInput: document.querySelector("#courierIdentityFileUrlInput"),
   vehicleTypeInput: document.querySelector("#courierVehicleTypeInput"),
   vehiclePlateInput: document.querySelector("#courierVehiclePlateInput"),
   driverLicenseInput: document.querySelector("#courierDriverLicenseInput"),
+  driverLicenseFileInput: document.querySelector("#courierDriverLicenseFileInput"),
+  driverLicenseFileUrlInput: document.querySelector("#courierDriverLicenseFileUrlInput"),
   insuranceInput: document.querySelector("#courierInsuranceInput"),
+  insuranceFileInput: document.querySelector("#courierInsuranceFileInput"),
+  insuranceFileUrlInput: document.querySelector("#courierInsuranceFileUrlInput"),
   bankInput: document.querySelector("#courierBankInput"),
   availabilityInput: document.querySelector("#courierAvailabilityInput"),
+  photoFileInput: document.querySelector("#courierPhotoFileInput"),
   photoUrlInput: document.querySelector("#courierPhotoUrlInput"),
+  selfieFileInput: document.querySelector("#courierSelfieFileInput"),
   selfieUrlInput: document.querySelector("#courierSelfieUrlInput"),
+  workPermitFileInput: document.querySelector("#courierWorkPermitFileInput"),
   workPermitUrlInput: document.querySelector("#courierWorkPermitUrlInput"),
   vehicleHelp: document.querySelector("#courierVehicleHelp"),
   termsInput: document.querySelector("#courierTermsInput"),
@@ -100,6 +111,58 @@ function courierEnsureClient() {
   return courierClient;
 }
 
+function courierDocumentStorageRef(path) {
+  return path ? `storage:${COURIER_DOCUMENT_BUCKET}/${path}` : "";
+}
+
+function courierFileExtension(file) {
+  const nameExtension = String(file?.name || "").split(".").pop().toLowerCase();
+  const cleanNameExtension = nameExtension.replace(/[^a-z0-9]/g, "");
+  if (cleanNameExtension && cleanNameExtension.length <= 5) return cleanNameExtension;
+  if (file?.type === "application/pdf") return "pdf";
+  if (file?.type === "image/png") return "png";
+  if (file?.type === "image/webp") return "webp";
+  return "jpg";
+}
+
+async function courierUploadDocument(file, kind) {
+  const client = courierEnsureClient();
+  if (!client || !courierUser) {
+    throw new Error("Primero inicia sesion como colaborador para subir archivos.");
+  }
+  if (!file) return "";
+  if (file.size > 8 * 1024 * 1024) {
+    throw new Error("El archivo es muy pesado. Usa imagen o PDF menor a 8 MB.");
+  }
+
+  const extension = courierFileExtension(file);
+  const cleanKind = courierNormalizeText(kind).toLowerCase().replace(/[^a-z0-9-]/g, "-") || "documento";
+  const path = `${courierUser.id}/${cleanKind}-${Date.now()}.${extension}`;
+  const { error } = await client.storage.from(COURIER_DOCUMENT_BUCKET).upload(path, file, {
+    contentType: file.type || "application/octet-stream",
+    upsert: true,
+  });
+  if (error) throw error;
+  return courierDocumentStorageRef(path);
+}
+
+async function courierHandleFileUpload(fileInput, targetInput, kind, label) {
+  const file = fileInput?.files?.[0];
+  if (!file || !targetInput) return;
+  courierSetMessage(courierElements.profileMessage, `Subiendo ${label}...`);
+  try {
+    targetInput.value = await courierUploadDocument(file, kind);
+    courierSetMessage(courierElements.profileMessage, `${label} subido correctamente. Presiona Enviar solicitud para guardar.`, "ok");
+  } catch (error) {
+    courierSetMessage(
+      courierElements.profileMessage,
+      error.message || "No se pudo subir el archivo. Ejecuta la migracion v58 o revisa permisos de Storage.",
+      "error"
+    );
+    if (fileInput) fileInput.value = "";
+  }
+}
+
 function courierSetMessage(element, message, type = "") {
   if (!element) return;
   element.textContent = message;
@@ -114,6 +177,18 @@ function courierVehicleType() {
 function courierVehicleRequiresDrivingDocs() {
   const vehicle = courierVehicleType();
   return vehicle === "motocicleta" || vehicle === "automovil";
+}
+
+function courierMissingDocumentLabels() {
+  const missing = [];
+  if (!courierInputValue(courierElements.identityFileUrlInput)) missing.push("documento de identidad");
+  if (!courierInputValue(courierElements.photoUrlInput)) missing.push("foto");
+  if (!courierInputValue(courierElements.selfieUrlInput)) missing.push("selfie de verificacion");
+  if (courierVehicleRequiresDrivingDocs()) {
+    if (!courierInputValue(courierElements.driverLicenseFileUrlInput)) missing.push("archivo de licencia");
+    if (!courierInputValue(courierElements.insuranceFileUrlInput)) missing.push("archivo de seguro");
+  }
+  return missing;
 }
 
 function courierRenderVehicleRequirements() {
@@ -239,13 +314,16 @@ function courierProfilePayload() {
     city: courierInputValue(courierElements.cityInput),
     address: courierInputValue(courierElements.addressInput),
     identity_document: courierInputValue(courierElements.identityInput),
+    identity_document_url: courierInputValue(courierElements.identityFileUrlInput),
     photo_url: courierInputValue(courierElements.photoUrlInput),
     verification_selfie_url: courierInputValue(courierElements.selfieUrlInput),
     work_permit_url: courierInputValue(courierElements.workPermitUrlInput),
     vehicle_type: courierInputValue(courierElements.vehicleTypeInput),
     vehicle_plate: courierInputValue(courierElements.vehiclePlateInput),
     driver_license: courierInputValue(courierElements.driverLicenseInput),
+    driver_license_url: courierInputValue(courierElements.driverLicenseFileUrlInput),
     insurance_info: courierInputValue(courierElements.insuranceInput),
+    insurance_url: courierInputValue(courierElements.insuranceFileUrlInput),
     bank_account: courierInputValue(courierElements.bankInput),
     availability: { text: courierInputValue(courierElements.availabilityInput) },
     status,
@@ -267,10 +345,13 @@ function courierMetadataProfile() {
     city: metadata.city || "",
     address: metadata.address || "",
     identity_document: metadata.identity_document || "",
+    identity_document_url: metadata.identity_document_url || "",
     vehicle_type: metadata.vehicle_type || "",
     vehicle_plate: metadata.vehicle_plate || "",
     driver_license: metadata.driver_license || "",
+    driver_license_url: metadata.driver_license_url || "",
     insurance_info: metadata.insurance_info || "",
+    insurance_url: metadata.insurance_url || "",
     bank_account: metadata.bank_account || "",
     availability: metadata.availability || {},
     photo_url: metadata.photo_url || "",
@@ -289,10 +370,13 @@ function courierApplyProfileFields(profile = {}) {
   courierElements.cityInput.value = profile.city || "";
   courierElements.addressInput.value = profile.address || "";
   courierElements.identityInput.value = profile.identity_document || "";
+  courierElements.identityFileUrlInput.value = profile.identity_document_url || "";
   courierElements.vehicleTypeInput.value = profile.vehicle_type || "";
   courierElements.vehiclePlateInput.value = profile.vehicle_plate || "";
   courierElements.driverLicenseInput.value = profile.driver_license || "";
+  courierElements.driverLicenseFileUrlInput.value = profile.driver_license_url || "";
   courierElements.insuranceInput.value = profile.insurance_info || "";
+  courierElements.insuranceFileUrlInput.value = profile.insurance_url || "";
   courierElements.bankInput.value = profile.bank_account || "";
   courierElements.availabilityInput.value = profile.availability?.text || "";
   courierElements.photoUrlInput.value = profile.photo_url || "";
@@ -407,9 +491,12 @@ async function courierSaveProfile() {
     const { error } = await courierClient.from("courier_profiles").upsert(courierProfilePayload());
     if (error) throw error;
     await courierLoadProfile();
+    const missingDocs = courierMissingDocumentLabels();
     courierSetMessage(
       courierElements.profileMessage,
-      `Solicitud guardada. Queda pendiente de revision. Envia los soportes a ${COURIER_VERIFICATION_EMAIL}.`,
+      missingDocs.length
+        ? `Solicitud guardada. Para revision completa faltan: ${missingDocs.join(", ")}. Puedes subirlos aqui o enviarlos a ${COURIER_VERIFICATION_EMAIL}.`
+        : "Solicitud guardada con documentos. Queda pendiente de revision y aprobacion para empezar a trabajar.",
       "ok"
     );
   } catch (error) {
@@ -533,6 +620,37 @@ async function courierSendPasswordResetEmail() {
   );
 }
 
+async function courierResendVerificationEmail() {
+  const client = courierEnsureClient();
+  const email = courierInputValue(courierElements.emailInput);
+  if (!client) {
+    courierSetMessage(courierElements.authMessage, "Supabase no esta configurado o no cargo correctamente.", "error");
+    return;
+  }
+  if (!email) {
+    courierSetMessage(courierElements.authMessage, "Escribe tu correo electronico para reenviar la verificacion.", "error");
+    courierElements.emailInput?.focus();
+    return;
+  }
+
+  courierSetMessage(courierElements.authMessage, "RINCON COLOMBIANO PEDIDOS esta reenviando el correo de verificacion...");
+  const redirectTo = window.location.href.split("#")[0].split("?")[0];
+  const { error } = await client.auth.resend({
+    type: "signup",
+    email,
+    options: { emailRedirectTo: redirectTo },
+  });
+  if (error) {
+    courierSetMessage(courierElements.authMessage, courierFriendlyAuthError(error), "error");
+    return;
+  }
+  courierSetMessage(
+    courierElements.authMessage,
+    "Correo de verificacion reenviado por RINCON COLOMBIANO PEDIDOS. Revisa entrada, spam o promociones.",
+    "ok"
+  );
+}
+
 function courierShowPasswordRecoveryForm() {
   courierRecoveringPassword = true;
   courierElements.authFields.hidden = false;
@@ -541,6 +659,7 @@ function courierShowPasswordRecoveryForm() {
   courierElements.signInButton.hidden = true;
   courierElements.signUpButton.hidden = true;
   courierElements.resetPasswordButton.hidden = true;
+  if (courierElements.resendVerificationButton) courierElements.resendVerificationButton.hidden = true;
   courierElements.passwordRecoveryPanel.hidden = false;
   courierSetMessage(
     courierElements.authMessage,
@@ -559,6 +678,7 @@ function courierHidePasswordRecoveryForm(message = "") {
   courierElements.signInButton.hidden = false;
   courierElements.signUpButton.hidden = false;
   courierElements.resetPasswordButton.hidden = false;
+  if (courierElements.resendVerificationButton) courierElements.resendVerificationButton.hidden = false;
   courierRender();
   if (message) courierSetMessage(courierElements.authMessage, message, "ok");
 }
@@ -594,10 +714,13 @@ function courierProfilePayloadForMetadata() {
     city: courierInputValue(courierElements.cityInput),
     address: courierInputValue(courierElements.addressInput),
     identity_document: courierInputValue(courierElements.identityInput),
+    identity_document_url: courierInputValue(courierElements.identityFileUrlInput),
     vehicle_type: courierInputValue(courierElements.vehicleTypeInput),
     vehicle_plate: courierInputValue(courierElements.vehiclePlateInput),
     driver_license: courierInputValue(courierElements.driverLicenseInput),
+    driver_license_url: courierInputValue(courierElements.driverLicenseFileUrlInput),
     insurance_info: courierInputValue(courierElements.insuranceInput),
+    insurance_url: courierInputValue(courierElements.insuranceFileUrlInput),
     bank_account: courierInputValue(courierElements.bankInput),
     availability: { text: courierInputValue(courierElements.availabilityInput) },
     photo_url: courierInputValue(courierElements.photoUrlInput),
@@ -652,6 +775,7 @@ async function courierInitialize() {
 courierElements.signInButton.addEventListener("click", courierSignIn);
 courierElements.signUpButton.addEventListener("click", courierSignUp);
 courierElements.resetPasswordButton.addEventListener("click", courierSendPasswordResetEmail);
+courierElements.resendVerificationButton?.addEventListener("click", courierResendVerificationEmail);
 courierElements.updatePasswordButton.addEventListener("click", courierUpdateRecoveredPassword);
 courierElements.cancelRecoveryButton.addEventListener("click", () => courierHidePasswordRecoveryForm());
 courierElements.signOutButton.addEventListener("click", courierSignOut);
@@ -660,6 +784,24 @@ courierElements.availabilityButton.addEventListener("click", courierToggleAvaila
 courierElements.vehicleTypeInput.addEventListener("change", courierRenderVehicleRequirements);
 courierElements.shareLocationButton?.addEventListener("click", courierShareLocation);
 courierElements.openGpsButton?.addEventListener("click", courierOpenGps);
+courierElements.identityFileInput?.addEventListener("change", () =>
+  courierHandleFileUpload(courierElements.identityFileInput, courierElements.identityFileUrlInput, "documento-identidad", "Documento de identidad")
+);
+courierElements.driverLicenseFileInput?.addEventListener("change", () =>
+  courierHandleFileUpload(courierElements.driverLicenseFileInput, courierElements.driverLicenseFileUrlInput, "licencia", "Licencia")
+);
+courierElements.insuranceFileInput?.addEventListener("change", () =>
+  courierHandleFileUpload(courierElements.insuranceFileInput, courierElements.insuranceFileUrlInput, "seguro", "Seguro")
+);
+courierElements.photoFileInput?.addEventListener("change", () =>
+  courierHandleFileUpload(courierElements.photoFileInput, courierElements.photoUrlInput, "foto", "Foto")
+);
+courierElements.selfieFileInput?.addEventListener("change", () =>
+  courierHandleFileUpload(courierElements.selfieFileInput, courierElements.selfieUrlInput, "selfie", "Selfie de verificacion")
+);
+courierElements.workPermitFileInput?.addEventListener("change", () =>
+  courierHandleFileUpload(courierElements.workPermitFileInput, courierElements.workPermitUrlInput, "permiso-trabajo", "Permiso de trabajo")
+);
 
 courierRenderVehicleRequirements();
 courierInitialize();

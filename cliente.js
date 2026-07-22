@@ -30,6 +30,7 @@ const customerElements = {
   signInButton: document.querySelector("#customerSignInButton"),
   signUpButton: document.querySelector("#customerSignUpButton"),
   resetPasswordButton: document.querySelector("#customerResetPasswordButton"),
+  resendVerificationButton: document.querySelector("#customerResendVerificationButton"),
   passwordRecoveryPanel: document.querySelector("#customerPasswordRecoveryPanel"),
   newPasswordInput: document.querySelector("#customerNewPasswordInput"),
   updatePasswordButton: document.querySelector("#customerUpdatePasswordButton"),
@@ -126,6 +127,7 @@ const CUSTOMER_I18N = {
     signIn: "Iniciar sesion",
     signUp: "Crear cuenta cliente",
     resetPassword: "Recuperar contrasena",
+    resendVerification: "Reenviar verificacion",
     newPasswordLabel: "Nueva contrasena",
     updatePassword: "Guardar nueva contrasena",
     cancel: "Cancelar",
@@ -138,6 +140,9 @@ const CUSTOMER_I18N = {
     resetEmailRequired: "Escribe tu correo electronico para recuperar la contrasena.",
     resetSending: "RINCON COLOMBIANO PEDIDOS esta enviando el correo de recuperacion...",
     resetSent: "Correo enviado por RINCON COLOMBIANO PEDIDOS. Abre el enlace para crear una contrasena nueva.",
+    resendEmailRequired: "Escribe tu correo electronico para reenviar la verificacion.",
+    resendSending: "RINCON COLOMBIANO PEDIDOS esta reenviando el correo de verificacion...",
+    resendSent: "Correo de verificacion reenviado por RINCON COLOMBIANO PEDIDOS. Revisa entrada, spam o promociones.",
     recoveryTitle: "Nueva contrasena",
     recoveryReady: "RINCON COLOMBIANO PEDIDOS verifico el enlace. Escribe tu nueva contrasena.",
     newPasswordShort: "La nueva contrasena debe tener minimo 6 caracteres.",
@@ -333,6 +338,7 @@ const CUSTOMER_I18N = {
     signIn: "Zaloguj",
     signUp: "Utworz konto klienta",
     resetPassword: "Odzyskaj haslo",
+    resendVerification: "Wyslij weryfikacje ponownie",
     newPasswordLabel: "Nowe haslo",
     updatePassword: "Zapisz nowe haslo",
     cancel: "Anuluj",
@@ -345,6 +351,9 @@ const CUSTOMER_I18N = {
     resetEmailRequired: "Wpisz e-mail, aby odzyskac haslo.",
     resetSending: "RINCON COLOMBIANO PEDIDOS wysyla e-mail do odzyskania hasla...",
     resetSent: "E-mail wyslany przez RINCON COLOMBIANO PEDIDOS. Otworz link, aby utworzyc nowe haslo.",
+    resendEmailRequired: "Wpisz e-mail, aby ponownie wyslac weryfikacje.",
+    resendSending: "RINCON COLOMBIANO PEDIDOS ponownie wysyla e-mail weryfikacyjny...",
+    resendSent: "E-mail weryfikacyjny wyslany ponownie przez RINCON COLOMBIANO PEDIDOS. Sprawdz skrzynke, spam lub promocje.",
     recoveryTitle: "Nowe haslo",
     recoveryReady: "RINCON COLOMBIANO PEDIDOS zweryfikowal link. Wpisz nowe haslo.",
     newPasswordShort: "Nowe haslo musi miec minimum 6 znakow.",
@@ -540,6 +549,7 @@ const CUSTOMER_I18N = {
     signIn: "Sign in",
     signUp: "Create customer account",
     resetPassword: "Recover password",
+    resendVerification: "Resend verification",
     newPasswordLabel: "New password",
     updatePassword: "Save new password",
     cancel: "Cancel",
@@ -552,6 +562,9 @@ const CUSTOMER_I18N = {
     resetEmailRequired: "Enter your email to recover the password.",
     resetSending: "RINCON COLOMBIANO PEDIDOS is sending the recovery email...",
     resetSent: "Email sent by RINCON COLOMBIANO PEDIDOS. Open the link to create a new password.",
+    resendEmailRequired: "Enter your email to resend verification.",
+    resendSending: "RINCON COLOMBIANO PEDIDOS is resending the verification email...",
+    resendSent: "Verification email resent by RINCON COLOMBIANO PEDIDOS. Check inbox, spam, or promotions.",
     recoveryTitle: "New password",
     recoveryReady: "RINCON COLOMBIANO PEDIDOS verified the link. Enter your new password.",
     newPasswordShort: "The new password must be at least 6 characters.",
@@ -705,6 +718,147 @@ const CUSTOMER_I18N = {
   },
 };
 
+const CUSTOMER_DESCRIPTION_TRANSLATION_FALLBACKS = {
+  en: [
+    ["acompanado de", "served with"],
+    ["acompanada de", "served with"],
+    ["acompanados de", "served with"],
+    ["acompanadas de", "served with"],
+    ["termino de carne", "meat doneness"],
+    ["salsa aparte", "sauce on the side"],
+    ["sin cebolla", "without onion"],
+    ["sin picante", "not spicy"],
+    ["para llevar", "takeaway"],
+    ["plato principal", "main dish"],
+    ["porcion", "portion"],
+    ["bebida", "drink"],
+    ["postre", "dessert"],
+    ["entrada", "starter"],
+    ["extra", "extra"],
+    ["bandeja paisa", "bandeja paisa"],
+    ["arroz blanco", "white rice"],
+    ["arroz con coco", "coconut rice"],
+    ["frijoles", "beans"],
+    ["lentejas", "lentils"],
+    ["garbanzos", "chickpeas"],
+    ["carne asada", "grilled beef"],
+    ["carne molida", "ground beef"],
+    ["carne", "beef"],
+    ["pollo asado", "grilled chicken"],
+    ["pollo", "chicken"],
+    ["res", "beef"],
+    ["cerdo", "pork"],
+    ["chicharron", "crispy pork belly"],
+    ["pescado", "fish"],
+    ["camaron", "shrimp"],
+    ["camarones", "shrimp"],
+    ["huevo", "egg"],
+    ["arepa", "corn cake"],
+    ["empanada", "empanada"],
+    ["patacon", "fried green plantain"],
+    ["maduro", "sweet plantain"],
+    ["platano", "plantain"],
+    ["yuca", "cassava"],
+    ["papa", "potato"],
+    ["papas", "potatoes"],
+    ["ensalada", "salad"],
+    ["aguacate", "avocado"],
+    ["queso", "cheese"],
+    ["maiz", "corn"],
+    ["tomate", "tomato"],
+    ["cebolla", "onion"],
+    ["lechuga", "lettuce"],
+    ["cilantro", "cilantro"],
+    ["limon", "lime"],
+    ["limonada", "lemonade"],
+    ["maracuya", "passion fruit"],
+    ["guanabana", "soursop"],
+    ["mango", "mango"],
+    ["mora", "blackberry"],
+    ["salsa", "sauce"],
+    ["picante", "spicy"],
+    ["dulce", "sweet"],
+    ["frito", "fried"],
+    ["frita", "fried"],
+    ["asado", "grilled"],
+    ["asada", "grilled"],
+    ["cocido", "cooked"],
+    ["cocida", "cooked"],
+    ["con", "with"],
+    ["sin", "without"],
+    ["y", "and"],
+  ],
+  pl: [
+    ["acompanado de", "podawane z"],
+    ["acompanada de", "podawane z"],
+    ["acompanados de", "podawane z"],
+    ["acompanadas de", "podawane z"],
+    ["termino de carne", "stopien wysmazenia miesa"],
+    ["salsa aparte", "sos osobno"],
+    ["sin cebolla", "bez cebuli"],
+    ["sin picante", "bez ostrego sosu"],
+    ["para llevar", "na wynos"],
+    ["plato principal", "danie glowne"],
+    ["porcion", "porcja"],
+    ["bebida", "napoj"],
+    ["postre", "deser"],
+    ["entrada", "przystawka"],
+    ["extra", "extra"],
+    ["bandeja paisa", "bandeja paisa"],
+    ["arroz blanco", "bialy ryz"],
+    ["arroz con coco", "ryz kokosowy"],
+    ["frijoles", "fasola"],
+    ["lentejas", "soczewica"],
+    ["garbanzos", "ciecierzyca"],
+    ["carne asada", "grillowana wolowina"],
+    ["carne molida", "mielona wolowina"],
+    ["carne", "wolowina"],
+    ["pollo asado", "grillowany kurczak"],
+    ["pollo", "kurczak"],
+    ["res", "wolowina"],
+    ["cerdo", "wieprzowina"],
+    ["chicharron", "chrupiacy boczek"],
+    ["pescado", "ryba"],
+    ["camaron", "krewetka"],
+    ["camarones", "krewetki"],
+    ["huevo", "jajko"],
+    ["arepa", "placek kukurydziany"],
+    ["empanada", "empanada"],
+    ["patacon", "smazony zielony banan"],
+    ["maduro", "slodki banan"],
+    ["platano", "banan plantan"],
+    ["yuca", "maniok"],
+    ["papa", "ziemniak"],
+    ["papas", "ziemniaki"],
+    ["ensalada", "salatka"],
+    ["aguacate", "awokado"],
+    ["queso", "ser"],
+    ["maiz", "kukurydza"],
+    ["tomate", "pomidor"],
+    ["cebolla", "cebula"],
+    ["lechuga", "salata"],
+    ["cilantro", "kolendra"],
+    ["limon", "limonka"],
+    ["limonada", "lemoniada"],
+    ["maracuya", "marakuja"],
+    ["guanabana", "guanabana"],
+    ["mango", "mango"],
+    ["mora", "jezyna"],
+    ["salsa", "sos"],
+    ["picante", "ostry"],
+    ["dulce", "slodki"],
+    ["frito", "smazony"],
+    ["frita", "smazona"],
+    ["asado", "grillowany"],
+    ["asada", "grillowana"],
+    ["cocido", "gotowany"],
+    ["cocida", "gotowana"],
+    ["con", "z"],
+    ["sin", "bez"],
+    ["y", "i"],
+  ],
+};
+
 const customerParams = new URLSearchParams(window.location.search);
 let customerStoreId = String(customerParams.get("store") || "").trim();
 const customerTableFromQr = String(customerParams.get("mesa") || customerParams.get("table") || "").trim();
@@ -754,11 +908,44 @@ function customerDescriptionTranslationKey(language, text) {
   return `${language}|${String(text || "").trim()}`;
 }
 
+function customerNormalizeDescriptionForFallback(text) {
+  return String(text || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function customerEscapeRegExp(value) {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function customerFallbackDescriptionTranslation(text, language) {
+  const description = customerNormalizeProductDescription(text);
+  if (!description || language === "es") return description;
+
+  const replacements = CUSTOMER_DESCRIPTION_TRANSLATION_FALLBACKS[language] || [];
+  if (!replacements.length) return description;
+
+  let translated = ` ${customerNormalizeDescriptionForFallback(description)} `;
+  replacements
+    .slice()
+    .sort((a, b) => b[0].length - a[0].length)
+    .forEach(([source, target]) => {
+      const cleanSource = customerNormalizeDescriptionForFallback(source);
+      const pattern = new RegExp(`(^|[^a-z0-9])${customerEscapeRegExp(cleanSource)}(?=$|[^a-z0-9])`, "g");
+      translated = translated.replace(pattern, `$1${target}`);
+    });
+
+  translated = translated.replace(/\s+([,.;:!?])/g, "$1").replace(/\s+/g, " ").trim();
+  if (translated) translated = translated[0].toUpperCase() + translated.slice(1);
+  return translated && translated !== customerNormalizeDescriptionForFallback(description) ? translated : description;
+}
+
 function customerDescriptionDisplay(dish) {
   const description = customerNormalizeProductDescription(dish?.description || "");
   if (!description || customerLanguage === "es") return description;
   const key = customerDescriptionTranslationKey(customerLanguage, description);
-  return customerDescriptionTranslations[key] || description;
+  return customerDescriptionTranslations[key] || customerFallbackDescriptionTranslation(description, customerLanguage);
 }
 
 function customerScheduleDescriptionRender() {
@@ -961,6 +1148,7 @@ function customerSetAuthMode(mode = "login") {
   if (customerElements.signInButton) customerElements.signInButton.hidden = normalizedMode === "register";
   if (customerElements.signUpButton) customerElements.signUpButton.hidden = normalizedMode !== "register";
   if (customerElements.resetPasswordButton) customerElements.resetPasswordButton.hidden = normalizedMode === "register";
+  if (customerElements.resendVerificationButton) customerElements.resendVerificationButton.hidden = normalizedMode === "register";
   customerSetAuthMessage("");
 }
 
@@ -996,6 +1184,7 @@ function customerShowPasswordRecoveryForm() {
   if (customerElements.signInButton) customerElements.signInButton.hidden = true;
   if (customerElements.signUpButton) customerElements.signUpButton.hidden = true;
   if (customerElements.resetPasswordButton) customerElements.resetPasswordButton.hidden = true;
+  if (customerElements.resendVerificationButton) customerElements.resendVerificationButton.hidden = true;
   if (customerElements.passwordRecoveryPanel) customerElements.passwordRecoveryPanel.hidden = false;
   if (customerElements.authDialog?.showModal && !customerElements.authDialog.open) customerElements.authDialog.showModal();
   customerSetAuthMessage(customerT("recoveryReady"), "ok");
@@ -1235,6 +1424,33 @@ async function customerSendPasswordResetEmail() {
     return;
   }
   customerSetAuthMessage(customerT("resetSent"), "ok");
+}
+
+async function customerResendVerificationEmail() {
+  const client = customerEnsureClient();
+  const email = customerElements.authEmail.value.trim();
+  if (!client) {
+    customerSetAuthMessage(customerT("appNotConfigured"), "error");
+    return;
+  }
+  if (!email) {
+    customerSetAuthMessage(customerT("resendEmailRequired"), "error");
+    customerElements.authEmail?.focus();
+    return;
+  }
+
+  customerSetAuthMessage(customerT("resendSending"));
+  const redirectTo = window.location.href.split("#")[0].split("?")[0];
+  const { error } = await client.auth.resend({
+    type: "signup",
+    email,
+    options: { emailRedirectTo: redirectTo },
+  });
+  if (error) {
+    customerSetAuthMessage(customerFriendlyAuthError(error), "error");
+    return;
+  }
+  customerSetAuthMessage(customerT("resendSent"), "ok");
 }
 
 async function customerUpdateRecoveredPassword() {
@@ -1681,7 +1897,7 @@ async function customerSelectRestaurant(storeId, options = {}) {
   if (options.updateUrl !== false) {
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("store", customerStoreId);
-    nextUrl.searchParams.set("app", "v54");
+    nextUrl.searchParams.set("app", "v59");
     window.history.replaceState({}, "", nextUrl.toString());
   }
 
@@ -3027,6 +3243,7 @@ customerElements.cartItems.addEventListener("input", (event) => {
 customerElements.signInButton.addEventListener("click", customerSignInWithEmail);
 customerElements.signUpButton.addEventListener("click", customerSignUpWithEmail);
 customerElements.resetPasswordButton?.addEventListener("click", customerSendPasswordResetEmail);
+customerElements.resendVerificationButton?.addEventListener("click", customerResendVerificationEmail);
 customerElements.updatePasswordButton?.addEventListener("click", customerUpdateRecoveredPassword);
 customerElements.cancelRecoveryButton?.addEventListener("click", () => customerHidePasswordRecoveryForm());
 customerElements.signOutButton.addEventListener("click", customerSignOut);

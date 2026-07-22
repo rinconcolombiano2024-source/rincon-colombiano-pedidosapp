@@ -54,6 +54,7 @@
             <button class="customer-map-button" id="courierSignInButton" type="button">Iniciar sesion</button>
             <button class="customer-map-button" id="courierSignUpButton" type="button">Crear cuenta</button>
             <button class="customer-map-button" id="courierResetPasswordButton" type="button">Recuperar contrasena</button>
+            <button class="customer-map-button" id="courierResendVerificationButton" type="button">Reenviar verificacion</button>
           </div>
           <div class="password-recovery-panel" id="courierPasswordRecoveryPanel" hidden>
             <label>
@@ -110,6 +111,11 @@
             Documento de identidad
             <input id="courierIdentityInput" type="text" placeholder="Numero o referencia del documento" autocomplete="off" />
           </label>
+          <label class="collaborator-wide-field">
+            Archivo documento de identidad
+            <input id="courierIdentityFileInput" type="file" accept="image/*,.pdf" />
+            <input id="courierIdentityFileUrlInput" type="text" readonly placeholder="Sin archivo subido" />
+          </label>
           <label>
             Tipo de vehiculo
             <select id="courierVehicleTypeInput">
@@ -129,8 +135,18 @@
             <input id="courierDriverLicenseInput" type="text" placeholder="Si aplica" autocomplete="off" />
           </label>
           <label>
+            Archivo licencia
+            <input id="courierDriverLicenseFileInput" type="file" accept="image/*,.pdf" />
+            <input id="courierDriverLicenseFileUrlInput" type="text" readonly placeholder="Sin archivo subido" />
+          </label>
+          <label>
             Seguro
             <input id="courierInsuranceInput" type="text" placeholder="Si aplica" autocomplete="off" />
+          </label>
+          <label>
+            Archivo seguro
+            <input id="courierInsuranceFileInput" type="file" accept="image/*,.pdf" />
+            <input id="courierInsuranceFileUrlInput" type="text" readonly placeholder="Sin archivo subido" />
           </label>
           <label>
             Cuenta bancaria
@@ -142,21 +158,24 @@
           </label>
           <label>
             Foto
-            <input id="courierPhotoUrlInput" type="url" placeholder="URL del archivo, si ya lo tienes" autocomplete="off" />
+            <input id="courierPhotoFileInput" type="file" accept="image/*" />
+            <input id="courierPhotoUrlInput" type="text" readonly placeholder="Sin foto subida" autocomplete="off" />
           </label>
           <label>
             Selfie de verificacion
-            <input id="courierSelfieUrlInput" type="url" placeholder="URL del archivo, si ya lo tienes" autocomplete="off" />
+            <input id="courierSelfieFileInput" type="file" accept="image/*" />
+            <input id="courierSelfieUrlInput" type="text" readonly placeholder="Sin selfie subida" autocomplete="off" />
           </label>
           <label class="collaborator-wide-field">
             Permiso de trabajo
-            <input id="courierWorkPermitUrlInput" type="url" placeholder="URL del documento, si aplica" autocomplete="off" />
+            <input id="courierWorkPermitFileInput" type="file" accept="image/*,.pdf" />
+            <input id="courierWorkPermitUrlInput" type="text" readonly placeholder="Sin archivo subido" autocomplete="off" />
           </label>
           <p class="customer-delivery-help collaborator-wide-field" id="courierVehicleHelp">
             Bicicleta: no requiere licencia. Motocicleta o automovil: requiere matricula, licencia y seguro.
           </p>
           <p class="customer-delivery-help collaborator-wide-field">
-            Envia fotos de documento, licencia, seguro o permiso de trabajo a pedidosapprinconcolombiano@gmail.com para revision manual.
+            Sube los soportes desde la camara o archivos del dispositivo. Si algo falla, tambien puedes enviarlos a pedidosapprinconcolombiano@gmail.com para revision manual.
           </p>
           <label class="customer-legal-checkbox">
             <input id="courierTermsInput" type="checkbox" />

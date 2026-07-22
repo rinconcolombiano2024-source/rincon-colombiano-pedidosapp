@@ -161,11 +161,30 @@ Archivos importantes:
 Notas para telefono:
 - Si el telefono no muestra cambios nuevos, desinstalar la app vieja y volver a instalar desde la URL de Vercel.
 - El service worker debe subir version cada vez que cambie la app.
-- Version de cache actual: rincon-colombiano-v57.
+- Version de cache actual: rincon-colombiano-v59.
 
 Precaucion offline:
 - Si varias tablets trabajan sin internet al mismo tiempo, pueden repetirse numeros locales de ticket.
 - Para evitar conflictos en hora pico sin internet, usar una tablet principal o mantener conexion estable.
+
+VERSION v59 - TRADUCCION DE DESCRIPCIONES EN CLIENTE
+
+- Cliente traduce la descripcion de productos al idioma seleccionado.
+- La app mantiene el intento de traduccion automatica online y agrega un respaldo local para palabras/frases comunes de restaurante.
+- Si el traductor externo falla, el cliente ya no queda necesariamente viendo todo en espanol.
+- Cache actualizado a rincon-colombiano-v59.
+
+VERSION v58 - COLABORADORES, ARCHIVOS Y APROBACION
+
+- Restaurante, cliente y colaborador tienen boton para reenviar correo de verificacion.
+- Colaborador puede subir archivos desde camara o archivos del dispositivo.
+- Archivos de colaborador previstos en Supabase Storage privado: courier-documents.
+- Perfil de colaborador guarda identity_document_url, driver_license_url e insurance_url.
+- Restaurante tiene boton Colaboradores para revisar solicitudes, abrir documentos, aprobar o rechazar.
+- Aprobar colaborador activa el rol platform_courier y permite disponibilidad en el panel del colaborador.
+- La aprobacion en restaurante exige documentos minimos visibles antes de habilitar el boton.
+- Se agrego migracion segura: MIGRACION-FASE7-V58-COLABORADORES-ARCHIVOS-APROBACION.sql.
+- Cache actualizado a rincon-colombiano-v58.
 VERSION v57 - CORREO, RECUPERACION Y DISENO INICIAL
 
 - Los mensajes de confirmacion de correo ahora dicen que RINCON COLOMBIANO PEDIDOS envio/verifico el correo.

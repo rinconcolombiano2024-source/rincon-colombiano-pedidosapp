@@ -33,7 +33,7 @@ const STORAGE_KEYS = {
 
 const DEFAULT_BUSINESS_NAME = "RINCON COLOMBIANO";
 const DEFAULT_DELIVERY_MINIMUM_FEE = 20;
-const APP_VERSION = "v57";
+const APP_VERSION = "v59";
 const PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 
 const EMPTY_MENU_CATALOG = {
@@ -62,6 +62,7 @@ const elements = {
   signInButton: document.querySelector("#signInButton"),
   signUpButton: document.querySelector("#signUpButton"),
   resetPasswordButton: document.querySelector("#resetPasswordButton"),
+  resendVerificationButton: document.querySelector("#resendVerificationButton"),
   passwordRecoveryPanel: document.querySelector("#passwordRecoveryPanel"),
   newPasswordInput: document.querySelector("#newPasswordInput"),
   updatePasswordButton: document.querySelector("#updatePasswordButton"),
@@ -77,6 +78,10 @@ const elements = {
   clientAlarmButton: document.querySelector("#clientAlarmButton"),
   clientOrdersButton: document.querySelector("#clientOrdersButton"),
   clientOrdersBadge: document.querySelector("#clientOrdersBadge"),
+  courierReviewButton: document.querySelector("#courierReviewButton"),
+  courierReviewDialog: document.querySelector("#courierReviewDialog"),
+  courierReviewList: document.querySelector("#courierReviewList"),
+  refreshCouriersButton: document.querySelector("#refreshCouriersButton"),
   nextTicketLabel: document.querySelector("#nextTicketLabel"),
   categoryTabs: document.querySelector("#categoryTabs"),
   menuGrid: document.querySelector("#menuGrid"),
@@ -1774,6 +1779,158 @@ async function cancelClientOrder(orderId) {
   showToast("Pedido de cliente cancelado.");
 }
 
+function courierReviewCanUse() {
+  return Boolean(cloudState.configured && cloudState.user && cloudState.client && navigator.onLine);
+}
+
+function courierDocumentRef(value) {
+  const ref = String(value || "").trim();
+  if (!ref) return "";
+  if (ref.startsWith("storage:courier-documents/")) return ref.replace("storage:courier-documents/", "");
+  if (ref.startsWith("courier-documents/")) return ref.replace("courier-documents/", "");
+  return ref;
+}
+
+function courierDocumentButton(label, value) {
+  const ref = courierDocumentRef(value);
+  if (!ref) return `<span>${escapeHtml(label)}: sin archivo</span>`;
+  if (/^https?:\/\//i.test(ref)) {
+    return `<a href="${escapeHtml(ref)}" target="_blank" rel="noopener">${escapeHtml(label)}</a>`;
+  }
+  return `<button type="button" data-action="open-courier-doc" data-doc="${escapeHtml(ref)}">${escapeHtml(label)}</button>`;
+}
+
+function courierStatusReviewLabel(status) {
+  if (status === "approved") return "Aprobado";
+  if (status === "rejected") return "Rechazado";
+  if (status === "suspended") return "Suspendido";
+  if (status === "inactive") return "Inactivo";
+  return "Pendiente";
+}
+
+function courierReviewMissingDocuments(row) {
+  const missing = [];
+  if (!courierDocumentRef(row.identity_document_url)) missing.push("documento");
+  if (!courierDocumentRef(row.photo_url)) missing.push("foto");
+  if (!courierDocumentRef(row.verification_selfie_url)) missing.push("selfie");
+  if (row.vehicle_type === "motocicleta" || row.vehicle_type === "automovil") {
+    if (!courierDocumentRef(row.driver_license_url)) missing.push("licencia");
+    if (!courierDocumentRef(row.insurance_url)) missing.push("seguro");
+  }
+  return missing;
+}
+
+function renderCourierReviewList(rows = []) {
+  if (!elements.courierReviewList) return;
+  if (!rows.length) {
+    elements.courierReviewList.innerHTML = `<div class="monthly-empty">No hay colaboradores pendientes o registrados.</div>`;
+    return;
+  }
+
+  elements.courierReviewList.innerHTML = rows
+    .map((row) => {
+      const fullName = [row.first_name, row.last_name].filter(Boolean).join(" ") || "Colaborador sin nombre";
+      const vehicle = [row.vehicle_type, row.vehicle_plate].filter(Boolean).join(" / ") || "Vehiculo no indicado";
+      const docs = [
+        courierDocumentButton("Documento", row.identity_document_url),
+        courierDocumentButton("Foto", row.photo_url),
+        courierDocumentButton("Selfie", row.verification_selfie_url),
+        courierDocumentButton("Licencia", row.driver_license_url),
+        courierDocumentButton("Seguro", row.insurance_url),
+        courierDocumentButton("Permiso trabajo", row.work_permit_url),
+      ].join("");
+      const missingDocs = courierReviewMissingDocuments(row);
+      const canApprove = row.status !== "approved" && missingDocs.length === 0;
+      const canReject = row.status !== "rejected";
+      return `
+        <article class="client-order-card courier-review-card" data-courier-id="${escapeHtml(row.user_id)}">
+          <div class="client-order-head">
+            <div>
+              <strong>${escapeHtml(fullName)}</strong>
+              <span>${escapeHtml(row.email || "Correo no disponible")}</span>
+              <span>${escapeHtml(row.phone || "Telefono no indicado")} / ${escapeHtml(row.city || "")}</span>
+              <span>Estado: ${escapeHtml(courierStatusReviewLabel(row.status))}</span>
+              <span>Vehiculo: ${escapeHtml(vehicle)}</span>
+            </div>
+            <strong>${escapeHtml(row.created_at ? new Date(row.created_at).toLocaleDateString("es-US") : "")}</strong>
+          </div>
+          <p class="client-order-note">Documento: ${escapeHtml(row.identity_document || "No indicado")}</p>
+          <p class="client-order-note">Licencia: ${escapeHtml(row.driver_license || "No aplica / no indicada")}</p>
+          <p class="client-order-note">Seguro: ${escapeHtml(row.insurance_info || "No aplica / no indicado")}</p>
+          <p class="client-order-note">${missingDocs.length ? `Faltan archivos: ${escapeHtml(missingDocs.join(", "))}` : "Documentos minimos completos."}</p>
+          <div class="courier-documents">${docs}</div>
+          <div class="client-order-actions">
+            <button type="button" data-action="approve-courier" ${canApprove ? "" : "disabled"}>Aprobar para trabajar</button>
+            <button type="button" data-action="reject-courier" ${canReject ? "" : "disabled"}>Rechazar</button>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+async function loadCourierReviewQueue() {
+  if (!elements.courierReviewList) return;
+  if (!courierReviewCanUse()) {
+    elements.courierReviewList.innerHTML = `<div class="monthly-empty">Inicia sesion y verifica internet para revisar colaboradores.</div>`;
+    return;
+  }
+
+  elements.courierReviewList.innerHTML = `<div class="monthly-empty">Cargando colaboradores...</div>`;
+  const { data, error } = await cloudState.client.rpc("get_courier_review_queue");
+  if (error) {
+    elements.courierReviewList.innerHTML = `<div class="monthly-empty">No se pudo cargar colaboradores. Ejecuta la migracion v58 en Supabase.</div>`;
+    return;
+  }
+  renderCourierReviewList(Array.isArray(data) ? data : []);
+}
+
+async function openCourierDocument(ref) {
+  const docRef = courierDocumentRef(ref);
+  if (!docRef) return;
+  if (/^https?:\/\//i.test(docRef)) {
+    window.open(docRef, "_blank", "noopener");
+    return;
+  }
+  if (!cloudState.client) return;
+  const { data, error } = await cloudState.client.storage.from("courier-documents").createSignedUrl(docRef, 60 * 10);
+  if (error || !data?.signedUrl) {
+    alert("No se pudo abrir el archivo. Ejecuta la migracion v58 o revisa permisos de Storage.");
+    return;
+  }
+  window.open(data.signedUrl, "_blank", "noopener");
+}
+
+async function reviewCourierProfile(userId, status) {
+  if (!courierReviewCanUse()) {
+    alert("Inicia sesion y verifica internet para revisar colaboradores.");
+    return;
+  }
+  const label = status === "approved" ? "aprobar este colaborador para trabajar" : "rechazar esta solicitud";
+  if (!confirm(`Confirmas ${label}?`)) return;
+  const { error } = await cloudState.client.rpc("review_courier_profile", {
+    p_user_id: userId,
+    p_status: status,
+  });
+  if (error) {
+    alert("No se pudo actualizar el colaborador. Ejecuta la migracion v58 en Supabase.");
+    return;
+  }
+  showToast(status === "approved" ? "Colaborador aprobado para trabajar." : "Solicitud de colaborador rechazada.");
+  await loadCourierReviewQueue();
+}
+
+function openCourierReviewDialog() {
+  if (elements.courierReviewDialog?.showModal && !elements.courierReviewDialog.open) {
+    elements.courierReviewDialog.showModal();
+  }
+  loadCourierReviewQueue().catch(() => {
+    if (elements.courierReviewList) {
+      elements.courierReviewList.innerHTML = `<div class="monthly-empty">No se pudo cargar colaboradores.</div>`;
+    }
+  });
+}
+
 async function restaurantImageFileToDataUrl(file) {
   if (!file) return "";
   if (!file.type.startsWith("image/")) {
@@ -2131,6 +2288,37 @@ async function sendPasswordResetEmail() {
     }
     elements.authMessage.textContent =
       "Correo enviado por RINCON COLOMBIANO PEDIDOS. Abre el enlace del correo para crear una contrasena nueva.";
+  } catch (error) {
+    elements.authMessage.textContent = friendlyAuthError(error);
+  }
+}
+
+async function resendVerificationEmail() {
+  const email = elements.authEmail.value.trim();
+  if (!email) {
+    elements.authMessage.textContent = "Escribe tu correo electronico para reenviar la verificacion.";
+    elements.authEmail.focus();
+    return;
+  }
+
+  if (!cloudState.client) {
+    elements.authMessage.textContent = "No se pudo conectar con Supabase. Revisa internet.";
+    return;
+  }
+
+  elements.authMessage.textContent = "RINCON COLOMBIANO PEDIDOS esta reenviando el correo de verificacion...";
+  try {
+    const { error } = await cloudState.client.auth.resend({
+      type: "signup",
+      email,
+      options: { emailRedirectTo: window.location.href.split("#")[0].split("?")[0] },
+    });
+    if (error) {
+      elements.authMessage.textContent = friendlyAuthError(error);
+      return;
+    }
+    elements.authMessage.textContent =
+      "Correo de verificacion reenviado por RINCON COLOMBIANO PEDIDOS. Revisa entrada, spam o promociones.";
   } catch (error) {
     elements.authMessage.textContent = friendlyAuthError(error);
   }
@@ -4326,6 +4514,7 @@ elements.openRestaurantSignupButton?.addEventListener("click", () => openRestaur
 elements.restaurantAuthCloseButton?.addEventListener("click", closeRestaurantAuthDialog);
 elements.restaurantAuthDialog?.addEventListener("cancel", () => hidePasswordRecoveryForm());
 elements.resetPasswordButton.addEventListener("click", sendPasswordResetEmail);
+elements.resendVerificationButton?.addEventListener("click", resendVerificationEmail);
 elements.updatePasswordButton.addEventListener("click", updateRecoveredPassword);
 elements.cancelRecoveryButton.addEventListener("click", () => hidePasswordRecoveryForm());
 if (elements.refreshAppButton) {
@@ -4342,6 +4531,8 @@ elements.copyQrLinkButton.addEventListener("click", copyQrLink);
 elements.openClientPageButton.addEventListener("click", openClientPage);
 elements.clientOrdersButton.addEventListener("click", openClientOrdersDialog);
 elements.refreshClientOrdersButton.addEventListener("click", () => refreshClientOrders());
+elements.courierReviewButton?.addEventListener("click", openCourierReviewDialog);
+elements.refreshCouriersButton?.addEventListener("click", () => loadCourierReviewQueue());
 elements.clientOrdersList.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-action]");
   const card = event.target.closest(".client-order-card");
@@ -4351,6 +4542,20 @@ elements.clientOrdersList.addEventListener("click", (event) => {
   if (button.dataset.action === "sent-client-order") markClientOrderSent(card.dataset.clientOrderId);
   if (button.dataset.action === "delivered-client-order") markClientOrderDelivered(card.dataset.clientOrderId);
   if (button.dataset.action === "send-client-message") sendRestaurantChatMessage(card.dataset.clientOrderId, card);
+});
+
+elements.courierReviewList?.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-action]");
+  if (!button) return;
+  if (button.dataset.action === "open-courier-doc") {
+    openCourierDocument(button.dataset.doc);
+    return;
+  }
+
+  const card = event.target.closest(".courier-review-card");
+  if (!card) return;
+  if (button.dataset.action === "approve-courier") reviewCourierProfile(card.dataset.courierId, "approved");
+  if (button.dataset.action === "reject-courier") reviewCourierProfile(card.dataset.courierId, "rejected");
 });
 
 elements.saveOrderButton.addEventListener("click", async () => {
