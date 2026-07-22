@@ -33,7 +33,7 @@ const STORAGE_KEYS = {
 
 const DEFAULT_BUSINESS_NAME = "RINCON COLOMBIANO";
 const DEFAULT_DELIVERY_MINIMUM_FEE = 20;
-const APP_VERSION = "v60";
+const APP_VERSION = "v61";
 const PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 
 const EMPTY_MENU_CATALOG = {
@@ -3037,7 +3037,6 @@ function renderProductList() {
             ${product.imageUrl ? `<img src="${escapeHtml(product.imageUrl)}" alt="${escapeHtml(product.name)}" loading="lazy" />` : ""}
             <div>
               <strong>${escapeHtml(product.name)}</strong>
-              ${product.description ? `<p>${escapeHtml(product.description)}</p>` : ""}
               <small>${productIsAvailable(product) ? "Disponible" : "No disponible"}</small>
             </div>
           </div>

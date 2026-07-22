@@ -161,7 +161,7 @@ Archivos importantes:
 Notas para telefono:
 - Si el telefono no muestra cambios nuevos, desinstalar la app vieja y volver a instalar desde la URL de Vercel.
 - El service worker debe subir version cada vez que cambie la app.
-- Version de cache actual: rincon-colombiano-v60.
+- Version de cache actual: rincon-colombiano-v61.
 
 Precaucion offline:
 - Si varias tablets trabajan sin internet al mismo tiempo, pueden repetirse numeros locales de ticket.
@@ -177,6 +177,12 @@ VERSION v60 - ADMINISTRACION DE PLATAFORMA SEPARADA
 - Documentos de colaboradores se verifican manualmente por correo en pedidosapprinconcolombiano@gmail.com o por Storage si fueron subidos en la app.
 - La notificacion al colaborador mas cercano queda como siguiente fase: requiere ubicacion en tiempo real, disponibilidad, calculo de distancia, oferta de entrega y Realtime/Push.
 - Cache actualizado a rincon-colombiano-v60.
+
+VERSION v61 - VALIDACION Y AJUSTES DE SINCRONIZACION
+- Se verificaron IDs, enlaces internos, archivos cacheados, traducciones, Realtime del menu, precios historicos, funciones de Supabase y documentos privados de colaboradores.
+- La descripcion del producto ya no se muestra en la lista interna del restaurante; sigue guardada para la app del cliente.
+- La migracion v58 quedo alineada para que solo platform_admin pueda revisar/aprobar colaboradores.
+- Cache actualizado a rincon-colombiano-v61.
 
 VERSION v59 - TRADUCCION DE DESCRIPCIONES EN CLIENTE
 

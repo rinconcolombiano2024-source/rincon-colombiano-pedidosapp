@@ -15,10 +15,7 @@ security definer
 set search_path = public
 as $$
   select auth.uid() is not null
-    and (
-      public.user_has_active_role('platform_admin')
-      or public.user_has_active_role('restaurant_owner')
-    );
+    and public.user_has_active_role('platform_admin');
 $$;
 
 create or replace function public.get_courier_review_queue()

@@ -1,0 +1,57 @@
+REPORTE DE VALIDACION v61
+
+Resultado general:
+- La app compila sin errores de sintaxis en app.js, cliente.js, colaborador.js, admin.js y service-worker.js.
+- Las pantallas index.html, cliente.html, colaborador.html y admin.html no tienen IDs duplicados.
+- Los selectores usados por JavaScript estan conectados con elementos reales del HTML.
+- Los enlaces internos y archivos de instalacion existen.
+- El cache offline esta en rincon-colombiano-v61.
+
+Restaurante:
+- Pantalla inicial limpia con acceso a Restaurante, Cliente y Colaborador.
+- Registro/inicio de restaurante en ventana modal.
+- Menu base vacio: los platos reales los crea el restaurante.
+- La lista interna del restaurante ya no muestra la descripcion de productos.
+- La descripcion se conserva para que el cliente la vea.
+- Guardar, eliminar, editar productos/categorias muestran avisos.
+- Busqueda de productos existe.
+- Cierre diario y mensual calculan totales, productos vendidos y metodos de pago.
+- Impresion usa ancho configurable de recibo.
+
+Cliente:
+- Puede ver restaurantes activos publicados en Supabase.
+- Deduplica restaurantes por nombre y direccion.
+- Carga el menu real del restaurante seleccionado desde Supabase.
+- Usa Realtime filtrado por user_id del restaurante.
+- Si el restaurante cambia menu/precio/disponibilidad, el cliente vuelve a cargar el menu.
+- Conserva precio historico dentro del pedido.
+- Puede pedir como invitado mediante RPC create_customer_order.
+- Puede crear cuenta e historial.
+- Puede activar notificaciones del navegador para cambios de estado.
+- La descripcion de productos se traduce segun idioma elegido, con cache y fallback.
+
+Colaborador:
+- Registro separado.
+- Carga de archivos desde camara o archivos del dispositivo.
+- Bicicleta no exige licencia; moto/automovil exigen matricula, licencia y seguro.
+- Los documentos se guardan en bucket privado courier-documents.
+- Solo platform_admin puede revisar/aprobar colaboradores.
+- Puede compartir ubicacion actual y abrir GPS.
+
+Supabase:
+- URL configurada correctamente sin /rest/v1/.
+- Clave usada en frontend es publishable, no secret.
+- RLS revisado en tablas principales.
+- app_settings esta publicado en Supabase Realtime.
+- get_public_restaurant_menu existe.
+- create_customer_order existe para pedidos invitados/autenticados.
+- Documentos de colaboradores quedan protegidos por storage.objects.
+
+Pendiente importante:
+- La asignacion automatica al colaborador mas cercano disponible todavia no es un sistema completo.
+- Para hacerlo bien falta crear disponibilidad persistente, ubicacion en vivo, asignaciones de entrega, estados de ruta y notificaciones push reales.
+- Esta parte debe implementarse en una fase separada para no danar la toma de pedidos que ya funciona.
+
+Limitacion de esta validacion:
+- En este entorno no se pudo abrir un navegador automatizado para capturas reales, porque el controlador local de navegador no inicio.
+- La validacion realizada fue estatica y de consistencia de codigo/archivos.
