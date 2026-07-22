@@ -29,6 +29,11 @@ const customerElements = {
   authMessage: document.querySelector("#customerAuthMessage"),
   signInButton: document.querySelector("#customerSignInButton"),
   signUpButton: document.querySelector("#customerSignUpButton"),
+  resetPasswordButton: document.querySelector("#customerResetPasswordButton"),
+  passwordRecoveryPanel: document.querySelector("#customerPasswordRecoveryPanel"),
+  newPasswordInput: document.querySelector("#customerNewPasswordInput"),
+  updatePasswordButton: document.querySelector("#customerUpdatePasswordButton"),
+  cancelRecoveryButton: document.querySelector("#customerCancelRecoveryButton"),
   signOutButton: document.querySelector("#customerSignOutButton"),
   restaurantPanel: document.querySelector("#customerRestaurantPanel"),
   restaurantTitle: document.querySelector("#customerRestaurantTitle"),
@@ -120,18 +125,29 @@ const CUSTOMER_I18N = {
     privacyConsent: "Acepto el tratamiento de mis datos para gestionar pedidos, historial, entrega, chat y cookies tecnicas necesarias.",
     signIn: "Iniciar sesion",
     signUp: "Crear cuenta cliente",
+    resetPassword: "Recuperar contrasena",
+    newPasswordLabel: "Nueva contrasena",
+    updatePassword: "Guardar nueva contrasena",
+    cancel: "Cancelar",
     signOut: "Cerrar sesion",
     signingIn: "Iniciando sesion...",
     signingUp: "Creando cuenta...",
     signedIn: "Sesion iniciada.",
     signedOut: "Sesion cerrada.",
-    accountCreated: "Cuenta creada. Revisa tu correo electronico para confirmar la cuenta antes de iniciar sesion.",
+    accountCreated: "Cuenta creada. RINCON COLOMBIANO PEDIDOS te envio un correo de verificacion. Abre ese correo, confirma la cuenta y despues inicia sesion.",
+    resetEmailRequired: "Escribe tu correo electronico para recuperar la contrasena.",
+    resetSending: "RINCON COLOMBIANO PEDIDOS esta enviando el correo de recuperacion...",
+    resetSent: "Correo enviado por RINCON COLOMBIANO PEDIDOS. Abre el enlace para crear una contrasena nueva.",
+    recoveryTitle: "Nueva contrasena",
+    recoveryReady: "RINCON COLOMBIANO PEDIDOS verifico el enlace. Escribe tu nueva contrasena.",
+    newPasswordShort: "La nueva contrasena debe tener minimo 6 caracteres.",
+    passwordUpdated: "Contrasena actualizada. Ya puedes iniciar sesion en RINCON COLOMBIANO PEDIDOS.",
     accountRequired: "Puedes enviar el pedido como invitado llenando tus datos. Inicia sesion solo si quieres guardar historial.",
     authMissing: "Escribe correo y contrasena.",
     authPasswordShort: "La contrasena debe tener minimo 6 caracteres.",
     authError: "No se pudo completar el acceso.",
     authInvalidCredentials: "Correo o contrasena incorrectos.",
-    authEmailConfirm: "Confirma tu correo electronico antes de iniciar sesion.",
+    authEmailConfirm: "RINCON COLOMBIANO PEDIDOS envio un correo de verificacion. Revisa tu correo, confirma la cuenta y vuelve a iniciar sesion.",
     authAlreadyRegistered: "Ese correo ya tiene cuenta. Intenta iniciar sesion.",
     privacyRequired: "Acepta el tratamiento de datos para crear la cuenta.",
     historyPanelAria: "Historial del cliente",
@@ -316,18 +332,29 @@ const CUSTOMER_I18N = {
     privacyConsent: "Akceptuje przetwarzanie danych do obslugi zamowien, historii, dostawy, czatu i niezbednych cookies technicznych.",
     signIn: "Zaloguj",
     signUp: "Utworz konto klienta",
+    resetPassword: "Odzyskaj haslo",
+    newPasswordLabel: "Nowe haslo",
+    updatePassword: "Zapisz nowe haslo",
+    cancel: "Anuluj",
     signOut: "Wyloguj",
     signingIn: "Logowanie...",
     signingUp: "Tworzenie konta...",
     signedIn: "Zalogowano.",
     signedOut: "Wylogowano.",
-    accountCreated: "Konto utworzone. Sprawdz e-mail i potwierdz konto przed logowaniem.",
+    accountCreated: "Konto utworzone. RINCON COLOMBIANO PEDIDOS wyslal e-mail weryfikacyjny. Otworz wiadomosc, potwierdz konto i potem sie zaloguj.",
+    resetEmailRequired: "Wpisz e-mail, aby odzyskac haslo.",
+    resetSending: "RINCON COLOMBIANO PEDIDOS wysyla e-mail do odzyskania hasla...",
+    resetSent: "E-mail wyslany przez RINCON COLOMBIANO PEDIDOS. Otworz link, aby utworzyc nowe haslo.",
+    recoveryTitle: "Nowe haslo",
+    recoveryReady: "RINCON COLOMBIANO PEDIDOS zweryfikowal link. Wpisz nowe haslo.",
+    newPasswordShort: "Nowe haslo musi miec minimum 6 znakow.",
+    passwordUpdated: "Haslo zaktualizowane. Mozesz zalogowac sie do RINCON COLOMBIANO PEDIDOS.",
     accountRequired: "Mozesz wyslac zamowienie jako gosc po wpisaniu danych. Logowanie jest potrzebne tylko do historii.",
     authMissing: "Wpisz e-mail i haslo.",
     authPasswordShort: "Haslo musi miec minimum 6 znakow.",
     authError: "Nie udalo sie zakonczyc logowania.",
     authInvalidCredentials: "Nieprawidlowy e-mail lub haslo.",
-    authEmailConfirm: "Potwierdz e-mail przed zalogowaniem.",
+    authEmailConfirm: "RINCON COLOMBIANO PEDIDOS wyslal e-mail weryfikacyjny. Sprawdz poczte, potwierdz konto i zaloguj sie ponownie.",
     authAlreadyRegistered: "Ten e-mail ma juz konto. Sprobuj sie zalogowac.",
     privacyRequired: "Zaakceptuj przetwarzanie danych, aby utworzyc konto.",
     historyPanelAria: "Historia klienta",
@@ -512,18 +539,29 @@ const CUSTOMER_I18N = {
     privacyConsent: "I accept data processing for orders, history, delivery, chat, and necessary technical cookies.",
     signIn: "Sign in",
     signUp: "Create customer account",
+    resetPassword: "Recover password",
+    newPasswordLabel: "New password",
+    updatePassword: "Save new password",
+    cancel: "Cancel",
     signOut: "Sign out",
     signingIn: "Signing in...",
     signingUp: "Creating account...",
     signedIn: "Signed in.",
     signedOut: "Signed out.",
-    accountCreated: "Account created. Check your email to confirm the account before signing in.",
+    accountCreated: "Account created. RINCON COLOMBIANO PEDIDOS sent you a verification email. Open it, confirm the account, then sign in.",
+    resetEmailRequired: "Enter your email to recover the password.",
+    resetSending: "RINCON COLOMBIANO PEDIDOS is sending the recovery email...",
+    resetSent: "Email sent by RINCON COLOMBIANO PEDIDOS. Open the link to create a new password.",
+    recoveryTitle: "New password",
+    recoveryReady: "RINCON COLOMBIANO PEDIDOS verified the link. Enter your new password.",
+    newPasswordShort: "The new password must be at least 6 characters.",
+    passwordUpdated: "Password updated. You can now sign in to RINCON COLOMBIANO PEDIDOS.",
     accountRequired: "You can send the order as a guest after entering your details. Sign in only if you want order history.",
     authMissing: "Enter email and password.",
     authPasswordShort: "Password must be at least 6 characters.",
     authError: "Could not complete account access.",
     authInvalidCredentials: "Email or password is incorrect.",
-    authEmailConfirm: "Confirm your email before signing in.",
+    authEmailConfirm: "RINCON COLOMBIANO PEDIDOS sent a verification email. Check your email, confirm the account, and sign in again.",
     authAlreadyRegistered: "That email already has an account. Try signing in.",
     privacyRequired: "Accept data processing to create the account.",
     historyPanelAria: "Customer history",
@@ -816,6 +854,7 @@ function customerPaymentMethodText(value) {
 let customerClient = null;
 let customerAuthInitialized = false;
 let customerUser = null;
+let customerRecoveringPassword = false;
 let customerHistoryRows = [];
 let customerRestaurants = [];
 let customerRestaurantSearchQuery = "";
@@ -908,6 +947,8 @@ function customerMountAuthDialog() {
 
 function customerSetAuthMode(mode = "login") {
   const normalizedMode = mode === "register" ? "register" : "login";
+  customerRecoveringPassword = false;
+  if (customerElements.passwordRecoveryPanel) customerElements.passwordRecoveryPanel.hidden = true;
   customerElements.authModalForm?.setAttribute("data-mode", normalizedMode);
   if (customerElements.authTitle) {
     customerElements.authTitle.removeAttribute("data-i18n");
@@ -919,6 +960,7 @@ function customerSetAuthMode(mode = "login") {
   });
   if (customerElements.signInButton) customerElements.signInButton.hidden = normalizedMode === "register";
   if (customerElements.signUpButton) customerElements.signUpButton.hidden = normalizedMode !== "register";
+  if (customerElements.resetPasswordButton) customerElements.resetPasswordButton.hidden = normalizedMode === "register";
   customerSetAuthMessage("");
 }
 
@@ -933,6 +975,38 @@ function customerOpenAuthDialog(mode = "login") {
 
 function customerCloseAuthDialog() {
   if (customerElements.authDialog?.open) customerElements.authDialog.close();
+}
+
+function customerShowPasswordRecoveryForm() {
+  customerMountAuthDialog();
+  customerRecoveringPassword = true;
+  if (customerElements.authFields) customerElements.authFields.hidden = false;
+  customerElements.authModalForm?.setAttribute("data-mode", "recovery");
+  if (customerElements.authTitle) {
+    customerElements.authTitle.removeAttribute("data-i18n");
+    customerElements.authTitle.textContent = customerT("recoveryTitle");
+  }
+  const labels = Array.from(customerElements.authFields?.querySelectorAll("label") || []);
+  labels.forEach((label) => {
+    label.hidden = true;
+  });
+  customerElements.passwordRecoveryPanel?.querySelectorAll("label").forEach((label) => {
+    label.hidden = false;
+  });
+  if (customerElements.signInButton) customerElements.signInButton.hidden = true;
+  if (customerElements.signUpButton) customerElements.signUpButton.hidden = true;
+  if (customerElements.resetPasswordButton) customerElements.resetPasswordButton.hidden = true;
+  if (customerElements.passwordRecoveryPanel) customerElements.passwordRecoveryPanel.hidden = false;
+  if (customerElements.authDialog?.showModal && !customerElements.authDialog.open) customerElements.authDialog.showModal();
+  customerSetAuthMessage(customerT("recoveryReady"), "ok");
+  window.setTimeout(() => customerElements.newPasswordInput?.focus(), 50);
+}
+
+function customerHidePasswordRecoveryForm(message = "") {
+  customerRecoveringPassword = false;
+  if (customerElements.newPasswordInput) customerElements.newPasswordInput.value = "";
+  customerSetAuthMode("login");
+  if (message) customerSetAuthMessage(message, "ok");
 }
 
 function customerInputValue(input) {
@@ -1010,7 +1084,7 @@ function customerRenderAccount() {
   if (customerElements.authFields) customerElements.authFields.hidden = Boolean(customerUser);
   if (customerElements.signOutButton) customerElements.signOutButton.hidden = !customerUser;
   if (customerElements.sendButton) customerElements.sendButton.disabled = customerCart.length === 0;
-  if (customerUser) customerCloseAuthDialog();
+  if (customerUser && !customerRecoveringPassword) customerCloseAuthDialog();
 
   if (customerUser) {
     customerApplyProfileFields(customerProfileFromMetadata());
@@ -1021,13 +1095,19 @@ function customerRenderAccount() {
   }
 }
 
+function customerUrlLooksLikeRecovery() {
+  return /type=recovery/i.test(window.location.hash) || customerParams.get("type") === "recovery" || customerParams.get("recovery") === "1";
+}
+
 async function customerInitializeAuth() {
   const client = customerEnsureClient();
   if (!client || customerAuthInitialized) return;
   customerAuthInitialized = true;
   const { data } = await client.auth.getSession();
   customerUser = data.session?.user || null;
+  if (customerUrlLooksLikeRecovery()) customerRecoveringPassword = true;
   customerRenderAccount();
+  if (customerRecoveringPassword) customerShowPasswordRecoveryForm();
   if (customerUser) {
     await customerLoadProfile();
     await customerEnsureIdentity();
@@ -1035,8 +1115,12 @@ async function customerInitializeAuth() {
   } else {
     customerRenderHistory();
   }
-  client.auth.onAuthStateChange(async (_event, session) => {
+  client.auth.onAuthStateChange(async (event, session) => {
     customerUser = session?.user || null;
+    if (event === "PASSWORD_RECOVERY") {
+      customerShowPasswordRecoveryForm();
+      return;
+    }
     customerRenderAccount();
     if (customerUser) {
       await customerLoadProfile();
@@ -1128,6 +1212,50 @@ async function customerSignUpWithEmail() {
     await customerLoadHistory();
   }
   customerSetAuthMessage(customerT("accountCreated"), "ok");
+}
+
+async function customerSendPasswordResetEmail() {
+  const client = customerEnsureClient();
+  const email = customerElements.authEmail.value.trim();
+  if (!client) {
+    customerSetAuthMessage(customerT("appNotConfigured"), "error");
+    return;
+  }
+  if (!email) {
+    customerSetAuthMessage(customerT("resetEmailRequired"), "error");
+    customerElements.authEmail?.focus();
+    return;
+  }
+
+  customerSetAuthMessage(customerT("resetSending"));
+  const redirectTo = window.location.href.split("#")[0];
+  const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo });
+  if (error) {
+    customerSetAuthMessage(customerFriendlyAuthError(error), "error");
+    return;
+  }
+  customerSetAuthMessage(customerT("resetSent"), "ok");
+}
+
+async function customerUpdateRecoveredPassword() {
+  const client = customerEnsureClient();
+  const password = customerElements.newPasswordInput?.value || "";
+  if (!client) {
+    customerSetAuthMessage(customerT("appNotConfigured"), "error");
+    return;
+  }
+  if (password.length < 6) {
+    customerSetAuthMessage(customerT("newPasswordShort"), "error");
+    customerElements.newPasswordInput?.focus();
+    return;
+  }
+
+  const { error } = await client.auth.updateUser({ password });
+  if (error) {
+    customerSetAuthMessage(customerFriendlyAuthError(error), "error");
+    return;
+  }
+  customerHidePasswordRecoveryForm(customerT("passwordUpdated"));
 }
 
 async function customerSignOut() {
@@ -2898,6 +3026,9 @@ customerElements.cartItems.addEventListener("input", (event) => {
 
 customerElements.signInButton.addEventListener("click", customerSignInWithEmail);
 customerElements.signUpButton.addEventListener("click", customerSignUpWithEmail);
+customerElements.resetPasswordButton?.addEventListener("click", customerSendPasswordResetEmail);
+customerElements.updatePasswordButton?.addEventListener("click", customerUpdateRecoveredPassword);
+customerElements.cancelRecoveryButton?.addEventListener("click", () => customerHidePasswordRecoveryForm());
 customerElements.signOutButton.addEventListener("click", customerSignOut);
 customerElements.openSignInButton?.addEventListener("click", () => customerOpenAuthDialog("login"));
 customerElements.openSignUpButton?.addEventListener("click", () => customerOpenAuthDialog("register"));

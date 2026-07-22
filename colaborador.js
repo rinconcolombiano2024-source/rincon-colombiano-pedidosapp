@@ -7,6 +7,11 @@ const courierElements = {
   passwordInput: document.querySelector("#courierPasswordInput"),
   signInButton: document.querySelector("#courierSignInButton"),
   signUpButton: document.querySelector("#courierSignUpButton"),
+  resetPasswordButton: document.querySelector("#courierResetPasswordButton"),
+  passwordRecoveryPanel: document.querySelector("#courierPasswordRecoveryPanel"),
+  newPasswordInput: document.querySelector("#courierNewPasswordInput"),
+  updatePasswordButton: document.querySelector("#courierUpdatePasswordButton"),
+  cancelRecoveryButton: document.querySelector("#courierCancelRecoveryButton"),
   signOutButton: document.querySelector("#courierSignOutButton"),
   authMessage: document.querySelector("#courierAuthMessage"),
   profileStatus: document.querySelector("#courierProfileStatus"),
@@ -55,6 +60,7 @@ let courierAuthReady = false;
 let courierProfile = null;
 let courierAvailable = false;
 let courierLastLocation = null;
+let courierRecoveringPassword = false;
 
 const COURIER_VERIFICATION_EMAIL = "pedidosapprinconcolombiano@gmail.com";
 
@@ -181,7 +187,9 @@ function courierOpenGps() {
 function courierFriendlyAuthError(error) {
   const message = String(error?.message || "");
   if (/invalid login credentials/i.test(message)) return "Correo o contrasena incorrectos.";
-  if (/email not confirmed/i.test(message)) return "Confirma tu correo electronico antes de iniciar sesion.";
+  if (/email not confirmed/i.test(message)) {
+    return "RINCON COLOMBIANO PEDIDOS envio un correo de verificacion. Revisa tu correo, confirma la cuenta y vuelve a iniciar sesion.";
+  }
   if (/already registered|already exists|user already/i.test(message)) {
     return "Ese correo ya tiene cuenta. Inicia sesion aqui con ese correo y despues envia la solicitud de colaborador.";
   }
@@ -302,7 +310,7 @@ function courierRender() {
   courierElements.accountSummary.textContent = courierUser
     ? `Sesion activa: ${email}`
     : "Inicia sesion o crea una cuenta para enviar tu solicitud.";
-  courierElements.authFields.hidden = Boolean(courierUser);
+  courierElements.authFields.hidden = Boolean(courierUser) && !courierRecoveringPassword;
   courierElements.signOutButton.hidden = !courierUser;
   courierElements.statusBadge.textContent = courierUser ? statusLabel : "Sin enviar";
   courierElements.statusBadge.dataset.status = status;
@@ -493,9 +501,87 @@ async function courierSignUp() {
   }
   courierSetMessage(
     courierElements.authMessage,
-    "Cuenta creada. Revisa el correo para confirmar y luego inicia sesion como colaborador.",
+    "Cuenta creada. RINCON COLOMBIANO PEDIDOS te envio un correo de verificacion. Abre ese correo, confirma la cuenta y despues inicia sesion como colaborador.",
     "ok"
   );
+}
+
+async function courierSendPasswordResetEmail() {
+  const client = courierEnsureClient();
+  const email = courierInputValue(courierElements.emailInput);
+  if (!client) {
+    courierSetMessage(courierElements.authMessage, "Supabase no esta configurado o no cargo correctamente.", "error");
+    return;
+  }
+  if (!email) {
+    courierSetMessage(courierElements.authMessage, "Escribe tu correo electronico para recuperar la contrasena.", "error");
+    courierElements.emailInput?.focus();
+    return;
+  }
+
+  courierSetMessage(courierElements.authMessage, "RINCON COLOMBIANO PEDIDOS esta enviando el correo de recuperacion...");
+  const redirectTo = window.location.href.split("#")[0];
+  const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo });
+  if (error) {
+    courierSetMessage(courierElements.authMessage, courierFriendlyAuthError(error), "error");
+    return;
+  }
+  courierSetMessage(
+    courierElements.authMessage,
+    "Correo enviado por RINCON COLOMBIANO PEDIDOS. Abre el enlace para crear una contrasena nueva.",
+    "ok"
+  );
+}
+
+function courierShowPasswordRecoveryForm() {
+  courierRecoveringPassword = true;
+  courierElements.authFields.hidden = false;
+  courierElements.emailInput.closest("label").hidden = true;
+  courierElements.passwordInput.closest("label").hidden = true;
+  courierElements.signInButton.hidden = true;
+  courierElements.signUpButton.hidden = true;
+  courierElements.resetPasswordButton.hidden = true;
+  courierElements.passwordRecoveryPanel.hidden = false;
+  courierSetMessage(
+    courierElements.authMessage,
+    "RINCON COLOMBIANO PEDIDOS verifico el enlace. Escribe tu nueva contrasena.",
+    "ok"
+  );
+  window.setTimeout(() => courierElements.newPasswordInput?.focus(), 50);
+}
+
+function courierHidePasswordRecoveryForm(message = "") {
+  courierRecoveringPassword = false;
+  courierElements.passwordRecoveryPanel.hidden = true;
+  courierElements.newPasswordInput.value = "";
+  courierElements.emailInput.closest("label").hidden = false;
+  courierElements.passwordInput.closest("label").hidden = false;
+  courierElements.signInButton.hidden = false;
+  courierElements.signUpButton.hidden = false;
+  courierElements.resetPasswordButton.hidden = false;
+  courierRender();
+  if (message) courierSetMessage(courierElements.authMessage, message, "ok");
+}
+
+async function courierUpdateRecoveredPassword() {
+  const client = courierEnsureClient();
+  const password = courierElements.newPasswordInput.value;
+  if (!client) {
+    courierSetMessage(courierElements.authMessage, "Supabase no esta configurado o no cargo correctamente.", "error");
+    return;
+  }
+  if (password.length < 6) {
+    courierSetMessage(courierElements.authMessage, "La nueva contrasena debe tener minimo 6 caracteres.", "error");
+    courierElements.newPasswordInput.focus();
+    return;
+  }
+
+  const { error } = await client.auth.updateUser({ password });
+  if (error) {
+    courierSetMessage(courierElements.authMessage, courierFriendlyAuthError(error), "error");
+    return;
+  }
+  courierHidePasswordRecoveryForm("Contrasena actualizada. Ya puedes iniciar sesion en RINCON COLOMBIANO PEDIDOS.");
 }
 
 function courierProfilePayloadForMetadata() {
@@ -532,6 +618,10 @@ function courierToggleAvailability() {
   courierRender();
 }
 
+function courierUrlLooksLikeRecovery() {
+  return /type=recovery/i.test(window.location.hash) || /[?&](type=recovery|recovery=1)/i.test(window.location.search);
+}
+
 async function courierInitialize() {
   const client = courierEnsureClient();
   if (!client || courierAuthReady) {
@@ -542,12 +632,18 @@ async function courierInitialize() {
 
   const { data } = await client.auth.getSession();
   courierUser = data.session?.user || null;
+  if (courierUrlLooksLikeRecovery()) courierRecoveringPassword = true;
   courierRender();
+  if (courierRecoveringPassword) courierShowPasswordRecoveryForm();
   if (courierUser) await courierLoadProfile();
 
-  client.auth.onAuthStateChange(async (_event, session) => {
+  client.auth.onAuthStateChange(async (event, session) => {
     courierUser = session?.user || null;
     courierProfile = null;
+    if (event === "PASSWORD_RECOVERY") {
+      courierShowPasswordRecoveryForm();
+      return;
+    }
     courierRender();
     if (courierUser) await courierLoadProfile();
   });
@@ -555,6 +651,9 @@ async function courierInitialize() {
 
 courierElements.signInButton.addEventListener("click", courierSignIn);
 courierElements.signUpButton.addEventListener("click", courierSignUp);
+courierElements.resetPasswordButton.addEventListener("click", courierSendPasswordResetEmail);
+courierElements.updatePasswordButton.addEventListener("click", courierUpdateRecoveredPassword);
+courierElements.cancelRecoveryButton.addEventListener("click", () => courierHidePasswordRecoveryForm());
 courierElements.signOutButton.addEventListener("click", courierSignOut);
 courierElements.saveProfileButton.addEventListener("click", courierSaveProfile);
 courierElements.availabilityButton.addEventListener("click", courierToggleAvailability);

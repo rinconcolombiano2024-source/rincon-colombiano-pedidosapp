@@ -1,6 +1,6 @@
 {
-  "name": "Sistema de Pedidos Restaurante",
-  "short_name": "Pedidos",
+  "name": "RINCON COLOMBIANO PEDIDOS",
+  "short_name": "RC Pedidos",
   "id": "/",
   "description": "Pedidos, tickets de cocina, cliente QR, historial y cierres para restaurantes.",
   "start_url": ".",

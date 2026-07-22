@@ -53,6 +53,17 @@
           <div class="customer-auth-actions">
             <button class="customer-map-button" id="courierSignInButton" type="button">Iniciar sesion</button>
             <button class="customer-map-button" id="courierSignUpButton" type="button">Crear cuenta</button>
+            <button class="customer-map-button" id="courierResetPasswordButton" type="button">Recuperar contrasena</button>
+          </div>
+          <div class="password-recovery-panel" id="courierPasswordRecoveryPanel" hidden>
+            <label>
+              Nueva contrasena
+              <input id="courierNewPasswordInput" type="password" autocomplete="new-password" placeholder="Minimo 6 caracteres" />
+            </label>
+            <div class="customer-auth-actions">
+              <button class="customer-map-button" id="courierUpdatePasswordButton" type="button">Guardar nueva contrasena</button>
+              <button class="customer-map-button" id="courierCancelRecoveryButton" type="button">Cancelar</button>
+            </div>
           </div>
         </div>
         <p class="customer-map-result" id="courierAuthMessage" hidden></p>

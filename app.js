@@ -33,7 +33,7 @@ const STORAGE_KEYS = {
 
 const DEFAULT_BUSINESS_NAME = "RINCON COLOMBIANO";
 const DEFAULT_DELIVERY_MINIMUM_FEE = 20;
-const APP_VERSION = "v56";
+const APP_VERSION = "v57";
 const PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 
 const EMPTY_MENU_CATALOG = {
@@ -2102,7 +2102,8 @@ async function signUpWithEmail() {
     return;
   }
 
-  elements.authMessage.textContent = "Cuenta del restaurante creada. Revisa el correo para confirmar y poder iniciar sesion.";
+  elements.authMessage.textContent =
+    "Cuenta del restaurante creada. RINCON COLOMBIANO PEDIDOS te envio un correo de verificacion. Abre ese correo, confirma la cuenta y despues inicia sesion.";
   elements.authPassword.value = "";
 }
 
@@ -2119,7 +2120,7 @@ async function sendPasswordResetEmail() {
     return;
   }
 
-  elements.authMessage.textContent = "Enviando correo de recuperacion...";
+  elements.authMessage.textContent = "RINCON COLOMBIANO PEDIDOS esta enviando el correo de recuperacion...";
   const redirectTo = window.location.href.split("#")[0].split("?")[0];
 
   try {
@@ -2128,7 +2129,8 @@ async function sendPasswordResetEmail() {
       elements.authMessage.textContent = friendlyAuthError(error);
       return;
     }
-    elements.authMessage.textContent = "Correo enviado. Abre el enlace para crear una contrasena nueva.";
+    elements.authMessage.textContent =
+      "Correo enviado por RINCON COLOMBIANO PEDIDOS. Abre el enlace del correo para crear una contrasena nueva.";
   } catch (error) {
     elements.authMessage.textContent = friendlyAuthError(error);
   }
@@ -2179,7 +2181,7 @@ function showPasswordRecoveryForm() {
   elements.signInButton.hidden = true;
   elements.signUpButton.hidden = true;
   elements.resetPasswordButton.hidden = true;
-  renderCloudState("Escribe tu nueva contrasena.");
+  renderCloudState("RINCON COLOMBIANO PEDIDOS verifico el enlace. Escribe tu nueva contrasena.");
   elements.newPasswordInput.focus();
 }
 
@@ -2211,7 +2213,7 @@ async function updateRecoveredPassword() {
       elements.authMessage.textContent = friendlyAuthError(error);
       return;
     }
-    hidePasswordRecoveryForm("Contrasena actualizada.");
+    hidePasswordRecoveryForm("Contrasena actualizada. Ya puedes iniciar sesion en RINCON COLOMBIANO PEDIDOS.");
   } catch (error) {
     elements.authMessage.textContent = friendlyAuthError(error);
   }
@@ -2221,6 +2223,12 @@ function friendlyAuthError(error) {
   const message = error?.message || String(error || "");
   if (message.toLowerCase().includes("invalid path specified")) {
     return "URL de Supabase incorrecta. Usa solo https://tu-proyecto.supabase.co, sin /rest/v1.";
+  }
+  if (/email not confirmed/i.test(message)) {
+    return "RINCON COLOMBIANO PEDIDOS envio un correo de verificacion. Revisa tu correo, confirma la cuenta y vuelve a iniciar sesion.";
+  }
+  if (/invalid login credentials/i.test(message)) {
+    return "Correo o contrasena incorrectos.";
   }
 
   return message;
@@ -2399,7 +2407,7 @@ function readBusinessName() {
 function applyBusinessNameToUi() {
   const name = normalizeBusinessName(businessName);
   businessName = name;
-  if (elements.authBusinessName) elements.authBusinessName.textContent = name;
+  if (elements.authBusinessName) elements.authBusinessName.textContent = `${name} PEDIDOS`;
   if (elements.appBusinessName) elements.appBusinessName.textContent = name;
   [elements.authLogoImage, elements.appLogoImage].forEach((image) => {
     if (!image) return;

@@ -161,11 +161,21 @@ Archivos importantes:
 Notas para telefono:
 - Si el telefono no muestra cambios nuevos, desinstalar la app vieja y volver a instalar desde la URL de Vercel.
 - El service worker debe subir version cada vez que cambie la app.
-- Version de cache actual: rincon-colombiano-v56.
+- Version de cache actual: rincon-colombiano-v57.
 
 Precaucion offline:
 - Si varias tablets trabajan sin internet al mismo tiempo, pueden repetirse numeros locales de ticket.
 - Para evitar conflictos en hora pico sin internet, usar una tablet principal o mantener conexion estable.
+VERSION v57 - CORREO, RECUPERACION Y DISENO INICIAL
+
+- Los mensajes de confirmacion de correo ahora dicen que RINCON COLOMBIANO PEDIDOS envio/verifico el correo.
+- Restaurante mantiene recuperacion de contrasena con Supabase y mensajes mas claros.
+- Cliente ahora tiene recuperacion de contrasena y panel para nueva contrasena al abrir el enlace del correo.
+- Colaborador ahora tiene recuperacion de contrasena y panel para nueva contrasena al abrir el enlace del correo.
+- Pantalla inicial mejorada para movil con bandera de Colombia hecha en CSS y colores de Colombia.
+- Manifest de instalacion actualizado a RINCON COLOMBIANO PEDIDOS / RC Pedidos.
+- Cache actualizado a rincon-colombiano-v57.
+
 VERSION v56 - MEJORAS SOLICITADAS
 
 - Restaurante: la descripcion del plato ya no se muestra en la pantalla principal de toma de pedidos. La descripcion sigue guardada y visible para el cliente.
