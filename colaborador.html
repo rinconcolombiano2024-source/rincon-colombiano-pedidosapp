@@ -141,6 +141,12 @@
             Permiso de trabajo
             <input id="courierWorkPermitUrlInput" type="url" placeholder="URL del documento, si aplica" autocomplete="off" />
           </label>
+          <p class="customer-delivery-help collaborator-wide-field" id="courierVehicleHelp">
+            Bicicleta: no requiere licencia. Motocicleta o automovil: requiere matricula, licencia y seguro.
+          </p>
+          <p class="customer-delivery-help collaborator-wide-field">
+            Envia fotos de documento, licencia, seguro o permiso de trabajo a pedidosapprinconcolombiano@gmail.com para revision manual.
+          </p>
           <label class="customer-legal-checkbox">
             <input id="courierTermsInput" type="checkbox" />
             <span>Acepto el contrato, terminos, politica de privacidad y tratamiento de datos para revision y entregas.</span>
@@ -166,6 +172,11 @@
           <button type="button" disabled>Llegue al cliente</button>
           <button type="button" disabled>Pedido entregado</button>
         </div>
+        <div class="collaborator-actions">
+          <button class="customer-map-button" id="courierShareLocationButton" type="button">Compartir ubicacion actual</button>
+          <button class="customer-map-button" id="courierOpenGpsButton" type="button" disabled>Abrir GPS</button>
+        </div>
+        <p class="customer-map-result" id="courierLocationMessage" hidden></p>
       </section>
     </main>
 

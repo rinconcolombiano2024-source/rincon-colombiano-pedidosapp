@@ -2741,8 +2741,8 @@ dialog::backdrop {
     max-width: 100%;
     margin: 0;
     padding: 4mm;
-    break-after: page;
-    page-break-after: always;
+    break-after: auto;
+    page-break-after: auto;
     color: #000000;
     font-family: "Courier New", Courier, monospace;
     font-size: 12px;
@@ -2751,7 +2751,7 @@ dialog::backdrop {
   .print-ticket::after {
     content: "";
     display: block;
-    height: 18mm;
+    height: 4mm;
   }
 
   .print-ticket h1,

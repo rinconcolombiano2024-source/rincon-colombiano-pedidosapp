@@ -161,8 +161,20 @@ Archivos importantes:
 Notas para telefono:
 - Si el telefono no muestra cambios nuevos, desinstalar la app vieja y volver a instalar desde la URL de Vercel.
 - El service worker debe subir version cada vez que cambie la app.
-- Version de cache actual al crear esta memoria: rincon-colombiano-v55.
+- Version de cache actual: rincon-colombiano-v56.
 
 Precaucion offline:
 - Si varias tablets trabajan sin internet al mismo tiempo, pueden repetirse numeros locales de ticket.
 - Para evitar conflictos en hora pico sin internet, usar una tablet principal o mantener conexion estable.
+VERSION v56 - MEJORAS SOLICITADAS
+
+- Restaurante: la descripcion del plato ya no se muestra en la pantalla principal de toma de pedidos. La descripcion sigue guardada y visible para el cliente.
+- Cliente: puede enviar pedido como invitado; si inicia sesion conserva historial.
+- Cliente: descripcion de platos con traduccion automatica por idioma seleccionado, con cache local y fallback al texto original.
+- Cliente: al actualizar menu/precios, el carrito sincroniza nombre/precio antes de enviar.
+- Domicilio: tarifa por tramos con ajuste operativo del 10%.
+- Colaborador: bicicleta no exige licencia; moto y automovil exigen matricula, licencia y seguro.
+- Colaborador: documentacion para revision manual al correo pedidosapprinconcolombiano@gmail.com.
+- Colaborador: botones para compartir ubicacion actual y abrir GPS.
+- Impresion: se redujo el espacio blanco al final del ticket.
+- Supabase: ejecutar MIGRACION-FASE5-V56-PEDIDOS-INVITADO-MEJORAS.sql para activar pedidos invitados.

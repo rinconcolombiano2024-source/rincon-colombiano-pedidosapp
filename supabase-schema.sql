@@ -660,7 +660,7 @@ as $$
   limit 1;
 $$;
 
-revoke execute on function public.create_customer_order(uuid, uuid, text, text, text, text, jsonb, numeric) from anon;
+grant execute on function public.create_customer_order(uuid, uuid, text, text, text, text, jsonb, numeric) to anon;
 grant execute on function public.create_customer_order(uuid, uuid, text, text, text, text, jsonb, numeric) to authenticated;
 grant execute on function public.get_customer_order_status(uuid, text) to anon, authenticated;
 

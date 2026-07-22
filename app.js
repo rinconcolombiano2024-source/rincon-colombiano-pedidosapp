@@ -33,7 +33,7 @@ const STORAGE_KEYS = {
 
 const DEFAULT_BUSINESS_NAME = "RINCON COLOMBIANO";
 const DEFAULT_DELIVERY_MINIMUM_FEE = 20;
-const APP_VERSION = "v55";
+const APP_VERSION = "v56";
 const PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 
 const EMPTY_MENU_CATALOG = {
@@ -2925,7 +2925,6 @@ function renderMenu() {
         >
           ${dish.imageUrl ? `<img src="${escapeHtml(dish.imageUrl)}" alt="${escapeHtml(dish.name)}" loading="lazy" />` : ""}
           <strong>${escapeHtml(dish.name)}</strong>
-          ${dish.description ? `<small>${escapeHtml(dish.description)}</small>` : ""}
           ${searchQuery ? `<small>${escapeHtml(category)}</small>` : ""}
           <span>${formatMoney(dish.price)}</span>
           ${productIsAvailable(dish) ? "" : `<em>No disponible</em>`}
@@ -3456,13 +3455,13 @@ function applyReceiptPrintStyle() {
         box-sizing: border-box !important;
         width: ${contentWidth}mm !important;
         padding: 2mm !important;
-        break-after: page !important;
-        page-break-after: always !important;
+        break-after: auto !important;
+        page-break-after: auto !important;
       }
       .print-ticket::after {
         content: "" !important;
         display: block !important;
-        height: 18mm !important;
+        height: 4mm !important;
       }
     }
   `;
@@ -3598,7 +3597,7 @@ function createReceiptPdfBlob(order) {
   const fontSize = 9;
   const maxLineLength = Math.max(18, Math.floor((pageWidth - margin * 2) / 5.4));
   const lines = buildTicketPdfLines(order, maxLineLength);
-  const pageHeight = Math.max(260, margin * 2 + lines.length * lineHeight + 12);
+  const pageHeight = Math.max(120, margin * 2 + lines.length * lineHeight + 12);
   const textCommands = [
     "BT",
     `/F1 ${fontSize} Tf`,

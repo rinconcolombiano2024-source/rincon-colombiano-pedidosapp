@@ -74,6 +74,8 @@ const customerElements = {
 };
 
 const CUSTOMER_LANGUAGE_KEY = "rincon_colombiano_customer_language";
+const CUSTOMER_TRANSLATION_CACHE_KEY = "rincon_colombiano_description_translations_v1";
+const CUSTOMER_DELIVERY_MARKUP = 1.1;
 const CUSTOMER_I18N = {
   es: {
     heroEyebrow: "Pedido del cliente",
@@ -87,7 +89,7 @@ const CUSTOMER_I18N = {
     legalNotice: "Usamos los datos que escribes para crear tu cuenta, preparar el pedido, entregarlo, guardar historial y responder por chat. La app usa cookies tecnicas/localStorage para mantener sesion, idioma, carrito y funcionamiento.",
     accountPanelAria: "Cuenta del cliente",
     accountTitle: "Mi cuenta",
-    accountGuest: "Inicia sesion o crea una cuenta para enviar pedidos y ver tu historial.",
+    accountGuest: "Puedes pedir como invitado. Inicia sesion o crea cuenta si quieres guardar historial.",
     accountSignedIn: "Conectado como {email}. Tus pedidos quedaran guardados en tu historial.",
     restaurantPanelAria: "Elegir restaurante",
     restaurantTitle: "Elegir restaurante",
@@ -124,7 +126,7 @@ const CUSTOMER_I18N = {
     signedIn: "Sesion iniciada.",
     signedOut: "Sesion cerrada.",
     accountCreated: "Cuenta creada. Revisa tu correo electronico para confirmar la cuenta antes de iniciar sesion.",
-    accountRequired: "Inicia sesion o crea una cuenta para enviar el pedido y guardar tu historial.",
+    accountRequired: "Puedes enviar el pedido como invitado llenando tus datos. Inicia sesion solo si quieres guardar historial.",
     authMissing: "Escribe correo y contrasena.",
     authPasswordShort: "La contrasena debe tener minimo 6 caracteres.",
     authError: "No se pudo completar el acceso.",
@@ -176,7 +178,7 @@ const CUSTOMER_I18N = {
     distancePlaceholder: "Ej: 3.4",
     useLocation: "Usar mi ubicacion",
     calculateMaps: "Calcular con Google Maps",
-    deliveryHelp: "Domicilio: minimo configurado por el restaurante; si la distancia supera ese valor, se calcula por tramos con Google Maps o km aproximados.",
+    deliveryHelp: "Domicilio: minimo configurado por el restaurante; si la distancia supera ese valor, se calcula por tramos con Google Maps o km aproximados e incluye ajuste operativo del 10%.",
     kitchenNotesLabel: "Notas para cocina",
     kitchenNotesPlaceholder: "Ej: sin cebolla, salsa aparte...",
     estimatedTotal: "Total estimado",
@@ -283,7 +285,7 @@ const CUSTOMER_I18N = {
     legalNotice: "Uzywamy podanych danych do utworzenia konta, przygotowania zamowienia, dostawy, historii i czatu. Aplikacja uzywa technicznego localStorage/cookies do sesji, jezyka, koszyka i dzialania.",
     accountPanelAria: "Konto klienta",
     accountTitle: "Moje konto",
-    accountGuest: "Zaloguj sie albo utworz konto, aby wysylac zamowienia i widziec historie.",
+    accountGuest: "Mozesz zamowic jako gosc. Zaloguj sie lub utworz konto, jesli chcesz zapisac historie.",
     accountSignedIn: "Zalogowano jako {email}. Twoje zamowienia beda zapisane w historii.",
     restaurantPanelAria: "Wybierz restauracje",
     restaurantTitle: "Wybierz restauracje",
@@ -320,7 +322,7 @@ const CUSTOMER_I18N = {
     signedIn: "Zalogowano.",
     signedOut: "Wylogowano.",
     accountCreated: "Konto utworzone. Sprawdz e-mail i potwierdz konto przed logowaniem.",
-    accountRequired: "Zaloguj sie albo utworz konto, aby wyslac zamowienie i zapisac historie.",
+    accountRequired: "Mozesz wyslac zamowienie jako gosc po wpisaniu danych. Logowanie jest potrzebne tylko do historii.",
     authMissing: "Wpisz e-mail i haslo.",
     authPasswordShort: "Haslo musi miec minimum 6 znakow.",
     authError: "Nie udalo sie zakonczyc logowania.",
@@ -372,7 +374,7 @@ const CUSTOMER_I18N = {
     distancePlaceholder: "Np. 3.4",
     useLocation: "Uzyj mojej lokalizacji",
     calculateMaps: "Oblicz w Google Maps",
-    deliveryHelp: "Dostawa: obowiazuje minimum ustawione przez restauracje; jesli dystans przekracza ten koszt, cena liczona jest progami z Google Maps albo przyblizonych km.",
+    deliveryHelp: "Dostawa: obowiazuje minimum ustawione przez restauracje; jesli dystans przekracza ten koszt, cena liczona jest progami z Google Maps albo przyblizonych km i zawiera 10% korekty operacyjnej.",
     kitchenNotesLabel: "Uwagi do kuchni",
     kitchenNotesPlaceholder: "Np. bez cebuli, sos osobno...",
     estimatedTotal: "Suma szacunkowa",
@@ -479,7 +481,7 @@ const CUSTOMER_I18N = {
     legalNotice: "We use the data you enter to create your account, prepare the order, deliver it, keep history, and answer by chat. The app uses technical cookies/localStorage for session, language, cart, and operation.",
     accountPanelAria: "Customer account",
     accountTitle: "My account",
-    accountGuest: "Sign in or create an account to send orders and see your history.",
+    accountGuest: "You can order as a guest. Sign in or create an account if you want order history.",
     accountSignedIn: "Signed in as {email}. Your orders will be saved in your history.",
     restaurantPanelAria: "Choose restaurant",
     restaurantTitle: "Choose restaurant",
@@ -516,7 +518,7 @@ const CUSTOMER_I18N = {
     signedIn: "Signed in.",
     signedOut: "Signed out.",
     accountCreated: "Account created. Check your email to confirm the account before signing in.",
-    accountRequired: "Sign in or create an account to send the order and save your history.",
+    accountRequired: "You can send the order as a guest after entering your details. Sign in only if you want order history.",
     authMissing: "Enter email and password.",
     authPasswordShort: "Password must be at least 6 characters.",
     authError: "Could not complete account access.",
@@ -568,7 +570,7 @@ const CUSTOMER_I18N = {
     distancePlaceholder: "Ex: 3.4",
     useLocation: "Use my location",
     calculateMaps: "Calculate with Google Maps",
-    deliveryHelp: "Delivery: the restaurant minimum applies; if distance is higher than that amount, the price is calculated by tiers using Google Maps or approximate km.",
+    deliveryHelp: "Delivery: the restaurant minimum applies; if distance is higher than that amount, the price is calculated by tiers using Google Maps or approximate km and includes a 10% operating adjustment.",
     kitchenNotesLabel: "Kitchen notes",
     kitchenNotesPlaceholder: "Ex: no onion, sauce on the side...",
     estimatedTotal: "Estimated total",
@@ -681,11 +683,89 @@ function customerInitialLanguage() {
 }
 
 let customerLanguage = customerInitialLanguage();
+let customerDescriptionTranslations = customerReadDescriptionTranslationCache();
+let customerDescriptionTranslationRequests = new Set();
+let customerDescriptionTranslationFailures = new Set();
+let customerDescriptionTranslationRenderTimer = null;
 
 function customerT(key, values = {}) {
   const dictionary = CUSTOMER_I18N[customerLanguage] || CUSTOMER_I18N.es;
   const fallback = CUSTOMER_I18N.es[key] || key;
   return String(dictionary[key] || fallback).replace(/\{(\w+)\}/g, (_, name) => values[name] ?? "");
+}
+
+function customerReadDescriptionTranslationCache() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(CUSTOMER_TRANSLATION_CACHE_KEY) || "{}");
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function customerSaveDescriptionTranslationCache() {
+  try {
+    const entries = Object.entries(customerDescriptionTranslations).slice(-450);
+    localStorage.setItem(CUSTOMER_TRANSLATION_CACHE_KEY, JSON.stringify(Object.fromEntries(entries)));
+  } catch {
+    // La traduccion sigue funcionando aunque el navegador limite el almacenamiento.
+  }
+}
+
+function customerDescriptionTranslationKey(language, text) {
+  return `${language}|${String(text || "").trim()}`;
+}
+
+function customerDescriptionDisplay(dish) {
+  const description = customerNormalizeProductDescription(dish?.description || "");
+  if (!description || customerLanguage === "es") return description;
+  const key = customerDescriptionTranslationKey(customerLanguage, description);
+  return customerDescriptionTranslations[key] || description;
+}
+
+function customerScheduleDescriptionRender() {
+  if (customerDescriptionTranslationRenderTimer) return;
+  customerDescriptionTranslationRenderTimer = window.setTimeout(() => {
+    customerDescriptionTranslationRenderTimer = null;
+    customerRenderMenu();
+  }, 120);
+}
+
+async function customerFetchDescriptionTranslation(text, language) {
+  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(
+    language
+  )}&dt=t&q=${encodeURIComponent(text)}`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error("translation unavailable");
+  const data = await response.json();
+  return String((data?.[0] || []).map((part) => part?.[0] || "").join("")).trim();
+}
+
+function customerQueueDescriptionTranslation(dish) {
+  const description = customerNormalizeProductDescription(dish?.description || "");
+  if (!description || customerLanguage === "es" || !window.navigator.onLine) return;
+
+  const key = customerDescriptionTranslationKey(customerLanguage, description);
+  if (customerDescriptionTranslations[key] || customerDescriptionTranslationRequests.has(key) || customerDescriptionTranslationFailures.has(key)) {
+    return;
+  }
+
+  customerDescriptionTranslationRequests.add(key);
+  customerFetchDescriptionTranslation(description, customerLanguage)
+    .then((translated) => {
+      const cleanTranslated = customerNormalizeProductDescription(translated);
+      if (cleanTranslated && cleanTranslated.toLowerCase() !== description.toLowerCase()) {
+        customerDescriptionTranslations[key] = cleanTranslated;
+        customerSaveDescriptionTranslationCache();
+        customerScheduleDescriptionRender();
+      }
+    })
+    .catch(() => {
+      customerDescriptionTranslationFailures.add(key);
+    })
+    .finally(() => {
+      customerDescriptionTranslationRequests.delete(key);
+    });
 }
 
 function customerApplyTranslations() {
@@ -706,6 +786,7 @@ function customerApplyTranslations() {
 function customerSetLanguage(language) {
   if (!CUSTOMER_I18N[language]) return;
   customerLanguage = language;
+  customerDescriptionTranslationFailures = new Set();
   localStorage.setItem(CUSTOMER_LANGUAGE_KEY, language);
   customerApplyTranslations();
   if (customerTableFromQr) {
@@ -778,6 +859,11 @@ const CUSTOMER_DELIVERY_RATES = {
   extraLongPerKm: 3.5,
 };
 const CUSTOMER_PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
+
+function customerRoundMoney(value) {
+  const number = Number.parseFloat(value);
+  return Number.isFinite(number) ? Math.round(number * 100) / 100 : 0;
+}
 
 function customerSupabaseConfig() {
   const config = window.RINCON_SUPABASE || {};
@@ -923,7 +1009,7 @@ function customerRenderAccount() {
   if (customerElements.accountActions) customerElements.accountActions.hidden = Boolean(customerUser);
   if (customerElements.authFields) customerElements.authFields.hidden = Boolean(customerUser);
   if (customerElements.signOutButton) customerElements.signOutButton.hidden = !customerUser;
-  if (customerElements.sendButton) customerElements.sendButton.disabled = customerCart.length === 0 || !customerUser;
+  if (customerElements.sendButton) customerElements.sendButton.disabled = customerCart.length === 0;
   if (customerUser) customerCloseAuthDialog();
 
   if (customerUser) {
@@ -1703,7 +1789,7 @@ function customerCalculateDeliveryFee(distanceKm) {
     total += (distance - rates.longLimitKm) * rates.extraLongPerKm;
   }
 
-  return Math.round(total * 100) / 100;
+  return customerRoundMoney(total * CUSTOMER_DELIVERY_MARKUP);
 }
 
 function customerSetMapResult(message, type = "") {
@@ -1927,7 +2013,7 @@ function customerDeliveryFee() {
   const calculatedFee = customerCalculateDeliveryFee(customerElements.distanceInput.value);
   const minimumFee = customerNormalizeDeliveryMinimumFee(customerSettings.deliveryMinimumFee);
   const extraFee = customerNormalizeMoney(customerSettings.deliveryFee);
-  return Math.max(minimumFee, calculatedFee) + extraFee;
+  return customerRoundMoney(Math.max(minimumFee, calculatedFee) + extraFee);
 }
 
 function customerItemTotal(item) {
@@ -1976,13 +2062,14 @@ function customerDeliveryPayload() {
     calculatedFee,
     minimumFee,
     extraFee,
-    fee: feeBeforeExtra + extraFee,
+    markupPercent: 10,
+    fee: customerRoundMoney(feeBeforeExtra + extraFee),
     mapDistanceText: customerMapDistance?.distanceText || "",
     mapDurationText: customerMapDistance?.durationText || "",
     mapOrigin: customerMapDistance?.origin || customerSettings.restaurantAddress || "",
     mapDestination: customerMapDistance?.destination || customerDeliveryDestination(),
     location: customerLocationCoords,
-    tariff: `MINIMO=${minimumFee} PLN; BASE 1.5KM=4.50 PLN; 1.5-6KM=1.50 PLN/KM; 6-8KM=2.50 PLN/KM; +8KM=3.50 PLN/KM`,
+    tariff: `MINIMO=${minimumFee} PLN; BASE 1.5KM=4.50 PLN; 1.5-6KM=1.50 PLN/KM; 6-8KM=2.50 PLN/KM; +8KM=3.50 PLN/KM; AJUSTE OPERATIVO=10%`,
   };
 }
 
@@ -2431,22 +2518,26 @@ function customerRenderMenu() {
 
   customerElements.menuGrid.innerHTML = entries
     .map(
-      ({ category, dish, index }) => `
-        <button
-          class="customer-dish-button ${dish.imageUrl ? "has-product-image" : ""} ${customerProductAvailable(dish) ? "" : "is-unavailable"}"
-          type="button"
-          data-category="${customerEscapeHtml(category)}"
-          data-index="${index}"
-          ${customerProductAvailable(dish) ? "" : "disabled aria-disabled=\"true\""}
-        >
-          ${dish.imageUrl ? `<img src="${customerEscapeHtml(dish.imageUrl)}" alt="${customerEscapeHtml(dish.name)}" loading="lazy" />` : ""}
-          <strong>${customerEscapeHtml(dish.name)}</strong>
-          ${dish.description ? `<small>${customerEscapeHtml(dish.description)}</small>` : ""}
-          ${searchQuery ? `<small>${customerEscapeHtml(category)}</small>` : ""}
-          <span>${customerFormatMoney(dish.price)}</span>
-          ${customerProductAvailable(dish) ? "" : `<em>${customerEscapeHtml(customerT("unavailable"))}</em>`}
-        </button>
-      `
+      ({ category, dish, index }) => {
+        const description = customerDescriptionDisplay(dish);
+        customerQueueDescriptionTranslation(dish);
+        return `
+          <button
+            class="customer-dish-button ${dish.imageUrl ? "has-product-image" : ""} ${customerProductAvailable(dish) ? "" : "is-unavailable"}"
+            type="button"
+            data-category="${customerEscapeHtml(category)}"
+            data-index="${index}"
+            ${customerProductAvailable(dish) ? "" : "disabled aria-disabled=\"true\""}
+          >
+            ${dish.imageUrl ? `<img src="${customerEscapeHtml(dish.imageUrl)}" alt="${customerEscapeHtml(dish.name)}" loading="lazy" />` : ""}
+            <strong>${customerEscapeHtml(dish.name)}</strong>
+            ${description ? `<small>${customerEscapeHtml(description)}</small>` : ""}
+            ${searchQuery ? `<small>${customerEscapeHtml(category)}</small>` : ""}
+            <span>${customerFormatMoney(dish.price)}</span>
+            ${customerProductAvailable(dish) ? "" : `<em>${customerEscapeHtml(customerT("unavailable"))}</em>`}
+          </button>
+        `;
+      }
     )
     .join("");
 }
@@ -2481,7 +2572,7 @@ function customerRenderCart() {
   customerElements.cartTotal.textContent = customerFormatMoney(customerCartTotal());
   customerElements.deliveryFeeRow.hidden = customerElements.orderType.value !== "Domicilio";
   customerElements.deliveryFeeLabel.textContent = customerFormatMoney(customerDeliveryFee());
-  customerElements.sendButton.disabled = customerCart.length === 0 || !customerUser;
+  customerElements.sendButton.disabled = customerCart.length === 0;
 }
 
 function customerAddItem(dish) {
@@ -2505,6 +2596,37 @@ function customerAddItem(dish) {
     });
   }
   customerRenderCart();
+}
+
+function customerFindCurrentMenuProduct(cartItem) {
+  const cartProductId = customerNormalizeProductId(cartItem?.productId || "");
+  const cartName = String(cartItem?.name || "").toLowerCase();
+  let fallbackMatch = null;
+
+  Object.values(customerMenu || {}).forEach((dishes) => {
+    (dishes || []).forEach((dish) => {
+      const productId = customerNormalizeProductId(dish.id || dish.productId || "");
+      if (cartProductId && productId && cartProductId === productId) fallbackMatch = dish;
+      if (!fallbackMatch && cartName && String(dish.name || "").toLowerCase() === cartName) fallbackMatch = dish;
+    });
+  });
+
+  return fallbackMatch;
+}
+
+function customerSyncCartWithCurrentMenu() {
+  if (!customerCart.length) return;
+  customerCart = customerCart.map((item) => {
+    const product = customerFindCurrentMenuProduct(item);
+    if (!product) return item;
+    return {
+      ...item,
+      productId: customerNormalizeProductId(product.id || product.productId) || item.productId,
+      name: product.name || item.name,
+      description: product.description || "",
+      price: Number.parseFloat(product.price) || 0,
+    };
+  });
 }
 
 async function customerLoadMenu(options = {}) {
@@ -2581,6 +2703,7 @@ async function customerLoadMenu(options = {}) {
 
   customerMenu = loadedMenu;
   customerActiveCategory = Object.keys(customerMenu)[0] || "Entradas";
+  customerSyncCartWithCurrentMenu();
 
   if (customerTableFromQr) {
     customerElements.tableInput.value = customerTableFromQr;
@@ -2617,12 +2740,6 @@ async function customerRefreshMenu() {
 async function customerSendOrder() {
   if (!customerClient || !customerStoreId) {
     customerSetStatus(customerT("noConnection"), "error");
-    return;
-  }
-
-  if (!customerUser) {
-    customerSetStatus(customerT("accountRequired"), "error");
-    customerElements.authEmail?.focus();
     return;
   }
 
@@ -2665,8 +2782,8 @@ async function customerSendOrder() {
   const total = customerCartTotal();
   const orderPayload = {
     source: "cliente_qr",
-    customerUserId: customerUser.id,
-    customerEmail: customerUser.email || "",
+    customerUserId: customerUser?.id || null,
+    customerEmail: customerUser?.email || "",
     customer: customerName,
     table: tableLabel,
     type: orderType,

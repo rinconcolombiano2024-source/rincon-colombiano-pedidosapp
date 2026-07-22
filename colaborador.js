@@ -28,12 +28,16 @@ const courierElements = {
   photoUrlInput: document.querySelector("#courierPhotoUrlInput"),
   selfieUrlInput: document.querySelector("#courierSelfieUrlInput"),
   workPermitUrlInput: document.querySelector("#courierWorkPermitUrlInput"),
+  vehicleHelp: document.querySelector("#courierVehicleHelp"),
   termsInput: document.querySelector("#courierTermsInput"),
   saveProfileButton: document.querySelector("#courierSaveProfileButton"),
   profileMessage: document.querySelector("#courierProfileMessage"),
   dashboard: document.querySelector("#courierDashboard"),
   dashboardText: document.querySelector("#courierDashboardText"),
   availabilityButton: document.querySelector("#courierAvailabilityButton"),
+  shareLocationButton: document.querySelector("#courierShareLocationButton"),
+  openGpsButton: document.querySelector("#courierOpenGpsButton"),
+  locationMessage: document.querySelector("#courierLocationMessage"),
 };
 
 const COURIER_STATUS_LABELS = {
@@ -50,6 +54,9 @@ let courierUser = null;
 let courierAuthReady = false;
 let courierProfile = null;
 let courierAvailable = false;
+let courierLastLocation = null;
+
+const COURIER_VERIFICATION_EMAIL = "pedidosapprinconcolombiano@gmail.com";
 
 function courierNormalizeText(value) {
   return String(value || "").trim().replace(/\s+/g, " ");
@@ -92,6 +99,83 @@ function courierSetMessage(element, message, type = "") {
   element.textContent = message;
   element.dataset.type = type;
   element.hidden = !message;
+}
+
+function courierVehicleType() {
+  return courierInputValue(courierElements.vehicleTypeInput).toLowerCase();
+}
+
+function courierVehicleRequiresDrivingDocs() {
+  const vehicle = courierVehicleType();
+  return vehicle === "motocicleta" || vehicle === "automovil";
+}
+
+function courierRenderVehicleRequirements() {
+  const requiresDocs = courierVehicleRequiresDrivingDocs();
+  const vehicle = courierVehicleType();
+  if (courierElements.vehicleHelp) {
+    courierElements.vehicleHelp.textContent = requiresDocs
+      ? `Para ${vehicle} debes registrar matricula, licencia y seguro. Envia los soportes a ${COURIER_VERIFICATION_EMAIL}.`
+      : `Bicicleta no requiere licencia. Envia documento, foto y selfie a ${COURIER_VERIFICATION_EMAIL} para revision.`;
+  }
+
+  if (courierElements.vehiclePlateInput) {
+    courierElements.vehiclePlateInput.placeholder = requiresDocs ? "Obligatorio para moto o automovil" : "No aplica para bicicleta";
+  }
+  if (courierElements.driverLicenseInput) {
+    courierElements.driverLicenseInput.placeholder = requiresDocs ? "Obligatoria para moto o automovil" : "No aplica para bicicleta";
+  }
+  if (courierElements.insuranceInput) {
+    courierElements.insuranceInput.placeholder = requiresDocs ? "Obligatorio para moto o automovil" : "No aplica para bicicleta";
+  }
+}
+
+function courierGpsUrl() {
+  if (!courierLastLocation) return "";
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+    `${courierLastLocation.lat},${courierLastLocation.lng}`
+  )}`;
+}
+
+function courierShareLocation() {
+  if (!navigator.geolocation) {
+    courierSetMessage(courierElements.locationMessage, "Este dispositivo no permite compartir ubicacion.", "error");
+    return;
+  }
+
+  courierElements.shareLocationButton.disabled = true;
+  courierSetMessage(courierElements.locationMessage, "Solicitando ubicacion...");
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      courierLastLocation = {
+        lat: Number(position.coords.latitude).toFixed(6),
+        lng: Number(position.coords.longitude).toFixed(6),
+        accuracy: Math.round(position.coords.accuracy || 0),
+        updatedAt: new Date().toISOString(),
+      };
+      courierElements.shareLocationButton.disabled = false;
+      if (courierElements.openGpsButton) courierElements.openGpsButton.disabled = false;
+      courierSetMessage(
+        courierElements.locationMessage,
+        `Ubicacion lista: ${courierLastLocation.lat}, ${courierLastLocation.lng}. Precision aprox: ${courierLastLocation.accuracy} m.`,
+        "ok"
+      );
+    },
+    () => {
+      courierElements.shareLocationButton.disabled = false;
+      courierSetMessage(courierElements.locationMessage, "No pude obtener ubicacion. Revisa permisos del navegador.", "error");
+    },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
+  );
+}
+
+function courierOpenGps() {
+  const url = courierGpsUrl();
+  if (!url) {
+    courierSetMessage(courierElements.locationMessage, "Primero comparte tu ubicacion actual.", "error");
+    return;
+  }
+  window.open(url, "_blank", "noopener");
 }
 
 function courierFriendlyAuthError(error) {
@@ -207,6 +291,7 @@ function courierApplyProfileFields(profile = {}) {
   courierElements.selfieUrlInput.value = profile.verification_selfie_url || "";
   courierElements.workPermitUrlInput.value = profile.work_permit_url || "";
   courierElements.termsInput.checked = Boolean(profile.terms_accepted_at);
+  courierRenderVehicleRequirements();
 }
 
 function courierRender() {
@@ -231,6 +316,7 @@ function courierRender() {
     ? "Perfil aprobado. Puedes activar disponibilidad cuando existan pedidos asignados."
     : "Tu perfil debe ser aprobado antes de recibir pedidos.";
   courierElements.availabilityButton.textContent = courierAvailable ? "Disponible" : "Desconectado";
+  courierRenderVehicleRequirements();
 }
 
 function courierValidateProfile() {
@@ -259,6 +345,21 @@ function courierValidateProfile() {
     courierSetMessage(courierElements.profileMessage, "Debes aceptar contrato, terminos y privacidad.", "error");
     courierElements.termsInput.focus();
     return false;
+  }
+
+  if (courierVehicleRequiresDrivingDocs()) {
+    const drivingDocs = [
+      [courierElements.vehiclePlateInput, "Para motocicleta o automovil escribe la matricula."],
+      [courierElements.driverLicenseInput, "Para motocicleta o automovil escribe la licencia."],
+      [courierElements.insuranceInput, "Para motocicleta o automovil escribe el seguro."],
+    ];
+    for (const [input, message] of drivingDocs) {
+      if (!courierInputValue(input)) {
+        courierSetMessage(courierElements.profileMessage, message, "error");
+        input?.focus();
+        return false;
+      }
+    }
   }
 
   return true;
@@ -298,7 +399,11 @@ async function courierSaveProfile() {
     const { error } = await courierClient.from("courier_profiles").upsert(courierProfilePayload());
     if (error) throw error;
     await courierLoadProfile();
-    courierSetMessage(courierElements.profileMessage, "Solicitud guardada. Queda pendiente de revision.", "ok");
+    courierSetMessage(
+      courierElements.profileMessage,
+      `Solicitud guardada. Queda pendiente de revision. Envia los soportes a ${COURIER_VERIFICATION_EMAIL}.`,
+      "ok"
+    );
   } catch (error) {
     courierSetMessage(courierElements.profileMessage, error.message || "No se pudo guardar la solicitud.", "error");
   }
@@ -453,5 +558,9 @@ courierElements.signUpButton.addEventListener("click", courierSignUp);
 courierElements.signOutButton.addEventListener("click", courierSignOut);
 courierElements.saveProfileButton.addEventListener("click", courierSaveProfile);
 courierElements.availabilityButton.addEventListener("click", courierToggleAvailability);
+courierElements.vehicleTypeInput.addEventListener("change", courierRenderVehicleRequirements);
+courierElements.shareLocationButton?.addEventListener("click", courierShareLocation);
+courierElements.openGpsButton?.addEventListener("click", courierOpenGps);
 
+courierRenderVehicleRequirements();
 courierInitialize();
