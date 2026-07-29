@@ -6,7 +6,12 @@
     <title>RC ORDERA - Administracion</title>
     <meta name="theme-color" content="#1f8f4d" />
     <meta name="robots" content="noindex,nofollow" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="RC Admin" />
     <link rel="icon" href="app-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="app-icon-192.png" />
+    <link rel="manifest" href="admin-manifest.webmanifest" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body class="customer-page platform-admin-page">
@@ -27,27 +32,24 @@
               <option value="en">English</option>
             </select>
           </label>
+          <button class="customer-map-button admin-install-button" id="adminInstallButton" type="button">Instalar panel</button>
         </div>
         <h1>RC ORDERA</h1>
         <p>Panel privado para aprobar o rechazar colaboradores despues de verificar sus documentos manualmente.</p>
       </header>
 
-      <section class="customer-warning">
-        Administrador unico: Jhon Jarolt Mendez, pedidosapprinconcolombiano@gmail.com. Los documentos se revisan manualmente con los soportes enviados a ese correo.
-      </section>
-
       <section class="customer-account-panel" aria-label="Acceso administracion">
         <div class="customer-account-head">
           <div>
             <h2>Acceso plataforma</h2>
-            <p id="adminAccountSummary">Solo Jhon Jarolt Mendez puede administrar la plataforma con pedidosapprinconcolombiano@gmail.com.</p>
+            <p id="adminAccountSummary">Acceso privado para la cuenta administradora autorizada.</p>
           </div>
           <button class="customer-map-button" id="adminSignOutButton" type="button" hidden>Cerrar sesion</button>
         </div>
         <div class="customer-auth-fields" id="adminAuthFields">
           <label>
             Correo electronico
-            <input id="adminEmailInput" type="email" placeholder="pedidosapprinconcolombiano@gmail.com" autocomplete="email" />
+            <input id="adminEmailInput" type="email" placeholder="Correo autorizado" autocomplete="username" />
           </label>
           <label>
             Contrasena
@@ -55,6 +57,7 @@
           </label>
           <div class="customer-auth-actions">
             <button class="customer-map-button" id="adminSignInButton" type="button">Iniciar sesion</button>
+            <button class="customer-map-button" id="adminMagicLinkButton" type="button">Entrar sin contrasena</button>
             <button class="customer-map-button" id="adminResetPasswordButton" type="button">Recuperar contrasena</button>
           </div>
           <div class="password-recovery-panel" id="adminPasswordRecoveryPanel" hidden>

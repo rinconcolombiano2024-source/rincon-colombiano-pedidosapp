@@ -1,4 +1,4 @@
-const CACHE_NAME = "rc-ordera-v69";
+const CACHE_NAME = "rc-ordera-v70";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -13,6 +13,7 @@ const APP_FILES = [
   "./auto-translate.js",
   "./supabase-config.js",
   "./manifest.webmanifest",
+  "./admin-manifest.webmanifest",
   "./app-icon.svg",
   "./app-icon-192.png",
   "./app-icon-512.png",

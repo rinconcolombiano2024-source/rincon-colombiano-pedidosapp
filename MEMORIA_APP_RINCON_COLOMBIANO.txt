@@ -5,6 +5,18 @@ Regla principal:
 - No inventar cambios fuera de lo solicitado.
 - Cada cambio debe conservar lo ya hecho: pedidos, tickets, impresion, cierre mensual, edicion de menu, Supabase, modo offline y PWA.
 
+VERSION v70 - ACCESO ADMINISTRATIVO SEGURO
+
+- El panel administrativo ya no muestra el nombre ni el correo autorizado.
+- La contrasena no se guarda ni se programa dentro de la aplicacion.
+- Administracion permite iniciar con correo/contrasena o solicitar un enlace seguro de un solo uso.
+- El enlace seguro no crea usuarios nuevos y solo funciona desde HTTPS publicado/instalado.
+- Toda sesion se valida con is_platform_owner antes de mostrar datos administrativos.
+- El panel administrativo tiene manifest propio y boton Instalar panel.
+- La migracion V70 valida por user_id y rol platform_admin, y revoca la lectura del correo propietario.
+- La sesion administrativa sigue siendo persistente en el dispositivo autorizado.
+- Cache PWA actualizado a rc-ordera-v70.
+
 VERSION v69 - ELIMINACION LOGICA DE RESTAURANTE
 
 - El boton visible ahora dice Eliminar restaurante.

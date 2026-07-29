@@ -1,6 +1,4 @@
 const PLATFORM_ADMIN_DOCUMENT_BUCKET = "courier-documents";
-const PLATFORM_OWNER_NAME = "Jhon Jarolt Mendez";
-const PLATFORM_OWNER_EMAIL = "pedidosapprinconcolombiano@gmail.com";
 
 const adminElements = {
   accountSummary: document.querySelector("#adminAccountSummary"),
@@ -8,6 +6,7 @@ const adminElements = {
   emailInput: document.querySelector("#adminEmailInput"),
   passwordInput: document.querySelector("#adminPasswordInput"),
   signInButton: document.querySelector("#adminSignInButton"),
+  magicLinkButton: document.querySelector("#adminMagicLinkButton"),
   resetPasswordButton: document.querySelector("#adminResetPasswordButton"),
   passwordRecoveryPanel: document.querySelector("#adminPasswordRecoveryPanel"),
   newPasswordInput: document.querySelector("#adminNewPasswordInput"),
@@ -17,12 +16,14 @@ const adminElements = {
   authMessage: document.querySelector("#adminAuthMessage"),
   refreshCouriersButton: document.querySelector("#adminRefreshCouriersButton"),
   courierList: document.querySelector("#adminCourierList"),
+  installButton: document.querySelector("#adminInstallButton"),
 };
 
 let adminClient = null;
 let adminUser = null;
 let adminAuthReady = false;
 let adminRecoveringPassword = false;
+let adminInstallPrompt = null;
 
 function adminSupabaseConfig() {
   const config = window.RINCON_SUPABASE || {};
@@ -87,14 +88,6 @@ function adminEnsureClient() {
 
 function adminInputValue(input) {
   return String(input?.value || "").trim();
-}
-
-function adminNormalizeEmail(value) {
-  return String(value || "").trim().toLowerCase();
-}
-
-function adminIsPlatformOwnerEmail(email) {
-  return adminNormalizeEmail(email) === PLATFORM_OWNER_EMAIL;
 }
 
 function adminSetMessage(element, message, type = "") {
@@ -179,19 +172,40 @@ function adminCourierMissingDocuments(row) {
 }
 
 function adminRender() {
-  const email = adminUser?.email || "";
   if (adminElements.accountSummary) {
     adminElements.accountSummary.textContent = adminUser
-      ? `Sesion activa: ${email}. Administrador autorizado: ${PLATFORM_OWNER_NAME}.`
-      : `Solo ${PLATFORM_OWNER_NAME} puede administrar la plataforma con ${PLATFORM_OWNER_EMAIL}.`;
+      ? "Sesion administrativa activa y verificada."
+      : "Acceso privado para la cuenta administradora autorizada.";
   }
   if (adminElements.authFields) adminElements.authFields.hidden = Boolean(adminUser) && !adminRecoveringPassword;
   if (adminElements.signOutButton) adminElements.signOutButton.hidden = !adminUser;
   if (adminElements.emailInput?.closest("label")) adminElements.emailInput.closest("label").hidden = adminRecoveringPassword;
   if (adminElements.passwordInput?.closest("label")) adminElements.passwordInput.closest("label").hidden = adminRecoveringPassword;
   if (adminElements.signInButton) adminElements.signInButton.hidden = adminRecoveringPassword;
+  if (adminElements.magicLinkButton) adminElements.magicLinkButton.hidden = adminRecoveringPassword;
   if (adminElements.resetPasswordButton) adminElements.resetPasswordButton.hidden = adminRecoveringPassword;
   if (adminElements.passwordRecoveryPanel) adminElements.passwordRecoveryPanel.hidden = !adminRecoveringPassword;
+}
+
+async function adminValidateAuthorizedSession(client, user) {
+  if (!client || !user) return false;
+  const { data, error } = await client.rpc("is_platform_owner");
+  if (error) {
+    console.warn("No se pudo validar el permiso administrativo.", {
+      code: error.code || error.status || "",
+      message: error.message || "",
+    });
+    return false;
+  }
+  return data === true;
+}
+
+function adminHttpsReturnUrl(parameter = "") {
+  const returnUrl = new URL(window.location.href);
+  returnUrl.hash = "";
+  returnUrl.search = "";
+  if (parameter) returnUrl.searchParams.set(parameter, "1");
+  return /^https?:$/.test(returnUrl.protocol) ? returnUrl.toString() : "";
 }
 
 function adminRenderCourierList(rows = []) {
@@ -330,15 +344,6 @@ async function adminSignIn() {
     adminSetMessage(adminElements.authMessage, "Escribe correo y contrasena.", "error");
     return;
   }
-  if (!adminIsPlatformOwnerEmail(email)) {
-    adminSetMessage(
-      adminElements.authMessage,
-      `Acceso no autorizado. La administracion de plataforma es solo para ${PLATFORM_OWNER_NAME}: ${PLATFORM_OWNER_EMAIL}.`,
-      "error"
-    );
-    return;
-  }
-
   adminSetMessage(adminElements.authMessage, "Iniciando sesion...");
   if (adminElements.signInButton) adminElements.signInButton.disabled = true;
   try {
@@ -348,13 +353,13 @@ async function adminSignIn() {
       return;
     }
 
-    const { data: isOwner, error: ownerError } = await client.rpc("is_platform_owner");
-    if (ownerError || isOwner !== true) {
+    const isAuthorized = await adminValidateAuthorizedSession(client, data.session?.user);
+    if (!isAuthorized) {
       await client.auth.signOut();
       adminUser = null;
       adminSetMessage(
         adminElements.authMessage,
-        "La cuenta fue autenticada, pero falta activar el permiso de administrador. Ejecuta la migracion V67.",
+        "La cuenta no tiene permiso administrativo activo. Revisa la configuracion de acceso de la plataforma.",
         "error"
       );
       adminRender();
@@ -373,6 +378,52 @@ async function adminSignIn() {
   }
 }
 
+async function adminSendMagicLink() {
+  if (!adminEnsureClient()) await adminLoadSupabaseLibrary();
+  const client = adminEnsureClient();
+  const email = adminInputValue(adminElements.emailInput);
+  if (!client) {
+    adminSetMessage(adminElements.authMessage, adminConnectionMessage(), "error");
+    return;
+  }
+  if (!email) {
+    adminSetMessage(adminElements.authMessage, "Escribe el correo de la cuenta administradora.", "error");
+    return;
+  }
+
+  const returnUrl = adminHttpsReturnUrl("access");
+  if (!returnUrl) {
+    adminSetMessage(
+      adminElements.authMessage,
+      "El enlace seguro se solicita desde la app publicada o instalada, no desde un archivo local.",
+      "error"
+    );
+    return;
+  }
+
+  if (adminElements.magicLinkButton) adminElements.magicLinkButton.disabled = true;
+  adminSetMessage(adminElements.authMessage, "Solicitando enlace seguro...");
+  try {
+    const { error } = await client.auth.signInWithOtp({
+      email,
+      options: {
+        shouldCreateUser: false,
+        emailRedirectTo: returnUrl,
+      },
+    });
+    if (error) throw error;
+    adminSetMessage(
+      adminElements.authMessage,
+      "Si la cuenta existe y esta autorizada, recibiras un enlace de acceso de un solo uso. Revisa tambien spam.",
+      "ok"
+    );
+  } catch (error) {
+    adminSetMessage(adminElements.authMessage, adminFriendlyAuthError(error), "error");
+  } finally {
+    if (adminElements.magicLinkButton) adminElements.magicLinkButton.disabled = false;
+  }
+}
+
 async function adminSendPasswordResetEmail() {
   if (!adminEnsureClient()) await adminLoadSupabaseLibrary();
   const client = adminEnsureClient();
@@ -387,19 +438,11 @@ async function adminSendPasswordResetEmail() {
   }
 
   const genericMessage = "Si la cuenta existe y esta autorizada, recibiras las instrucciones de recuperacion.";
-  if (!adminIsPlatformOwnerEmail(email)) {
-    adminSetMessage(adminElements.authMessage, genericMessage, "ok");
-    return;
-  }
-
-  const redirectUrl = new URL(window.location.href);
-  redirectUrl.hash = "";
-  redirectUrl.search = "";
-  redirectUrl.searchParams.set("recovery", "1");
-  if (!/^https?:$/.test(redirectUrl.protocol)) {
+  const redirectUrl = adminHttpsReturnUrl("recovery");
+  if (!redirectUrl) {
     adminSetMessage(
       adminElements.authMessage,
-      "Abre la app publicada en Vercel para solicitar la recuperacion. Supabase no admite enlaces file://.",
+      "La recuperacion se solicita desde la app publicada o instalada, no desde un archivo local.",
       "error"
     );
     return;
@@ -408,7 +451,7 @@ async function adminSendPasswordResetEmail() {
   if (adminElements.resetPasswordButton) adminElements.resetPasswordButton.disabled = true;
   adminSetMessage(adminElements.authMessage, "Solicitando correo de recuperacion...");
   try {
-    const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo: redirectUrl.toString() });
+    const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo: redirectUrl });
     if (error) {
       console.warn("No se pudo enviar recuperacion administrativa.", {
         code: error.code || error.status || "",
@@ -495,12 +538,12 @@ async function adminInitialize() {
     adminSetMessage(adminElements.authMessage, adminFriendlyAuthError(sessionError), "error");
   }
   adminUser = data.session?.user || null;
-  if (adminUser && !adminIsPlatformOwnerEmail(adminUser.email)) {
+  if (adminUser && !(await adminValidateAuthorizedSession(client, adminUser))) {
     await client.auth.signOut();
     adminUser = null;
     adminSetMessage(
       adminElements.authMessage,
-      `Sesion cerrada. La administracion de plataforma es solo para ${PLATFORM_OWNER_NAME}: ${PLATFORM_OWNER_EMAIL}.`,
+      "La sesion no tiene permiso para administrar la plataforma.",
       "error"
     );
   }
@@ -527,17 +570,20 @@ async function adminInitialize() {
   client.auth.onAuthStateChange(async (event, session) => {
     adminUser = session?.user || null;
     if (event === "PASSWORD_RECOVERY") {
-      adminShowPasswordRecoveryForm();
+      if (await adminValidateAuthorizedSession(client, adminUser)) {
+        adminShowPasswordRecoveryForm();
+      } else {
+        await client.auth.signOut();
+        adminUser = null;
+        adminSetMessage(adminElements.authMessage, "El enlace no tiene permiso administrativo.", "error");
+        adminRender();
+      }
       return;
     }
-    if (adminUser && !adminIsPlatformOwnerEmail(adminUser.email)) {
+    if (adminUser && !(await adminValidateAuthorizedSession(client, adminUser))) {
       await client.auth.signOut();
       adminUser = null;
-      adminSetMessage(
-        adminElements.authMessage,
-        `Acceso no autorizado. Usa ${PLATFORM_OWNER_EMAIL}.`,
-        "error"
-      );
+      adminSetMessage(adminElements.authMessage, "La cuenta no tiene permiso administrativo.", "error");
     }
     adminRender();
     if (adminUser) await adminLoadCouriers();
@@ -547,12 +593,28 @@ async function adminInitialize() {
   });
 }
 
+async function adminInstallPanel() {
+  if (adminInstallPrompt) {
+    adminInstallPrompt.prompt();
+    await adminInstallPrompt.userChoice;
+    adminInstallPrompt = null;
+    return;
+  }
+  if (!window.location.protocol.startsWith("http")) {
+    alert("Abre el panel publicado en Vercel para instalarlo como aplicacion.");
+    return;
+  }
+  alert("En el menu del navegador selecciona Instalar aplicacion o Agregar a pantalla de inicio.");
+}
+
 adminElements.signInButton?.addEventListener("click", adminSignIn);
+adminElements.magicLinkButton?.addEventListener("click", adminSendMagicLink);
 adminElements.resetPasswordButton?.addEventListener("click", adminSendPasswordResetEmail);
 adminElements.updatePasswordButton?.addEventListener("click", adminUpdateRecoveredPassword);
 adminElements.cancelRecoveryButton?.addEventListener("click", () => adminHidePasswordRecoveryForm());
 adminElements.signOutButton?.addEventListener("click", adminSignOut);
 adminElements.refreshCouriersButton?.addEventListener("click", adminLoadCouriers);
+adminElements.installButton?.addEventListener("click", adminInstallPanel);
 adminElements.courierList?.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-action]");
   if (!button) return;
@@ -566,5 +628,19 @@ adminElements.courierList?.addEventListener("click", (event) => {
   if (button.dataset.action === "approve") adminReviewCourier(card.dataset.courierId, "approved");
   if (button.dataset.action === "reject") adminReviewCourier(card.dataset.courierId, "rejected");
 });
+
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  adminInstallPrompt = event;
+});
+
+window.addEventListener("appinstalled", () => {
+  adminInstallPrompt = null;
+  adminSetMessage(adminElements.authMessage, "Panel administrativo instalado.", "ok");
+});
+
+if ("serviceWorker" in navigator && window.location.protocol.startsWith("http")) {
+  navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+}
 
 adminInitialize();

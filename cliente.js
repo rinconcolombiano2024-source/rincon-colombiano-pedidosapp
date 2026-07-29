@@ -2038,7 +2038,7 @@ function customerClearRestaurantSelection(messageKey = "") {
 
   const nextUrl = new URL(window.location.href);
   nextUrl.searchParams.delete("store");
-  nextUrl.searchParams.set("app", "v69");
+  nextUrl.searchParams.set("app", "v70");
   window.history.replaceState({}, "", nextUrl.toString());
 
   customerApplyBusinessName();
@@ -2191,7 +2191,7 @@ async function customerSelectRestaurant(storeId, options = {}) {
   if (options.updateUrl !== false) {
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("store", customerStoreId);
-    nextUrl.searchParams.set("app", "v69");
+    nextUrl.searchParams.set("app", "v70");
     window.history.replaceState({}, "", nextUrl.toString());
   }
 

@@ -913,6 +913,11 @@
     #ffffff;
 }
 
+.admin-install-button {
+  min-height: 40px;
+  white-space: nowrap;
+}
+
 .platform-courier-list {
   margin-top: 12px;
 }

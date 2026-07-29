@@ -1,0 +1,42 @@
+RC ORDERA v70 - ACCESO ADMINISTRATIVO
+
+CAMBIOS
+
+- Retirada la nota publica con nombre y correo del administrador.
+- Retirado el correo del placeholder y mensajes de acceso.
+- Conservado inicio con correo y contrasena mediante Supabase Auth.
+- Agregado acceso sin contrasena mediante Magic Link y shouldCreateUser=false.
+- Agregada validacion backend is_platform_owner para inicio, sesion guardada y recuperacion.
+- Agregado manifest independiente para instalar el panel administrativo.
+- Agregado boton Instalar panel.
+- Agregado service worker en admin.html mediante admin.js.
+- Cache actualizado a rc-ordera-v70.
+- Migracion V70 no destructiva para autorizacion por user_id y platform_admin.
+
+ARCHIVOS PRINCIPALES
+
+- admin.html
+- admin.js
+- admin-manifest.webmanifest
+- auto-translate.js
+- styles.css
+- service-worker.js
+- MIGRACION-FASE1-V70-ACCESO-ADMIN-SEGURO.sql
+- supabase-schema.sql
+
+VALIDACIONES
+
+- Sintaxis JavaScript: OK.
+- IDs HTML duplicados: ninguno.
+- Referencias de los seis controles administrativos: OK.
+- Manifest administrativo JSON: valido.
+- SQL V70: parentesis y bloques balanceados.
+- SQL V70: sin DROP TABLE, TRUNCATE, DELETE FROM ni claves privadas.
+- Correo y contrasena indicados por el usuario: no aparecen en admin.html ni admin.js.
+- El navegador solo recibe autorizacion si is_platform_owner devuelve true.
+
+LIMITACIONES
+
+- No es posible confirmar el inicio real sin las credenciales privadas del usuario.
+- Magic Link y recuperacion requieren URL HTTPS autorizada y entrega de correo configurada.
+- El usuario debe ejecutar V67 y V70 en Supabase y cambiar la contrasena expuesta.
