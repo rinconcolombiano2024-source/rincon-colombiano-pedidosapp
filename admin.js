@@ -42,12 +42,45 @@ function adminSupabaseConfig() {
   };
 }
 
+function adminConnectionMessage() {
+  const config = adminSupabaseConfig();
+  if (!config.url || !config.anonKey) {
+    return "Falta configurar la conexion de Supabase para usar la administracion.";
+  }
+  if (!window.supabase?.createClient) {
+    return "No se pudo cargar la conexion de Supabase. Revisa internet, actualiza la pagina o prueba nuevamente.";
+  }
+  return "No se pudo iniciar la conexion de administracion.";
+}
+
+function adminLoadSupabaseLibrary() {
+  if (window.supabase?.createClient) return Promise.resolve(true);
+  if (!navigator.onLine) return Promise.resolve(false);
+
+  return new Promise((resolve) => {
+    const existingScript = document.querySelector("script[data-supabase-loader]");
+    if (existingScript) {
+      existingScript.addEventListener("load", () => resolve(Boolean(window.supabase?.createClient)), { once: true });
+      existingScript.addEventListener("error", () => resolve(false), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+    script.async = true;
+    script.dataset.supabaseLoader = "true";
+    script.addEventListener("load", () => resolve(Boolean(window.supabase?.createClient)), { once: true });
+    script.addEventListener("error", () => resolve(false), { once: true });
+    document.head.appendChild(script);
+  });
+}
+
 function adminEnsureClient() {
   if (adminClient) return adminClient;
   const config = adminSupabaseConfig();
   if (!config.url || !config.anonKey || !window.supabase?.createClient) return null;
   adminClient = window.supabase.createClient(config.url, config.anonKey, {
-    auth: { persistSession: true, autoRefreshToken: true },
+    auth: { persistSession: true, autoRefreshToken: true, storageKey: "rc_ordera_platform_admin_auth" },
   });
   return adminClient;
 }
@@ -213,11 +246,11 @@ async function adminLoadCouriers() {
   if (error) {
     adminSetMessage(
       adminElements.authMessage,
-      "No se pudo cargar. Ejecuta la migracion v60 y confirma que tu cuenta tenga rol platform_admin.",
+      "No se pudo cargar la revision de colaboradores. Confirma que esta cuenta sea la administradora autorizada y que la nube tenga los permisos activos.",
       "error"
     );
     if (adminElements.courierList) {
-      adminElements.courierList.innerHTML = `<div class="customer-empty">Sin permiso o migracion pendiente.</div>`;
+      adminElements.courierList.innerHTML = `<div class="customer-empty">Sin permiso para ver colaboradores o configuracion pendiente en la nube.</div>`;
     }
     return;
   }
@@ -267,11 +300,12 @@ async function adminReviewCourier(userId, status) {
 }
 
 async function adminSignIn() {
+  if (!adminEnsureClient()) await adminLoadSupabaseLibrary();
   const client = adminEnsureClient();
   const email = adminInputValue(adminElements.emailInput);
   const password = adminElements.passwordInput.value;
   if (!client) {
-    adminSetMessage(adminElements.authMessage, "Supabase no esta configurado.", "error");
+    adminSetMessage(adminElements.authMessage, adminConnectionMessage(), "error");
     return;
   }
   if (!email || !password) {
@@ -298,10 +332,11 @@ async function adminSignIn() {
 }
 
 async function adminSendPasswordResetEmail() {
+  if (!adminEnsureClient()) await adminLoadSupabaseLibrary();
   const client = adminEnsureClient();
   const email = adminInputValue(adminElements.emailInput);
   if (!client) {
-    adminSetMessage(adminElements.authMessage, "Supabase no esta configurado.", "error");
+    adminSetMessage(adminElements.authMessage, adminConnectionMessage(), "error");
     return;
   }
   if (!email) {
@@ -338,10 +373,11 @@ function adminHidePasswordRecoveryForm(message = "") {
 }
 
 async function adminUpdateRecoveredPassword() {
+  if (!adminEnsureClient()) await adminLoadSupabaseLibrary();
   const client = adminEnsureClient();
   const password = adminElements.newPasswordInput?.value || "";
   if (!client) {
-    adminSetMessage(adminElements.authMessage, "Supabase no esta configurado.", "error");
+    adminSetMessage(adminElements.authMessage, adminConnectionMessage(), "error");
     return;
   }
   if (password.length < 6) {
@@ -366,9 +402,19 @@ async function adminSignOut() {
 }
 
 async function adminInitialize() {
+  if (adminAuthReady) return;
+  const config = adminSupabaseConfig();
+  if (!config.url || !config.anonKey) {
+    adminSetMessage(adminElements.authMessage, adminConnectionMessage(), "error");
+    return;
+  }
+  if (!window.supabase?.createClient && !(await adminLoadSupabaseLibrary())) {
+    adminSetMessage(adminElements.authMessage, adminConnectionMessage(), "error");
+    return;
+  }
   const client = adminEnsureClient();
-  if (!client || adminAuthReady) {
-    if (!client) adminSetMessage(adminElements.authMessage, "Configura Supabase para usar administracion.", "error");
+  if (!client) {
+    adminSetMessage(adminElements.authMessage, adminConnectionMessage(), "error");
     return;
   }
   adminAuthReady = true;

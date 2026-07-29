@@ -33,7 +33,7 @@ const STORAGE_KEYS = {
 
 const DEFAULT_BUSINESS_NAME = "RINCON COLOMBIANO";
 const DEFAULT_DELIVERY_MINIMUM_FEE = 20;
-const APP_VERSION = "v64";
+const APP_VERSION = "v65";
 const PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 const PLATFORM_APP_NAME = "RC ORDERA";
 
@@ -750,7 +750,7 @@ async function activateCurrentUserRole(role) {
     });
     if (error) throw error;
   } catch (error) {
-    console.warn("No se pudo activar el rol de usuario. Ejecuta la migracion de Fase 3 en Supabase.", error);
+    console.warn("No se pudo activar el rol de usuario en la nube.", error);
   }
 }
 
@@ -1299,7 +1299,7 @@ async function requestRestaurantDeletion() {
     showToast("Solicitud registrada. El restaurante quedo cerrado para clientes.");
   } catch (error) {
     console.error(error);
-    alert("No se pudo registrar la solicitud. Ejecuta la migracion v55 en Supabase y vuelve a intentar.");
+    alert("No se pudo registrar la solicitud. Revisa la conexion y la configuracion de la nube, y vuelve a intentar.");
   }
 }
 
@@ -1545,7 +1545,7 @@ async function refreshClientOrders(options = {}) {
 
   if (error) {
     if (!silent || elements.clientOrdersDialog.open) {
-      elements.clientOrdersList.innerHTML = `<div class="monthly-empty">No se pudieron cargar pedidos de clientes. Ejecuta el SQL actualizado de Supabase.</div>`;
+      elements.clientOrdersList.innerHTML = `<div class="monthly-empty">No se pudieron cargar pedidos de clientes. Revisa internet, inicia sesion y vuelve a intentar.</div>`;
     }
     throw error;
   }
@@ -1775,7 +1775,7 @@ function renderClientOrders() {
 function friendlyCourierAssignmentError(error) {
   const message = String(error?.message || "");
   if (/assign_nearest_courier|function .* does not exist|schema cache/i.test(message)) {
-    return "Falta ejecutar la migracion v63 en Supabase para activar colaboradores cercanos.";
+    return "La asignacion de colaboradores cercanos aun no esta activa en la nube. Revisa la configuracion de Supabase.";
   }
   if (/Restaurant location is missing|location/i.test(message)) {
     return "Guarda la ubicacion del restaurante en Editar menu > Pedidos cliente > Usar ubicacion actual.";
@@ -2117,7 +2117,7 @@ async function syncMenuBeforeQr() {
 
 async function openQrDialog() {
   if (!cloudState.configured) {
-    alert("Configura Supabase antes de usar pedidos por QR.");
+    alert("La conexion de la nube no esta configurada. Revisa Supabase antes de usar pedidos por QR.");
     return;
   }
   if (!cloudState.user) {
@@ -2151,7 +2151,7 @@ function openClientPage() {
 
 async function openClientOrdersDialog() {
   if (!cloudState.configured) {
-    alert("Configura Supabase antes de recibir pedidos de clientes.");
+    alert("La conexion de la nube no esta configurada. Revisa Supabase antes de recibir pedidos de clientes.");
     return;
   }
   if (!cloudState.user) {

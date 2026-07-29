@@ -1,0 +1,107 @@
+RC ORDERA - REPORTE V65 ACCESOS, PERFILES Y ESTABILIDAD
+Fecha: 2026-07-29
+
+OBJETIVO
+Revisar y corregir errores reales sin reconstruir la app ni borrar funciones existentes.
+Areas revisadas: Restaurante, Cliente, Colaborador y Administracion de plataforma.
+
+ERRORES / RIESGOS ENCONTRADOS
+1. Algunas pantallas mostraban mensajes tecnicos como "ejecuta migracion" o "configura Supabase" aunque el problema podia ser conexion lenta o libreria no cargada.
+2. Cliente, Colaborador y Administrador dependian de que la libreria Supabase cargara al primer intento; en telefonos podia fallar y dejar mensajes confusos.
+3. En colaborador, despues de subir un archivo el navegador podia mostrar "ningun archivo seleccionado", causando confusion aunque el archivo ya estuviera guardado.
+4. En la lista del cliente, restaurantes repetidos con mismo nombre/direccion podian mostrarse duplicados si habia diferencias menores de espacios o puntuacion.
+5. La lectura publica de app_settings era demasiado amplia. El menu debe ser publico solo para restaurantes activos.
+6. Algunos textos dinamicos del perfil colaborador no se traducian correctamente cuando el idioma estaba en ingles o polaco.
+
+CAUSAS IDENTIFICADAS
+1. Carga externa de Supabase no tenia reintento propio en cliente, colaborador y administracion.
+2. Los mensajes visibles mezclaban instrucciones tecnicas internas con avisos para usuario final.
+3. El input de archivo del navegador siempre puede limpiar su estado visible despues de procesar una subida.
+4. La deduplicacion de restaurantes no normalizaba puntuacion ni espacios internos.
+5. La politica RLS "Public read app menu settings" permitia SELECT publico sin filtrar por restaurante activo.
+6. auto-translate saltaba textos dentro de select/option y no tenia algunas frases dinamicas del colaborador.
+
+ARCHIVOS MODIFICADOS
+- app.js
+- cliente.js
+- colaborador.js
+- admin.js
+- auto-translate.js
+- service-worker.js
+- supabase-schema.sql
+- MIGRACION-FASE1-V65-SEGURIDAD-ACCESOS.sql
+
+CAMBIOS PRINCIPALES
+1. Version interna actualizada a v65.
+2. Cache PWA actualizado a rc-ordera-v65 para evitar versiones viejas.
+3. Carga automatica/reintento de Supabase agregada en Cliente, Colaborador y Administracion.
+4. Sesion de Administracion separada con storageKey propio.
+5. Mensajes tecnicos de migracion removidos de pantallas visibles.
+6. Subida de archivos de colaborador ahora conserva archivo anterior si falla el reemplazo y muestra aviso claro.
+7. Dedupe de restaurantes reforzado por nombre y direccion normalizados.
+8. Traducciones reforzadas para colaborador en ingles y polaco.
+9. RLS publica de app_settings limitada a restaurantes activos.
+
+MIGRACION SUPABASE V65
+Ejecutar manualmente en Supabase SQL Editor:
+MIGRACION-FASE1-V65-SEGURIDAD-ACCESOS.sql
+
+Que hace:
+- No borra datos.
+- No borra tablas.
+- Reemplaza la politica publica de lectura de app_settings.
+- Permite lectura publica solo si el restaurante esta activo en restaurant_profiles.
+
+VALIDACIONES REALIZADAS
+1. Sintaxis JavaScript:
+   - app.js OK
+   - cliente.js OK
+   - colaborador.js OK
+   - admin.js OK
+   - auto-translate.js OK
+   - service-worker.js OK
+
+2. Referencias HTML/JS:
+   - index.html/app.js OK
+   - cliente.html/cliente.js OK
+   - colaborador.html/colaborador.js OK
+   - admin.html/admin.js OK
+
+3. Seguridad frontend:
+   - No se encontro service_role_key.
+   - No se encontro sb_secret.
+   - No se encontro clave privada Supabase en JS/HTML/config.
+
+4. Visual movil/escritorio con Chrome:
+   - Restaurante desktop OK
+   - Restaurante mobile OK
+   - Cliente desktop OK
+   - Cliente mobile OK
+   - Colaborador desktop OK
+   - Colaborador mobile OK
+   - Administracion desktop OK
+   - Administracion mobile OK
+   - Sin overflow horizontal detectado.
+   - Sin pantalla vacia detectada.
+
+5. Traduccion colaborador:
+   - Prueba movil en ingles OK.
+   - Textos principales, ayuda de bicicleta y opciones de vehiculo traducidos.
+
+6. Supabase / Realtime revisado:
+   - Cliente usa canal por restaurante: app_settings filtrado por user_id.
+   - app_settings tiene replica identity full.
+   - supabase_realtime incluye app_settings.
+   - Bucket courier-documents es privado.
+   - Storage permite documentos al colaborador propietario y lectura al administrador autorizado.
+   - Administracion de plataforma depende de is_platform_owner().
+   - El unico correo autorizado esperado es pedidosapprinconcolombiano@gmail.com.
+
+RESULTADO
+La app queda en version v65 con mejoras de acceso, mensajes, traduccion, subida de archivos, seguridad RLS y cache.
+
+PENDIENTES / RIESGOS
+1. Para confirmar correos reales de registro/recuperacion se debe probar desde Supabase en produccion, porque el entorno local no envia correos por si solo.
+2. Para confirmar subida real de archivos se debe probar con una sesion Supabase autenticada y el bucket courier-documents creado.
+3. Si ya existen restaurantes duplicados en Supabase, la app ya los oculta mejor al cliente, pero la limpieza definitiva de datos duplicados debe hacerse manualmente revisando cual registro conservar.
+4. La asignacion del colaborador mas cercano requiere que la migracion v63 este ejecutada y que restaurante/colaborador tengan coordenadas reales.

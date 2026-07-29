@@ -167,6 +167,19 @@ Precaucion offline:
 - Si varias tablets trabajan sin internet al mismo tiempo, pueden repetirse numeros locales de ticket.
 - Para evitar conflictos en hora pico sin internet, usar una tablet principal o mantener conexion estable.
 
+VERSION v65 - RC ORDERA ACCESOS, PERFILES Y SEGURIDAD
+
+- Nombre de plataforma: RC ORDERA.
+- Cache actualizado a rc-ordera-v65.
+- Cliente, Colaborador y Administracion cargan Supabase con reintento para evitar fallas en telefonos o conexion lenta.
+- Administracion usa sesion separada y mantiene como administrador unico a Jhon Jarolt Mendez / pedidosapprinconcolombiano@gmail.com.
+- Los mensajes visibles ya no muestran instrucciones tecnicas de migracion; ahora muestran avisos claros para usuario final.
+- Colaborador: subida de archivos conserva archivo anterior si falla reemplazo y muestra estado claro de archivo subido/listo para guardar.
+- Cliente: deduplicacion de restaurantes reforzada para no mostrar dos tarjetas iguales por diferencias menores de espacios o puntuacion.
+- Traduccion reforzada en colaborador para textos dinamicos, ayuda de bicicleta, opciones de vehiculo y errores de conexion.
+- Supabase: app_settings publico queda limitado a restaurantes activos mediante MIGRACION-FASE1-V65-SEGURIDAD-ACCESOS.sql.
+- Validacion v65: JavaScript OK, referencias HTML OK, PWA OK, visual movil/escritorio OK, sin claves privadas en frontend.
+
 VERSION v60 - ADMINISTRACION DE PLATAFORMA SEPARADA
 
 - La aprobacion de colaboradores ya no aparece en el panel del restaurante.

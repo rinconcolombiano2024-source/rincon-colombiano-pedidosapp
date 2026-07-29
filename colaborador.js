@@ -118,6 +118,39 @@ function courierSupabaseConfig() {
   };
 }
 
+function courierConnectionMessage() {
+  const config = courierSupabaseConfig();
+  if (!config.url || !config.anonKey) {
+    return "Falta configurar la conexion de Supabase para usar colaboradores.";
+  }
+  if (!window.supabase?.createClient) {
+    return "No se pudo cargar la conexion de Supabase. Revisa internet, actualiza la pagina o intenta de nuevo.";
+  }
+  return "No se pudo iniciar la conexion de colaborador.";
+}
+
+function courierLoadSupabaseLibrary() {
+  if (window.supabase?.createClient) return Promise.resolve(true);
+  if (!navigator.onLine) return Promise.resolve(false);
+
+  return new Promise((resolve) => {
+    const existingScript = document.querySelector("script[data-supabase-loader]");
+    if (existingScript) {
+      existingScript.addEventListener("load", () => resolve(Boolean(window.supabase?.createClient)), { once: true });
+      existingScript.addEventListener("error", () => resolve(false), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+    script.async = true;
+    script.dataset.supabaseLoader = "true";
+    script.addEventListener("load", () => resolve(Boolean(window.supabase?.createClient)), { once: true });
+    script.addEventListener("error", () => resolve(false), { once: true });
+    document.head.appendChild(script);
+  });
+}
+
 function courierEnsureClient() {
   if (courierClient) return courierClient;
   const config = courierSupabaseConfig();
@@ -195,16 +228,30 @@ async function courierUploadDocument(file, kind) {
 async function courierHandleFileUpload(fileInput, targetInput, kind, label) {
   const file = fileInput?.files?.[0];
   if (!file || !targetInput) return;
+  const previousValue = targetInput.value;
   courierSetMessage(courierElements.profileMessage, `Subiendo ${label}...`);
   try {
     targetInput.value = await courierUploadDocument(file, kind);
-    courierSetFileStatus(targetInput, `${label} subido: ${file.name || courierReadableFileRef(targetInput.value)}`, "ok");
-    courierSetMessage(courierElements.profileMessage, `${label} subido correctamente. Presiona Enviar solicitud para guardar.`, "ok");
+    targetInput.dataset.uploadedFileName = file.name || courierReadableFileRef(targetInput.value);
+    courierSetFileStatus(
+      targetInput,
+      `${label} subido y listo para guardar: ${targetInput.dataset.uploadedFileName}`,
+      "ok"
+    );
+    courierSetMessage(courierElements.profileMessage, `${label} subido correctamente. Ahora presiona Enviar solicitud para guardar tu perfil.`, "ok");
+    if (fileInput) fileInput.value = "";
   } catch (error) {
-    courierSetFileStatus(targetInput, `${label} no subio. Intenta de nuevo.`, "error");
+    targetInput.value = previousValue;
+    courierSetFileStatus(
+      targetInput,
+      previousValue
+        ? `${label} no se reemplazo. Se conserva el archivo anterior: ${courierReadableFileRef(previousValue)}`
+        : `${label} no subio. Intenta de nuevo.`,
+      "error"
+    );
     courierSetMessage(
       courierElements.profileMessage,
-      error.message || "No se pudo subir el archivo. Ejecuta la migracion v58 o revisa permisos de Storage.",
+      error.message || "No se pudo subir el archivo. Revisa internet, el tipo de archivo o los permisos de Storage.",
       "error"
     );
     if (fileInput) fileInput.value = "";
@@ -269,7 +316,7 @@ function courierGpsUrl() {
 function courierFriendlyDeliveryError(error) {
   const message = String(error?.message || "");
   if (/upsert_courier_live_location|delivery_assignment|assign_nearest|function .* does not exist|schema cache/i.test(message)) {
-    return "Falta ejecutar la migracion v63 en Supabase para activar entregas cercanas.";
+    return "La asignacion de entregas cercanas aun no esta activa en la nube. Revisa la configuracion de Supabase.";
   }
   if (/Courier profile is not approved/i.test(message)) return "Tu perfil debe estar aprobado por la administracion antes de recibir pedidos.";
   if (/Invalid location/i.test(message)) return "La ubicacion no es valida. Intenta compartirla de nuevo.";
@@ -770,7 +817,7 @@ async function courierActivateRole() {
     });
     if (error) throw error;
   } catch (error) {
-    console.warn("No se pudo activar el rol de colaborador. Ejecuta la migracion de Fase 3 en Supabase.", error);
+    console.warn("No se pudo activar el rol de colaborador en la nube.", error);
   }
 }
 
@@ -832,11 +879,12 @@ async function courierLoadProfile() {
 }
 
 async function courierSignIn() {
+  if (!courierEnsureClient()) await courierLoadSupabaseLibrary();
   const client = courierEnsureClient();
   const email = courierInputValue(courierElements.emailInput);
   const password = courierElements.passwordInput.value;
   if (!client) {
-    courierSetMessage(courierElements.authMessage, "Supabase no esta configurado o no cargo correctamente.", "error");
+    courierSetMessage(courierElements.authMessage, courierConnectionMessage(), "error");
     return;
   }
   if (!email || !password) {
@@ -855,11 +903,12 @@ async function courierSignIn() {
 }
 
 async function courierSignUp() {
+  if (!courierEnsureClient()) await courierLoadSupabaseLibrary();
   const client = courierEnsureClient();
   const email = courierInputValue(courierElements.emailInput);
   const password = courierElements.passwordInput.value;
   if (!client) {
-    courierSetMessage(courierElements.authMessage, "Supabase no esta configurado o no cargo correctamente.", "error");
+    courierSetMessage(courierElements.authMessage, courierConnectionMessage(), "error");
     return;
   }
   if (!email || password.length < 6) {
@@ -901,10 +950,11 @@ async function courierSignUp() {
 }
 
 async function courierSendPasswordResetEmail() {
+  if (!courierEnsureClient()) await courierLoadSupabaseLibrary();
   const client = courierEnsureClient();
   const email = courierInputValue(courierElements.emailInput);
   if (!client) {
-    courierSetMessage(courierElements.authMessage, "Supabase no esta configurado o no cargo correctamente.", "error");
+    courierSetMessage(courierElements.authMessage, courierConnectionMessage(), "error");
     return;
   }
   if (!email) {
@@ -928,10 +978,11 @@ async function courierSendPasswordResetEmail() {
 }
 
 async function courierResendVerificationEmail() {
+  if (!courierEnsureClient()) await courierLoadSupabaseLibrary();
   const client = courierEnsureClient();
   const email = courierInputValue(courierElements.emailInput);
   if (!client) {
-    courierSetMessage(courierElements.authMessage, "Supabase no esta configurado o no cargo correctamente.", "error");
+    courierSetMessage(courierElements.authMessage, courierConnectionMessage(), "error");
     return;
   }
   if (!email) {
@@ -991,10 +1042,11 @@ function courierHidePasswordRecoveryForm(message = "") {
 }
 
 async function courierUpdateRecoveredPassword() {
+  if (!courierEnsureClient()) await courierLoadSupabaseLibrary();
   const client = courierEnsureClient();
   const password = courierElements.newPasswordInput.value;
   if (!client) {
-    courierSetMessage(courierElements.authMessage, "Supabase no esta configurado o no cargo correctamente.", "error");
+    courierSetMessage(courierElements.authMessage, courierConnectionMessage(), "error");
     return;
   }
   if (password.length < 6) {
@@ -1072,9 +1124,19 @@ function courierUrlLooksLikeRecovery() {
 }
 
 async function courierInitialize() {
+  if (courierAuthReady) return;
+  const config = courierSupabaseConfig();
+  if (!config.url || !config.anonKey) {
+    courierSetMessage(courierElements.authMessage, courierConnectionMessage(), "error");
+    return;
+  }
+  if (!window.supabase?.createClient && !(await courierLoadSupabaseLibrary())) {
+    courierSetMessage(courierElements.authMessage, courierConnectionMessage(), "error");
+    return;
+  }
   const client = courierEnsureClient();
-  if (!client || courierAuthReady) {
-    if (!client) courierSetMessage(courierElements.authMessage, "Configura Supabase para usar colaborador.", "error");
+  if (!client) {
+    courierSetMessage(courierElements.authMessage, courierConnectionMessage(), "error");
     return;
   }
   courierAuthReady = true;

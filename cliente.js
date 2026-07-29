@@ -109,7 +109,7 @@ const CUSTOMER_I18N = {
     restaurantLoading: "Cargando restaurantes...",
     restaurantEmpty: "Todavia no hay restaurantes publicados.",
     restaurantSearchEmpty: "No encontre restaurantes con \"{query}\".",
-    restaurantLoadError: "No se pudieron cargar restaurantes. Ejecuta el SQL actualizado o revisa internet.",
+    restaurantLoadError: "No se pudieron cargar restaurantes. Revisa internet e intenta de nuevo.",
     restaurantChoose: "Elegir",
     restaurantCurrent: "Seleccionado",
     restaurantChooseFirst: "Elige un restaurante para ver su menu.",
@@ -161,7 +161,7 @@ const CUSTOMER_I18N = {
     refreshHistory: "Actualizar",
     historySignIn: "Inicia sesion para ver tus pedidos anteriores.",
     historyEmpty: "Todavia no tienes pedidos guardados.",
-    historyLoadError: "No se pudo cargar el historial. Ejecuta el SQL actualizado.",
+    historyLoadError: "No se pudo cargar el historial. Revisa internet e intenta de nuevo.",
     historyOpenOrder: "Ver estado y chat",
     historyTicket: "Ticket",
     historyNoTicket: "Sin ticket",
@@ -213,6 +213,7 @@ const CUSTOMER_I18N = {
     sendOrder: "Enviar pedido",
     missingStore: "Falta el codigo del restaurante en el QR.",
     appNotConfigured: "La conexion de la app no esta configurada.",
+    appConnectionLoadError: "No se pudo cargar la conexion de la app. Revisa internet e intenta de nuevo.",
     menuLoadError: "No se pudo cargar el menu. Avisa al restaurante.",
     noMenu: "Este QR no tiene menu disponible.",
     menuReady: "Menu listo. Elige tus productos.",
@@ -283,7 +284,7 @@ const CUSTOMER_I18N = {
     restaurantSender: "Restaurante",
     customerSender: "Cliente",
     chatImageAlt: "Imagen enviada en chat",
-    chatLoadError: "No se pudo cargar el chat. Ejecuta el SQL actualizado.",
+    chatLoadError: "No se pudo cargar el chat. Revisa internet e intenta de nuevo.",
     chatFirstOrder: "Primero envia el pedido para activar el chat.",
     chatNeedMessage: "Escribe un mensaje o selecciona una imagen.",
     chatSending: "Enviando chat...",
@@ -320,7 +321,7 @@ const CUSTOMER_I18N = {
     restaurantLoading: "Ladowanie restauracji...",
     restaurantEmpty: "Nie ma jeszcze opublikowanych restauracji.",
     restaurantSearchEmpty: "Nie znaleziono restauracji dla \"{query}\".",
-    restaurantLoadError: "Nie udalo sie zaladowac restauracji. Wykonaj zaktualizowany SQL albo sprawdz internet.",
+    restaurantLoadError: "Nie udalo sie zaladowac restauracji. Sprawdz internet i sprobuj ponownie.",
     restaurantChoose: "Wybierz",
     restaurantCurrent: "Wybrano",
     restaurantChooseFirst: "Wybierz restauracje, aby zobaczyc menu.",
@@ -372,7 +373,7 @@ const CUSTOMER_I18N = {
     refreshHistory: "Odswiez",
     historySignIn: "Zaloguj sie, aby zobaczyc poprzednie zamowienia.",
     historyEmpty: "Nie masz jeszcze zapisanych zamowien.",
-    historyLoadError: "Nie udalo sie zaladowac historii. Wykonaj zaktualizowany SQL.",
+    historyLoadError: "Nie udalo sie zaladowac historii. Sprawdz internet i sprobuj ponownie.",
     historyOpenOrder: "Zobacz status i czat",
     historyTicket: "Bilet",
     historyNoTicket: "Bez biletu",
@@ -424,6 +425,7 @@ const CUSTOMER_I18N = {
     sendOrder: "Wyslij zamowienie",
     missingStore: "Brakuje kodu restauracji w QR.",
     appNotConfigured: "Polaczenie aplikacji nie jest skonfigurowane.",
+    appConnectionLoadError: "Nie udalo sie zaladowac polaczenia aplikacji. Sprawdz internet i sprobuj ponownie.",
     menuLoadError: "Nie udalo sie zaladowac menu. Powiadom restauracje.",
     noMenu: "Ten QR nie ma dostepnego menu.",
     menuReady: "Menu gotowe. Wybierz produkty.",
@@ -531,7 +533,7 @@ const CUSTOMER_I18N = {
     restaurantLoading: "Loading restaurants...",
     restaurantEmpty: "No restaurants have been published yet.",
     restaurantSearchEmpty: "No restaurants found for \"{query}\".",
-    restaurantLoadError: "Could not load restaurants. Run the updated SQL or check internet.",
+    restaurantLoadError: "Could not load restaurants. Check internet and try again.",
     restaurantChoose: "Choose",
     restaurantCurrent: "Selected",
     restaurantChooseFirst: "Choose a restaurant to see its menu.",
@@ -583,7 +585,7 @@ const CUSTOMER_I18N = {
     refreshHistory: "Refresh",
     historySignIn: "Sign in to see your previous orders.",
     historyEmpty: "You do not have saved orders yet.",
-    historyLoadError: "Could not load history. Run the updated SQL.",
+    historyLoadError: "Could not load history. Check internet and try again.",
     historyOpenOrder: "View status and chat",
     historyTicket: "Ticket",
     historyNoTicket: "No ticket",
@@ -635,6 +637,7 @@ const CUSTOMER_I18N = {
     sendOrder: "Send order",
     missingStore: "Restaurant code is missing from the QR.",
     appNotConfigured: "The app connection is not configured.",
+    appConnectionLoadError: "Could not load the app connection. Check internet and try again.",
     menuLoadError: "Could not load the menu. Please tell the restaurant.",
     noMenu: "This QR has no menu available.",
     menuReady: "Menu ready. Choose your products.",
@@ -1148,6 +1151,35 @@ function customerSupabaseConfig() {
   };
 }
 
+function customerConnectionMessage() {
+  const config = customerSupabaseConfig();
+  if (!config.url || !config.anonKey) return customerT("appNotConfigured");
+  if (!window.supabase?.createClient) return customerT("appConnectionLoadError");
+  return customerT("appConnectionLoadError");
+}
+
+function customerLoadSupabaseLibrary() {
+  if (window.supabase?.createClient) return Promise.resolve(true);
+  if (!navigator.onLine) return Promise.resolve(false);
+
+  return new Promise((resolve) => {
+    const existingScript = document.querySelector("script[data-supabase-loader]");
+    if (existingScript) {
+      existingScript.addEventListener("load", () => resolve(Boolean(window.supabase?.createClient)), { once: true });
+      existingScript.addEventListener("error", () => resolve(false), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+    script.async = true;
+    script.dataset.supabaseLoader = "true";
+    script.addEventListener("load", () => resolve(Boolean(window.supabase?.createClient)), { once: true });
+    script.addEventListener("error", () => resolve(false), { once: true });
+    document.head.appendChild(script);
+  });
+}
+
 function customerFriendlyAuthError(error) {
   const message = String(error?.message || "");
   if (/invalid login credentials/i.test(message)) return customerT("authInvalidCredentials");
@@ -1328,6 +1360,7 @@ function customerUrlLooksLikeRecovery() {
 }
 
 async function customerInitializeAuth() {
+  if (!customerEnsureClient()) await customerLoadSupabaseLibrary();
   const client = customerEnsureClient();
   if (!client || customerAuthInitialized) return;
   customerAuthInitialized = true;
@@ -1362,11 +1395,12 @@ async function customerInitializeAuth() {
 }
 
 async function customerSignInWithEmail() {
+  if (!customerEnsureClient()) await customerLoadSupabaseLibrary();
   const client = customerEnsureClient();
   const email = customerElements.authEmail.value.trim();
   const password = customerElements.authPassword.value;
   if (!client) {
-    customerSetAuthMessage(customerT("appNotConfigured"), "error");
+    customerSetAuthMessage(customerConnectionMessage(), "error");
     return;
   }
   if (!email || !password) {
@@ -1384,12 +1418,13 @@ async function customerSignInWithEmail() {
 }
 
 async function customerSignUpWithEmail() {
+  if (!customerEnsureClient()) await customerLoadSupabaseLibrary();
   const client = customerEnsureClient();
   const email = customerElements.authEmail.value.trim();
   const password = customerElements.authPassword.value;
   const fullName = customerInputValue(customerElements.registerNameInput) || customerInputValue(customerElements.nameInput);
   if (!client) {
-    customerSetAuthMessage(customerT("appNotConfigured"), "error");
+    customerSetAuthMessage(customerConnectionMessage(), "error");
     return;
   }
   if (!email || !password) {
@@ -1443,10 +1478,11 @@ async function customerSignUpWithEmail() {
 }
 
 async function customerSendPasswordResetEmail() {
+  if (!customerEnsureClient()) await customerLoadSupabaseLibrary();
   const client = customerEnsureClient();
   const email = customerElements.authEmail.value.trim();
   if (!client) {
-    customerSetAuthMessage(customerT("appNotConfigured"), "error");
+    customerSetAuthMessage(customerConnectionMessage(), "error");
     return;
   }
   if (!email) {
@@ -1466,10 +1502,11 @@ async function customerSendPasswordResetEmail() {
 }
 
 async function customerResendVerificationEmail() {
+  if (!customerEnsureClient()) await customerLoadSupabaseLibrary();
   const client = customerEnsureClient();
   const email = customerElements.authEmail.value.trim();
   if (!client) {
-    customerSetAuthMessage(customerT("appNotConfigured"), "error");
+    customerSetAuthMessage(customerConnectionMessage(), "error");
     return;
   }
   if (!email) {
@@ -1493,10 +1530,11 @@ async function customerResendVerificationEmail() {
 }
 
 async function customerUpdateRecoveredPassword() {
+  if (!customerEnsureClient()) await customerLoadSupabaseLibrary();
   const client = customerEnsureClient();
   const password = customerElements.newPasswordInput?.value || "";
   if (!client) {
-    customerSetAuthMessage(customerT("appNotConfigured"), "error");
+    customerSetAuthMessage(customerConnectionMessage(), "error");
     return;
   }
   if (password.length < 6) {
@@ -1575,7 +1613,7 @@ async function customerActivateRole(role) {
     });
     if (error) throw error;
   } catch (error) {
-    console.warn("No se pudo activar el rol del cliente. Ejecuta la migracion de Fase 3 en Supabase.", error);
+    console.warn("No se pudo activar el rol del cliente en la nube.", error);
   }
 }
 
@@ -1744,6 +1782,8 @@ function customerNormalizeSearchText(value) {
   return String(value || "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[.,;:_-]+/g, " ")
+    .replace(/\s+/g, " ")
     .toLowerCase()
     .trim();
 }
@@ -1766,8 +1806,8 @@ function customerNormalizeRestaurantProfile(row = {}) {
 function customerRestaurantDedupeKey(restaurant) {
   const name = customerNormalizeSearchText(restaurant?.name || "");
   const address = customerNormalizeSearchText(restaurant?.address || "");
-  if (!name || !address) return `id:${restaurant?.userId || ""}`;
-  return `${name}|${address}`;
+  if (!name) return `id:${restaurant?.userId || ""}`;
+  return address ? `${name}|${address}` : `name:${name}`;
 }
 
 function customerRestaurantIsNewer(candidate, current) {
@@ -1936,7 +1976,7 @@ async function customerSelectRestaurant(storeId, options = {}) {
   if (options.updateUrl !== false) {
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("store", customerStoreId);
-    nextUrl.searchParams.set("app", "v64");
+    nextUrl.searchParams.set("app", "v65");
     window.history.replaceState({}, "", nextUrl.toString());
   }
 
@@ -3014,8 +3054,12 @@ function customerSyncCartWithCurrentMenu() {
 
 async function customerLoadMenu(options = {}) {
   const config = customerSupabaseConfig();
-  if (!config.url || !config.anonKey || !window.supabase?.createClient) {
+  if (!config.url || !config.anonKey) {
     customerSetStatus(customerT("appNotConfigured"), "error");
+    return;
+  }
+  if (!window.supabase?.createClient && !(await customerLoadSupabaseLibrary())) {
+    customerSetStatus(customerT("appConnectionLoadError"), "error");
     return;
   }
 
