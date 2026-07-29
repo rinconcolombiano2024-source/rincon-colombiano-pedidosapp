@@ -195,6 +195,23 @@ Fecha: 29/07/2026
 - Validacion v66: sintaxis JavaScript OK, referencias HTML OK, URL y publishable key correctas, sin claves privadas en frontend.
 - Pendiente manual obligatorio: ejecutar la migracion V66 en Supabase y probar con una sesion real del restaurante.
 
+VERSION v67 - RECUPERACION Y ACCESO DE ADMINISTRACION
+Fecha: 29/07/2026
+
+- Se reviso el acceso exclusivo de pedidosapprinconcolombiano@gmail.com.
+- Se confirmo que "credenciales incorrectas" proviene de Supabase Auth antes de comprobar el rol platform_admin.
+- La recuperacion ya no oculta errores de limite, destinatario no autorizado, redireccion o conexion.
+- La app impide solicitudes de recuperacion desde file:// y exige la version publicada por HTTPS.
+- El boton de recuperacion se bloquea durante el envio para evitar solicitudes duplicadas.
+- El enlace de recuperacion solo muestra cambio de contrasena cuando Supabase entrego una sesion valida.
+- Despues del login se valida tambien public.is_platform_owner() en el backend.
+- Se agrego MIGRACION-FASE1-V67-VERIFICAR-ADMIN.sql.
+- V67 no crea funciones, triggers, tablas ni policies; no borra datos y no modifica contrasenas.
+- V67 activa platform_admin solamente si la cuenta Auth exacta ya existe.
+- Cache PWA actualizado a rc-ordera-v67.
+- Validacion local: sintaxis, referencias HTML, ausencia de claves privadas y caracter no destructivo de V67: OK.
+- Pendiente real: ejecutar V67 y revisar Authentication Logs para confirmar si Supabase entrega el correo.
+
 VERSION v60 - ADMINISTRACION DE PLATAFORMA SEPARADA
 
 - La aprobacion de colaboradores ya no aparece en el panel del restaurante.

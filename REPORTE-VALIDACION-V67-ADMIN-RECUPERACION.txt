@@ -1,0 +1,65 @@
+RC ORDERA v67 - VERIFICACION DE ADMINISTRACION Y RECUPERACION
+Fecha: 29/07/2026
+
+CORREO AUTORIZADO
+
+pedidosapprinconcolombiano@gmail.com
+
+HALLAZGOS
+
+1. El mensaje "correo o contrasena incorrectos" se recibe directamente de Supabase Auth.
+   Ocurre antes de consultar el rol platform_admin.
+2. La app mostraba siempre un mensaje generico despues de solicitar recuperacion,
+   incluso cuando Supabase devolvia un error.
+3. El proveedor integrado de correo de Supabase es de prueba, tiene limite bajo
+   y puede rechazar destinatarios que no pertenecen al equipo del proyecto.
+4. El rol platform_admin se asignaba por migracion. Si el usuario fue creado
+   despues de ejecutar esa migracion, el rol podia quedar sin asignar.
+5. La pantalla podia mostrar el formulario de nueva contrasena usando solamente
+   ?recovery=1, aunque no existiera una sesion de recuperacion valida.
+
+CORRECCIONES
+
+1. Errores claros de credenciales, confirmacion, limite, destinatario, URL y red.
+2. Manejo de excepciones de red en login y recuperacion.
+3. Bloqueo temporal de botones durante la solicitud.
+4. Validacion backend de is_platform_owner despues del login.
+5. Validacion de sesion antes de permitir cambiar la contrasena.
+6. Migracion V67 para verificar la cuenta y activar el rol exacto.
+
+BASE DE DATOS
+
+Archivo:
+MIGRACION-FASE1-V67-VERIFICAR-ADMIN.sql
+
+- No crea tablas.
+- No crea funciones.
+- No crea triggers.
+- No cambia policies RLS.
+- No cambia contrasenas.
+- No confirma correos artificialmente.
+- No elimina datos.
+- Inserta o reactiva unicamente el rol platform_admin del correo autorizado,
+  siempre que esa cuenta ya exista en auth.users.
+
+PRUEBAS
+
+Modulo | Perfil | Prueba | Resultado | Estado final
+Auth | Administracion | Sintaxis JavaScript | Sin errores | OK
+Auth | Administracion | Referencias HTML | Todos los elementos existen | OK
+Seguridad | Administracion | Claves privadas en frontend | No encontradas | OK
+Migracion | Administracion | DROP/DELETE/TRUNCATE | No encontrados | OK
+Migracion | Administracion | Cambios RLS/funciones/triggers | No encontrados | OK
+Correo | Administracion | Solicitud real y entrega Gmail | Requiere V67 desplegado y Auth Logs | PENDIENTE
+Login | Administracion | Contrasena real | Requiere restablecimiento o credencial del propietario | PENDIENTE
+Rol | Administracion | platform_admin real | Se confirma al ejecutar V67 | PENDIENTE
+
+CONCLUSION
+
+El codigo de recuperacion fue corregido y validado localmente.
+No se declara que el correo llegue realmente hasta comprobar en Supabase:
+
+1. El resultado de V67.
+2. Authentication Logs.
+3. Configuracion SMTP.
+4. Recepcion real en Gmail.

@@ -115,9 +115,27 @@ function adminEscapeHtml(value) {
 
 function adminFriendlyAuthError(error) {
   const message = String(error?.message || "");
-  if (/invalid login credentials/i.test(message)) return "Correo o contrasena incorrectos.";
+  const code = String(error?.code || error?.status || "");
+  if (/invalid login credentials/i.test(message)) {
+    return "Supabase no acepto las credenciales. Verifica que la cuenta exista en Authentication > Users o recupera la contrasena.";
+  }
   if (/email not confirmed/i.test(message)) return "Confirma el correo electronico antes de iniciar sesion.";
-  return message || "No se pudo completar la accion.";
+  if (/email address not authorized/i.test(message)) {
+    return "El servicio de correo de prueba de Supabase no autoriza este destinatario. Agrega el correo al equipo del proyecto o configura SMTP.";
+  }
+  if (code === "429" || /rate limit|too many requests|over_email_send_rate_limit/i.test(message)) {
+    return "Supabase alcanzo el limite temporal de correos. Espera antes de reintentar o configura SMTP propio.";
+  }
+  if (/redirect|not allowed|site url/i.test(message)) {
+    return "La direccion de recuperacion no esta autorizada en Supabase. Revisa Site URL y Redirect URLs.";
+  }
+  if (/failed to fetch|network|fetch/i.test(message)) {
+    return "No fue posible conectar con Supabase. Revisa internet e intenta nuevamente.";
+  }
+  if (/expired|invalid.*token|otp/i.test(message)) {
+    return "El enlace de recuperacion vencio o ya fue utilizado. Solicita uno nuevo.";
+  }
+  return "No se pudo completar la accion en Supabase. Revisa los registros de Authentication.";
 }
 
 function adminStatusLabel(status) {
@@ -322,13 +340,37 @@ async function adminSignIn() {
   }
 
   adminSetMessage(adminElements.authMessage, "Iniciando sesion...");
-  const { error } = await client.auth.signInWithPassword({ email, password });
-  if (error) {
+  if (adminElements.signInButton) adminElements.signInButton.disabled = true;
+  try {
+    const { data, error } = await client.auth.signInWithPassword({ email, password });
+    if (error) {
+      adminSetMessage(adminElements.authMessage, adminFriendlyAuthError(error), "error");
+      return;
+    }
+
+    const { data: isOwner, error: ownerError } = await client.rpc("is_platform_owner");
+    if (ownerError || isOwner !== true) {
+      await client.auth.signOut();
+      adminUser = null;
+      adminSetMessage(
+        adminElements.authMessage,
+        "La cuenta fue autenticada, pero falta activar el permiso de administrador. Ejecuta la migracion V67.",
+        "error"
+      );
+      adminRender();
+      return;
+    }
+
+    adminUser = data.session?.user || null;
+    adminElements.passwordInput.value = "";
+    adminSetMessage(adminElements.authMessage, "Sesion administrativa iniciada correctamente.", "ok");
+    adminRender();
+    await adminLoadCouriers();
+  } catch (error) {
     adminSetMessage(adminElements.authMessage, adminFriendlyAuthError(error), "error");
-    return;
+  } finally {
+    if (adminElements.signInButton) adminElements.signInButton.disabled = false;
   }
-  adminElements.passwordInput.value = "";
-  adminSetMessage(adminElements.authMessage, "Sesion iniciada.", "ok");
 }
 
 async function adminSendPasswordResetEmail() {
@@ -350,12 +392,41 @@ async function adminSendPasswordResetEmail() {
     return;
   }
 
-  const redirectTo = `${window.location.href.split("#")[0].split("?")[0]}?recovery=1`;
-  const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo });
-  if (error) {
-    console.warn("No se pudo enviar recuperacion administrativa.", error);
+  const redirectUrl = new URL(window.location.href);
+  redirectUrl.hash = "";
+  redirectUrl.search = "";
+  redirectUrl.searchParams.set("recovery", "1");
+  if (!/^https?:$/.test(redirectUrl.protocol)) {
+    adminSetMessage(
+      adminElements.authMessage,
+      "Abre la app publicada en Vercel para solicitar la recuperacion. Supabase no admite enlaces file://.",
+      "error"
+    );
+    return;
   }
-  adminSetMessage(adminElements.authMessage, genericMessage, "ok");
+
+  if (adminElements.resetPasswordButton) adminElements.resetPasswordButton.disabled = true;
+  adminSetMessage(adminElements.authMessage, "Solicitando correo de recuperacion...");
+  try {
+    const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo: redirectUrl.toString() });
+    if (error) {
+      console.warn("No se pudo enviar recuperacion administrativa.", {
+        code: error.code || error.status || "",
+        message: error.message || "",
+      });
+      adminSetMessage(adminElements.authMessage, adminFriendlyAuthError(error), "error");
+      return;
+    }
+    adminSetMessage(
+      adminElements.authMessage,
+      "Supabase acepto la solicitud. Revisa entrada, spam y promociones. El envio puede tardar algunos minutos.",
+      "ok"
+    );
+  } catch (error) {
+    adminSetMessage(adminElements.authMessage, adminFriendlyAuthError(error), "error");
+  } finally {
+    if (adminElements.resetPasswordButton) adminElements.resetPasswordButton.disabled = false;
+  }
 }
 
 function adminShowPasswordRecoveryForm() {
@@ -419,7 +490,10 @@ async function adminInitialize() {
   }
   adminAuthReady = true;
 
-  const { data } = await client.auth.getSession();
+  const { data, error: sessionError } = await client.auth.getSession();
+  if (sessionError) {
+    adminSetMessage(adminElements.authMessage, adminFriendlyAuthError(sessionError), "error");
+  }
   adminUser = data.session?.user || null;
   if (adminUser && !adminIsPlatformOwnerEmail(adminUser.email)) {
     await client.auth.signOut();
@@ -433,8 +507,21 @@ async function adminInitialize() {
   adminRender();
   if (adminUser) await adminLoadCouriers();
 
-  if (/[?&](type=recovery|recovery=1)/i.test(window.location.search) || /type=recovery/i.test(window.location.hash)) {
+  const recoveryInUrl =
+    /[?&](type=recovery|recovery=1)/i.test(window.location.search) || /type=recovery/i.test(window.location.hash);
+  const urlAuthError =
+    new URLSearchParams(window.location.search).get("error_description") ||
+    new URLSearchParams(window.location.hash.replace(/^#/, "")).get("error_description");
+  if (urlAuthError) {
+    adminSetMessage(adminElements.authMessage, adminFriendlyAuthError({ message: urlAuthError }), "error");
+  } else if (recoveryInUrl && adminUser) {
     adminShowPasswordRecoveryForm();
+  } else if (recoveryInUrl && !adminUser) {
+    adminSetMessage(
+      adminElements.authMessage,
+      "El enlace de recuperacion no contiene una sesion valida. Solicita un enlace nuevo.",
+      "error"
+    );
   }
 
   client.auth.onAuthStateChange(async (event, session) => {
