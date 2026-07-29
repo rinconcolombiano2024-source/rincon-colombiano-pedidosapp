@@ -142,6 +142,7 @@ const CUSTOMER_I18N = {
     restaurantEmpty: "Todavia no hay restaurantes publicados.",
     restaurantSearchEmpty: "No encontre restaurantes con \"{query}\".",
     restaurantLoadError: "No se pudieron cargar restaurantes. Revisa internet e intenta de nuevo.",
+    restaurantUnavailable: "Este restaurante fue cerrado o eliminado y ya no recibe pedidos.",
     restaurantChoose: "Elegir",
     restaurantCurrent: "Seleccionado",
     restaurantChooseFirst: "Elige un restaurante para ver su menu.",
@@ -376,6 +377,7 @@ const CUSTOMER_I18N = {
     restaurantEmpty: "Nie ma jeszcze opublikowanych restauracji.",
     restaurantSearchEmpty: "Nie znaleziono restauracji dla \"{query}\".",
     restaurantLoadError: "Nie udalo sie zaladowac restauracji. Sprawdz internet i sprobuj ponownie.",
+    restaurantUnavailable: "Ta restauracja zostala zamknieta lub usunieta i nie przyjmuje juz zamowien.",
     restaurantChoose: "Wybierz",
     restaurantCurrent: "Wybrano",
     restaurantChooseFirst: "Wybierz restauracje, aby zobaczyc menu.",
@@ -610,6 +612,7 @@ const CUSTOMER_I18N = {
     restaurantEmpty: "No restaurants have been published yet.",
     restaurantSearchEmpty: "No restaurants found for \"{query}\".",
     restaurantLoadError: "Could not load restaurants. Check internet and try again.",
+    restaurantUnavailable: "This restaurant was closed or removed and is no longer accepting orders.",
     restaurantChoose: "Choose",
     restaurantCurrent: "Selected",
     restaurantChooseFirst: "Choose a restaurant to see its menu.",
@@ -2018,6 +2021,36 @@ function customerSelectedRestaurant() {
   return customerRestaurants.find((restaurant) => restaurant.userId === customerStoreId) || null;
 }
 
+function customerClearRestaurantSelection(messageKey = "") {
+  customerStoreId = "";
+  customerStopMenuRealtime();
+  customerMenu = CUSTOMER_DEFAULT_MENU;
+  customerActiveCategory = "Entradas";
+  customerCart = [];
+  customerMapDistance = null;
+  customerLocationCoords = null;
+  customerSettings = {
+    ...customerSettings,
+    businessName: "RC ORDERA",
+    businessLogoUrl: "",
+    restaurantAddress: "",
+  };
+
+  const nextUrl = new URL(window.location.href);
+  nextUrl.searchParams.delete("store");
+  nextUrl.searchParams.set("app", "v69");
+  window.history.replaceState({}, "", nextUrl.toString());
+
+  customerApplyBusinessName();
+  customerRenderRestaurantDirectory();
+  customerRenderSelectedRestaurantDetails();
+  customerRenderCategories();
+  customerRenderMenu();
+  customerRenderCart();
+  customerSetView("home", { keepScroll: true });
+  if (messageKey) customerSetStatus(customerT(messageKey), "error");
+}
+
 function customerRenderRestaurantDirectory() {
   if (!customerElements.restaurantList) return;
 
@@ -2134,6 +2167,10 @@ async function customerLoadRestaurantDirectory(options = {}) {
   customerRestaurants = customerDeduplicateRestaurants((Array.isArray(data) ? data : [])
     .map(customerNormalizeRestaurantProfile)
     .filter(Boolean));
+  if (customerStoreId && !customerSelectedRestaurant()) {
+    customerClearRestaurantSelection("restaurantUnavailable");
+    return;
+  }
   customerRenderRestaurantDirectory();
 }
 
@@ -2154,7 +2191,7 @@ async function customerSelectRestaurant(storeId, options = {}) {
   if (options.updateUrl !== false) {
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("store", customerStoreId);
-    nextUrl.searchParams.set("app", "v68");
+    nextUrl.searchParams.set("app", "v69");
     window.history.replaceState({}, "", nextUrl.toString());
   }
 
@@ -2173,6 +2210,15 @@ async function customerFetchPublicMenu(storeId) {
     const row = Array.isArray(rpcData) ? rpcData[0] : rpcData;
     if (row) return row;
   }
+
+  const { data: activeProfile, error: profileError } = await customerClient
+    .from("restaurant_profiles")
+    .select("user_id")
+    .eq("user_id", storeId)
+    .eq("active", true)
+    .maybeSingle();
+  if (profileError) throw rpcError || profileError;
+  if (!activeProfile) return null;
 
   const { data, error } = await customerClient
     .from("app_settings")
@@ -3283,6 +3329,8 @@ async function customerLoadMenu(options = {}) {
   }
 
   if (!data) {
+    await customerLoadRestaurantDirectory({ silent: true });
+    if (!customerStoreId) return;
     customerSetStatus(customerT("noMenu"), "error");
     return;
   }

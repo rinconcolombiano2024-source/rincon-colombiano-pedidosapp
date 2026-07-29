@@ -5,6 +5,17 @@ Regla principal:
 - No inventar cambios fuera de lo solicitado.
 - Cada cambio debe conservar lo ya hecho: pedidos, tickets, impresion, cierre mensual, edicion de menu, Supabase, modo offline y PWA.
 
+VERSION v69 - ELIMINACION LOGICA DE RESTAURANTE
+
+- El boton visible ahora dice Eliminar restaurante.
+- La app solo confirma la eliminacion despues de verificar en Supabase que restaurant_profiles.active quedo en false.
+- El cierre/eliminacion conserva pedidos, reportes, menu y datos historicos; deja de publicar el restaurante para clientes.
+- Los errores de guardado del perfil publico ya no se ocultan ni muestran un exito falso.
+- La migracion V69 agrega funciones seguras para cerrar, reabrir y solicitar eliminacion del restaurante autenticado.
+- El menu publico exige un perfil de restaurante existente y activo.
+- Si un cliente conserva un QR o enlace de un restaurante cerrado, la seleccion se limpia y se informa que ya no recibe pedidos.
+- Cache PWA actualizado a rc-ordera-v69.
+
 Funciones actuales que deben conservarse:
 - App de pedidos para restaurante RINCON COLOMBIANO.
 - Tomar pedidos desde categorias y productos.

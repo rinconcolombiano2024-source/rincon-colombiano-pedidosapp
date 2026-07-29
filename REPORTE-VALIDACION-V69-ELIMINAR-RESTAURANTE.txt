@@ -1,0 +1,71 @@
+RC ORDERA v69 - CORRECCION ELIMINAR RESTAURANTE
+
+PROBLEMA ENCONTRADO
+
+- El guardado de restaurant_profiles ocultaba errores de Supabase.
+- La interfaz podia informar exito aunque active no hubiera cambiado.
+- La solicitud de eliminacion se intentaba registrar antes de cerrar el restaurante.
+- La funcion publica del menu aceptaba restaurantes sin perfil mediante coalesce(rp.active, true).
+- Un enlace QR antiguo podia conservar un store que ya no estaba publicado.
+
+CORRECCION
+
+- El boton ahora muestra Eliminar restaurante.
+- El estado se actualiza primero en Supabase y luego se vuelve a consultar.
+- Solo se muestra exito si restaurant_profiles.active queda confirmado en false.
+- Si la funcion V69 aun no existe, la app usa una actualizacion compatible y vuelve a verificar.
+- El flujo alternativo actualiza solo active y updated_at, sin borrar nombre, logo, direccion ni descripcion.
+- Al volver a iniciar sesion, restaurant_profiles.active tiene prioridad sobre una copia antigua de app_settings.
+- La solicitud administrativa no impide ocultar el restaurante cuando la tabla de solicitudes aun no esta disponible.
+- El menu publico exige un restaurant_profiles existente con active = true.
+- El cliente elimina de la URL y de la pantalla un restaurante inactivo.
+- El texto ELIMINAR acepta mayusculas, minusculas y espacios externos.
+- Pedidos, reportes, menu e historial se conservan.
+
+ARCHIVOS MODIFICADOS
+
+- app.js
+- cliente.js
+- index.html
+- service-worker.js
+- supabase-schema.sql
+- MEMORIA_APP_RINCON_COLOMBIANO.txt
+- MIGRACION-FASE1-V69-ELIMINAR-RESTAURANTE.sql
+
+MIGRACION MANUAL
+
+Ejecutar una sola vez en Supabase SQL Editor:
+
+MIGRACION-FASE1-V69-ELIMINAR-RESTAURANTE.sql
+
+La migracion es incremental y no contiene DROP TABLE, TRUNCATE ni DELETE FROM.
+
+PRUEBAS REALIZADAS
+
+- Sintaxis JavaScript de app.js: OK.
+- Sintaxis JavaScript de cliente.js: OK.
+- Sintaxis JavaScript de service-worker.js: OK.
+- IDs duplicados en los cuatro HTML: ninguno.
+- Claves nuevas de traduccion ES/PL/EN: completas.
+- Botones y referencias del flujo: presentes.
+- Cache PWA: rc-ordera-v69.
+- Migracion V69: tres funciones versionadas, permisos limitados y transaccion.
+- Busqueda de claves privadas en archivos publicos modificados: sin coincidencias.
+- Busqueda de operaciones SQL destructivas en V69: sin coincidencias.
+
+PRUEBA MANUAL DESPUES DE LA MIGRACION
+
+1. Publicar la version v69.
+2. Iniciar sesion como propietario del restaurante.
+3. Abrir Editar menu y ajustes.
+4. Pulsar Eliminar restaurante.
+5. Escribir ELIMINAR y confirmar.
+6. Comprobar el aviso de confirmacion.
+7. Abrir cliente.html y pulsar Actualizar restaurantes.
+8. Confirmar que el restaurante ya no aparece.
+9. En Supabase, revisar restaurant_profiles y confirmar active = false.
+
+LIMITACION DE ESTA VALIDACION
+
+- No se realizo la escritura real contra el proyecto Supabase porque la migracion debe ejecutarse primero en el proyecto del usuario.
+- La conexion visual automatica con el navegador local no estuvo disponible en esta sesion.

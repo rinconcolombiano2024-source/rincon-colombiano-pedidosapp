@@ -1,4 +1,4 @@
-const CACHE_NAME = "rc-ordera-v68";
+const CACHE_NAME = "rc-ordera-v69";
 const APP_FILES = [
   "./",
   "./index.html",

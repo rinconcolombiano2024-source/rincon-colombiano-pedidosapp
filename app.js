@@ -33,7 +33,7 @@ const STORAGE_KEYS = {
 
 const DEFAULT_BUSINESS_NAME = "RINCON COLOMBIANO";
 const DEFAULT_DELIVERY_MINIMUM_FEE = 20;
-const APP_VERSION = "v68";
+const APP_VERSION = "v69";
 const PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 const PLATFORM_APP_NAME = "RC ORDERA";
 
@@ -1167,6 +1167,11 @@ async function loadCloudData() {
       clearSettingsPending();
     }
 
+    if (typeof publicProfileRow?.active === "boolean") {
+      restaurantActive = publicProfileRow.active;
+      localStorage.setItem(STORAGE_KEYS.restaurantActive, restaurantActive ? "1" : "0");
+    }
+
     const { data: cloudOrders, error: ordersError } = await cloudState.client
       .from("orders")
       .select("order_json")
@@ -1275,13 +1280,19 @@ async function saveRestaurantPublicProfile() {
     console.warn("No se pudo leer el perfil publico actual antes de guardar.", error);
   }
 
-  const { error } = await cloudState.client
+  const { data, error } = await cloudState.client
     .from("restaurant_profiles")
-    .upsert(payload);
+    .upsert(payload)
+    .select("user_id, business_name, logo_url, public_address, phone, description, active, updated_at")
+    .single();
 
   if (error) {
-    console.warn("No se pudo actualizar el perfil publico del restaurante.", error);
+    throw error;
   }
+  if (!data || data.user_id !== cloudState.user.id || data.active !== payload.active) {
+    throw new Error("Supabase no confirmo el estado del restaurante.");
+  }
+  return data;
 }
 
 async function restaurantNameAlreadyExists(name) {
@@ -1303,6 +1314,86 @@ async function restaurantNameAlreadyExists(name) {
   }
 }
 
+function isMissingRestaurantRpc(error) {
+  const code = String(error?.code || error?.status || "").trim();
+  const message = String(error?.message || "").toLowerCase();
+  return code === "PGRST202" || code === "42883" || message.includes("could not find the function");
+}
+
+async function verifyRestaurantActiveInCloud(expectedActive) {
+  const { data, error } = await cloudState.client
+    .from("restaurant_profiles")
+    .select("user_id, active, updated_at")
+    .eq("user_id", cloudState.user.id)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data || data.active !== Boolean(expectedActive)) {
+    throw new Error("Supabase no confirmo el cambio de estado del restaurante.");
+  }
+  return data;
+}
+
+async function persistRestaurantActiveInCloud(nextActive) {
+  const expectedActive = Boolean(nextActive);
+  const { error: rpcError } = await cloudState.client.rpc("set_current_restaurant_active", {
+    p_active: expectedActive,
+  });
+
+  if (rpcError && !isMissingRestaurantRpc(rpcError)) throw rpcError;
+
+  if (rpcError) {
+    const changedAt = new Date().toISOString();
+    const { data: updatedProfile, error: updateError } = await cloudState.client
+      .from("restaurant_profiles")
+      .update({ active: expectedActive, updated_at: changedAt })
+      .eq("user_id", cloudState.user.id)
+      .select("user_id")
+      .maybeSingle();
+    if (updateError) throw updateError;
+
+    if (!updatedProfile) {
+      const payload = {
+        ...currentRestaurantPublicProfilePayload(),
+        active: expectedActive,
+        updated_at: changedAt,
+      };
+      const { error: insertError } = await cloudState.client
+        .from("restaurant_profiles")
+        .insert(payload);
+      if (insertError) throw insertError;
+    }
+  }
+
+  return verifyRestaurantActiveInCloud(expectedActive);
+}
+
+async function persistRestaurantDeletionRequestInCloud() {
+  const { error: rpcError } = await cloudState.client.rpc("request_current_restaurant_deletion");
+  if (!rpcError) {
+    await verifyRestaurantActiveInCloud(false);
+    return { requestRecorded: true };
+  }
+  if (!isMissingRestaurantRpc(rpcError)) throw rpcError;
+
+  await persistRestaurantActiveInCloud(false);
+  const { error: requestError } = await cloudState.client.from("account_privacy_requests").insert({
+    user_id: cloudState.user.id,
+    request_type: "restaurant_deletion",
+    role_context: "restaurant_owner",
+    status: "requested",
+    details: {
+      businessName,
+      requestedAt: new Date().toISOString(),
+    },
+  });
+  if (requestError) {
+    console.warn("El restaurante se desactivo, pero la solicitud administrativa quedo pendiente.", requestError);
+    return { requestRecorded: false };
+  }
+  return { requestRecorded: true };
+}
+
 async function setRestaurantActive(nextActive) {
   if (!cloudState.client || !cloudState.user) {
     showToast("Inicia sesion para cambiar el estado del restaurante.");
@@ -1314,19 +1405,27 @@ async function setRestaurantActive(nextActive) {
     : "Cerrar restaurante? Dejaremos de mostrarlo en la app del cliente, pero no se borran pedidos ni reportes.";
   if (!confirm(message)) return;
 
-  restaurantActive = Boolean(nextActive);
-  localStorage.setItem(STORAGE_KEYS.restaurantActive, restaurantActive ? "1" : "0");
-  renderRestaurantStatus();
+  const previousActive = restaurantActive;
+  if (elements.closeRestaurantButton) elements.closeRestaurantButton.disabled = true;
+  if (elements.restaurantStatusText) elements.restaurantStatusText.textContent = "Actualizando estado en la nube...";
   try {
-    await saveRestaurantPublicProfile();
-    await saveCloudSettings();
+    await persistRestaurantActiveInCloud(nextActive);
+    restaurantActive = Boolean(nextActive);
+    localStoreCurrentSettings();
+    renderRestaurantStatus();
+    const settingsResult = await saveSettingsWhenPossible({ silent: true });
     showToast(restaurantActive ? "Restaurante reabierto para clientes." : "Restaurante cerrado para clientes.");
+    if (!settingsResult.synced) {
+      showToast("Estado confirmado. Otros ajustes quedaron pendientes de sincronizar.");
+    }
   } catch (error) {
     console.error(error);
-    restaurantActive = !nextActive;
-    localStorage.setItem(STORAGE_KEYS.restaurantActive, restaurantActive ? "1" : "0");
+    restaurantActive = previousActive;
+    localStoreCurrentSettings();
     renderRestaurantStatus();
-    alert("No se pudo cambiar el estado del restaurante. Revisa internet o Supabase.");
+    alert("No se pudo confirmar el cambio en Supabase. El restaurante conserva su estado anterior.");
+  } finally {
+    if (elements.closeRestaurantButton) elements.closeRestaurantButton.disabled = false;
   }
 }
 
@@ -1342,32 +1441,30 @@ async function requestRestaurantDeletion() {
   const detail = prompt(
     "Escribe ELIMINAR para solicitar eliminar/desactivar la cuenta del restaurante. No borraremos pedidos ni datos contables automaticamente."
   );
-  if (detail !== "ELIMINAR") {
+  if (normalizeTextSetting(detail).toUpperCase() !== "ELIMINAR") {
     showToast("Solicitud cancelada.");
     return;
   }
 
+  if (elements.requestRestaurantDeletionButton) elements.requestRestaurantDeletionButton.disabled = true;
+  if (elements.restaurantStatusText) elements.restaurantStatusText.textContent = "Eliminando restaurante de la app del cliente...";
   try {
-    const { error } = await cloudState.client.from("account_privacy_requests").insert({
-      user_id: cloudState.user.id,
-      request_type: "restaurant_deletion",
-      role_context: "restaurant_owner",
-      status: "requested",
-      details: {
-        businessName,
-        requestedAt: new Date().toISOString(),
-      },
-    });
-    if (error) throw error;
+    const result = await persistRestaurantDeletionRequestInCloud();
     restaurantActive = false;
-    localStorage.setItem(STORAGE_KEYS.restaurantActive, "0");
+    localStoreCurrentSettings();
     renderRestaurantStatus();
-    await saveRestaurantPublicProfile();
-    await saveCloudSettings();
-    showToast("Solicitud registrada. El restaurante quedo cerrado para clientes.");
+    await saveSettingsWhenPossible({ silent: true });
+    showToast(
+      result.requestRecorded
+        ? "Restaurante eliminado de la app del cliente. La solicitud quedo registrada."
+        : "Restaurante eliminado de la app del cliente. La solicitud administrativa quedo pendiente."
+    );
   } catch (error) {
     console.error(error);
-    alert("No se pudo registrar la solicitud. Revisa la conexion y la configuracion de la nube, y vuelve a intentar.");
+    renderRestaurantStatus();
+    alert("No se pudo confirmar la eliminacion en Supabase. El restaurante sigue conservando su estado anterior.");
+  } finally {
+    if (elements.requestRestaurantDeletionButton) elements.requestRestaurantDeletionButton.disabled = false;
   }
 }
 
