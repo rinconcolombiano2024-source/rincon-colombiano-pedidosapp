@@ -33,7 +33,7 @@ const STORAGE_KEYS = {
 
 const DEFAULT_BUSINESS_NAME = "RINCON COLOMBIANO";
 const DEFAULT_DELIVERY_MINIMUM_FEE = 20;
-const APP_VERSION = "v65";
+const APP_VERSION = "v66";
 const PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 const PLATFORM_APP_NAME = "RC ORDERA";
 
@@ -239,6 +239,8 @@ const cloudState = {
   loading: false,
   syncing: false,
   recoveringPassword: false,
+  lastError: "",
+  moduleWarning: "",
 };
 
 function createBlankOrder() {
@@ -634,6 +636,49 @@ function hasSupabaseConfig() {
   return config.url.startsWith("http") && config.anonKey.length > 20;
 }
 
+function friendlyCloudError(error) {
+  const code = String(error?.code || error?.status || "").trim();
+  const message = String(error?.message || error?.error_description || "").toLowerCase();
+
+  if (code === "42703" || message.includes("column") && message.includes("does not exist")) {
+    return "Supabase necesita la migracion V66 para completar las columnas nuevas.";
+  }
+  if (code === "42P01" || code === "PGRST205" || message.includes("could not find the table")) {
+    return "Supabase necesita completar las tablas de RC ORDERA.";
+  }
+  if (code === "42501" || code === "401" || code === "403" || message.includes("row-level security")) {
+    return "Supabase rechazo la operacion por permisos. Ejecuta la migracion V66.";
+  }
+  if (message.includes("jwt") || message.includes("refresh token") || message.includes("session")) {
+    return "La sesion de nube vencio. Cierra sesion y vuelve a ingresar.";
+  }
+  if (message.includes("fetch") || message.includes("network") || message.includes("internet")) {
+    return "No fue posible conectar con Supabase. Revisa internet e intenta nuevamente.";
+  }
+  if (message.includes("tiempo") || message.includes("timeout")) {
+    return "Supabase no respondio a tiempo. El pedido y los cambios siguen guardados localmente.";
+  }
+  return "No fue posible completar la carga de la nube. Los datos locales se conservaron.";
+}
+
+function setCloudError(error, options = {}) {
+  const friendlyMessage = friendlyCloudError(error);
+  if (options.moduleOnly) {
+    cloudState.moduleWarning = friendlyMessage;
+  } else {
+    cloudState.lastError = friendlyMessage;
+  }
+  updateCloudStatus(options.moduleOnly ? "Nube parcial" : "Revisar nube");
+  if (elements.cloudStatus) elements.cloudStatus.title = friendlyMessage;
+  return friendlyMessage;
+}
+
+function clearCloudErrors() {
+  cloudState.lastError = "";
+  cloudState.moduleWarning = "";
+  if (elements.cloudStatus) elements.cloudStatus.title = "";
+}
+
 function currentSettingsPayload() {
   return {
     businessName,
@@ -902,6 +947,7 @@ function applySettingsPayload(settings = {}) {
 function updateCloudStatus(message = "") {
   if (!cloudState.configured) {
     elements.cloudStatus.textContent = "Modo local";
+    elements.cloudStatus.title = "La conexion con Supabase no esta configurada.";
     return;
   }
 
@@ -921,6 +967,19 @@ function updateCloudStatus(message = "") {
     return;
   }
 
+  if (cloudState.lastError) {
+    elements.cloudStatus.textContent = "Revisar nube";
+    elements.cloudStatus.title = cloudState.lastError;
+    return;
+  }
+
+  if (cloudState.moduleWarning) {
+    elements.cloudStatus.textContent = "Nube parcial";
+    elements.cloudStatus.title = cloudState.moduleWarning;
+    return;
+  }
+
+  elements.cloudStatus.title = "";
   elements.cloudStatus.textContent = cloudState.user ? "Sincronizado" : "Iniciar sesion";
 }
 
@@ -1057,7 +1116,8 @@ async function initializeCloud() {
 }
 
 async function loadCloudData() {
-  if (!cloudState.client || !cloudState.user || cloudState.loading) return;
+  if (!cloudState.client || !cloudState.user) return { ok: false, reason: "no-session" };
+  if (cloudState.loading) return { ok: false, reason: "busy" };
   cloudState.loading = true;
   elements.cloudStatus.textContent = "Cargando nube...";
   const localOrdersBeforeLoad = savedOrders.map(structuredCloneOrder);
@@ -1146,15 +1206,23 @@ async function loadCloudData() {
     renderOrder();
     renderHistory();
     cloudState.ready = true;
+    clearCloudErrors();
     await syncPendingData({ silent: true, allowWhileLoading: true });
-    await refreshClientOrders({ silent: true });
+    try {
+      await refreshClientOrders({ silent: true });
+    } catch (moduleError) {
+      console.warn("El modulo de pedidos de clientes necesita revision.", moduleError);
+      setCloudError(moduleError, { moduleOnly: true });
+    }
     startClientOrdersPolling();
     updateCloudStatus();
     maybeAskShiftServer();
+    return { ok: true, warning: cloudState.moduleWarning };
   } catch (error) {
     console.error(error);
-    updateCloudStatus(navigator.onLine ? "Error nube" : "");
-    elements.authMessage.textContent = error.message || "No se pudo cargar la informacion.";
+    const friendlyMessage = navigator.onLine ? setCloudError(error) : "Sin internet. Los datos locales siguen disponibles.";
+    elements.authMessage.textContent = friendlyMessage;
+    return { ok: false, error, message: friendlyMessage };
   } finally {
     cloudState.loading = false;
   }
@@ -2406,8 +2474,15 @@ async function refreshRestaurantApp() {
   try {
     if (cloudState.configured && cloudState.user && navigator.onLine) {
       await syncPendingData({ silent: true });
-      await loadCloudData();
-      await refreshClientOrders({ silent: true });
+      const loadResult = await loadCloudData();
+      if (!loadResult?.ok) {
+        showToast(loadResult?.message || "La nube sigue pendiente. El pedido actual esta conservado.");
+        return;
+      }
+      if (loadResult.warning) {
+        showToast("Nube conectada. Falta completar la migracion V66 para pedidos de clientes.");
+        return;
+      }
       showToast("App y nube actualizadas. Pedido actual conservado.");
       return;
     }
@@ -4805,6 +4880,6 @@ renderOrder();
 renderHistory();
 initializeCloud().catch((error) => {
   console.error(error);
-  updateCloudStatus(navigator.onLine ? "Error nube" : "");
-  elements.authMessage.textContent = error.message || "No se pudo iniciar Supabase.";
+  const friendlyMessage = navigator.onLine ? setCloudError(error) : "Sin internet. Puedes continuar con los datos guardados.";
+  elements.authMessage.textContent = friendlyMessage;
 });

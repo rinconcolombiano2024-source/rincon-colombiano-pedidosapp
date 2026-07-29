@@ -180,6 +180,21 @@ VERSION v65 - RC ORDERA ACCESOS, PERFILES Y SEGURIDAD
 - Supabase: app_settings publico queda limitado a restaurantes activos mediante MIGRACION-FASE1-V65-SEGURIDAD-ACCESOS.sql.
 - Validacion v65: JavaScript OK, referencias HTML OK, PWA OK, visual movil/escritorio OK, sin claves privadas en frontend.
 
+VERSION v66 - REPARACION DE NUBE Y CONFIGURACION SUPABASE
+Fecha: 29/07/2026
+
+- Se corrigio el aviso general "Error nube" para informar si falta conexion, permiso, sesion o migracion.
+- La carga principal ya no falla completamente cuando el modulo secundario de pedidos de clientes necesita una columna nueva.
+- El boton Actualizar confirma el resultado real y conserva el pedido actual.
+- Se agrego la migracion MIGRACION-FASE1-V66-REPARAR-NUBE.sql.
+- La migracion completa permisos de app_settings, restaurant_profiles, orders, ticket_counters y customer_orders.
+- La migracion agrega las columnas de asignacion de colaborador si todavia faltan.
+- La migracion asegura el contador diario consecutivo de tickets y habilita Realtime para app_settings.
+- Se agrego GUIA-CONFIGURACION-SUPABASE-V66.txt.
+- Cache PWA actualizado a rc-ordera-v66 y enlaces QR marcados como v66.
+- Validacion v66: sintaxis JavaScript OK, referencias HTML OK, URL y publishable key correctas, sin claves privadas en frontend.
+- Pendiente manual obligatorio: ejecutar la migracion V66 en Supabase y probar con una sesion real del restaurante.
+
 VERSION v60 - ADMINISTRACION DE PLATAFORMA SEPARADA
 
 - La aprobacion de colaboradores ya no aparece en el panel del restaurante.

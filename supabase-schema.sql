@@ -786,8 +786,11 @@ using (public.is_platform_owner())
 with check (public.is_platform_owner());
 
 grant select on public.app_settings to anon, authenticated;
+grant insert, update, delete on public.app_settings to authenticated;
 grant select on public.restaurant_profiles to anon, authenticated;
 grant insert, update, delete on public.restaurant_profiles to authenticated;
+grant select, insert, update, delete on public.orders to authenticated;
+grant select, insert, update, delete on public.ticket_counters to authenticated;
 grant select, insert, update, delete on public.customer_profiles to authenticated;
 revoke insert on public.customer_orders from anon;
 grant select, insert, update, delete on public.customer_orders to authenticated;
@@ -1661,3 +1664,6 @@ begin
                 updated_at = now();
 end;
 $$;
+
+grant execute on function public.claim_next_ticket(date) to authenticated;
+grant execute on function public.set_next_ticket(date, integer) to authenticated;

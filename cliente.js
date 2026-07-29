@@ -1976,7 +1976,7 @@ async function customerSelectRestaurant(storeId, options = {}) {
   if (options.updateUrl !== false) {
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("store", customerStoreId);
-    nextUrl.searchParams.set("app", "v65");
+    nextUrl.searchParams.set("app", "v66");
     window.history.replaceState({}, "", nextUrl.toString());
   }
 

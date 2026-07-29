@@ -1,0 +1,68 @@
+RC ORDERA v66 - REPORTE DE REPARACION DE NUBE
+Fecha: 29/07/2026
+
+PROBLEMA OBSERVADO
+
+La pantalla del restaurante mostraba "Error nube" al cargar o pulsar Actualizar.
+El aviso no explicaba si la causa era conexion, permisos, sesion o esquema incompleto.
+
+CAUSAS ENCONTRADAS EN EL CODIGO
+
+1. La carga principal dependia del modulo de pedidos de clientes.
+2. La consulta de pedidos espera las columnas:
+   - assigned_courier_user_id
+   - courier_assignment_status
+3. Si dichas columnas no estaban instaladas, toda la carga terminaba como Error nube.
+4. Faltaban permisos SQL explicitos de escritura para algunas tablas operativas.
+5. El boton Actualizar podia mostrar exito aunque loadCloudData hubiera capturado un error.
+
+CORRECCIONES
+
+1. Mensajes de nube comprensibles y separados por causa.
+2. El modulo de pedidos de clientes ya no derriba la carga principal.
+3. El boton Actualizar usa el resultado real de la carga.
+4. Migracion V66 incremental para tablas, columnas, RLS, permisos, Realtime y contador de tickets.
+5. Version PWA actualizada a v66.
+
+ARCHIVOS MODIFICADOS
+
+- app.js
+- cliente.js
+- service-worker.js
+- supabase-schema.sql
+- MEMORIA_APP_RINCON_COLOMBIANO.txt
+
+ARCHIVOS NUEVOS
+
+- MIGRACION-FASE1-V66-REPARAR-NUBE.sql
+- GUIA-CONFIGURACION-SUPABASE-V66.txt
+- REPORTE-VALIDACION-V66-NUBE-SUPABASE.txt
+
+PRUEBAS AUTOMATICAS REALIZADAS
+
+- Sintaxis de app.js: OK
+- Sintaxis de cliente.js: OK
+- Sintaxis de colaborador.js: OK
+- Sintaxis de admin.js: OK
+- Sintaxis de auto-translate.js: OK
+- Sintaxis de service-worker.js: OK
+- Referencias JavaScript a elementos HTML: OK en las cuatro pantallas
+- URL base de Supabase sin /rest/v1/: OK
+- Tipo de clave sb_publishable_: OK
+- Busqueda de service_role y sb_secret_ en frontend: OK, no encontradas
+- Cache PWA rc-ordera-v66: OK
+
+PRUEBA MANUAL PENDIENTE
+
+No es posible confirmar la escritura real en la base de datos sin ejecutar primero
+la migracion V66 dentro del proyecto Supabase y usar una sesion real del restaurante.
+
+Despues de ejecutar V66:
+
+1. Cerrar sesion en RC ORDERA.
+2. Iniciar sesion nuevamente.
+3. Pulsar Actualizar.
+4. Confirmar que aparezca Sincronizado.
+5. Editar el precio de un producto.
+6. Guardar.
+7. Abrir el menu del cliente y confirmar el precio nuevo.
