@@ -192,6 +192,17 @@ VERSION v62 - ADMIN UNICO, ARCHIVOS Y TRADUCCION
 - Traduccion de descripciones en cliente reforzada con servicio de respaldo y reintentos.
 - Cache actualizado a rincon-colombiano-v62.
 
+VERSION v63 - COLABORADOR CERCANO, IDIOMAS Y LIMPIEZA VISUAL
+- El restaurante puede buscar colaborador cercano al aceptar un pedido tipo Domicilio.
+- Supabase agrega courier_live_locations y delivery_assignments.
+- El colaborador aprobado puede compartir ubicacion, activar disponibilidad, ver pedidos ofrecidos, aceptar/rechazar y avanzar estados de entrega.
+- El origen para calcular colaborador cercano es la ubicacion real guardada del restaurante; si falta, la app avisa y no calcula con datos incorrectos.
+- Pantalla inicial movil corregida: solo muestra accesos por Restaurante, Cliente y Colaborador; no aparece el panel de pedidos debajo.
+- Selector de idioma integrado en inicio, colaborador y administracion; cliente conserva selector propio.
+- Traduccion de interfaz por diccionario en restaurante/colaborador/admin, sin tocar pedidos, tickets, nombres de platos ni datos escritos por usuarios.
+- Cache actualizado a rincon-colombiano-v63.
+- Validacion v63: scripts OK, IDs OK, visual movil/escritorio OK, sin claves privadas en frontend.
+
 VERSION v59 - TRADUCCION DE DESCRIPCIONES EN CLIENTE
 
 - Cliente traduce la descripcion de productos al idioma seleccionado.

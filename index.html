@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>RINCON COLOMBIANO - Pedidos</title>
+    <title>RC ORDERA - Plataforma de pedidos</title>
     <meta name="theme-color" content="#1f8f4d" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="Rincon Colombiano Pedidos" />
+    <meta name="apple-mobile-web-app-title" content="RC ORDERA" />
     <meta name="format-detection" content="telephone=no" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="app-icon.svg" type="image/svg+xml" />
@@ -24,8 +24,17 @@
           <span></span>
           <span></span>
         </div>
+        <label class="app-language-inline">
+          <span>Idioma</span>
+          <select id="autoLanguageSelect">
+            <option value="es">Espanol</option>
+            <option value="pl">Polski</option>
+            <option value="en">English</option>
+          </select>
+        </label>
         <p class="eyebrow">Plataforma de pedidos</p>
-        <h1 id="authBusinessName">RINCON COLOMBIANO PEDIDOS</h1>
+        <h1 id="authBusinessName">RC ORDERA</h1>
+        <p class="auth-tagline">Tu comida favorita, cerca de ti.</p>
         <div class="role-access-grid">
           <section class="role-access-card">
             <h2>Restaurante</h2>
@@ -636,6 +645,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
+    <script src="auto-translate.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

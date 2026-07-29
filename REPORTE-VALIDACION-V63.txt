@@ -1,0 +1,39 @@
+REPORTE DE VALIDACION v63
+
+Fecha: 2026-07-22
+
+Cambios revisados:
+- Restaurante: acepta domicilio y puede buscar colaborador cercano.
+- Colaborador: guarda ubicacion en Supabase, activa disponibilidad, recibe pedidos ofrecidos y avanza estados de entrega.
+- Cliente: conserva menu realtime y traduccion de descripciones.
+- Idiomas: selector integrado en inicio, colaborador y administracion; cliente conserva selector propio.
+- Inicio movil: ya no muestra el panel de pedidos debajo de la pantalla de acceso.
+- Cache PWA actualizado a rincon-colombiano-v63.
+
+Validaciones realizadas:
+- app.js: sintaxis correcta.
+- cliente.js: sintaxis correcta.
+- colaborador.js: sintaxis correcta.
+- admin.js: sintaxis correcta.
+- auto-translate.js: sintaxis correcta.
+- service-worker.js: sintaxis correcta.
+- IDs HTML revisados:
+  app.js -> index.html: 149 IDs, 0 faltantes.
+  cliente.js -> cliente.html: 74 IDs, 0 faltantes.
+  colaborador.js -> colaborador.html: 58 IDs, 0 faltantes.
+  admin.js -> admin.html: 9 IDs, 0 faltantes.
+- No se encontraron service_role, secret key ni sb_secret en JS/HTML/config.
+- Prueba visual con Chrome:
+  index.html movil: OK.
+  cliente.html movil: OK.
+  colaborador.html movil: OK.
+  admin.html movil: OK.
+  index.html escritorio: OK.
+  cliente.html escritorio: OK.
+  colaborador.html escritorio: OK.
+  admin.html escritorio: OK.
+
+Limitaciones honestas:
+- La asignacion real de colaborador cercano necesita ejecutar MIGRACION-FASE10-V63-COLABORADOR-CERCANO.sql en Supabase.
+- La prueba local no puede aprobar usuarios reales ni confirmar notificaciones push cerradas; eso requiere Supabase activo, usuario aprobado y navegador/dispositivo real.
+- Las notificaciones actuales son dentro de la app/navegador. Push cuando la app este cerrada requiere una fase posterior con servicio push.

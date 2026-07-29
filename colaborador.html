@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Plataforma restaurantes - Colaborador</title>
+    <title>RC ORDERA - Colaborador</title>
     <meta name="theme-color" content="#1f8f4d" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="Colaborador" />
+    <meta name="apple-mobile-web-app-title" content="RC ORDERA" />
     <meta name="format-detection" content="telephone=no" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="app-icon.svg" type="image/svg+xml" />
@@ -24,9 +24,17 @@
             <a href="index.html">Restaurante</a>
             <a href="cliente.html">Cliente</a>
           </nav>
+          <label class="app-language-inline">
+            <span>Idioma</span>
+            <select id="autoLanguageSelect">
+              <option value="es">Espanol</option>
+              <option value="pl">Polski</option>
+              <option value="en">English</option>
+            </select>
+          </label>
         </div>
-        <h1>Colaborador</h1>
-        <p>Gestiona tu solicitud, disponibilidad y entregas asignadas.</p>
+        <h1>RC ORDERA</h1>
+        <p>Colaborador: tu comida favorita, cerca de ti. Gestiona tu solicitud, disponibilidad y entregas asignadas.</p>
       </header>
 
       <section class="customer-warning">
@@ -197,21 +205,24 @@
           <button class="customer-map-button" id="courierAvailabilityButton" type="button" disabled>Disponible</button>
         </div>
         <div class="courier-steps">
-          <button type="button" disabled>Llegue al restaurante</button>
-          <button type="button" disabled>Pedido recogido</button>
-          <button type="button" disabled>Llegue al cliente</button>
-          <button type="button" disabled>Pedido entregado</button>
+          <button id="courierArrivedRestaurantButton" type="button" disabled>Llegue al restaurante</button>
+          <button id="courierPickedUpButton" type="button" disabled>Pedido recogido</button>
+          <button id="courierArrivedCustomerButton" type="button" disabled>Llegue al cliente</button>
+          <button id="courierDeliveredButton" type="button" disabled>Pedido entregado</button>
         </div>
         <div class="collaborator-actions">
           <button class="customer-map-button" id="courierShareLocationButton" type="button">Compartir ubicacion actual</button>
           <button class="customer-map-button" id="courierOpenGpsButton" type="button" disabled>Abrir GPS</button>
+          <button class="customer-map-button" id="courierRefreshOffersButton" type="button">Actualizar pedidos</button>
         </div>
         <p class="customer-map-result" id="courierLocationMessage" hidden></p>
+        <div class="courier-offers-list" id="courierOffersList" aria-live="polite"></div>
       </section>
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
+    <script src="auto-translate.js"></script>
     <script src="colaborador.js"></script>
   </body>
 </html>

@@ -8,6 +8,11 @@ const adminElements = {
   emailInput: document.querySelector("#adminEmailInput"),
   passwordInput: document.querySelector("#adminPasswordInput"),
   signInButton: document.querySelector("#adminSignInButton"),
+  resetPasswordButton: document.querySelector("#adminResetPasswordButton"),
+  passwordRecoveryPanel: document.querySelector("#adminPasswordRecoveryPanel"),
+  newPasswordInput: document.querySelector("#adminNewPasswordInput"),
+  updatePasswordButton: document.querySelector("#adminUpdatePasswordButton"),
+  cancelRecoveryButton: document.querySelector("#adminCancelRecoveryButton"),
   signOutButton: document.querySelector("#adminSignOutButton"),
   authMessage: document.querySelector("#adminAuthMessage"),
   refreshCouriersButton: document.querySelector("#adminRefreshCouriersButton"),
@@ -17,6 +22,7 @@ const adminElements = {
 let adminClient = null;
 let adminUser = null;
 let adminAuthReady = false;
+let adminRecoveringPassword = false;
 
 function adminSupabaseConfig() {
   const config = window.RINCON_SUPABASE || {};
@@ -128,8 +134,13 @@ function adminRender() {
       ? `Sesion activa: ${email}. Administrador autorizado: ${PLATFORM_OWNER_NAME}.`
       : `Solo ${PLATFORM_OWNER_NAME} puede administrar la plataforma con ${PLATFORM_OWNER_EMAIL}.`;
   }
-  if (adminElements.authFields) adminElements.authFields.hidden = Boolean(adminUser);
+  if (adminElements.authFields) adminElements.authFields.hidden = Boolean(adminUser) && !adminRecoveringPassword;
   if (adminElements.signOutButton) adminElements.signOutButton.hidden = !adminUser;
+  if (adminElements.emailInput?.closest("label")) adminElements.emailInput.closest("label").hidden = adminRecoveringPassword;
+  if (adminElements.passwordInput?.closest("label")) adminElements.passwordInput.closest("label").hidden = adminRecoveringPassword;
+  if (adminElements.signInButton) adminElements.signInButton.hidden = adminRecoveringPassword;
+  if (adminElements.resetPasswordButton) adminElements.resetPasswordButton.hidden = adminRecoveringPassword;
+  if (adminElements.passwordRecoveryPanel) adminElements.passwordRecoveryPanel.hidden = !adminRecoveringPassword;
 }
 
 function adminRenderCourierList(rows = []) {
@@ -286,6 +297,67 @@ async function adminSignIn() {
   adminSetMessage(adminElements.authMessage, "Sesion iniciada.", "ok");
 }
 
+async function adminSendPasswordResetEmail() {
+  const client = adminEnsureClient();
+  const email = adminInputValue(adminElements.emailInput);
+  if (!client) {
+    adminSetMessage(adminElements.authMessage, "Supabase no esta configurado.", "error");
+    return;
+  }
+  if (!email) {
+    adminSetMessage(adminElements.authMessage, "Escribe el correo autorizado para recuperar la contrasena.", "error");
+    return;
+  }
+
+  const genericMessage = "Si la cuenta existe y esta autorizada, recibiras las instrucciones de recuperacion.";
+  if (!adminIsPlatformOwnerEmail(email)) {
+    adminSetMessage(adminElements.authMessage, genericMessage, "ok");
+    return;
+  }
+
+  const redirectTo = `${window.location.href.split("#")[0].split("?")[0]}?recovery=1`;
+  const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo });
+  if (error) {
+    console.warn("No se pudo enviar recuperacion administrativa.", error);
+  }
+  adminSetMessage(adminElements.authMessage, genericMessage, "ok");
+}
+
+function adminShowPasswordRecoveryForm() {
+  adminRecoveringPassword = true;
+  adminRender();
+  adminSetMessage(adminElements.authMessage, "RC ORDERA verifico el enlace. Escribe tu nueva contrasena.", "ok");
+  window.setTimeout(() => adminElements.newPasswordInput?.focus(), 50);
+}
+
+function adminHidePasswordRecoveryForm(message = "") {
+  adminRecoveringPassword = false;
+  if (adminElements.newPasswordInput) adminElements.newPasswordInput.value = "";
+  adminRender();
+  if (message) adminSetMessage(adminElements.authMessage, message, "ok");
+}
+
+async function adminUpdateRecoveredPassword() {
+  const client = adminEnsureClient();
+  const password = adminElements.newPasswordInput?.value || "";
+  if (!client) {
+    adminSetMessage(adminElements.authMessage, "Supabase no esta configurado.", "error");
+    return;
+  }
+  if (password.length < 6) {
+    adminSetMessage(adminElements.authMessage, "La nueva contrasena debe tener minimo 6 caracteres.", "error");
+    adminElements.newPasswordInput?.focus();
+    return;
+  }
+
+  const { error } = await client.auth.updateUser({ password });
+  if (error) {
+    adminSetMessage(adminElements.authMessage, adminFriendlyAuthError(error), "error");
+    return;
+  }
+  adminHidePasswordRecoveryForm("Contrasena actualizada. Ya puedes iniciar sesion en RC ORDERA.");
+}
+
 async function adminSignOut() {
   const client = adminEnsureClient();
   if (!client) return;
@@ -315,8 +387,16 @@ async function adminInitialize() {
   adminRender();
   if (adminUser) await adminLoadCouriers();
 
-  client.auth.onAuthStateChange(async (_event, session) => {
+  if (/[?&](type=recovery|recovery=1)/i.test(window.location.search) || /type=recovery/i.test(window.location.hash)) {
+    adminShowPasswordRecoveryForm();
+  }
+
+  client.auth.onAuthStateChange(async (event, session) => {
     adminUser = session?.user || null;
+    if (event === "PASSWORD_RECOVERY") {
+      adminShowPasswordRecoveryForm();
+      return;
+    }
     if (adminUser && !adminIsPlatformOwnerEmail(adminUser.email)) {
       await client.auth.signOut();
       adminUser = null;
@@ -335,6 +415,9 @@ async function adminInitialize() {
 }
 
 adminElements.signInButton?.addEventListener("click", adminSignIn);
+adminElements.resetPasswordButton?.addEventListener("click", adminSendPasswordResetEmail);
+adminElements.updatePasswordButton?.addEventListener("click", adminUpdateRecoveredPassword);
+adminElements.cancelRecoveryButton?.addEventListener("click", () => adminHidePasswordRecoveryForm());
 adminElements.signOutButton?.addEventListener("click", adminSignOut);
 adminElements.refreshCouriersButton?.addEventListener("click", adminLoadCouriers);
 adminElements.courierList?.addEventListener("click", (event) => {

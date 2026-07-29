@@ -53,6 +53,12 @@ const courierElements = {
   availabilityButton: document.querySelector("#courierAvailabilityButton"),
   shareLocationButton: document.querySelector("#courierShareLocationButton"),
   openGpsButton: document.querySelector("#courierOpenGpsButton"),
+  refreshOffersButton: document.querySelector("#courierRefreshOffersButton"),
+  offersList: document.querySelector("#courierOffersList"),
+  arrivedRestaurantButton: document.querySelector("#courierArrivedRestaurantButton"),
+  pickedUpButton: document.querySelector("#courierPickedUpButton"),
+  arrivedCustomerButton: document.querySelector("#courierArrivedCustomerButton"),
+  deliveredButton: document.querySelector("#courierDeliveredButton"),
   locationMessage: document.querySelector("#courierLocationMessage"),
 };
 
@@ -72,6 +78,9 @@ let courierProfile = null;
 let courierAvailable = false;
 let courierLastLocation = null;
 let courierRecoveringPassword = false;
+let courierAssignments = [];
+let courierActiveAssignmentId = "";
+let courierOffersTimer = null;
 
 const COURIER_VERIFICATION_EMAIL = "pedidosapprinconcolombiano@gmail.com";
 const COURIER_FILE_FIELDS = [
@@ -257,36 +266,227 @@ function courierGpsUrl() {
   )}`;
 }
 
-function courierShareLocation() {
+function courierFriendlyDeliveryError(error) {
+  const message = String(error?.message || "");
+  if (/upsert_courier_live_location|delivery_assignment|assign_nearest|function .* does not exist|schema cache/i.test(message)) {
+    return "Falta ejecutar la migracion v63 en Supabase para activar entregas cercanas.";
+  }
+  if (/Courier profile is not approved/i.test(message)) return "Tu perfil debe estar aprobado por la administracion antes de recibir pedidos.";
+  if (/Invalid location/i.test(message)) return "La ubicacion no es valida. Intenta compartirla de nuevo.";
+  if (/not authenticated/i.test(message)) return "Inicia sesion como colaborador.";
+  return message || "No se pudo actualizar la entrega.";
+}
+
+function courierEscapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function courierFormatMoney(amount) {
+  const value = Number(amount) || 0;
+  return `${new Intl.NumberFormat("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)} zl`;
+}
+
+function courierOrderItems(assignment) {
+  return Array.isArray(assignment?.order_json?.items) ? assignment.order_json.items : [];
+}
+
+function courierItemName(item) {
+  return String(item?.product_name_snapshot || item?.name || item?.productName || "Producto").trim();
+}
+
+function courierItemQuantity(item) {
+  const qty = Number.parseInt(item?.quantity ?? item?.qty, 10);
+  return Number.isFinite(qty) && qty > 0 ? qty : 1;
+}
+
+function courierDeliveryAddress(assignment) {
+  const delivery = assignment?.order_json?.delivery || {};
+  return [delivery.address, delivery.neighborhood, delivery.reference].filter(Boolean).join(" - ") ||
+    assignment?.table_label ||
+    "Direccion del cliente pendiente";
+}
+
+function courierCoordinatesUrl(lat, lng) {
+  const cleanLat = Number.parseFloat(lat);
+  const cleanLng = Number.parseFloat(lng);
+  if (!Number.isFinite(cleanLat) || !Number.isFinite(cleanLng)) return "";
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${cleanLat},${cleanLng}`)}`;
+}
+
+function courierDeliveryGpsUrl(assignment) {
+  const location = assignment?.order_json?.delivery?.location || {};
+  return courierCoordinatesUrl(location.lat, location.lng);
+}
+
+function courierAssignmentStatusLabel(status) {
+  if (status === "offered") return "Pedido ofrecido";
+  if (status === "accepted") return "Aceptado";
+  if (status === "arrived_restaurant") return "Llegaste al restaurante";
+  if (status === "picked_up") return "Pedido recogido";
+  if (status === "arrived_customer") return "Llegaste al cliente";
+  if (status === "delivered") return "Entregado";
+  if (status === "rejected") return "Rechazado";
+  if (status === "cancelled") return "Cancelado";
+  return "Pendiente";
+}
+
+function courierActiveAssignment() {
+  return courierAssignments.find((assignment) =>
+    ["accepted", "arrived_restaurant", "picked_up", "arrived_customer"].includes(assignment.status)
+  );
+}
+
+function courierSetStepButtons() {
+  const active = courierActiveAssignment();
+  courierActiveAssignmentId = active?.assignment_id || "";
+  const status = active?.status || "";
+  const canUse = Boolean(active);
+
+  if (courierElements.arrivedRestaurantButton) {
+    courierElements.arrivedRestaurantButton.disabled = !canUse || status !== "accepted";
+  }
+  if (courierElements.pickedUpButton) {
+    courierElements.pickedUpButton.disabled = !canUse || !["accepted", "arrived_restaurant"].includes(status);
+  }
+  if (courierElements.arrivedCustomerButton) {
+    courierElements.arrivedCustomerButton.disabled = !canUse || status !== "picked_up";
+  }
+  if (courierElements.deliveredButton) {
+    courierElements.deliveredButton.disabled = !canUse || !["picked_up", "arrived_customer"].includes(status);
+  }
+}
+
+function courierRenderDeliveryOffers() {
+  if (!courierElements.offersList) return;
+  if (!courierUser) {
+    courierElements.offersList.innerHTML = "";
+    courierSetStepButtons();
+    return;
+  }
+  if (courierProfile?.status !== "approved") {
+    courierElements.offersList.innerHTML = `<div class="customer-empty">La administracion debe aprobar tu perfil antes de recibir pedidos.</div>`;
+    courierSetStepButtons();
+    return;
+  }
+  if (!courierAssignments.length) {
+    courierElements.offersList.innerHTML = `<div class="customer-empty">No tienes pedidos disponibles ahora. Activa disponibilidad y comparte ubicacion.</div>`;
+    courierSetStepButtons();
+    return;
+  }
+
+  courierElements.offersList.innerHTML = courierAssignments
+    .map((assignment) => {
+      const pickupUrl = courierCoordinatesUrl(assignment.pickup_lat, assignment.pickup_lng);
+      const deliveryUrl = courierDeliveryGpsUrl(assignment);
+      const items = courierOrderItems(assignment);
+      const status = assignment.status;
+      const distance = Number.parseFloat(assignment.distance_km);
+      return `
+        <article class="courier-offer-card" data-assignment-id="${courierEscapeHtml(assignment.assignment_id)}">
+          <div class="client-order-head">
+            <div>
+              <strong>${courierEscapeHtml(assignment.restaurant_name || "Restaurante")}</strong>
+              <span>${courierEscapeHtml(courierAssignmentStatusLabel(status))}</span>
+              <span>Cliente: ${courierEscapeHtml(assignment.customer_name || assignment.table_label || "Cliente")}</span>
+              <span>Destino: ${courierEscapeHtml(courierDeliveryAddress(assignment))}</span>
+              ${Number.isFinite(distance) ? `<span>Distancia al restaurante: ${distance.toFixed(2)} km</span>` : ""}
+            </div>
+            <strong>${courierFormatMoney(assignment.total)}</strong>
+          </div>
+          <div class="client-order-items">
+            ${items
+              .map(
+                (item) => `
+                  <div>
+                    <strong>${courierItemQuantity(item)} x ${courierEscapeHtml(courierItemName(item))}</strong>
+                    ${item.note ? `<span>NOTA: ${courierEscapeHtml(String(item.note).toUpperCase())}</span>` : ""}
+                  </div>
+                `
+              )
+              .join("")}
+          </div>
+          <div class="client-order-actions">
+            ${pickupUrl ? `<a href="${courierEscapeHtml(pickupUrl)}" target="_blank" rel="noopener">GPS restaurante</a>` : ""}
+            ${deliveryUrl ? `<a href="${courierEscapeHtml(deliveryUrl)}" target="_blank" rel="noopener">GPS cliente</a>` : ""}
+            ${
+              status === "offered"
+                ? `
+                  <button type="button" data-action="accept-assignment">Aceptar</button>
+                  <button type="button" data-action="reject-assignment">Rechazar</button>
+                `
+                : ""
+            }
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+  courierSetStepButtons();
+}
+
+function courierCurrentPosition() {
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 30000,
+    });
+  });
+}
+
+async function courierPersistLiveLocation(available = courierAvailable) {
+  const client = courierEnsureClient();
+  if (!client || !courierUser || !courierLastLocation) return false;
+  const { error } = await client.rpc("upsert_courier_live_location", {
+    p_available: Boolean(available),
+    p_lat: Number(courierLastLocation.lat),
+    p_lng: Number(courierLastLocation.lng),
+    p_accuracy_m: Number.parseInt(courierLastLocation.accuracy, 10) || 0,
+  });
+  if (error) throw error;
+  return true;
+}
+
+async function courierShareLocation(options = {}) {
   if (!navigator.geolocation) {
     courierSetMessage(courierElements.locationMessage, "Este dispositivo no permite compartir ubicacion.", "error");
+    return;
+  }
+  if (courierProfile?.status !== "approved") {
+    courierSetMessage(courierElements.locationMessage, "Tu perfil debe estar aprobado antes de compartir ubicacion para entregas.", "error");
     return;
   }
 
   courierElements.shareLocationButton.disabled = true;
   courierSetMessage(courierElements.locationMessage, "Solicitando ubicacion...");
-  navigator.geolocation.getCurrentPosition(
-    (position) => {
-      courierLastLocation = {
-        lat: Number(position.coords.latitude).toFixed(6),
-        lng: Number(position.coords.longitude).toFixed(6),
-        accuracy: Math.round(position.coords.accuracy || 0),
-        updatedAt: new Date().toISOString(),
-      };
-      courierElements.shareLocationButton.disabled = false;
-      if (courierElements.openGpsButton) courierElements.openGpsButton.disabled = false;
-      courierSetMessage(
-        courierElements.locationMessage,
-        `Ubicacion lista: ${courierLastLocation.lat}, ${courierLastLocation.lng}. Precision aprox: ${courierLastLocation.accuracy} m.`,
-        "ok"
-      );
-    },
-    () => {
-      courierElements.shareLocationButton.disabled = false;
-      courierSetMessage(courierElements.locationMessage, "No pude obtener ubicacion. Revisa permisos del navegador.", "error");
-    },
-    { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
-  );
+  try {
+    const position = await courierCurrentPosition();
+    courierLastLocation = {
+      lat: Number(position.coords.latitude).toFixed(6),
+      lng: Number(position.coords.longitude).toFixed(6),
+      accuracy: Math.round(position.coords.accuracy || 0),
+      updatedAt: new Date().toISOString(),
+    };
+    if (options.makeAvailable) courierAvailable = true;
+    await courierPersistLiveLocation(courierAvailable);
+    if (courierAvailable) await courierLoadDeliveryOffers({ silent: true });
+    if (courierElements.openGpsButton) courierElements.openGpsButton.disabled = false;
+    courierSetMessage(
+      courierElements.locationMessage,
+      `Ubicacion guardada: ${courierLastLocation.lat}, ${courierLastLocation.lng}. Precision aprox: ${courierLastLocation.accuracy} m.`,
+      "ok"
+    );
+  } catch (error) {
+    courierSetMessage(courierElements.locationMessage, courierFriendlyDeliveryError(error), "error");
+  } finally {
+    courierElements.shareLocationButton.disabled = false;
+    courierRender();
+  }
 }
 
 function courierOpenGps() {
@@ -298,11 +498,71 @@ function courierOpenGps() {
   window.open(url, "_blank", "noopener");
 }
 
+async function courierLoadDeliveryOffers(options = {}) {
+  const { silent = false } = options;
+  const client = courierEnsureClient();
+  if (!client || !courierUser || courierProfile?.status !== "approved") {
+    courierAssignments = [];
+    courierRenderDeliveryOffers();
+    return;
+  }
+
+  if (!silent) courierSetMessage(courierElements.locationMessage, "Actualizando pedidos disponibles...");
+  const { data, error } = await client.rpc("get_courier_delivery_offers");
+  if (error) {
+    courierSetMessage(courierElements.locationMessage, courierFriendlyDeliveryError(error), "error");
+    return;
+  }
+
+  const previousOffered = new Set(courierAssignments.filter((assignment) => assignment.status === "offered").map((assignment) => assignment.assignment_id));
+  courierAssignments = Array.isArray(data) ? data : [];
+  const hasNewOffer = courierAssignments.some((assignment) => assignment.status === "offered" && !previousOffered.has(assignment.assignment_id));
+  courierRenderDeliveryOffers();
+  courierRender();
+  if (hasNewOffer) {
+    courierSetMessage(courierElements.locationMessage, "Nuevo pedido disponible. Revisa y acepta si puedes tomarlo.", "ok");
+  } else if (!silent) {
+    courierSetMessage(courierElements.locationMessage, "Pedidos actualizados.", "ok");
+  }
+}
+
+function courierSyncOffersPolling() {
+  const shouldPoll = Boolean(courierUser && courierProfile?.status === "approved");
+  if (!shouldPoll && courierOffersTimer) {
+    window.clearInterval(courierOffersTimer);
+    courierOffersTimer = null;
+  }
+  if (shouldPoll && !courierOffersTimer) {
+    courierOffersTimer = window.setInterval(() => {
+      courierLoadDeliveryOffers({ silent: true }).catch(() => {});
+      if (courierAvailable && courierLastLocation) courierPersistLiveLocation(true).catch(() => {});
+    }, 15000);
+  }
+}
+
+async function courierUpdateAssignmentStatus(assignmentId, status) {
+  const client = courierEnsureClient();
+  if (!client || !courierUser) return;
+  courierSetMessage(courierElements.locationMessage, "Actualizando entrega...");
+  const { error } = await client.rpc("update_delivery_assignment_status", {
+    p_assignment_id: assignmentId,
+    p_status: status,
+  });
+  if (error) {
+    courierSetMessage(courierElements.locationMessage, courierFriendlyDeliveryError(error), "error");
+    return;
+  }
+  if (status === "accepted") courierAvailable = false;
+  if (status === "delivered") courierAvailable = true;
+  await courierLoadDeliveryOffers({ silent: true });
+  courierSetMessage(courierElements.locationMessage, `${courierAssignmentStatusLabel(status)}.`, "ok");
+}
+
 function courierFriendlyAuthError(error) {
   const message = String(error?.message || "");
   if (/invalid login credentials/i.test(message)) return "Correo o contrasena incorrectos.";
   if (/email not confirmed/i.test(message)) {
-    return "RINCON COLOMBIANO PEDIDOS envio un correo de verificacion. Revisa tu correo, confirma la cuenta y vuelve a iniciar sesion.";
+    return "RC ORDERA envio un correo de verificacion. Revisa tu correo, confirma la cuenta y vuelve a iniciar sesion.";
   }
   if (/already registered|already exists|user already/i.test(message)) {
     return "Ese correo ya tiene cuenta. Inicia sesion aqui con ese correo y despues envia la solicitud de colaborador.";
@@ -444,11 +704,15 @@ function courierRender() {
 
   courierElements.dashboard.hidden = !courierUser;
   courierElements.availabilityButton.disabled = status !== "approved";
+  if (courierElements.shareLocationButton) courierElements.shareLocationButton.disabled = status !== "approved";
+  if (courierElements.refreshOffersButton) courierElements.refreshOffersButton.disabled = status !== "approved";
   courierElements.dashboardText.textContent = status === "approved"
-    ? "Perfil aprobado. Puedes activar disponibilidad cuando existan pedidos asignados."
+    ? "Perfil aprobado. Activa disponibilidad, comparte ubicacion y recibiras pedidos cercanos."
     : "Tu perfil debe ser aprobado antes de recibir pedidos.";
   courierElements.availabilityButton.textContent = courierAvailable ? "Disponible" : "Desconectado";
   courierRenderVehicleRequirements();
+  courierRenderDeliveryOffers();
+  courierSyncOffersPolling();
 }
 
 function courierValidateProfile() {
@@ -562,6 +826,9 @@ async function courierLoadProfile() {
   courierProfile = data;
   courierApplyProfileFields(data);
   courierRender();
+  if (data.status === "approved") {
+    courierLoadDeliveryOffers({ silent: true }).catch(() => {});
+  }
 }
 
 async function courierSignIn() {
@@ -628,7 +895,7 @@ async function courierSignUp() {
   }
   courierSetMessage(
     courierElements.authMessage,
-    "Cuenta creada. RINCON COLOMBIANO PEDIDOS te envio un correo de verificacion. Abre ese correo, confirma la cuenta y despues inicia sesion como colaborador.",
+    "Cuenta creada. RC ORDERA te envio un correo de verificacion. Abre ese correo, confirma la cuenta y despues inicia sesion como colaborador.",
     "ok"
   );
 }
@@ -646,7 +913,7 @@ async function courierSendPasswordResetEmail() {
     return;
   }
 
-  courierSetMessage(courierElements.authMessage, "RINCON COLOMBIANO PEDIDOS esta enviando el correo de recuperacion...");
+  courierSetMessage(courierElements.authMessage, "RC ORDERA esta enviando el correo de recuperacion...");
   const redirectTo = window.location.href.split("#")[0];
   const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo });
   if (error) {
@@ -655,7 +922,7 @@ async function courierSendPasswordResetEmail() {
   }
   courierSetMessage(
     courierElements.authMessage,
-    "Correo enviado por RINCON COLOMBIANO PEDIDOS. Abre el enlace para crear una contrasena nueva.",
+    "Correo enviado por RC ORDERA. Abre el enlace para crear una contrasena nueva.",
     "ok"
   );
 }
@@ -673,7 +940,7 @@ async function courierResendVerificationEmail() {
     return;
   }
 
-  courierSetMessage(courierElements.authMessage, "RINCON COLOMBIANO PEDIDOS esta reenviando el correo de verificacion...");
+  courierSetMessage(courierElements.authMessage, "RC ORDERA esta reenviando el correo de verificacion...");
   const redirectTo = window.location.href.split("#")[0].split("?")[0];
   const { error } = await client.auth.resend({
     type: "signup",
@@ -686,7 +953,7 @@ async function courierResendVerificationEmail() {
   }
   courierSetMessage(
     courierElements.authMessage,
-    "Correo de verificacion reenviado por RINCON COLOMBIANO PEDIDOS. Revisa entrada, spam o promociones.",
+    "Correo de verificacion reenviado por RC ORDERA. Revisa entrada, spam o promociones.",
     "ok"
   );
 }
@@ -703,7 +970,7 @@ function courierShowPasswordRecoveryForm() {
   courierElements.passwordRecoveryPanel.hidden = false;
   courierSetMessage(
     courierElements.authMessage,
-    "RINCON COLOMBIANO PEDIDOS verifico el enlace. Escribe tu nueva contrasena.",
+    "RC ORDERA verifico el enlace. Escribe tu nueva contrasena.",
     "ok"
   );
   window.setTimeout(() => courierElements.newPasswordInput?.focus(), 50);
@@ -741,7 +1008,7 @@ async function courierUpdateRecoveredPassword() {
     courierSetMessage(courierElements.authMessage, courierFriendlyAuthError(error), "error");
     return;
   }
-  courierHidePasswordRecoveryForm("Contrasena actualizada. Ya puedes iniciar sesion en RINCON COLOMBIANO PEDIDOS.");
+  courierHidePasswordRecoveryForm("Contrasena actualizada. Ya puedes iniciar sesion en RC ORDERA.");
 }
 
 function courierProfilePayloadForMetadata() {
@@ -777,8 +1044,27 @@ async function courierSignOut() {
 
 function courierToggleAvailability() {
   if (courierProfile?.status !== "approved") return;
-  courierAvailable = !courierAvailable;
+  const nextAvailable = !courierAvailable;
+  if (nextAvailable && !courierLastLocation) {
+    courierSetMessage(courierElements.locationMessage, "Para estar disponible primero comparte tu ubicacion actual.");
+    courierShareLocation({ makeAvailable: true });
+    return;
+  }
+
+  courierAvailable = nextAvailable;
   courierRender();
+  courierPersistLiveLocation(courierAvailable)
+    .then(() => {
+      courierSetMessage(
+        courierElements.locationMessage,
+        courierAvailable ? "Estas disponible para recibir pedidos cercanos." : "Estas desconectado para nuevas entregas.",
+        "ok"
+      );
+      if (courierAvailable) courierLoadDeliveryOffers({ silent: true }).catch(() => {});
+    })
+    .catch((error) => {
+      courierSetMessage(courierElements.locationMessage, courierFriendlyDeliveryError(error), "error");
+    });
 }
 
 function courierUrlLooksLikeRecovery() {
@@ -803,6 +1089,8 @@ async function courierInitialize() {
   client.auth.onAuthStateChange(async (event, session) => {
     courierUser = session?.user || null;
     courierProfile = null;
+    courierAssignments = [];
+    courierAvailable = false;
     if (event === "PASSWORD_RECOVERY") {
       courierShowPasswordRecoveryForm();
       return;
@@ -824,6 +1112,26 @@ courierElements.availabilityButton.addEventListener("click", courierToggleAvaila
 courierElements.vehicleTypeInput.addEventListener("change", courierRenderVehicleRequirements);
 courierElements.shareLocationButton?.addEventListener("click", courierShareLocation);
 courierElements.openGpsButton?.addEventListener("click", courierOpenGps);
+courierElements.refreshOffersButton?.addEventListener("click", () => courierLoadDeliveryOffers());
+courierElements.offersList?.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-action]");
+  const card = event.target.closest(".courier-offer-card");
+  if (!button || !card) return;
+  if (button.dataset.action === "accept-assignment") courierUpdateAssignmentStatus(card.dataset.assignmentId, "accepted");
+  if (button.dataset.action === "reject-assignment") courierUpdateAssignmentStatus(card.dataset.assignmentId, "rejected");
+});
+courierElements.arrivedRestaurantButton?.addEventListener("click", () => {
+  if (courierActiveAssignmentId) courierUpdateAssignmentStatus(courierActiveAssignmentId, "arrived_restaurant");
+});
+courierElements.pickedUpButton?.addEventListener("click", () => {
+  if (courierActiveAssignmentId) courierUpdateAssignmentStatus(courierActiveAssignmentId, "picked_up");
+});
+courierElements.arrivedCustomerButton?.addEventListener("click", () => {
+  if (courierActiveAssignmentId) courierUpdateAssignmentStatus(courierActiveAssignmentId, "arrived_customer");
+});
+courierElements.deliveredButton?.addEventListener("click", () => {
+  if (courierActiveAssignmentId) courierUpdateAssignmentStatus(courierActiveAssignmentId, "delivered");
+});
 courierElements.identityFileInput?.addEventListener("change", () =>
   courierHandleFileUpload(courierElements.identityFileInput, courierElements.identityFileUrlInput, "documento-identidad", "Documento de identidad")
 );

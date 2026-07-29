@@ -1201,6 +1201,16 @@ body {
   display: none;
 }
 
+body.auth-mode {
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body.auth-mode .app-shell,
+body.auth-mode .print-ticket {
+  display: none;
+}
+
 .auth-card {
   display: grid;
   gap: 14px;
@@ -1267,6 +1277,26 @@ body {
   background: var(--colombia-red);
 }
 
+.app-language-inline {
+  display: flex;
+  justify-self: start;
+  gap: 8px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.app-language-inline select {
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  font-weight: 900;
+}
+
 .auth-landing h1,
 .auth-landing p {
   margin: 0;
@@ -1277,6 +1307,13 @@ body {
   color: #12233c;
   font-size: clamp(2rem, 5vw, 3.4rem);
   line-height: 1.02;
+}
+
+.auth-tagline {
+  max-width: 520px;
+  color: var(--muted);
+  font-size: 1.02rem;
+  font-weight: 900;
 }
 
 .role-access-grid {
@@ -1525,6 +1562,70 @@ body {
   font-weight: 900;
 }
 
+.courier-steps button:not(:disabled) {
+  border-color: rgba(31, 143, 77, 0.35);
+  background: #f0fff5;
+  color: #14532d;
+  cursor: pointer;
+}
+
+.courier-offers-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.courier-offer-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.client-order-actions a,
+.courier-offer-card a {
+  display: inline-grid;
+  min-height: 38px;
+  place-items: center;
+  padding: 0 12px;
+  border: 1px solid rgba(31, 143, 77, 0.35);
+  border-radius: 8px;
+  background: #f0fff5;
+  color: #14532d;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.app-language-floating {
+  position: fixed;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  z-index: 80;
+  display: grid;
+  gap: 4px;
+  min-width: 118px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.app-language-floating select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 8px;
+  background: #ffffff;
+  color: var(--ink);
+  font-weight: 900;
+}
+
 .legal-checkbox,
 .customer-legal-checkbox {
   display: flex;
@@ -1557,6 +1658,23 @@ body {
 .auth-card > p:not(.eyebrow):not(.auth-message) {
   color: var(--muted);
   font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .role-access-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .role-access-card {
+    min-height: auto;
+  }
+
+  .role-access-card button,
+  .role-access-card a {
+    min-height: 46px;
+    white-space: normal;
+    line-height: 1.15;
+  }
 }
 
 .auth-actions {

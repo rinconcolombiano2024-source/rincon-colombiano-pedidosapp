@@ -1,0 +1,93 @@
+RC ORDERA - REPORTE DE VALIDACION V64 / FASE 1
+Fecha: 2026-07-29
+
+Resumen
+- La plataforma pasa a llamarse RC ORDERA.
+- Lema visible en portada: Tu comida favorita, cerca de ti.
+- RINCON COLOMBIANO queda como restaurante configurable, no como nombre global fijo de la plataforma.
+- Se creo respaldo antes de modificar:
+  C:\Users\chipi\Documents\Codex\2026-06-30\ne\outputs\rincon-colombiano-app-backup-before-fase1-20260729-071824.zip
+
+Errores encontrados
+- El guardado de ajustes del restaurante podia mostrar "guardado" antes de confirmar Supabase.
+- Campos vacios de formulario o de datos antiguos podian sobrescribir logo, direccion, telefono, banco u otros datos validos.
+- El perfil publico del restaurante podia ser actualizado sin leer primero los datos existentes.
+- El panel admin no tenia recuperacion de contrasena propia.
+- La marca estaba fija como RINCON COLOMBIANO PEDIDOS en mensajes de verificacion y recuperacion.
+
+Causas identificadas
+- app.js guardaba un objeto completo de settings con valores vacios.
+- applySettingsPayload aceptaba cadenas vacias como valores reales.
+- saveRestaurantPublicProfile hacia upsert directo con el payload actual.
+- saveSettingsWhenPossible no devolvia confirmacion al usuario.
+
+Archivos modificados
+- app.js
+- cliente.js
+- colaborador.js
+- admin.js
+- index.html
+- cliente.html
+- colaborador.html
+- admin.html
+- styles.css
+- manifest.webmanifest
+- service-worker.js
+
+Cambios realizados
+- Version interna actualizada a v64.
+- Cache PWA cambiado a rc-ordera-v64 para evitar versiones viejas en dispositivos.
+- Plataforma renombrada a RC ORDERA.
+- Se agrego lema en la pantalla principal.
+- Se actualizaron mensajes de verificacion y recuperacion de cliente, restaurante y colaborador.
+- El guardado de restaurante ahora conserva datos existentes cuando un campo llega vacio por carga incompleta.
+- El guardado en nube ahora confirma contra Supabase y actualiza la interfaz con datos confirmados.
+- Los avisos de menu/productos/categorias indican si queda sincronizado o pendiente.
+- El perfil publico del restaurante ahora se lee antes de guardar para no borrar logo, direccion o telefono existentes.
+- Se agrego recuperacion de contrasena al panel de administracion.
+- El mensaje de recuperacion admin es seguro: no revela si un correo existe o no.
+- Los guardados criticos de ajustes tienen limite de espera; si Supabase no confirma a tiempo, quedan pendientes y no muestran exito falso.
+
+Base de datos
+- No se creo migracion nueva en v64.
+- No se eliminaron tablas.
+- No se modificaron credenciales.
+- No se tocaron las politicas RLS en Supabase en esta fase.
+- La estructura existente revisada incluye app_settings, restaurant_profiles, customer_profiles, customer_orders, user_profiles, user_roles, courier_profiles, courier_live_locations, delivery_assignments y account_privacy_requests.
+
+Pruebas realizadas
+- Validacion de sintaxis JavaScript:
+  app.js OK
+  cliente.js OK
+  colaborador.js OK
+  admin.js OK
+- Validacion de IDs HTML/JS:
+  index/app OK
+  cliente OK
+  colaborador OK
+  admin OK
+- Revision visual local:
+  index mobile/desktop OK
+  cliente mobile/desktop OK
+  colaborador mobile/desktop OK
+  admin mobile/desktop OK
+- Revision visual final:
+  restaurante, cliente, colaborador y admin: 0 errores propios de JavaScript.
+- Revision de seguridad local:
+  No se encontro service_role.
+  No se encontro sb_secret.
+  No se encontraron claves privadas en archivos publicos.
+
+Observaciones de prueba
+- En la prueba local aparecen errores net::ERR_NETWORK_ACCESS_DENIED por recursos externos bloqueados en el entorno local, como CDN o servicios externos. No son errores de sintaxis de la app.
+- No se probo escritura real contra Supabase desde este entorno porque la validacion local no debe modificar datos productivos sin accion manual del usuario.
+
+Riesgos pendientes
+- El logo del restaurante sigue guardandose como imagen optimizada en settings/localStorage/app_settings. Es estable para la version actual, pero en una fase posterior conviene migrarlo a Supabase Storage con bucket propio para logos y portada.
+- Los permisos finos de empleados por restaurante todavia requieren una fase posterior con migracion y pruebas RLS especificas.
+- La validacion de precios en servidor y pedidos duplicados debe completarse en fase de backend/RPC.
+- La recuperacion de correo depende de que Supabase Auth tenga configurado SMTP/Email Templates correctamente en el panel de Supabase.
+
+Resultado
+- Fase 1 estabilizada parcialmente en persistencia critica de restaurante y marca.
+- La app queda lista para probar manualmente guardado de nombre, logo, direccion, menu y recuperacion admin en Supabase.

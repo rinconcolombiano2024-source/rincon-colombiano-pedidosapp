@@ -1,8 +1,8 @@
 {
-  "name": "RINCON COLOMBIANO PEDIDOS",
-  "short_name": "RC Pedidos",
+  "name": "RC ORDERA",
+  "short_name": "RC ORDERA",
   "id": "/",
-  "description": "Pedidos, tickets de cocina, cliente QR, historial y cierres para restaurantes.",
+  "description": "Tu comida favorita, cerca de ti. Pedidos, tickets internos, cliente QR, historial y cierres para restaurantes.",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",

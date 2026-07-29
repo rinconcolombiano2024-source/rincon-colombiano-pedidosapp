@@ -33,8 +33,9 @@ const STORAGE_KEYS = {
 
 const DEFAULT_BUSINESS_NAME = "RINCON COLOMBIANO";
 const DEFAULT_DELIVERY_MINIMUM_FEE = 20;
-const APP_VERSION = "v62";
+const APP_VERSION = "v64";
 const PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
+const PLATFORM_APP_NAME = "RC ORDERA";
 
 const EMPTY_MENU_CATALOG = {
   Entradas: [],
@@ -531,6 +532,16 @@ function shouldQueueForCloud() {
   return cloudState.configured && (Boolean(cloudState.user) || hasKnownCloudSession());
 }
 
+function withCloudTimeout(promise, message = "La nube no respondio a tiempo.", timeoutMs = 20000) {
+  let timerId = null;
+  const timeout = new Promise((_, reject) => {
+    timerId = window.setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timerId) window.clearTimeout(timerId);
+  });
+}
+
 function needsCloudSync(order) {
   return Boolean(order?.saved && order.syncStatus === "pending");
 }
@@ -783,30 +794,65 @@ function applyRestaurantProfile(profile = {}, options = {}) {
   applyBusinessNameToUi();
 }
 
-function applySettingsPayload(settings = {}) {
-  businessName = normalizeBusinessName(settings.businessName || businessName);
-  businessLogoUrl = normalizeProductImageUrl(settings.businessLogoUrl ?? businessLogoUrl);
-  legalBusinessName = normalizeTextSetting(settings.legalBusinessName ?? legalBusinessName);
-  taxId = normalizeTextSetting(settings.taxId ?? taxId);
-  businessPhone = normalizeTextSetting(settings.businessPhone ?? businessPhone);
-  businessEmail = normalizeTextSetting(settings.businessEmail ?? businessEmail);
-  legalAddress = normalizeTextSetting(settings.legalAddress ?? legalAddress);
-  currencySymbol = settings.currencySymbol || currencySymbol || "$";
-  currencyPosition = settings.currencyPosition === "after" ? "after" : "before";
-  moneyFormat = settings.moneyFormat === "eu" ? "eu" : "us";
-  receiptWidthMm = normalizeReceiptWidth(settings.receiptWidthMm || receiptWidthMm);
-  deliveryFee = normalizeMoneyValue(settings.deliveryFee ?? deliveryFee);
-  deliveryMinimumFee = normalizeDeliveryMinimumFee(settings.deliveryMinimumFee ?? deliveryMinimumFee);
-  restaurantAddress = normalizeTextSetting(settings.restaurantAddress ?? restaurantAddress);
-  googleMapsApiKey = normalizeTextSetting(settings.googleMapsApiKey ?? googleMapsApiKey);
-  bankAccount = normalizeTextSetting(settings.bankAccount ?? bankAccount);
-  bankTransferNote = normalizeTextSetting(settings.bankTransferNote ?? bankTransferNote);
-  onlinePaymentProvider = normalizeOnlinePaymentProvider(settings.onlinePaymentProvider ?? onlinePaymentProvider);
-  onlinePaymentNote = normalizeTextSetting(settings.onlinePaymentNote ?? onlinePaymentNote);
-  restaurantActive = settings.restaurantActive === false ? false : restaurantActive;
+function applyPublicRestaurantProfileFallback(profile = {}, options = {}) {
+  const onlyIfEmpty = Boolean(options.onlyIfEmpty);
+  const assignText = (currentValue, nextValue) => {
+    const cleanValue = normalizeTextSetting(nextValue);
+    if (!cleanValue) return currentValue;
+    if (onlyIfEmpty && normalizeTextSetting(currentValue)) return currentValue;
+    return cleanValue;
+  };
+  const assignImage = (currentValue, nextValue) => {
+    const cleanValue = normalizeProductImageUrl(nextValue);
+    if (!cleanValue) return currentValue;
+    if (onlyIfEmpty && normalizeProductImageUrl(currentValue)) return currentValue;
+    return cleanValue;
+  };
+
+  const publicName = normalizeTextSetting(profile.business_name);
+  if (publicName && (!onlyIfEmpty || !normalizeTextSetting(businessName) || businessName === DEFAULT_BUSINESS_NAME)) {
+    businessName = normalizeBusinessName(publicName);
+  }
+  businessLogoUrl = assignImage(businessLogoUrl, profile.logo_url);
+  restaurantAddress = assignText(restaurantAddress, profile.public_address);
+  businessPhone = assignText(businessPhone, profile.phone);
+  if (typeof profile.active === "boolean") restaurantActive = profile.active;
+
   localStorage.setItem(STORAGE_KEYS.businessName, businessName);
   localStorage.setItem(STORAGE_KEYS.businessLogoUrl, businessLogoUrl);
+  localStorage.setItem(STORAGE_KEYS.restaurantAddress, restaurantAddress);
+  localStorage.setItem(STORAGE_KEYS.businessPhone, businessPhone);
   localStorage.setItem(STORAGE_KEYS.restaurantActive, restaurantActive ? "1" : "0");
+  applyBusinessNameToUi();
+}
+
+function preserveTextSetting(nextValue, currentValue, options = {}) {
+  const cleanValue = normalizeTextSetting(nextValue);
+  const cleanCurrent = normalizeTextSetting(currentValue);
+  if (!cleanValue && options.preserveExisting !== false && cleanCurrent) return cleanCurrent;
+  return cleanValue;
+}
+
+function preserveImageSetting(nextValue, currentValue, options = {}) {
+  const cleanValue = normalizeProductImageUrl(nextValue);
+  const cleanCurrent = normalizeProductImageUrl(currentValue);
+  if (!cleanValue && options.preserveExisting !== false && cleanCurrent) return cleanCurrent;
+  return cleanValue;
+}
+
+function readTextInputPreservingValue(input, currentValue, options = {}) {
+  if (!input) return normalizeTextSetting(currentValue);
+  return preserveTextSetting(input.value, currentValue, options);
+}
+
+function readImageInputPreservingValue(input, currentValue, options = {}) {
+  if (!input) return normalizeProductImageUrl(currentValue);
+  return preserveImageSetting(input.value, currentValue, options);
+}
+
+function localStoreCurrentSettings() {
+  localStorage.setItem(STORAGE_KEYS.businessName, businessName);
+  localStorage.setItem(STORAGE_KEYS.businessLogoUrl, businessLogoUrl);
   localStorage.setItem(STORAGE_KEYS.legalBusinessName, legalBusinessName);
   localStorage.setItem(STORAGE_KEYS.taxId, taxId);
   localStorage.setItem(STORAGE_KEYS.businessPhone, businessPhone);
@@ -825,6 +871,31 @@ function applySettingsPayload(settings = {}) {
   localStorage.setItem(STORAGE_KEYS.onlinePaymentProvider, onlinePaymentProvider);
   localStorage.setItem(STORAGE_KEYS.onlinePaymentNote, onlinePaymentNote);
   localStorage.setItem(STORAGE_KEYS.restaurantActive, restaurantActive ? "1" : "0");
+}
+
+function applySettingsPayload(settings = {}) {
+  const cleanBusinessName = normalizeTextSetting(settings.businessName);
+  if (cleanBusinessName) businessName = normalizeBusinessName(cleanBusinessName);
+  businessLogoUrl = preserveImageSetting(settings.businessLogoUrl, businessLogoUrl);
+  legalBusinessName = preserveTextSetting(settings.legalBusinessName, legalBusinessName);
+  taxId = preserveTextSetting(settings.taxId, taxId);
+  businessPhone = preserveTextSetting(settings.businessPhone, businessPhone);
+  businessEmail = preserveTextSetting(settings.businessEmail, businessEmail);
+  legalAddress = preserveTextSetting(settings.legalAddress, legalAddress);
+  currencySymbol = settings.currencySymbol || currencySymbol || "$";
+  currencyPosition = settings.currencyPosition ? (settings.currencyPosition === "after" ? "after" : "before") : currencyPosition;
+  moneyFormat = settings.moneyFormat ? (settings.moneyFormat === "eu" ? "eu" : "us") : moneyFormat;
+  receiptWidthMm = normalizeReceiptWidth(settings.receiptWidthMm ?? receiptWidthMm);
+  deliveryFee = normalizeMoneyValue(settings.deliveryFee ?? deliveryFee);
+  deliveryMinimumFee = normalizeDeliveryMinimumFee(settings.deliveryMinimumFee ?? deliveryMinimumFee);
+  restaurantAddress = preserveTextSetting(settings.restaurantAddress, restaurantAddress);
+  googleMapsApiKey = preserveTextSetting(settings.googleMapsApiKey, googleMapsApiKey);
+  bankAccount = preserveTextSetting(settings.bankAccount, bankAccount);
+  bankTransferNote = preserveTextSetting(settings.bankTransferNote, bankTransferNote);
+  onlinePaymentProvider = normalizeOnlinePaymentProvider(settings.onlinePaymentProvider ?? onlinePaymentProvider);
+  onlinePaymentNote = preserveTextSetting(settings.onlinePaymentNote, onlinePaymentNote);
+  if (typeof settings.restaurantActive === "boolean") restaurantActive = settings.restaurantActive;
+  localStoreCurrentSettings();
   applyBusinessNameToUi();
 }
 
@@ -853,9 +924,14 @@ function updateCloudStatus(message = "") {
   elements.cloudStatus.textContent = cloudState.user ? "Sincronizado" : "Iniciar sesion";
 }
 
+function setAuthScreenVisible(visible) {
+  elements.authScreen.hidden = !visible;
+  document.body.classList.toggle("auth-mode", Boolean(visible));
+}
+
 function renderCloudState(message = "") {
   if (!cloudState.configured) {
-    elements.authScreen.hidden = true;
+    setAuthScreenVisible(false);
     elements.openSignInButton.hidden = true;
     elements.signOutButton.hidden = true;
     elements.qrButton.hidden = true;
@@ -867,7 +943,7 @@ function renderCloudState(message = "") {
   }
 
   const canWorkOffline = !cloudState.user && hasKnownCloudSession() && !navigator.onLine;
-  elements.authScreen.hidden = cloudState.recoveringPassword ? false : Boolean(cloudState.user) || canWorkOffline;
+  setAuthScreenVisible(cloudState.recoveringPassword ? true : !(Boolean(cloudState.user) || canWorkOffline));
   if ((cloudState.user || canWorkOffline) && elements.restaurantAuthDialog?.open) closeRestaurantAuthDialog();
   elements.openSignInButton.hidden = Boolean(cloudState.user) || cloudState.recoveringPassword;
   elements.signOutButton.hidden = !cloudState.user;
@@ -901,7 +977,7 @@ function openRestaurantAuthDialog(mode = "login") {
     return;
   }
   hidePasswordRecoveryForm();
-  elements.authScreen.hidden = false;
+  setAuthScreenVisible(true);
   setRestaurantAuthMode(mode);
   if (elements.restaurantAuthDialog?.showModal && !elements.restaurantAuthDialog.open) {
     elements.restaurantAuthDialog.showModal();
@@ -1004,7 +1080,7 @@ async function loadCloudData() {
     const restaurantProfile = restaurantProfileFromUserMetadata();
     const { data: publicProfileRow, error: publicProfileError } = await cloudState.client
       .from("restaurant_profiles")
-      .select("active")
+      .select("business_name, logo_url, public_address, phone, active")
       .eq("user_id", cloudState.user.id)
       .maybeSingle();
     if (!publicProfileError && typeof publicProfileRow?.active === "boolean") {
@@ -1023,8 +1099,10 @@ async function loadCloudData() {
       localStorage.setItem(STORAGE_KEYS.menu, JSON.stringify(menuCatalog));
       applySettingsPayload(settingsRow.settings || {});
       applyRestaurantProfile(restaurantProfile, { onlyIfEmpty: true });
+      applyPublicRestaurantProfileFallback(publicProfileRow || {}, { onlyIfEmpty: true });
     } else if (!settingsRow || localSettingsPending) {
       applyRestaurantProfile(restaurantProfile, { onlyIfEmpty: false });
+      applyPublicRestaurantProfileFallback(publicProfileRow || {}, { onlyIfEmpty: true });
       await saveCloudSettings();
       clearSettingsPending();
     }
@@ -1085,24 +1163,53 @@ async function loadCloudData() {
 async function saveCloudSettings() {
   if (!cloudState.client || !cloudState.user) return;
 
-  const { error } = await cloudState.client.from("app_settings").upsert({
+  const { data, error } = await cloudState.client.from("app_settings").upsert({
     user_id: cloudState.user.id,
     menu: normalizeMenuCatalog(menuCatalog),
     settings: currentSettingsPayload(),
     updated_at: new Date().toISOString(),
-  });
+  }).select("menu, settings, updated_at").maybeSingle();
 
   if (error) throw error;
+  if (data?.settings) applySettingsPayload(data.settings);
 
   await saveRestaurantPublicProfile();
+  return data;
 }
 
 async function saveRestaurantPublicProfile() {
   if (!cloudState.client || !cloudState.user) return;
 
+  let payload = currentRestaurantPublicProfilePayload();
+  try {
+    const { data: currentProfile, error: currentProfileError } = await cloudState.client
+      .from("restaurant_profiles")
+      .select("business_name, logo_url, public_address, phone, description, active")
+      .eq("user_id", cloudState.user.id)
+      .maybeSingle();
+    if (!currentProfileError && currentProfile) {
+      const currentPublicName = normalizeTextSetting(currentProfile.business_name);
+      const nextPublicName = normalizeTextSetting(payload.business_name);
+      payload = {
+        ...payload,
+        business_name:
+          nextPublicName && !(nextPublicName === DEFAULT_BUSINESS_NAME && currentPublicName && currentPublicName !== DEFAULT_BUSINESS_NAME)
+            ? normalizeBusinessName(nextPublicName)
+            : normalizeBusinessName(currentPublicName || nextPublicName),
+        logo_url: preserveImageSetting(payload.logo_url, currentProfile.logo_url),
+        public_address: preserveTextSetting(payload.public_address, currentProfile.public_address),
+        phone: preserveTextSetting(payload.phone, currentProfile.phone),
+        description: preserveTextSetting(payload.description, currentProfile.description, { preserveExisting: true }),
+        active: typeof payload.active === "boolean" ? payload.active : currentProfile.active !== false,
+      };
+    }
+  } catch (error) {
+    console.warn("No se pudo leer el perfil publico actual antes de guardar.", error);
+  }
+
   const { error } = await cloudState.client
     .from("restaurant_profiles")
-    .upsert(currentRestaurantPublicProfilePayload());
+    .upsert(payload);
 
   if (error) {
     console.warn("No se pudo actualizar el perfil publico del restaurante.", error);
@@ -1429,7 +1536,7 @@ async function refreshClientOrders(options = {}) {
 
   const { data, error } = await cloudState.client
     .from("customer_orders")
-    .select("id, status, table_label, customer_name, order_type, order_json, total, created_at")
+    .select("id, status, table_label, customer_name, order_type, order_json, total, created_at, assigned_courier_user_id, courier_assignment_status")
     .eq("user_id", cloudState.user.id)
     .in("status", ["pending", "accepted", "sent"])
     .gte("created_at", startOfDay.toISOString())
@@ -1482,7 +1589,45 @@ function clientOrderStatusLabel(status) {
   return "Pendiente";
 }
 
-function clientOrderActionsHtml(status) {
+function clientOrderCourierStatusLabel(status) {
+  if (status === "offered") return "Oferta enviada al colaborador";
+  if (status === "accepted") return "Colaborador acepto";
+  if (status === "arrived_restaurant") return "Colaborador llego al restaurante";
+  if (status === "picked_up") return "Pedido recogido por colaborador";
+  if (status === "arrived_customer") return "Colaborador llego al cliente";
+  if (status === "delivered") return "Domicilio entregado";
+  if (status === "rejected") return "Colaborador rechazo";
+  if (status === "cancelled") return "Asignacion cancelada";
+  if (status === "expired") return "Oferta vencida";
+  if (status === "no_courier") return "Sin colaborador disponible";
+  return "Sin colaborador asignado";
+}
+
+function clientOrderNeedsCourier(order) {
+  return normalizeOrderType(order?.order_type || order?.order_json?.type) === "Domicilio";
+}
+
+function clientOrderCanRequestCourier(order) {
+  if (!clientOrderNeedsCourier(order)) return false;
+  if (!["accepted", "sent"].includes(order?.status)) return false;
+  return !["offered", "accepted", "arrived_restaurant", "picked_up", "arrived_customer", "delivered"].includes(
+    order?.courier_assignment_status
+  );
+}
+
+function clientOrderCourierHtml(order) {
+  if (!clientOrderNeedsCourier(order)) return "";
+  const status = order?.courier_assignment_status || "unassigned";
+  return `<p class="client-order-note">COLABORADOR: ${escapeHtml(clientOrderCourierStatusLabel(status))}</p>`;
+}
+
+function clientOrderActionsHtml(orderOrStatus) {
+  const order = typeof orderOrStatus === "object" ? orderOrStatus : { status: orderOrStatus };
+  const status = order.status;
+  const courierButton = clientOrderCanRequestCourier(order)
+    ? `<button type="button" data-action="assign-nearest-courier">Buscar colaborador cercano</button>`
+    : "";
+
   if (status === "pending") {
     return `
       <div class="client-order-actions">
@@ -1495,6 +1640,7 @@ function clientOrderActionsHtml(status) {
   if (status === "accepted") {
     return `
       <div class="client-order-actions">
+        ${courierButton}
         <button type="button" data-action="sent-client-order">Pedido enviado</button>
         <button type="button" data-action="cancel-client-order">Cancelar</button>
       </div>
@@ -1504,6 +1650,7 @@ function clientOrderActionsHtml(status) {
   if (status === "sent") {
     return `
       <div class="client-order-actions">
+        ${courierButton}
         <button type="button" data-action="delivered-client-order">Pedido entregado</button>
       </div>
     `;
@@ -1616,12 +1763,83 @@ function renderClientOrders() {
               : ""
           }
           ${deliverySummary ? `<p class="client-order-note">DOMICILIO: ${escapeHtml(deliverySummary)}</p>` : ""}
+          ${clientOrderCourierHtml(order)}
           ${renderClientChat(order)}
-          ${clientOrderActionsHtml(order.status)}
+          ${clientOrderActionsHtml(order)}
         </article>
       `;
     })
     .join("");
+}
+
+function friendlyCourierAssignmentError(error) {
+  const message = String(error?.message || "");
+  if (/assign_nearest_courier|function .* does not exist|schema cache/i.test(message)) {
+    return "Falta ejecutar la migracion v63 en Supabase para activar colaboradores cercanos.";
+  }
+  if (/Restaurant location is missing|location/i.test(message)) {
+    return "Guarda la ubicacion del restaurante en Editar menu > Pedidos cliente > Usar ubicacion actual.";
+  }
+  if (/Order is not delivery/i.test(message)) return "Solo los pedidos a domicilio necesitan colaborador.";
+  if (/not authenticated/i.test(message)) return "Inicia sesion como restaurante para asignar colaborador.";
+  return message || "No se pudo buscar colaborador cercano.";
+}
+
+async function assignNearestCourierForOrder(orderId) {
+  const clientOrder = pendingClientOrders.find((order) => order.id === orderId);
+  if (!clientOrder) return null;
+  if (!clientOrderNeedsCourier(clientOrder)) {
+    showToast("Este pedido no es domicilio; no necesita colaborador.");
+    return null;
+  }
+  if (!canUseCustomerModule() || !navigator.onLine) {
+    alert("Necesitas internet e iniciar sesion para buscar colaborador cercano.");
+    return null;
+  }
+
+  showToast("Buscando colaborador disponible mas cercano...");
+  const { data, error } = await cloudState.client.rpc("assign_nearest_courier", {
+    p_customer_order_id: orderId,
+  });
+
+  if (error) {
+    const message = friendlyCourierAssignmentError(error);
+    pendingClientOrders = pendingClientOrders.map((order) =>
+      order.id === orderId ? { ...order, courier_assignment_status: "no_courier" } : order
+    );
+    renderClientOrders();
+    showToast(message);
+    return null;
+  }
+
+  const assignment = Array.isArray(data) ? data[0] : data;
+  if (!assignment?.assignment_id) {
+    pendingClientOrders = pendingClientOrders.map((order) =>
+      order.id === orderId ? { ...order, courier_assignment_status: "no_courier" } : order
+    );
+    renderClientOrders();
+    showToast("No hay colaboradores aprobados y disponibles cerca en este momento.");
+    return null;
+  }
+
+  pendingClientOrders = pendingClientOrders.map((order) =>
+    order.id === orderId
+      ? {
+          ...order,
+          assigned_courier_user_id: assignment.courier_user_id,
+          courier_assignment_status: assignment.status || "offered",
+        }
+      : order
+  );
+  renderClientOrders();
+  const courierName = assignment.courier_name || "colaborador";
+  const km = Number.parseFloat(assignment.distance_km);
+  showToast(
+    Number.isFinite(km)
+      ? `Oferta enviada a ${courierName} (${km.toFixed(2)} km).`
+      : `Oferta enviada a ${courierName}.`
+  );
+  return assignment;
 }
 
 function orderFromClientOrder(clientOrder) {
@@ -1691,6 +1909,9 @@ async function acceptClientOrder(orderId) {
     );
     updateClientOrdersBadge();
     renderClientOrders();
+    if (clientOrderNeedsCourier(clientOrder)) {
+      await assignNearestCourierForOrder(orderId);
+    }
   }
 
   renderPrintTicket(currentOrder);
@@ -2104,7 +2325,7 @@ async function signUpWithEmail() {
   }
 
   elements.authMessage.textContent =
-    "Cuenta del restaurante creada. RINCON COLOMBIANO PEDIDOS te envio un correo de verificacion. Abre ese correo, confirma la cuenta y despues inicia sesion.";
+    "Cuenta del restaurante creada. RC ORDERA te envio un correo de verificacion. Abre ese correo, confirma la cuenta y despues inicia sesion.";
   elements.authPassword.value = "";
 }
 
@@ -2121,7 +2342,7 @@ async function sendPasswordResetEmail() {
     return;
   }
 
-  elements.authMessage.textContent = "RINCON COLOMBIANO PEDIDOS esta enviando el correo de recuperacion...";
+  elements.authMessage.textContent = "RC ORDERA esta enviando el correo de recuperacion...";
   const redirectTo = window.location.href.split("#")[0].split("?")[0];
 
   try {
@@ -2131,7 +2352,7 @@ async function sendPasswordResetEmail() {
       return;
     }
     elements.authMessage.textContent =
-      "Correo enviado por RINCON COLOMBIANO PEDIDOS. Abre el enlace del correo para crear una contrasena nueva.";
+      "Correo enviado por RC ORDERA. Abre el enlace del correo para crear una contrasena nueva.";
   } catch (error) {
     elements.authMessage.textContent = friendlyAuthError(error);
   }
@@ -2150,7 +2371,7 @@ async function resendVerificationEmail() {
     return;
   }
 
-  elements.authMessage.textContent = "RINCON COLOMBIANO PEDIDOS esta reenviando el correo de verificacion...";
+  elements.authMessage.textContent = "RC ORDERA esta reenviando el correo de verificacion...";
   try {
     const { error } = await cloudState.client.auth.resend({
       type: "signup",
@@ -2162,7 +2383,7 @@ async function resendVerificationEmail() {
       return;
     }
     elements.authMessage.textContent =
-      "Correo de verificacion reenviado por RINCON COLOMBIANO PEDIDOS. Revisa entrada, spam o promociones.";
+      "Correo de verificacion reenviado por RC ORDERA. Revisa entrada, spam o promociones.";
   } catch (error) {
     elements.authMessage.textContent = friendlyAuthError(error);
   }
@@ -2203,7 +2424,7 @@ async function refreshRestaurantApp() {
 
 function showPasswordRecoveryForm() {
   cloudState.recoveringPassword = true;
-  elements.authScreen.hidden = false;
+  setAuthScreenVisible(true);
   if (elements.restaurantAuthDialog?.showModal && !elements.restaurantAuthDialog.open) {
     elements.restaurantAuthDialog.showModal();
   }
@@ -2213,7 +2434,7 @@ function showPasswordRecoveryForm() {
   elements.signInButton.hidden = true;
   elements.signUpButton.hidden = true;
   elements.resetPasswordButton.hidden = true;
-  renderCloudState("RINCON COLOMBIANO PEDIDOS verifico el enlace. Escribe tu nueva contrasena.");
+  renderCloudState("RC ORDERA verifico el enlace. Escribe tu nueva contrasena.");
   elements.newPasswordInput.focus();
 }
 
@@ -2245,7 +2466,7 @@ async function updateRecoveredPassword() {
       elements.authMessage.textContent = friendlyAuthError(error);
       return;
     }
-    hidePasswordRecoveryForm("Contrasena actualizada. Ya puedes iniciar sesion en RINCON COLOMBIANO PEDIDOS.");
+    hidePasswordRecoveryForm("Contrasena actualizada. Ya puedes iniciar sesion en RC ORDERA.");
   } catch (error) {
     elements.authMessage.textContent = friendlyAuthError(error);
   }
@@ -2257,7 +2478,7 @@ function friendlyAuthError(error) {
     return "URL de Supabase incorrecta. Usa solo https://tu-proyecto.supabase.co, sin /rest/v1.";
   }
   if (/email not confirmed/i.test(message)) {
-    return "RINCON COLOMBIANO PEDIDOS envio un correo de verificacion. Revisa tu correo, confirma la cuenta y vuelve a iniciar sesion.";
+    return "RC ORDERA envio un correo de verificacion. Revisa tu correo, confirma la cuenta y vuelve a iniciar sesion.";
   }
   if (/invalid login credentials/i.test(message)) {
     return "Correo o contrasena incorrectos.";
@@ -2388,39 +2609,39 @@ function saveMenuCatalog() {
 
   renderCategories();
   renderMenu();
-  if (cloudState.user && navigator.onLine) {
-    saveCloudSettings()
-      .then(() => {
-        clearSettingsPending();
-        updateCloudStatus();
-      })
-      .catch((error) => {
-        console.error(error);
-        markSettingsPending();
-        updateCloudStatus();
-      });
-  } else if (shouldQueueForCloud()) {
-    markSettingsPending();
-    updateCloudStatus();
-  }
+  return saveSettingsWhenPossible();
 }
 
-function saveSettingsWhenPossible() {
+function syncResultMessage(successMessage, result = {}) {
+  if (result.synced) return successMessage;
+  if (result.pending) return `${successMessage} Quedo pendiente de sincronizar cuando vuelva internet.`;
+  if (result.localOnly) return `${successMessage} Guardado solo en este equipo porque no hay sesion en nube.`;
+  if (result.error) return "No se pudo confirmar en la nube. Se conservo localmente para reintentar.";
+  return successMessage;
+}
+
+async function saveSettingsWhenPossible(options = {}) {
+  const { silent = false } = options;
   if (cloudState.user && navigator.onLine) {
-    saveCloudSettings()
-      .then(() => {
-        clearSettingsPending();
-        updateCloudStatus();
-      })
-      .catch((error) => {
-        console.error(error);
-        markSettingsPending();
-        updateCloudStatus();
-      });
+    try {
+      if (!silent) updateCloudStatus("Guardando nube...");
+      await withCloudTimeout(saveCloudSettings(), "No fue posible confirmar el guardado en nube a tiempo.");
+      clearSettingsPending();
+      updateCloudStatus("Sincronizado");
+      return { synced: true };
+    } catch (error) {
+      console.error(error);
+      markSettingsPending();
+      updateCloudStatus();
+      return { pending: shouldQueueForCloud(), error };
+    }
   } else if (shouldQueueForCloud()) {
     markSettingsPending();
     updateCloudStatus();
+    return { pending: true };
   }
+  updateCloudStatus();
+  return { localOnly: true };
 }
 
 function readCurrencySymbol() {
@@ -2439,7 +2660,7 @@ function readBusinessName() {
 function applyBusinessNameToUi() {
   const name = normalizeBusinessName(businessName);
   businessName = name;
-  if (elements.authBusinessName) elements.authBusinessName.textContent = `${name} PEDIDOS`;
+  if (elements.authBusinessName) elements.authBusinessName.textContent = PLATFORM_APP_NAME;
   if (elements.appBusinessName) elements.appBusinessName.textContent = name;
   [elements.authLogoImage, elements.appLogoImage].forEach((image) => {
     if (!image) return;
@@ -2451,9 +2672,9 @@ function applyBusinessNameToUi() {
       image.hidden = true;
     }
   });
-  document.title = `${name} - Pedidos`;
+  document.title = `${PLATFORM_APP_NAME} - Restaurante`;
   const appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
-  if (appleTitle) appleTitle.setAttribute("content", name);
+  if (appleTitle) appleTitle.setAttribute("content", PLATFORM_APP_NAME);
 }
 
 function readCurrencyPosition() {
@@ -2611,57 +2832,48 @@ function showToast(message) {
   }, 2600);
 }
 
-function saveCurrencySymbol() {
-  businessName = normalizeBusinessName(elements.businessNameInput?.value || businessName);
-  businessLogoUrl = normalizeProductImageUrl(elements.businessLogoUrlInput?.value || "");
-  legalBusinessName = normalizeTextSetting(elements.legalBusinessNameInput?.value || "");
-  taxId = normalizeTextSetting(elements.taxIdInput?.value || "");
-  businessPhone = normalizeTextSetting(elements.businessPhoneInput?.value || "");
-  businessEmail = normalizeTextSetting(elements.businessEmailInput?.value || "");
-  legalAddress = normalizeTextSetting(elements.legalAddressInput?.value || "");
-  const symbol = elements.currencySymbolInput.value.trim() || "$";
-  currencySymbol = symbol;
-  currencyPosition = elements.currencyPositionSelect.value === "after" ? "after" : "before";
-  moneyFormat = elements.moneyFormatSelect.value === "eu" ? "eu" : "us";
-  receiptWidthMm = normalizeReceiptWidth(elements.receiptWidthInput.value);
-  deliveryFee = normalizeMoneyValue(elements.deliveryFeeInput.value);
-  deliveryMinimumFee = normalizeDeliveryMinimumFee(elements.deliveryMinimumFeeInput?.value);
-  restaurantAddress = normalizeTextSetting(elements.restaurantAddressInput.value);
-  googleMapsApiKey = normalizeTextSetting(elements.googleMapsApiKeyInput.value);
-  bankAccount = normalizeTextSetting(elements.bankAccountInput.value);
-  bankTransferNote = normalizeTextSetting(elements.bankTransferNoteInput.value);
-  onlinePaymentProvider = normalizeOnlinePaymentProvider(elements.onlinePaymentProviderSelect?.value || "disabled");
-  onlinePaymentNote = normalizeTextSetting(elements.onlinePaymentNoteInput?.value || "");
-  localStorage.setItem(STORAGE_KEYS.businessName, businessName);
-  localStorage.setItem(STORAGE_KEYS.businessLogoUrl, businessLogoUrl);
-  localStorage.setItem(STORAGE_KEYS.legalBusinessName, legalBusinessName);
-  localStorage.setItem(STORAGE_KEYS.taxId, taxId);
-  localStorage.setItem(STORAGE_KEYS.businessPhone, businessPhone);
-  localStorage.setItem(STORAGE_KEYS.businessEmail, businessEmail);
-  localStorage.setItem(STORAGE_KEYS.legalAddress, legalAddress);
-  localStorage.setItem(STORAGE_KEYS.currencySymbol, currencySymbol);
-  localStorage.setItem(STORAGE_KEYS.currencyPosition, currencyPosition);
-  localStorage.setItem(STORAGE_KEYS.moneyFormat, moneyFormat);
-  localStorage.setItem(STORAGE_KEYS.receiptWidthMm, String(receiptWidthMm));
-  localStorage.setItem(STORAGE_KEYS.deliveryFee, String(deliveryFee));
-  localStorage.setItem(STORAGE_KEYS.deliveryMinimumFee, String(deliveryMinimumFee));
-  localStorage.setItem(STORAGE_KEYS.restaurantAddress, restaurantAddress);
-  localStorage.setItem(STORAGE_KEYS.googleMapsApiKey, googleMapsApiKey);
-  localStorage.setItem(STORAGE_KEYS.bankAccount, bankAccount);
-  localStorage.setItem(STORAGE_KEYS.bankTransferNote, bankTransferNote);
-  localStorage.setItem(STORAGE_KEYS.onlinePaymentProvider, onlinePaymentProvider);
-  localStorage.setItem(STORAGE_KEYS.onlinePaymentNote, onlinePaymentNote);
-  localStorage.setItem(STORAGE_KEYS.restaurantActive, restaurantActive ? "1" : "0");
-  applyBusinessNameToUi();
-  renderCurrencySettings();
-  renderMenu();
-  renderOrder();
-  renderHistory();
-  if (elements.menuEditorDialog.open) renderMenuEditor();
-  if (elements.dailyCloseDialog.open) renderDailyClose(elements.closeDayInput.value || todayKey);
-  if (elements.monthlyCloseDialog.open) renderMonthlyClose(elements.closeMonthInput.value || currentMonthKey());
-  saveSettingsWhenPossible();
-  showToast("Ajustes guardados.");
+async function saveCurrencySymbol() {
+  const saveButtons = [elements.saveCurrencyButton, elements.saveCustomerSettingsButton].filter(Boolean);
+  saveButtons.forEach((button) => {
+    button.disabled = true;
+  });
+  try {
+    businessName = normalizeBusinessName(elements.businessNameInput?.value || businessName);
+    businessLogoUrl = readImageInputPreservingValue(elements.businessLogoUrlInput, businessLogoUrl);
+    legalBusinessName = readTextInputPreservingValue(elements.legalBusinessNameInput, legalBusinessName);
+    taxId = readTextInputPreservingValue(elements.taxIdInput, taxId);
+    businessPhone = readTextInputPreservingValue(elements.businessPhoneInput, businessPhone);
+    businessEmail = readTextInputPreservingValue(elements.businessEmailInput, businessEmail);
+    legalAddress = readTextInputPreservingValue(elements.legalAddressInput, legalAddress);
+    const symbol = elements.currencySymbolInput.value.trim() || "$";
+    currencySymbol = symbol;
+    currencyPosition = elements.currencyPositionSelect.value === "after" ? "after" : "before";
+    moneyFormat = elements.moneyFormatSelect.value === "eu" ? "eu" : "us";
+    receiptWidthMm = normalizeReceiptWidth(elements.receiptWidthInput.value);
+    deliveryFee = normalizeMoneyValue(elements.deliveryFeeInput.value);
+    deliveryMinimumFee = normalizeDeliveryMinimumFee(elements.deliveryMinimumFeeInput?.value);
+    restaurantAddress = readTextInputPreservingValue(elements.restaurantAddressInput, restaurantAddress);
+    googleMapsApiKey = readTextInputPreservingValue(elements.googleMapsApiKeyInput, googleMapsApiKey);
+    bankAccount = readTextInputPreservingValue(elements.bankAccountInput, bankAccount);
+    bankTransferNote = readTextInputPreservingValue(elements.bankTransferNoteInput, bankTransferNote);
+    onlinePaymentProvider = normalizeOnlinePaymentProvider(elements.onlinePaymentProviderSelect?.value || "disabled");
+    onlinePaymentNote = readTextInputPreservingValue(elements.onlinePaymentNoteInput, onlinePaymentNote);
+    localStoreCurrentSettings();
+    applyBusinessNameToUi();
+    renderCurrencySettings();
+    renderMenu();
+    renderOrder();
+    renderHistory();
+    if (elements.menuEditorDialog.open) renderMenuEditor();
+    if (elements.dailyCloseDialog.open) renderDailyClose(elements.closeDayInput.value || todayKey);
+    if (elements.monthlyCloseDialog.open) renderMonthlyClose(elements.closeMonthInput.value || currentMonthKey());
+    const result = await saveSettingsWhenPossible();
+    showToast(syncResultMessage("Ajustes guardados.", result));
+  } finally {
+    saveButtons.forEach((button) => {
+      button.disabled = false;
+    });
+  }
 }
 
 function useRestaurantCurrentLocation() {
@@ -2673,16 +2885,16 @@ function useRestaurantCurrentLocation() {
   elements.useRestaurantLocationButton.disabled = true;
   showToast("Solicitando ubicacion del restaurante...");
   navigator.geolocation.getCurrentPosition(
-    (position) => {
+    async (position) => {
       const lat = Number(position.coords.latitude).toFixed(6);
       const lng = Number(position.coords.longitude).toFixed(6);
       restaurantAddress = `${lat}, ${lng}`;
       elements.restaurantAddressInput.value = restaurantAddress;
       localStorage.setItem(STORAGE_KEYS.restaurantAddress, restaurantAddress);
-      saveSettingsWhenPossible();
+      const result = await saveSettingsWhenPossible();
       updateQrPreview();
       elements.useRestaurantLocationButton.disabled = false;
-      showToast("Ubicacion actual guardada para domicilio.");
+      showToast(syncResultMessage("Ubicacion actual guardada para domicilio.", result));
     },
     () => {
       elements.useRestaurantLocationButton.disabled = false;
@@ -3087,7 +3299,7 @@ function startNewProduct() {
   elements.productNameInput.focus();
 }
 
-function addCategory() {
+async function addCategory() {
   const category = cleanCategoryName(elements.categoryNameInput.value);
   if (!category) {
     alert("Escribe el nombre de la categoria.");
@@ -3103,13 +3315,15 @@ function addCategory() {
     activeCategory = category;
   }
 
-  saveMenuCatalog();
+  const result = await saveMenuCatalog();
   clearProductForm();
   renderMenuEditor();
-  showToast(existed ? `Categoria "${activeCategory}" seleccionada.` : `Categoria "${category}" agregada.`);
+  showToast(
+    syncResultMessage(existed ? `Categoria "${activeCategory}" seleccionada.` : `Categoria "${category}" agregada.`, result)
+  );
 }
 
-function renameCategory() {
+async function renameCategory() {
   const newName = cleanCategoryName(elements.categoryNameInput.value);
   if (!newName) {
     alert("Escribe el nuevo nombre de la categoria.");
@@ -3130,10 +3344,10 @@ function renameCategory() {
     menuCatalog[existingCategory] = [...(menuCatalog[existingCategory] || []), ...(menuCatalog[activeCategory] || [])];
     delete menuCatalog[activeCategory];
     activeCategory = existingCategory;
-    saveMenuCatalog();
+    const result = await saveMenuCatalog();
     clearProductForm();
     renderMenuEditor();
-    showToast(`Categorias unidas en "${existingCategory}".`);
+    showToast(syncResultMessage(`Categorias unidas en "${existingCategory}".`, result));
     return;
   }
 
@@ -3143,13 +3357,13 @@ function renameCategory() {
   });
   menuCatalog = renamed;
   activeCategory = newName;
-  saveMenuCatalog();
+  const result = await saveMenuCatalog();
   clearProductForm();
   renderMenuEditor();
-  showToast(`Categoria "${previousName}" cambiada a "${newName}".`);
+  showToast(syncResultMessage(`Categoria "${previousName}" cambiada a "${newName}".`, result));
 }
 
-function deleteCategory() {
+async function deleteCategory() {
   const originalCatalog = menuCatalog || {};
   const typedCategory = cleanCategoryName(elements.categoryNameInput.value);
   const targetCategory = findCategoryByName(typedCategory) || findCategoryByName(activeCategory);
@@ -3178,10 +3392,10 @@ function deleteCategory() {
 
     menuCatalog = normalizeMenuCatalog(cleanedCatalog);
     activeCategory = findCategoryByName(targetCategory) || Object.keys(menuCatalog)[0];
-    saveMenuCatalog();
+    const result = await saveMenuCatalog();
     clearProductForm();
     renderMenuEditor();
-    showToast(`Duplicadas de "${targetCategory}" eliminadas y guardadas.`);
+    showToast(syncResultMessage(`Duplicadas de "${targetCategory}" eliminadas y guardadas.`, result));
     return;
   }
 
@@ -3203,17 +3417,20 @@ function deleteCategory() {
 
   categoriesToDelete.forEach((category) => delete menuCatalog[category]);
   activeCategory = Object.keys(menuCatalog)[0];
-  saveMenuCatalog();
+  const result = await saveMenuCatalog();
   clearProductForm();
   renderMenuEditor();
   showToast(
-    categoriesToDelete.length > 1
-      ? `Categorias repetidas de "${deletedCategory}" eliminadas.`
-      : `Categoria "${deletedCategory}" eliminada.`
+    syncResultMessage(
+      categoriesToDelete.length > 1
+        ? `Categorias repetidas de "${deletedCategory}" eliminadas.`
+        : `Categoria "${deletedCategory}" eliminada.`,
+      result
+    )
   );
 }
 
-function saveProduct() {
+async function saveProduct() {
   const category = elements.productCategorySelect.value;
   const name = elements.productNameInput.value.trim();
   const description = normalizeProductDescription(elements.productDescriptionInput.value);
@@ -3249,10 +3466,10 @@ function saveProduct() {
 
   menuCatalog[category].push(product);
   activeCategory = category;
-  saveMenuCatalog();
+  const result = await saveMenuCatalog();
   clearProductForm();
   renderMenuEditor();
-  showToast("Producto guardado.");
+  showToast(syncResultMessage("Producto guardado.", result));
 }
 
 function editProduct(index) {
@@ -3273,7 +3490,7 @@ function editProduct(index) {
   showToast(`Editando "${product.name}". Cambia los datos y presiona Guardar cambios.`);
 }
 
-function deleteProduct(index) {
+async function deleteProduct(index) {
   const product = (menuCatalog[activeCategory] || [])[index];
   if (!product) return;
 
@@ -3281,22 +3498,22 @@ function deleteProduct(index) {
   if (!shouldDelete) return;
 
   menuCatalog[activeCategory].splice(index, 1);
-  saveMenuCatalog();
+  const result = await saveMenuCatalog();
   clearProductForm();
   renderMenuEditor();
-  showToast(`Producto "${product.name}" eliminado.`);
+  showToast(syncResultMessage(`Producto "${product.name}" eliminado.`, result));
 }
 
-function resetMenu() {
+async function resetMenu() {
   const shouldReset = confirm("Vaciar el menu? Esto elimina categorias y productos actuales. Usa esta opcion solo si vas a crear el menu desde cero.");
   if (!shouldReset) return;
 
   menuCatalog = normalizeMenuCatalog(EMPTY_MENU_CATALOG);
   activeCategory = Object.keys(menuCatalog)[0];
-  saveMenuCatalog();
+  const result = await saveMenuCatalog();
   clearProductForm();
   renderMenuEditor();
-  showToast("Menu vaciado. Ahora puedes crear categorias y productos.");
+  showToast(syncResultMessage("Menu vaciado. Ahora puedes crear categorias y productos.", result));
 }
 
 function addItem(name, price) {
@@ -4380,6 +4597,7 @@ elements.clientOrdersList.addEventListener("click", (event) => {
   if (!button || !card) return;
   if (button.dataset.action === "accept-client-order") acceptClientOrder(card.dataset.clientOrderId);
   if (button.dataset.action === "cancel-client-order") cancelClientOrder(card.dataset.clientOrderId);
+  if (button.dataset.action === "assign-nearest-courier") assignNearestCourierForOrder(card.dataset.clientOrderId);
   if (button.dataset.action === "sent-client-order") markClientOrderSent(card.dataset.clientOrderId);
   if (button.dataset.action === "delivered-client-order") markClientOrderDelivered(card.dataset.clientOrderId);
   if (button.dataset.action === "send-client-message") sendRestaurantChatMessage(card.dataset.clientOrderId, card);

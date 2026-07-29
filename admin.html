@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Administracion plataforma - Colaboradores</title>
+    <title>RC ORDERA - Administracion</title>
     <meta name="theme-color" content="#1f8f4d" />
     <meta name="robots" content="noindex,nofollow" />
     <link rel="icon" href="app-icon.svg" type="image/svg+xml" />
@@ -19,8 +19,16 @@
             <a href="cliente.html">Cliente</a>
             <a href="colaborador.html">Colaborador</a>
           </nav>
+          <label class="app-language-inline">
+            <span>Idioma</span>
+            <select id="autoLanguageSelect">
+              <option value="es">Espanol</option>
+              <option value="pl">Polski</option>
+              <option value="en">English</option>
+            </select>
+          </label>
         </div>
-        <h1>Revision de colaboradores</h1>
+        <h1>RC ORDERA</h1>
         <p>Panel privado para aprobar o rechazar colaboradores despues de verificar sus documentos manualmente.</p>
       </header>
 
@@ -47,6 +55,17 @@
           </label>
           <div class="customer-auth-actions">
             <button class="customer-map-button" id="adminSignInButton" type="button">Iniciar sesion</button>
+            <button class="customer-map-button" id="adminResetPasswordButton" type="button">Recuperar contrasena</button>
+          </div>
+          <div class="password-recovery-panel" id="adminPasswordRecoveryPanel" hidden>
+            <label>
+              Nueva contrasena
+              <input id="adminNewPasswordInput" type="password" autocomplete="new-password" placeholder="Minimo 6 caracteres" />
+            </label>
+            <div class="customer-auth-actions">
+              <button class="customer-map-button" id="adminUpdatePasswordButton" type="button">Guardar nueva contrasena</button>
+              <button class="customer-map-button" id="adminCancelRecoveryButton" type="button">Cancelar</button>
+            </div>
           </div>
         </div>
         <p class="customer-map-result" id="adminAuthMessage" hidden></p>
@@ -68,6 +87,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
+    <script src="auto-translate.js"></script>
     <script src="admin.js"></script>
   </body>
 </html>

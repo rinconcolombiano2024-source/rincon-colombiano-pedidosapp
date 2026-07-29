@@ -80,6 +80,7 @@ const customerElements = {
 };
 
 const CUSTOMER_LANGUAGE_KEY = "rincon_colombiano_customer_language";
+const CUSTOMER_APP_LANGUAGE_KEY = "rincon_colombiano_app_language";
 const CUSTOMER_TRANSLATION_CACHE_KEY = "rincon_colombiano_description_translations_v1";
 const CUSTOMER_DELIVERY_MARKUP = 1.1;
 const CUSTOMER_I18N = {
@@ -136,23 +137,23 @@ const CUSTOMER_I18N = {
     signingUp: "Creando cuenta...",
     signedIn: "Sesion iniciada.",
     signedOut: "Sesion cerrada.",
-    accountCreated: "Cuenta creada. RINCON COLOMBIANO PEDIDOS te envio un correo de verificacion. Abre ese correo, confirma la cuenta y despues inicia sesion.",
+    accountCreated: "Cuenta creada. RC ORDERA te envio un correo de verificacion. Abre ese correo, confirma la cuenta y despues inicia sesion.",
     resetEmailRequired: "Escribe tu correo electronico para recuperar la contrasena.",
-    resetSending: "RINCON COLOMBIANO PEDIDOS esta enviando el correo de recuperacion...",
-    resetSent: "Correo enviado por RINCON COLOMBIANO PEDIDOS. Abre el enlace para crear una contrasena nueva.",
+    resetSending: "RC ORDERA esta enviando el correo de recuperacion...",
+    resetSent: "Correo enviado por RC ORDERA. Abre el enlace para crear una contrasena nueva.",
     resendEmailRequired: "Escribe tu correo electronico para reenviar la verificacion.",
-    resendSending: "RINCON COLOMBIANO PEDIDOS esta reenviando el correo de verificacion...",
-    resendSent: "Correo de verificacion reenviado por RINCON COLOMBIANO PEDIDOS. Revisa entrada, spam o promociones.",
+    resendSending: "RC ORDERA esta reenviando el correo de verificacion...",
+    resendSent: "Correo de verificacion reenviado por RC ORDERA. Revisa entrada, spam o promociones.",
     recoveryTitle: "Nueva contrasena",
-    recoveryReady: "RINCON COLOMBIANO PEDIDOS verifico el enlace. Escribe tu nueva contrasena.",
+    recoveryReady: "RC ORDERA verifico el enlace. Escribe tu nueva contrasena.",
     newPasswordShort: "La nueva contrasena debe tener minimo 6 caracteres.",
-    passwordUpdated: "Contrasena actualizada. Ya puedes iniciar sesion en RINCON COLOMBIANO PEDIDOS.",
+    passwordUpdated: "Contrasena actualizada. Ya puedes iniciar sesion en RC ORDERA.",
     accountRequired: "Puedes enviar el pedido como invitado llenando tus datos. Inicia sesion solo si quieres guardar historial.",
     authMissing: "Escribe correo y contrasena.",
     authPasswordShort: "La contrasena debe tener minimo 6 caracteres.",
     authError: "No se pudo completar el acceso.",
     authInvalidCredentials: "Correo o contrasena incorrectos.",
-    authEmailConfirm: "RINCON COLOMBIANO PEDIDOS envio un correo de verificacion. Revisa tu correo, confirma la cuenta y vuelve a iniciar sesion.",
+    authEmailConfirm: "RC ORDERA envio un correo de verificacion. Revisa tu correo, confirma la cuenta y vuelve a iniciar sesion.",
     authAlreadyRegistered: "Ese correo ya tiene cuenta. Intenta iniciar sesion.",
     privacyRequired: "Acepta el tratamiento de datos para crear la cuenta.",
     historyPanelAria: "Historial del cliente",
@@ -347,23 +348,23 @@ const CUSTOMER_I18N = {
     signingUp: "Tworzenie konta...",
     signedIn: "Zalogowano.",
     signedOut: "Wylogowano.",
-    accountCreated: "Konto utworzone. RINCON COLOMBIANO PEDIDOS wyslal e-mail weryfikacyjny. Otworz wiadomosc, potwierdz konto i potem sie zaloguj.",
+    accountCreated: "Konto utworzone. RC ORDERA wyslala e-mail weryfikacyjny. Otworz wiadomosc, potwierdz konto i potem sie zaloguj.",
     resetEmailRequired: "Wpisz e-mail, aby odzyskac haslo.",
-    resetSending: "RINCON COLOMBIANO PEDIDOS wysyla e-mail do odzyskania hasla...",
-    resetSent: "E-mail wyslany przez RINCON COLOMBIANO PEDIDOS. Otworz link, aby utworzyc nowe haslo.",
+    resetSending: "RC ORDERA wysyla e-mail do odzyskania hasla...",
+    resetSent: "E-mail wyslany przez RC ORDERA. Otworz link, aby utworzyc nowe haslo.",
     resendEmailRequired: "Wpisz e-mail, aby ponownie wyslac weryfikacje.",
-    resendSending: "RINCON COLOMBIANO PEDIDOS ponownie wysyla e-mail weryfikacyjny...",
-    resendSent: "E-mail weryfikacyjny wyslany ponownie przez RINCON COLOMBIANO PEDIDOS. Sprawdz skrzynke, spam lub promocje.",
+    resendSending: "RC ORDERA ponownie wysyla e-mail weryfikacyjny...",
+    resendSent: "E-mail weryfikacyjny wyslany ponownie przez RC ORDERA. Sprawdz skrzynke, spam lub promocje.",
     recoveryTitle: "Nowe haslo",
-    recoveryReady: "RINCON COLOMBIANO PEDIDOS zweryfikowal link. Wpisz nowe haslo.",
+    recoveryReady: "RC ORDERA zweryfikowala link. Wpisz nowe haslo.",
     newPasswordShort: "Nowe haslo musi miec minimum 6 znakow.",
-    passwordUpdated: "Haslo zaktualizowane. Mozesz zalogowac sie do RINCON COLOMBIANO PEDIDOS.",
+    passwordUpdated: "Haslo zaktualizowane. Mozesz zalogowac sie do RC ORDERA.",
     accountRequired: "Mozesz wyslac zamowienie jako gosc po wpisaniu danych. Logowanie jest potrzebne tylko do historii.",
     authMissing: "Wpisz e-mail i haslo.",
     authPasswordShort: "Haslo musi miec minimum 6 znakow.",
     authError: "Nie udalo sie zakonczyc logowania.",
     authInvalidCredentials: "Nieprawidlowy e-mail lub haslo.",
-    authEmailConfirm: "RINCON COLOMBIANO PEDIDOS wyslal e-mail weryfikacyjny. Sprawdz poczte, potwierdz konto i zaloguj sie ponownie.",
+    authEmailConfirm: "RC ORDERA wyslala e-mail weryfikacyjny. Sprawdz poczte, potwierdz konto i zaloguj sie ponownie.",
     authAlreadyRegistered: "Ten e-mail ma juz konto. Sprobuj sie zalogowac.",
     privacyRequired: "Zaakceptuj przetwarzanie danych, aby utworzyc konto.",
     historyPanelAria: "Historia klienta",
@@ -558,23 +559,23 @@ const CUSTOMER_I18N = {
     signingUp: "Creating account...",
     signedIn: "Signed in.",
     signedOut: "Signed out.",
-    accountCreated: "Account created. RINCON COLOMBIANO PEDIDOS sent you a verification email. Open it, confirm the account, then sign in.",
+    accountCreated: "Account created. RC ORDERA sent you a verification email. Open it, confirm the account, then sign in.",
     resetEmailRequired: "Enter your email to recover the password.",
-    resetSending: "RINCON COLOMBIANO PEDIDOS is sending the recovery email...",
-    resetSent: "Email sent by RINCON COLOMBIANO PEDIDOS. Open the link to create a new password.",
+    resetSending: "RC ORDERA is sending the recovery email...",
+    resetSent: "Email sent by RC ORDERA. Open the link to create a new password.",
     resendEmailRequired: "Enter your email to resend verification.",
-    resendSending: "RINCON COLOMBIANO PEDIDOS is resending the verification email...",
-    resendSent: "Verification email resent by RINCON COLOMBIANO PEDIDOS. Check inbox, spam, or promotions.",
+    resendSending: "RC ORDERA is resending the verification email...",
+    resendSent: "Verification email resent by RC ORDERA. Check inbox, spam, or promotions.",
     recoveryTitle: "New password",
-    recoveryReady: "RINCON COLOMBIANO PEDIDOS verified the link. Enter your new password.",
+    recoveryReady: "RC ORDERA verified the link. Enter your new password.",
     newPasswordShort: "The new password must be at least 6 characters.",
-    passwordUpdated: "Password updated. You can now sign in to RINCON COLOMBIANO PEDIDOS.",
+    passwordUpdated: "Password updated. You can now sign in to RC ORDERA.",
     accountRequired: "You can send the order as a guest after entering your details. Sign in only if you want order history.",
     authMissing: "Enter email and password.",
     authPasswordShort: "Password must be at least 6 characters.",
     authError: "Could not complete account access.",
     authInvalidCredentials: "Email or password is incorrect.",
-    authEmailConfirm: "RINCON COLOMBIANO PEDIDOS sent a verification email. Check your email, confirm the account, and sign in again.",
+    authEmailConfirm: "RC ORDERA sent a verification email. Check your email, confirm the account, and sign in again.",
     authAlreadyRegistered: "That email already has an account. Try signing in.",
     privacyRequired: "Accept data processing to create the account.",
     historyPanelAria: "Customer history",
@@ -865,7 +866,7 @@ const customerTableFromQr = String(customerParams.get("mesa") || customerParams.
 
 function customerInitialLanguage() {
   const fromUrl = String(customerParams.get("lang") || "").toLowerCase();
-  const saved = String(localStorage.getItem(CUSTOMER_LANGUAGE_KEY) || "").toLowerCase();
+  const saved = String(localStorage.getItem(CUSTOMER_LANGUAGE_KEY) || localStorage.getItem(CUSTOMER_APP_LANGUAGE_KEY) || "").toLowerCase();
   const browser = String(navigator.language || "").toLowerCase();
   if (CUSTOMER_I18N[fromUrl]) return fromUrl;
   if (CUSTOMER_I18N[saved]) return saved;
@@ -1050,6 +1051,7 @@ function customerSetLanguage(language) {
   customerLanguage = language;
   customerDescriptionTranslationFailures = new Map();
   localStorage.setItem(CUSTOMER_LANGUAGE_KEY, language);
+  localStorage.setItem(CUSTOMER_APP_LANGUAGE_KEY, language);
   customerApplyTranslations();
   if (customerTableFromQr) {
     customerElements.tableLabel.textContent = customerT("orderFor", { table: customerTableFromQr });
@@ -1087,7 +1089,7 @@ let customerActiveCategory = "Entradas";
 let customerSearchQuery = "";
 let customerCart = [];
 let customerSettings = {
-  businessName: "RINCON COLOMBIANO",
+  businessName: "RC ORDERA",
   businessLogoUrl: "",
   currencySymbol: "$",
   currencyPosition: "before",
@@ -1418,7 +1420,7 @@ async function customerSignUpWithEmail() {
     options: {
       emailRedirectTo: window.location.href.split("#")[0],
       data: {
-        app_name: customerSettings.businessName || "RINCON COLOMBIANO",
+        app_name: customerSettings.businessName || "RC ORDERA",
         full_name: fullName,
         phone: customerInputValue(customerElements.registerPhoneInput),
         default_address: customerRegisteredAddressPayload(),
@@ -1934,7 +1936,7 @@ async function customerSelectRestaurant(storeId, options = {}) {
   if (options.updateUrl !== false) {
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("store", customerStoreId);
-    nextUrl.searchParams.set("app", "v62");
+    nextUrl.searchParams.set("app", "v64");
     window.history.replaceState({}, "", nextUrl.toString());
   }
 
@@ -2124,7 +2126,7 @@ function customerNormalizeText(value) {
 
 function customerNormalizeBusinessName(value) {
   const name = customerNormalizeText(value).replace(/\s+/g, " ");
-  return name || "RINCON COLOMBIANO";
+  return name || "RC ORDERA";
 }
 
 function customerApplyBusinessName() {
