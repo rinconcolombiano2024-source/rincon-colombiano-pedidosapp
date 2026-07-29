@@ -1,0 +1,48 @@
+RC ORDERA v68 - EXPERIENCIA DE USUARIO
+
+ALCANCE
+- Correccion incremental de Cliente y Colaborador.
+- Sin cambios destructivos.
+- Sin cambios de tablas, RLS o Storage.
+- Sin migracion SQL nueva.
+
+CLIENTE
+- Inicio muestra buscador y restaurantes.
+- La tarjeta completa del restaurante es seleccionable con raton, tactil o teclado.
+- El menu y el carrito aparecen en la vista del restaurante elegido.
+- Pedido activo e historial aparecen separados en Pedidos.
+- Cuenta, idioma y privacidad aparecen en Perfil.
+- Login y registro se ocultan cuando hay sesion valida.
+- Se mantiene el pedido como invitado.
+- Se mantiene Supabase Realtime filtrado por restaurante.
+- Se mantiene el calculo de domicilio por restaurante y direccion.
+- Cambiar la direccion invalida distancia y costo anteriores para evitar usar una tarifa vieja.
+
+COLABORADOR
+- Inicio muestra disponibilidad, ubicacion y entregas ofrecidas.
+- Entrega activa muestra ruta, datos permitidos y una sola accion siguiente.
+- Perfil contiene acceso, solicitud y documentos.
+- Historial muestra resultados devueltos por el servicio actual.
+- Se mantienen aprobacion, GPS, archivos y asignacion existentes.
+
+RESTAURANTE Y ADMINISTRACION
+- No se modifico la estructura visual.
+- app.js y admin.js pasan validacion de sintaxis.
+- Referencias HTML/JavaScript revisadas.
+
+PRUEBAS EJECUTADAS
+- Sintaxis JavaScript: cliente.js, colaborador.js, app.js y admin.js.
+- IDs HTML duplicados: ninguno en Cliente ni Colaborador.
+- Referencias JavaScript a IDs inexistentes: ninguna.
+- Claves de traduccion ES/PL/EN usadas por Cliente: completas.
+- Enlaces y archivos locales: sin rutas rotas.
+- Lista de archivos PWA: completa.
+- Balance de bloques CSS: correcto.
+- Balance de section/div en Cliente y Colaborador: correcto.
+- Version PWA: rc-ordera-v68.
+
+LIMITES DE LA VALIDACION
+- No fue posible ejecutar capturas automatizadas porque el controlador de navegador de esta sesion no inicio.
+- No se afirma que correos, GPS, Supabase, Storage o Realtime hayan sido probados en produccion durante esta revision.
+- Administracion conserva la correccion v67; su correo real requiere despliegue HTTPS, SMTP y URLs de Supabase configuradas.
+- Reservas muestra un estado vacio porque el proyecto actual no contiene un modulo de reservas. No se inventaron registros ni tablas.

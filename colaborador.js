@@ -60,6 +60,13 @@ const courierElements = {
   arrivedCustomerButton: document.querySelector("#courierArrivedCustomerButton"),
   deliveredButton: document.querySelector("#courierDeliveredButton"),
   locationMessage: document.querySelector("#courierLocationMessage"),
+  headerStatus: document.querySelector("#courierHeaderStatus"),
+  homeSignedOut: document.querySelector("#courierHomeSignedOut"),
+  activeDeliveryCard: document.querySelector("#courierActiveDeliveryCard"),
+  historyList: document.querySelector("#courierHistoryList"),
+  steps: document.querySelector("#courierSteps"),
+  views: Array.from(document.querySelectorAll("[data-courier-view]")),
+  viewButtons: Array.from(document.querySelectorAll("[data-courier-view-target]")),
 };
 
 const COURIER_STATUS_LABELS = {
@@ -81,6 +88,7 @@ let courierRecoveringPassword = false;
 let courierAssignments = [];
 let courierActiveAssignmentId = "";
 let courierOffersTimer = null;
+let courierCurrentView = "profile";
 
 const COURIER_VERIFICATION_EMAIL = "pedidosapprinconcolombiano@gmail.com";
 const COURIER_FILE_FIELDS = [
@@ -91,6 +99,24 @@ const COURIER_FILE_FIELDS = [
   ["selfieUrlInput", "Selfie de verificacion"],
   ["workPermitUrlInput", "Permiso de trabajo"],
 ];
+
+function courierSetView(view, options = {}) {
+  const allowedViews = new Set(["home", "active", "history", "profile"]);
+  let nextView = allowedViews.has(view) ? view : "home";
+  if (!courierUser && nextView !== "profile") nextView = "profile";
+  courierCurrentView = nextView;
+
+  courierElements.views.forEach((section) => {
+    section.hidden = section.dataset.courierView !== nextView;
+  });
+  courierElements.viewButtons.forEach((button) => {
+    const isCurrent = button.dataset.courierViewTarget === nextView;
+    if (isCurrent) button.setAttribute("aria-current", "page");
+    else button.removeAttribute("aria-current");
+  });
+  document.body.dataset.courierView = nextView;
+  if (!options.keepScroll) window.scrollTo({ top: 0, behavior: options.instant ? "auto" : "smooth" });
+}
 
 function courierNormalizeText(value) {
   return String(value || "").trim().replace(/\s+/g, " ");
@@ -392,41 +418,135 @@ function courierSetStepButtons() {
   const active = courierActiveAssignment();
   courierActiveAssignmentId = active?.assignment_id || "";
   const status = active?.status || "";
-  const canUse = Boolean(active);
+  const actionByStatus = {
+    accepted: courierElements.arrivedRestaurantButton,
+    arrived_restaurant: courierElements.pickedUpButton,
+    picked_up: courierElements.arrivedCustomerButton,
+    arrived_customer: courierElements.deliveredButton,
+  };
+  [
+    courierElements.arrivedRestaurantButton,
+    courierElements.pickedUpButton,
+    courierElements.arrivedCustomerButton,
+    courierElements.deliveredButton,
+  ].forEach((button) => {
+    if (!button) return;
+    button.hidden = true;
+    button.disabled = true;
+  });
+  const nextButton = actionByStatus[status];
+  if (active && nextButton) {
+    nextButton.hidden = false;
+    nextButton.disabled = false;
+  }
+}
 
-  if (courierElements.arrivedRestaurantButton) {
-    courierElements.arrivedRestaurantButton.disabled = !canUse || status !== "accepted";
+function courierRenderActiveDelivery() {
+  if (!courierElements.activeDeliveryCard) return;
+  const active = courierActiveAssignment();
+  if (!courierUser) {
+    courierElements.activeDeliveryCard.innerHTML = `<div class="customer-empty">Inicia sesion para ver tu entrega activa.</div>`;
+    courierSetStepButtons();
+    return;
   }
-  if (courierElements.pickedUpButton) {
-    courierElements.pickedUpButton.disabled = !canUse || !["accepted", "arrived_restaurant"].includes(status);
+  if (!active) {
+    courierElements.activeDeliveryCard.innerHTML = `<div class="customer-empty">No tienes una entrega activa.</div>`;
+    courierSetStepButtons();
+    return;
   }
-  if (courierElements.arrivedCustomerButton) {
-    courierElements.arrivedCustomerButton.disabled = !canUse || status !== "picked_up";
+
+  const pickupUrl = courierCoordinatesUrl(active.pickup_lat, active.pickup_lng);
+  const deliveryUrl = courierDeliveryGpsUrl(active);
+  const items = courierOrderItems(active);
+  courierElements.activeDeliveryCard.innerHTML = `
+    <article class="courier-offer-card courier-active-card" data-assignment-id="${courierEscapeHtml(active.assignment_id)}">
+      <div class="client-order-head">
+        <div>
+          <strong>${courierEscapeHtml(active.restaurant_name || "Restaurante")}</strong>
+          <span>${courierEscapeHtml(courierAssignmentStatusLabel(active.status))}</span>
+          <span>Cliente: ${courierEscapeHtml(active.customer_name || active.table_label || "Cliente")}</span>
+          <span>Destino: ${courierEscapeHtml(courierDeliveryAddress(active))}</span>
+        </div>
+        <strong>${courierFormatMoney(active.total)}</strong>
+      </div>
+      <div class="client-order-items">
+        ${items
+          .map(
+            (item) => `
+              <div>
+                <strong>${courierItemQuantity(item)} x ${courierEscapeHtml(courierItemName(item))}</strong>
+                ${item.note ? `<span>NOTA: ${courierEscapeHtml(String(item.note).toUpperCase())}</span>` : ""}
+              </div>
+            `
+          )
+          .join("")}
+      </div>
+      <div class="client-order-actions">
+        ${pickupUrl ? `<a href="${courierEscapeHtml(pickupUrl)}" target="_blank" rel="noopener">GPS restaurante</a>` : ""}
+        ${deliveryUrl ? `<a href="${courierEscapeHtml(deliveryUrl)}" target="_blank" rel="noopener">GPS cliente</a>` : ""}
+      </div>
+    </article>
+  `;
+  courierSetStepButtons();
+}
+
+function courierRenderHistory() {
+  if (!courierElements.historyList) return;
+  if (!courierUser) {
+    courierElements.historyList.innerHTML = `<div class="customer-empty">Inicia sesion para consultar el historial.</div>`;
+    return;
   }
-  if (courierElements.deliveredButton) {
-    courierElements.deliveredButton.disabled = !canUse || !["picked_up", "arrived_customer"].includes(status);
+  const history = courierAssignments.filter((assignment) =>
+    ["delivered", "rejected", "cancelled"].includes(assignment.status)
+  );
+  if (!history.length) {
+    courierElements.historyList.innerHTML = `<div class="customer-empty">Todavia no hay entregas finalizadas en esta sesion.</div>`;
+    return;
   }
+  courierElements.historyList.innerHTML = history
+    .map(
+      (assignment) => `
+        <article class="courier-offer-card">
+          <div class="client-order-head">
+            <div>
+              <strong>${courierEscapeHtml(assignment.restaurant_name || "Restaurante")}</strong>
+              <span>${courierEscapeHtml(courierAssignmentStatusLabel(assignment.status))}</span>
+              <span>${courierEscapeHtml(courierDeliveryAddress(assignment))}</span>
+            </div>
+            <strong>${courierFormatMoney(assignment.total)}</strong>
+          </div>
+        </article>
+      `
+    )
+    .join("");
 }
 
 function courierRenderDeliveryOffers() {
   if (!courierElements.offersList) return;
   if (!courierUser) {
     courierElements.offersList.innerHTML = "";
+    courierRenderActiveDelivery();
+    courierRenderHistory();
     courierSetStepButtons();
     return;
   }
   if (courierProfile?.status !== "approved") {
     courierElements.offersList.innerHTML = `<div class="customer-empty">La administracion debe aprobar tu perfil antes de recibir pedidos.</div>`;
+    courierRenderActiveDelivery();
+    courierRenderHistory();
     courierSetStepButtons();
     return;
   }
-  if (!courierAssignments.length) {
+  const offeredAssignments = courierAssignments.filter((assignment) => assignment.status === "offered");
+  if (!offeredAssignments.length) {
     courierElements.offersList.innerHTML = `<div class="customer-empty">No tienes pedidos disponibles ahora. Activa disponibilidad y comparte ubicacion.</div>`;
+    courierRenderActiveDelivery();
+    courierRenderHistory();
     courierSetStepButtons();
     return;
   }
 
-  courierElements.offersList.innerHTML = courierAssignments
+  courierElements.offersList.innerHTML = offeredAssignments
     .map((assignment) => {
       const pickupUrl = courierCoordinatesUrl(assignment.pickup_lat, assignment.pickup_lng);
       const deliveryUrl = courierDeliveryGpsUrl(assignment);
@@ -473,7 +593,8 @@ function courierRenderDeliveryOffers() {
       `;
     })
     .join("");
-  courierSetStepButtons();
+  courierRenderActiveDelivery();
+  courierRenderHistory();
 }
 
 function courierCurrentPosition() {
@@ -603,6 +724,7 @@ async function courierUpdateAssignmentStatus(assignmentId, status) {
   if (status === "delivered") courierAvailable = true;
   await courierLoadDeliveryOffers({ silent: true });
   courierSetMessage(courierElements.locationMessage, `${courierAssignmentStatusLabel(status)}.`, "ok");
+  courierSetView(status === "delivered" || status === "rejected" ? "home" : "active");
 }
 
 function courierFriendlyAuthError(error) {
@@ -745,11 +867,15 @@ function courierRender() {
   courierElements.signOutButton.hidden = !courierUser;
   courierElements.statusBadge.textContent = courierUser ? statusLabel : "Sin enviar";
   courierElements.statusBadge.dataset.status = status;
+  if (courierElements.headerStatus) {
+    courierElements.headerStatus.textContent = courierUser ? statusLabel : "Sin iniciar sesion";
+  }
   courierElements.profileStatus.textContent = courierUser
     ? `Estado actual: ${statusLabel}.`
     : "Puedes llenar los datos, pero debes iniciar sesion para guardar la solicitud.";
 
   courierElements.dashboard.hidden = !courierUser;
+  if (courierElements.homeSignedOut) courierElements.homeSignedOut.hidden = Boolean(courierUser);
   courierElements.availabilityButton.disabled = status !== "approved";
   if (courierElements.shareLocationButton) courierElements.shareLocationButton.disabled = status !== "approved";
   if (courierElements.refreshOffersButton) courierElements.refreshOffersButton.disabled = status !== "approved";
@@ -1144,6 +1270,7 @@ async function courierInitialize() {
   const { data } = await client.auth.getSession();
   courierUser = data.session?.user || null;
   if (courierUrlLooksLikeRecovery()) courierRecoveringPassword = true;
+  courierSetView(courierUser ? "home" : "profile", { instant: true });
   courierRender();
   if (courierRecoveringPassword) courierShowPasswordRecoveryForm();
   if (courierUser) await courierLoadProfile();
@@ -1154,9 +1281,11 @@ async function courierInitialize() {
     courierAssignments = [];
     courierAvailable = false;
     if (event === "PASSWORD_RECOVERY") {
+      courierSetView("profile", { instant: true });
       courierShowPasswordRecoveryForm();
       return;
     }
+    courierSetView(courierUser ? "home" : "profile", { instant: true });
     courierRender();
     if (courierUser) await courierLoadProfile();
   });
@@ -1194,6 +1323,9 @@ courierElements.arrivedCustomerButton?.addEventListener("click", () => {
 courierElements.deliveredButton?.addEventListener("click", () => {
   if (courierActiveAssignmentId) courierUpdateAssignmentStatus(courierActiveAssignmentId, "delivered");
 });
+courierElements.viewButtons.forEach((button) => {
+  button.addEventListener("click", () => courierSetView(button.dataset.courierViewTarget));
+});
 courierElements.identityFileInput?.addEventListener("change", () =>
   courierHandleFileUpload(courierElements.identityFileInput, courierElements.identityFileUrlInput, "documento-identidad", "Documento de identidad")
 );
@@ -1214,4 +1346,5 @@ courierElements.workPermitFileInput?.addEventListener("change", () =>
 );
 
 courierRenderVehicleRequirements();
+courierSetView(courierCurrentView, { instant: true });
 courierInitialize();

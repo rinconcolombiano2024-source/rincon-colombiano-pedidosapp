@@ -15,101 +15,24 @@
     <link rel="apple-touch-icon" href="app-icon-192.png" />
     <link rel="stylesheet" href="styles.css" />
   </head>
-  <body class="customer-page">
-    <main class="customer-shell">
-      <header class="customer-hero">
-        <div class="customer-language-row">
-          <p class="eyebrow" data-i18n="heroEyebrow">Pedido del cliente</p>
-          <button class="customer-map-button" id="customerRefreshMenuButton" type="button" data-i18n="refreshMenu">Actualizar menu</button>
-          <label class="customer-language-label">
-            <span data-i18n="languageLabel">Idioma</span>
-            <select id="customerLanguageSelect">
-              <option value="es">Espanol</option>
-              <option value="pl">Polski</option>
-              <option value="en">English</option>
-            </select>
-          </label>
+  <body class="customer-page customer-app-page">
+    <main class="customer-shell customer-app-shell">
+      <header class="customer-app-header">
+        <div class="customer-app-brand">
+          <img src="app-icon-192.png" alt="" aria-hidden="true" />
+          <div>
+            <p class="eyebrow" data-i18n="heroEyebrow">Pedido del cliente</p>
+            <h1>RC ORDERA</h1>
+          </div>
         </div>
-        <img class="brand-logo customer-brand-logo" id="customerBusinessLogo" alt="Logo del restaurante" hidden />
-        <h1 id="customerBusinessName">RC ORDERA</h1>
-        <p id="customerTableLabel" data-i18n="heroSubtitle">Escanea, elige y envia tu pedido.</p>
+        <button class="customer-profile-shortcut" type="button" data-customer-view-target="profile" data-i18n="navProfile">Perfil</button>
+        <div class="customer-location-summary">
+          <span data-i18n="deliveryLocation">Direccion de entrega</span>
+          <strong id="customerTopLocation" data-i18n="locationNotSet">Agrega una direccion al hacer tu pedido</strong>
+        </div>
       </header>
 
-      <section class="customer-warning" data-i18n="warning">
-        App de prueba: si algo sale diferente, el restaurante confirmara el pedido y cualquier ajuste antes de prepararlo.
-      </section>
-
-      <details class="customer-legal-notice">
-        <summary data-i18n="privacySummary">Privacidad y datos</summary>
-        <p data-i18n="legalNotice">
-          Usamos los datos que escribes para crear tu cuenta, preparar el pedido, entregarlo, guardar historial y responder por chat. La app puede usar almacenamiento local/cookies tecnicas para mantener sesion, idioma, carrito y funcionamiento.
-        </p>
-      </details>
-
-      <section class="customer-account-panel" aria-label="Cuenta del cliente" data-i18n-aria-label="accountPanelAria">
-        <div class="customer-account-head">
-          <div>
-            <h2 data-i18n="accountTitle">Mi cuenta</h2>
-            <p id="customerAccountSummary" data-i18n="accountGuest">Inicia sesion o crea una cuenta para enviar pedidos y ver tu historial.</p>
-          </div>
-          <div class="customer-account-actions" id="customerAccountActions">
-            <button class="customer-map-button" id="customerOpenSignInButton" type="button" data-i18n="signIn">Iniciar sesion</button>
-            <button class="customer-map-button" id="customerOpenSignUpButton" type="button" data-i18n="signUp">Crear cuenta cliente</button>
-          </div>
-          <button class="customer-map-button" id="customerSignOutButton" type="button" hidden data-i18n="signOut">Cerrar sesion</button>
-        </div>
-        <div class="customer-auth-fields" id="customerAuthFields">
-          <label>
-            <span data-i18n="emailLabel">Correo electronico</span>
-            <input id="customerAuthEmail" type="email" placeholder="correo@ejemplo.com" data-i18n-placeholder="emailPlaceholder" autocomplete="email" />
-          </label>
-          <label>
-            <span data-i18n="passwordLabel">Contrasena</span>
-            <input id="customerAuthPassword" type="password" placeholder="Minimo 6 caracteres" data-i18n-placeholder="passwordPlaceholder" autocomplete="current-password" />
-          </label>
-          <label class="customer-register-field">
-            <span data-i18n="registerNameLabel">Nombre completo para registro</span>
-            <input id="customerRegisterNameInput" type="text" placeholder="Nombre y apellido" data-i18n-placeholder="registerNamePlaceholder" autocomplete="name" />
-          </label>
-          <label>
-            <span data-i18n="registerPhoneLabel">Telefono</span>
-            <input id="customerRegisterPhoneInput" type="tel" placeholder="Numero de contacto" data-i18n-placeholder="phonePlaceholder" autocomplete="tel" />
-          </label>
-          <label>
-            <span data-i18n="registerAddressLabel">Direccion</span>
-            <input id="customerRegisterAddressInput" type="text" placeholder="Calle, numero, apartamento" data-i18n-placeholder="addressPlaceholder" autocomplete="street-address" />
-          </label>
-          <label>
-            <span data-i18n="registerNeighborhoodLabel">Barrio / ciudad</span>
-            <input id="customerRegisterNeighborhoodInput" type="text" placeholder="Barrio o ciudad" data-i18n-placeholder="neighborhoodPlaceholder" autocomplete="address-level2" />
-          </label>
-          <label>
-            <span data-i18n="registerReferenceLabel">Referencia</span>
-            <input id="customerRegisterReferenceInput" type="text" placeholder="Piso, timbre, instrucciones" data-i18n-placeholder="referencePlaceholder" autocomplete="off" />
-          </label>
-          <label class="customer-legal-checkbox">
-            <input id="customerPrivacyConsentInput" type="checkbox" />
-            <span data-i18n="privacyConsent">Acepto el tratamiento de mis datos para gestionar pedidos, historial, entrega, chat y cookies tecnicas necesarias.</span>
-          </label>
-          <div class="customer-auth-actions">
-            <button class="customer-map-button" id="customerSignInButton" type="button" data-i18n="signIn">Iniciar sesion</button>
-            <button class="customer-map-button" id="customerSignUpButton" type="button" data-i18n="signUp">Crear cuenta cliente</button>
-            <button class="customer-map-button" id="customerResetPasswordButton" type="button" data-i18n="resetPassword">Recuperar contrasena</button>
-            <button class="customer-map-button" id="customerResendVerificationButton" type="button" data-i18n="resendVerification">Reenviar verificacion</button>
-          </div>
-          <div class="password-recovery-panel" id="customerPasswordRecoveryPanel" hidden>
-            <label>
-              <span data-i18n="newPasswordLabel">Nueva contrasena</span>
-              <input id="customerNewPasswordInput" type="password" autocomplete="new-password" placeholder="Minimo 6 caracteres" data-i18n-placeholder="passwordPlaceholder" />
-            </label>
-            <div class="customer-auth-actions">
-              <button class="customer-map-button" id="customerUpdatePasswordButton" type="button" data-i18n="updatePassword">Guardar nueva contrasena</button>
-              <button class="customer-map-button" id="customerCancelRecoveryButton" type="button" data-i18n="cancel">Cancelar</button>
-            </div>
-          </div>
-        </div>
-        <p class="customer-map-result" id="customerAuthMessage" hidden></p>
-      </section>
+      <div class="customer-test-badge" data-i18n="testEnvironment">Entorno de prueba</div>
 
       <dialog id="customerAuthDialog" class="auth-dialog">
         <form method="dialog" class="customer-auth-modal" id="customerAuthModalForm" data-mode="login">
@@ -126,117 +49,212 @@
         </form>
       </dialog>
 
-      <section class="customer-restaurant-panel" id="customerRestaurantPanel" aria-label="Elegir restaurante" data-i18n-aria-label="restaurantPanelAria">
-        <div class="customer-account-head">
-          <div>
-            <h2 id="customerRestaurantTitle" data-i18n="restaurantTitle">Elegir restaurante</h2>
-            <p id="customerSelectedRestaurantText" data-i18n="restaurantHelp">Busca el restaurante donde quieres hacer tu pedido.</p>
-          </div>
-          <button class="customer-map-button" id="customerRefreshRestaurantsButton" type="button" data-i18n="restaurantRefresh">Actualizar restaurantes</button>
+      <div class="customer-auth-fields" id="customerAuthFields">
+        <label>
+          <span data-i18n="emailLabel">Correo electronico</span>
+          <input id="customerAuthEmail" type="email" placeholder="correo@ejemplo.com" data-i18n-placeholder="emailPlaceholder" autocomplete="email" />
+        </label>
+        <label>
+          <span data-i18n="passwordLabel">Contrasena</span>
+          <input id="customerAuthPassword" type="password" placeholder="Minimo 6 caracteres" data-i18n-placeholder="passwordPlaceholder" autocomplete="current-password" />
+        </label>
+        <label class="customer-register-field">
+          <span data-i18n="registerNameLabel">Nombre completo para registro</span>
+          <input id="customerRegisterNameInput" type="text" placeholder="Nombre y apellido" data-i18n-placeholder="registerNamePlaceholder" autocomplete="name" />
+        </label>
+        <label>
+          <span data-i18n="registerPhoneLabel">Telefono</span>
+          <input id="customerRegisterPhoneInput" type="tel" placeholder="Numero de contacto" data-i18n-placeholder="phonePlaceholder" autocomplete="tel" />
+        </label>
+        <label>
+          <span data-i18n="registerAddressLabel">Direccion</span>
+          <input id="customerRegisterAddressInput" type="text" placeholder="Calle, numero, apartamento" data-i18n-placeholder="addressPlaceholder" autocomplete="street-address" />
+        </label>
+        <label>
+          <span data-i18n="registerNeighborhoodLabel">Barrio / ciudad</span>
+          <input id="customerRegisterNeighborhoodInput" type="text" placeholder="Barrio o ciudad" data-i18n-placeholder="neighborhoodPlaceholder" autocomplete="address-level2" />
+        </label>
+        <label>
+          <span data-i18n="registerReferenceLabel">Referencia</span>
+          <input id="customerRegisterReferenceInput" type="text" placeholder="Piso, timbre, instrucciones" data-i18n-placeholder="referencePlaceholder" autocomplete="off" />
+        </label>
+        <label class="customer-legal-checkbox">
+          <input id="customerPrivacyConsentInput" type="checkbox" />
+          <span data-i18n="privacyConsent">Acepto el tratamiento de mis datos para gestionar pedidos, historial, entrega, chat y cookies tecnicas necesarias.</span>
+        </label>
+        <div class="customer-auth-actions">
+          <button class="customer-map-button" id="customerSignInButton" type="button" data-i18n="signIn">Iniciar sesion</button>
+          <button class="customer-map-button" id="customerSignUpButton" type="button" data-i18n="signUp">Crear cuenta cliente</button>
+          <button class="customer-map-button" id="customerResetPasswordButton" type="button" data-i18n="resetPassword">Recuperar contrasena</button>
+          <button class="customer-map-button" id="customerResendVerificationButton" type="button" data-i18n="resendVerification">Reenviar verificacion</button>
         </div>
-        <div class="customer-restaurant-search">
+        <div class="password-recovery-panel" id="customerPasswordRecoveryPanel" hidden>
           <label>
-            <span data-i18n="restaurantSearchLabel">Buscar restaurante</span>
-            <input id="customerRestaurantSearchInput" type="search" placeholder="Nombre, ciudad o direccion" data-i18n-placeholder="restaurantSearchPlaceholder" autocomplete="off" />
+            <span data-i18n="newPasswordLabel">Nueva contrasena</span>
+            <input id="customerNewPasswordInput" type="password" autocomplete="new-password" placeholder="Minimo 6 caracteres" data-i18n-placeholder="passwordPlaceholder" />
           </label>
+          <div class="customer-auth-actions">
+            <button class="customer-map-button" id="customerUpdatePasswordButton" type="button" data-i18n="updatePassword">Guardar nueva contrasena</button>
+            <button class="customer-map-button" id="customerCancelRecoveryButton" type="button" data-i18n="cancel">Cancelar</button>
+          </div>
         </div>
-        <div class="customer-restaurant-list" id="customerRestaurantList"></div>
+      </div>
+      <p class="customer-map-result" id="customerAuthMessage" hidden></p>
+
+      <section class="customer-view" data-customer-view="home">
+        <section class="customer-restaurant-panel" id="customerRestaurantPanel" aria-label="Elegir restaurante" data-i18n-aria-label="restaurantPanelAria">
+          <div class="customer-section-heading">
+            <div>
+              <p class="eyebrow" data-i18n="homeEyebrow">Cerca de ti</p>
+              <h2 id="customerRestaurantTitle" data-i18n="restaurantTitle">Elegir restaurante</h2>
+              <p id="customerSelectedRestaurantText" data-i18n="restaurantHelp">Busca el restaurante donde quieres hacer tu pedido.</p>
+            </div>
+            <button class="customer-icon-action" id="customerRefreshRestaurantsButton" type="button" title="Actualizar restaurantes" aria-label="Actualizar restaurantes" data-i18n-aria-label="restaurantRefresh">
+              <span aria-hidden="true">&#8635;</span>
+            </button>
+          </div>
+          <div class="customer-restaurant-search">
+            <label>
+              <span data-i18n="restaurantSearchLabel">Buscar restaurante</span>
+              <input id="customerRestaurantSearchInput" type="search" placeholder="Nombre, ciudad o direccion" data-i18n-placeholder="restaurantSearchPlaceholder" autocomplete="off" />
+            </label>
+          </div>
+          <div class="customer-restaurant-list" id="customerRestaurantList"></div>
+        </section>
       </section>
 
-      <section class="customer-status" id="customerStatus" role="status" data-i18n="loadingMenu">Cargando menu...</section>
-      <section class="customer-status customer-tracking-status" id="customerTrackingStatus" role="status" hidden></section>
-
-      <section class="customer-menu-layout">
-        <section class="customer-menu-panel" aria-label="Menu del restaurante" data-i18n-aria-label="menuPanelAria">
-          <div class="customer-menu-search">
-            <label>
-              <span data-i18n="searchLabel">Buscar producto</span>
-              <input id="customerMenuSearchInput" type="search" placeholder="Ej: bandeja paisa" data-i18n-placeholder="searchPlaceholder" autocomplete="off" />
-            </label>
-            <button class="customer-map-button" id="customerMenuSearchClearButton" type="button" hidden data-i18n="searchClear">Limpiar</button>
+      <section class="customer-view" data-customer-view="store" hidden>
+        <section class="customer-store-header" id="customerSelectedRestaurantPanel">
+          <button class="customer-back-button" id="customerBackToRestaurantsButton" type="button" data-i18n="backToRestaurants">Volver</button>
+          <div class="customer-store-identity">
+            <img class="brand-logo customer-brand-logo" id="customerBusinessLogo" alt="Logo del restaurante" hidden />
+            <div>
+              <div class="customer-store-title-row">
+                <h2 id="customerBusinessName">Restaurante</h2>
+                <span class="customer-open-badge" id="customerSelectedRestaurantStatus" data-i18n="restaurantOpen">Abierto</span>
+              </div>
+              <p id="customerTableLabel" data-i18n="heroSubtitle">Escanea, elige y envia tu pedido.</p>
+            </div>
           </div>
-          <div class="customer-tabs" id="customerCategoryTabs"></div>
-          <div class="customer-menu-grid" id="customerMenuGrid"></div>
+          <p class="customer-store-description" id="customerSelectedRestaurantDescription" hidden></p>
+          <div class="customer-store-meta">
+            <span id="customerSelectedRestaurantAddress"></span>
+            <span id="customerSelectedRestaurantDelivery" data-i18n="deliveryCalculatedAtCheckout">Domicilio calculado con tu direccion</span>
+          </div>
+          <button class="customer-icon-action customer-store-refresh" id="customerRefreshMenuButton" type="button" title="Actualizar menu" aria-label="Actualizar menu" data-i18n-aria-label="refreshMenu">
+            <span aria-hidden="true">&#8635;</span>
+          </button>
         </section>
 
-        <aside class="customer-cart-panel" aria-label="Pedido del cliente" data-i18n-aria-label="cartPanelAria">
-          <h2 data-i18n="yourOrder">Tu pedido</h2>
-          <button class="customer-map-button" id="customerNotifyButton" type="button" data-i18n="enableNotifications">Activar notificaciones</button>
+        <section class="customer-status" id="customerStatus" role="status" data-i18n="loadingMenu">Cargando menu...</section>
 
-          <label>
-            <span data-i18n="orderTypeLabel">Tipo de pedido</span>
-            <select id="customerOrderType">
-              <option value="Comer en el punto" data-i18n="eatHere">Comer en el punto</option>
-              <option value="Recoger en el punto" data-i18n="pickup">Para llevar / recoger en el punto</option>
-              <option value="Domicilio" data-i18n="delivery">Envio a domicilio</option>
-            </select>
-          </label>
+        <section class="customer-menu-layout">
+          <section class="customer-menu-panel" aria-label="Menu del restaurante" data-i18n-aria-label="menuPanelAria">
+            <div class="customer-menu-search">
+              <label>
+                <span data-i18n="searchLabel">Buscar producto</span>
+                <input id="customerMenuSearchInput" type="search" placeholder="Ej: bandeja paisa" data-i18n-placeholder="searchPlaceholder" autocomplete="off" />
+              </label>
+              <button class="customer-map-button" id="customerMenuSearchClearButton" type="button" hidden data-i18n="searchClear">Limpiar</button>
+            </div>
+            <div class="customer-tabs" id="customerCategoryTabs"></div>
+            <div class="customer-menu-grid" id="customerMenuGrid"></div>
+          </section>
 
-          <label>
-            <span data-i18n="nameLabel">Nombre</span>
-            <input id="customerNameInput" type="text" placeholder="Tu nombre" data-i18n-placeholder="namePlaceholder" autocomplete="name" />
-          </label>
+          <aside class="customer-cart-panel" aria-label="Pedido del cliente" data-i18n-aria-label="cartPanelAria">
+            <div class="customer-cart-heading">
+              <h2 data-i18n="yourOrder">Tu pedido</h2>
+              <button class="customer-icon-action" id="customerNotifyButton" type="button" title="Activar notificaciones" aria-label="Activar notificaciones" data-i18n-aria-label="enableNotifications">
+                <span aria-hidden="true">!</span>
+              </button>
+            </div>
 
-          <label>
-            <span data-i18n="tableLabel">Mesa / ubicacion</span>
-            <input id="customerTableInput" type="text" placeholder="Mesa, punto de entrega o ubicacion" data-i18n-placeholder="tablePlaceholder" autocomplete="off" />
-          </label>
-
-          <label>
-            <span data-i18n="paymentMethodLabel">Metodo de pago</span>
-            <select id="customerPaymentMethod">
-              <option value="Efectivo" data-i18n="cash">Efectivo</option>
-              <option value="Transferencia" data-i18n="transfer">Transferencia</option>
-              <option value="Datafono" data-i18n="cardTerminal">Datafono / tarjeta al recibir</option>
-            </select>
-          </label>
-
-          <div class="customer-delivery-fields" id="customerDeliveryFields" hidden>
             <label>
-              <span data-i18n="phoneLabel">Telefono</span>
-              <input id="customerPhoneInput" type="tel" placeholder="Numero de contacto" data-i18n-placeholder="phonePlaceholder" autocomplete="tel" />
+              <span data-i18n="orderTypeLabel">Tipo de pedido</span>
+              <select id="customerOrderType">
+                <option value="Comer en el punto" data-i18n="eatHere">Comer en el punto</option>
+                <option value="Recoger en el punto" data-i18n="pickup">Para llevar / recoger en el punto</option>
+                <option value="Domicilio" data-i18n="delivery">Envio a domicilio</option>
+              </select>
             </label>
+
             <label>
-              <span data-i18n="addressLabel">Direccion completa</span>
-              <input id="customerAddressInput" type="text" placeholder="Calle, numero, apartamento" data-i18n-placeholder="addressPlaceholder" autocomplete="street-address" />
+              <span data-i18n="nameLabel">Nombre</span>
+              <input id="customerNameInput" type="text" placeholder="Tu nombre" data-i18n-placeholder="namePlaceholder" autocomplete="name" />
             </label>
+
             <label>
-              <span data-i18n="neighborhoodLabel">Barrio / ciudad</span>
-              <input id="customerNeighborhoodInput" type="text" placeholder="Barrio o ciudad" data-i18n-placeholder="neighborhoodPlaceholder" autocomplete="address-level2" />
+              <span data-i18n="tableLabel">Mesa / ubicacion</span>
+              <input id="customerTableInput" type="text" placeholder="Mesa, punto de entrega o ubicacion" data-i18n-placeholder="tablePlaceholder" autocomplete="off" />
             </label>
+
             <label>
-              <span data-i18n="referenceLabel">Referencia</span>
-              <input id="customerReferenceInput" type="text" placeholder="Piso, timbre, instrucciones" data-i18n-placeholder="referencePlaceholder" autocomplete="off" />
+              <span data-i18n="paymentMethodLabel">Metodo de pago</span>
+              <select id="customerPaymentMethod">
+                <option value="Efectivo" data-i18n="cash">Efectivo</option>
+                <option value="Transferencia" data-i18n="transfer">Transferencia</option>
+                <option value="Datafono" data-i18n="cardTerminal">Datafono / tarjeta al recibir</option>
+              </select>
             </label>
+
+            <div class="customer-delivery-fields" id="customerDeliveryFields" hidden>
+              <label>
+                <span data-i18n="phoneLabel">Telefono</span>
+                <input id="customerPhoneInput" type="tel" placeholder="Numero de contacto" data-i18n-placeholder="phonePlaceholder" autocomplete="tel" />
+              </label>
+              <label>
+                <span data-i18n="addressLabel">Direccion completa</span>
+                <input id="customerAddressInput" type="text" placeholder="Calle, numero, apartamento" data-i18n-placeholder="addressPlaceholder" autocomplete="street-address" />
+              </label>
+              <label>
+                <span data-i18n="neighborhoodLabel">Barrio / ciudad</span>
+                <input id="customerNeighborhoodInput" type="text" placeholder="Barrio o ciudad" data-i18n-placeholder="neighborhoodPlaceholder" autocomplete="address-level2" />
+              </label>
+              <label>
+                <span data-i18n="referenceLabel">Referencia</span>
+                <input id="customerReferenceInput" type="text" placeholder="Piso, timbre, instrucciones" data-i18n-placeholder="referencePlaceholder" autocomplete="off" />
+              </label>
+              <label>
+                <span data-i18n="distanceLabel">Distancia aproximada km</span>
+                <input id="customerDistanceInput" type="number" min="0" step="0.1" placeholder="Ej: 3.4" data-i18n-placeholder="distancePlaceholder" inputmode="decimal" />
+              </label>
+              <button class="customer-map-button" id="customerUseLocationButton" type="button" data-i18n="useLocation">Usar mi ubicacion</button>
+              <button class="customer-map-button" id="customerCalculateDistanceButton" type="button" data-i18n="calculateMaps">Calcular con Google Maps</button>
+              <p class="customer-map-result" id="customerMapResult" hidden></p>
+              <p class="customer-delivery-help" data-i18n="deliveryHelp">Domicilio: minimo configurado por el restaurante; si la distancia supera ese valor, se calcula por tramos.</p>
+            </div>
+
+            <div class="customer-cart-items" id="customerCartItems"></div>
+
             <label>
-              <span data-i18n="distanceLabel">Distancia aproximada km</span>
-              <input id="customerDistanceInput" type="number" min="0" step="0.1" placeholder="Ej: 3.4" data-i18n-placeholder="distancePlaceholder" inputmode="decimal" />
+              <span data-i18n="kitchenNotesLabel">Notas para cocina</span>
+              <textarea id="customerOrderNotes" rows="3" placeholder="Ej: sin cebolla, salsa aparte..." data-i18n-placeholder="kitchenNotesPlaceholder"></textarea>
             </label>
-            <button class="customer-map-button" id="customerUseLocationButton" type="button" data-i18n="useLocation">Usar mi ubicacion</button>
-            <button class="customer-map-button" id="customerCalculateDistanceButton" type="button" data-i18n="calculateMaps">Calcular con Google Maps</button>
-            <p class="customer-map-result" id="customerMapResult" hidden></p>
-            <p class="customer-delivery-help" data-i18n="deliveryHelp">Domicilio: minimo configurado por el restaurante; si la distancia supera ese valor, se calcula por tramos.</p>
-          </div>
 
-          <div class="customer-cart-items" id="customerCartItems"></div>
+            <div class="customer-cart-total">
+              <span data-i18n="estimatedTotal">Total estimado</span>
+              <strong id="customerCartTotal">$0.00</strong>
+            </div>
 
-          <label>
-            <span data-i18n="kitchenNotesLabel">Notas para cocina</span>
-            <textarea id="customerOrderNotes" rows="3" placeholder="Ej: sin cebolla, salsa aparte..." data-i18n-placeholder="kitchenNotesPlaceholder"></textarea>
-          </label>
+            <div class="customer-delivery-fee" id="customerDeliveryFeeRow" hidden>
+              <span data-i18n="estimatedDelivery">Domicilio estimado</span>
+              <strong id="customerDeliveryFeeLabel">$0.00</strong>
+            </div>
 
-          <div class="customer-cart-total">
-            <span data-i18n="estimatedTotal">Total estimado</span>
-            <strong id="customerCartTotal">$0.00</strong>
-          </div>
+            <button class="customer-submit-button" id="sendCustomerOrderButton" type="button" data-i18n="sendOrder">Enviar pedido</button>
+          </aside>
+        </section>
+      </section>
 
-          <div class="customer-delivery-fee" id="customerDeliveryFeeRow" hidden>
-            <span data-i18n="estimatedDelivery">Domicilio estimado</span>
-            <strong id="customerDeliveryFeeLabel">$0.00</strong>
-          </div>
-
+      <section class="customer-view" data-customer-view="orders" hidden>
+        <div class="customer-view-heading">
+          <p class="eyebrow" data-i18n="ordersEyebrow">Seguimiento</p>
+          <h2 data-i18n="navOrders">Pedidos</h2>
+        </div>
+        <section class="customer-active-order-panel">
+          <h3 data-i18n="activeOrderTitle">Pedido activo</h3>
+          <section class="customer-status customer-tracking-status" id="customerTrackingStatus" role="status" hidden></section>
           <div class="customer-payment-box" id="customerPaymentBox" hidden></div>
-
           <section class="customer-chat-panel" id="customerChatPanel" hidden>
             <h3 data-i18n="chatTitle">Chat con el restaurante</h3>
             <div class="customer-chat-messages" id="customerChatMessages"></div>
@@ -251,19 +269,73 @@
             <button class="customer-map-button" id="customerSendChatButton" type="button" data-i18n="sendChat">Enviar chat</button>
             <p class="customer-map-result" id="customerChatStatus" hidden></p>
           </section>
+          <div class="customer-empty" id="customerNoActiveOrder" data-i18n="noActiveOrder">No tienes un pedido activo.</div>
+        </section>
 
-          <button class="customer-submit-button" id="sendCustomerOrderButton" type="button" data-i18n="sendOrder">Enviar pedido</button>
+        <section class="customer-history-panel customer-history-page" aria-label="Historial del cliente" data-i18n-aria-label="historyPanelAria">
+          <div class="customer-history-head">
+            <h3 data-i18n="historyTitle">Historial de pedidos</h3>
+            <button class="customer-icon-action" id="customerRefreshHistoryButton" type="button" title="Actualizar pedidos" aria-label="Actualizar pedidos" data-i18n-aria-label="refreshHistory">
+              <span aria-hidden="true">&#8635;</span>
+            </button>
+          </div>
+          <div class="customer-history-list" id="customerHistoryList"></div>
+        </section>
+      </section>
 
-          <section class="customer-history-panel" aria-label="Historial del cliente" data-i18n-aria-label="historyPanelAria">
-            <div class="customer-history-head">
-              <h3 data-i18n="historyTitle">Mis pedidos</h3>
-              <button class="customer-map-button" id="customerRefreshHistoryButton" type="button" data-i18n="refreshHistory">Actualizar</button>
+      <section class="customer-view" data-customer-view="reservations" hidden>
+        <div class="customer-view-heading">
+          <p class="eyebrow" data-i18n="reservationsEyebrow">Tus mesas</p>
+          <h2 data-i18n="navReservations">Reservas</h2>
+        </div>
+        <div class="customer-empty customer-empty-page" data-i18n="reservationsEmpty">No tienes reservas registradas.</div>
+      </section>
+
+      <section class="customer-view" data-customer-view="profile" hidden>
+        <div class="customer-view-heading">
+          <p class="eyebrow" data-i18n="profileEyebrow">Cuenta y preferencias</p>
+          <h2 data-i18n="navProfile">Perfil</h2>
+        </div>
+        <section class="customer-account-panel" aria-label="Cuenta del cliente" data-i18n-aria-label="accountPanelAria">
+          <div class="customer-account-head">
+            <div>
+              <h3 data-i18n="accountTitle">Mi cuenta</h3>
+              <p id="customerAccountSummary" data-i18n="accountGuest">Inicia sesion o crea una cuenta para enviar pedidos y ver tu historial.</p>
             </div>
-            <div class="customer-history-list" id="customerHistoryList"></div>
-          </section>
-        </aside>
+            <div class="customer-account-actions" id="customerAccountActions">
+              <button class="customer-map-button" id="customerOpenSignInButton" type="button" data-i18n="signIn">Iniciar sesion</button>
+              <button class="customer-map-button" id="customerOpenSignUpButton" type="button" data-i18n="signUp">Crear cuenta cliente</button>
+            </div>
+            <button class="customer-map-button customer-sign-out-button" id="customerSignOutButton" type="button" hidden data-i18n="signOut">Cerrar sesion</button>
+          </div>
+          <div class="customer-profile-details" id="customerProfileDetails"></div>
+        </section>
+
+        <section class="customer-profile-settings">
+          <label class="customer-language-label">
+            <span data-i18n="languageLabel">Idioma</span>
+            <select id="customerLanguageSelect">
+              <option value="es">Espanol</option>
+              <option value="pl">Polski</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+          <details class="customer-legal-notice">
+            <summary data-i18n="privacySummary">Privacidad y datos</summary>
+            <p data-i18n="legalNotice">
+              Usamos los datos que escribes para crear tu cuenta, preparar el pedido, entregarlo, guardar historial y responder por chat. La app puede usar almacenamiento local/cookies tecnicas para mantener sesion, idioma, carrito y funcionamiento.
+            </p>
+          </details>
+        </section>
       </section>
     </main>
+
+    <nav class="customer-bottom-nav" aria-label="Navegacion del cliente" data-i18n-aria-label="customerNavigationAria">
+      <button type="button" data-customer-view-target="home" aria-current="page" data-i18n="navHome">Inicio</button>
+      <button type="button" data-customer-view-target="orders" data-i18n="navOrders">Pedidos</button>
+      <button type="button" data-customer-view-target="reservations" data-i18n="navReservations">Reservas</button>
+      <button type="button" data-customer-view-target="profile" data-i18n="navProfile">Perfil</button>
+    </nav>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>

@@ -15,78 +15,132 @@
     <link rel="apple-touch-icon" href="app-icon-192.png" />
     <link rel="stylesheet" href="styles.css" />
   </head>
-  <body class="customer-page collaborator-page">
-    <main class="customer-shell collaborator-shell">
-      <header class="customer-hero collaborator-hero">
-        <div class="customer-language-row">
-          <p class="eyebrow">Entorno de colaborador</p>
-          <nav class="role-link-row" aria-label="Cambiar entorno">
-            <a href="index.html">Restaurante</a>
-            <a href="cliente.html">Cliente</a>
-          </nav>
-          <label class="app-language-inline">
-            <span>Idioma</span>
-            <select id="autoLanguageSelect">
-              <option value="es">Espanol</option>
-              <option value="pl">Polski</option>
-              <option value="en">English</option>
-            </select>
-          </label>
+  <body class="customer-page collaborator-page collaborator-app-page">
+    <main class="customer-shell collaborator-shell collaborator-app-shell">
+      <header class="collaborator-app-header">
+        <div class="customer-app-brand">
+          <img src="app-icon-192.png" alt="" aria-hidden="true" />
+          <div>
+            <p class="eyebrow">Colaborador</p>
+            <h1>RC ORDERA</h1>
+          </div>
         </div>
-        <h1>RC ORDERA</h1>
-        <p>Colaborador: tu comida favorita, cerca de ti. Gestiona tu solicitud, disponibilidad y entregas asignadas.</p>
+        <button class="customer-profile-shortcut" type="button" data-courier-view-target="profile">Perfil</button>
+        <div class="collaborator-header-status">
+          <span>Estado</span>
+          <strong id="courierHeaderStatus">Sin iniciar sesion</strong>
+        </div>
       </header>
 
-      <section class="customer-warning">
-        App de prueba: el colaborador no recibe pedidos hasta que la administracion de la plataforma apruebe su perfil.
+      <div class="customer-test-badge">Entorno de prueba</div>
+
+      <section class="courier-view" data-courier-view="home" hidden>
+        <div class="customer-view-heading">
+          <p class="eyebrow">Panel de trabajo</p>
+          <h2>Inicio</h2>
+        </div>
+        <section class="customer-account-panel courier-dashboard" id="courierDashboard" aria-label="Panel del colaborador" hidden>
+          <div class="customer-account-head">
+            <div>
+              <h3>Disponibilidad</h3>
+              <p id="courierDashboardText">Cuando tu perfil sea aprobado, podras recibir pedidos.</p>
+            </div>
+            <button class="customer-map-button courier-availability-button" id="courierAvailabilityButton" type="button" disabled>Disponible</button>
+          </div>
+          <div class="collaborator-actions collaborator-location-actions">
+            <button class="customer-map-button" id="courierShareLocationButton" type="button">Compartir ubicacion</button>
+            <button class="customer-map-button" id="courierOpenGpsButton" type="button" disabled>Abrir GPS</button>
+            <button class="customer-icon-action" id="courierRefreshOffersButton" type="button" title="Actualizar pedidos" aria-label="Actualizar pedidos">
+              <span aria-hidden="true">&#8635;</span>
+            </button>
+          </div>
+          <p class="customer-map-result" id="courierLocationMessage" hidden></p>
+          <div class="courier-section-title">
+            <h3>Entregas disponibles</h3>
+          </div>
+          <div class="courier-offers-list" id="courierOffersList" aria-live="polite"></div>
+        </section>
+        <div class="customer-empty" id="courierHomeSignedOut">Inicia sesion desde Perfil para gestionar entregas.</div>
       </section>
 
-      <section class="customer-account-panel" aria-label="Acceso colaborador">
-        <div class="customer-account-head">
-          <div>
-            <h2>Acceso</h2>
-            <p id="courierAccountSummary">Inicia sesion o crea una cuenta para enviar tu solicitud.</p>
-          </div>
-          <button class="customer-map-button" id="courierSignOutButton" type="button" hidden>Cerrar sesion</button>
+      <section class="courier-view" data-courier-view="active" hidden>
+        <div class="customer-view-heading">
+          <p class="eyebrow">Ruta y estado</p>
+          <h2>Entrega activa</h2>
         </div>
-        <div class="customer-auth-fields" id="courierAuthFields">
-          <label>
-            Correo electronico
-            <input id="courierEmailInput" type="email" placeholder="correo@ejemplo.com" autocomplete="email" />
-          </label>
-          <label>
-            Contrasena
-            <input id="courierPasswordInput" type="password" placeholder="Minimo 6 caracteres" autocomplete="current-password" />
-          </label>
-          <div class="customer-auth-actions">
-            <button class="customer-map-button" id="courierSignInButton" type="button">Iniciar sesion</button>
-            <button class="customer-map-button" id="courierSignUpButton" type="button">Crear cuenta</button>
-            <button class="customer-map-button" id="courierResetPasswordButton" type="button">Recuperar contrasena</button>
-            <button class="customer-map-button" id="courierResendVerificationButton" type="button">Reenviar verificacion</button>
+        <section class="customer-account-panel courier-active-panel">
+          <div id="courierActiveDeliveryCard" class="courier-active-delivery"></div>
+          <div class="courier-steps" id="courierSteps">
+            <button id="courierArrivedRestaurantButton" type="button" disabled>Llegue al restaurante</button>
+            <button id="courierPickedUpButton" type="button" disabled>Pedido recogido</button>
+            <button id="courierArrivedCustomerButton" type="button" disabled>Llegue al cliente</button>
+            <button id="courierDeliveredButton" type="button" disabled>Pedido entregado</button>
           </div>
-          <div class="password-recovery-panel" id="courierPasswordRecoveryPanel" hidden>
+        </section>
+      </section>
+
+      <section class="courier-view" data-courier-view="history" hidden>
+        <div class="customer-view-heading">
+          <p class="eyebrow">Actividad</p>
+          <h2>Historial</h2>
+        </div>
+        <section class="customer-account-panel">
+          <div class="courier-offers-list" id="courierHistoryList"></div>
+        </section>
+      </section>
+
+      <section class="courier-view" data-courier-view="profile">
+        <div class="customer-view-heading">
+          <p class="eyebrow">Cuenta y documentos</p>
+          <h2>Perfil</h2>
+        </div>
+
+        <section class="customer-account-panel" aria-label="Acceso colaborador">
+          <div class="customer-account-head">
+            <div>
+              <h3>Acceso</h3>
+              <p id="courierAccountSummary">Inicia sesion o crea una cuenta para enviar tu solicitud.</p>
+            </div>
+            <button class="customer-map-button customer-sign-out-button" id="courierSignOutButton" type="button" hidden>Cerrar sesion</button>
+          </div>
+          <div class="customer-auth-fields" id="courierAuthFields">
             <label>
-              Nueva contrasena
-              <input id="courierNewPasswordInput" type="password" autocomplete="new-password" placeholder="Minimo 6 caracteres" />
+              Correo electronico
+              <input id="courierEmailInput" type="email" placeholder="correo@ejemplo.com" autocomplete="email" />
+            </label>
+            <label>
+              Contrasena
+              <input id="courierPasswordInput" type="password" placeholder="Minimo 6 caracteres" autocomplete="current-password" />
             </label>
             <div class="customer-auth-actions">
-              <button class="customer-map-button" id="courierUpdatePasswordButton" type="button">Guardar nueva contrasena</button>
-              <button class="customer-map-button" id="courierCancelRecoveryButton" type="button">Cancelar</button>
+              <button class="customer-map-button" id="courierSignInButton" type="button">Iniciar sesion</button>
+              <button class="customer-map-button" id="courierSignUpButton" type="button">Crear cuenta</button>
+              <button class="customer-map-button" id="courierResetPasswordButton" type="button">Recuperar contrasena</button>
+              <button class="customer-map-button" id="courierResendVerificationButton" type="button">Reenviar verificacion</button>
+            </div>
+            <div class="password-recovery-panel" id="courierPasswordRecoveryPanel" hidden>
+              <label>
+                Nueva contrasena
+                <input id="courierNewPasswordInput" type="password" autocomplete="new-password" placeholder="Minimo 6 caracteres" />
+              </label>
+              <div class="customer-auth-actions">
+                <button class="customer-map-button" id="courierUpdatePasswordButton" type="button">Guardar nueva contrasena</button>
+                <button class="customer-map-button" id="courierCancelRecoveryButton" type="button">Cancelar</button>
+              </div>
             </div>
           </div>
-        </div>
-        <p class="customer-map-result" id="courierAuthMessage" hidden></p>
-      </section>
+          <p class="customer-map-result" id="courierAuthMessage" hidden></p>
+        </section>
 
-      <section class="customer-account-panel" aria-label="Solicitud de colaborador">
-        <div class="customer-account-head">
-          <div>
-            <h2>Solicitud</h2>
-            <p id="courierProfileStatus">Completa tus datos para revision.</p>
+        <section class="customer-account-panel" aria-label="Solicitud de colaborador">
+          <div class="customer-account-head">
+            <div>
+              <h3>Solicitud</h3>
+              <p id="courierProfileStatus">Completa tus datos para revision.</p>
+            </div>
+            <span class="courier-status-badge" id="courierStatusBadge">Sin enviar</span>
           </div>
-          <span class="courier-status-badge" id="courierStatusBadge">Sin enviar</span>
-        </div>
-        <div class="collaborator-form-grid">
+          <div class="collaborator-form-grid">
           <label>
             Nombre
             <input id="courierFirstNameInput" type="text" placeholder="Nombre" autocomplete="given-name" />
@@ -189,36 +243,36 @@
             <input id="courierTermsInput" type="checkbox" />
             <span>Acepto el contrato, terminos, politica de privacidad y tratamiento de datos para revision y entregas.</span>
           </label>
-        </div>
-        <div class="collaborator-actions">
-          <button class="customer-map-button" id="courierSaveProfileButton" type="button">Enviar solicitud</button>
-        </div>
-        <p class="customer-map-result" id="courierProfileMessage" hidden></p>
-      </section>
-
-      <section class="customer-account-panel courier-dashboard" id="courierDashboard" aria-label="Panel del colaborador" hidden>
-        <div class="customer-account-head">
-          <div>
-            <h2>Panel</h2>
-            <p id="courierDashboardText">Cuando tu perfil sea aprobado, podras recibir pedidos.</p>
           </div>
-          <button class="customer-map-button" id="courierAvailabilityButton" type="button" disabled>Disponible</button>
-        </div>
-        <div class="courier-steps">
-          <button id="courierArrivedRestaurantButton" type="button" disabled>Llegue al restaurante</button>
-          <button id="courierPickedUpButton" type="button" disabled>Pedido recogido</button>
-          <button id="courierArrivedCustomerButton" type="button" disabled>Llegue al cliente</button>
-          <button id="courierDeliveredButton" type="button" disabled>Pedido entregado</button>
-        </div>
-        <div class="collaborator-actions">
-          <button class="customer-map-button" id="courierShareLocationButton" type="button">Compartir ubicacion actual</button>
-          <button class="customer-map-button" id="courierOpenGpsButton" type="button" disabled>Abrir GPS</button>
-          <button class="customer-map-button" id="courierRefreshOffersButton" type="button">Actualizar pedidos</button>
-        </div>
-        <p class="customer-map-result" id="courierLocationMessage" hidden></p>
-        <div class="courier-offers-list" id="courierOffersList" aria-live="polite"></div>
+          <div class="collaborator-actions">
+            <button class="customer-map-button" id="courierSaveProfileButton" type="button">Enviar solicitud</button>
+          </div>
+          <p class="customer-map-result" id="courierProfileMessage" hidden></p>
+        </section>
+
+        <section class="customer-profile-settings">
+          <label class="app-language-inline">
+            <span>Idioma</span>
+            <select id="autoLanguageSelect">
+              <option value="es">Espanol</option>
+              <option value="pl">Polski</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+          <nav class="role-link-row" aria-label="Cambiar entorno">
+            <a href="index.html">Restaurante</a>
+            <a href="cliente.html">Cliente</a>
+          </nav>
+        </section>
       </section>
     </main>
+
+    <nav class="customer-bottom-nav collaborator-bottom-nav" aria-label="Navegacion del colaborador">
+      <button type="button" data-courier-view-target="home">Inicio</button>
+      <button type="button" data-courier-view-target="active">Entrega activa</button>
+      <button type="button" data-courier-view-target="history">Historial</button>
+      <button type="button" data-courier-view-target="profile" aria-current="page">Perfil</button>
+    </nav>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>

@@ -209,6 +209,20 @@ Fecha: 29/07/2026
 - V67 no crea funciones, triggers, tablas ni policies; no borra datos y no modifica contrasenas.
 - V67 activa platform_admin solamente si la cuenta Auth exacta ya existe.
 - Cache PWA actualizado a rc-ordera-v67.
+
+VERSION v68 - EXPERIENCIA DE CLIENTE Y COLABORADOR
+- Cliente organizado en Inicio, Restaurante, Pedidos, Reservas y Perfil sin cambiar la logica de autenticacion, menu, carrito, pedidos, chat o historial.
+- Los accesos de cliente aparecen solo en Perfil y se ocultan cuando existe una sesion valida.
+- La lista de restaurantes utiliza tarjetas completas seleccionables; el menu se abre en una vista propia del restaurante.
+- Los controles manuales de actualizacion se cambiaron por acciones discretas.
+- Pedido activo e historial quedaron separados.
+- Colaborador organizado en Inicio, Entrega activa, Historial y Perfil.
+- En una entrega activa se muestra solamente la siguiente accion valida para su estado.
+- Se conserva la carga de documentos, aprobacion, disponibilidad, ubicacion, GPS y asignacion existentes.
+- Se retiro el pais fijo de la direccion usada para calcular rutas, evitando forzar Polonia cuando el restaurante opera en Colombia.
+- Restaurante y Administracion no fueron redisenados; se verifico sintaxis y referencias para evitar regresiones.
+- Cache PWA actualizado a rc-ordera-v68 y enlaces QR marcados como v68.
+- No se requiere migracion SQL para v68.
 - Validacion local: sintaxis, referencias HTML, ausencia de claves privadas y caracter no destructivo de V67: OK.
 - Pendiente real: ejecutar V67 y revisar Authentication Logs para confirmar si Supabase entrega el correo.
 

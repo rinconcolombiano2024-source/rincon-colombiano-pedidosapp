@@ -46,6 +46,16 @@ const customerElements = {
   refreshHistoryButton: document.querySelector("#customerRefreshHistoryButton"),
   refreshMenuButton: document.querySelector("#customerRefreshMenuButton"),
   tableLabel: document.querySelector("#customerTableLabel"),
+  topLocation: document.querySelector("#customerTopLocation"),
+  views: Array.from(document.querySelectorAll("[data-customer-view]")),
+  viewButtons: Array.from(document.querySelectorAll("[data-customer-view-target]")),
+  backToRestaurantsButton: document.querySelector("#customerBackToRestaurantsButton"),
+  selectedRestaurantDescription: document.querySelector("#customerSelectedRestaurantDescription"),
+  selectedRestaurantAddress: document.querySelector("#customerSelectedRestaurantAddress"),
+  selectedRestaurantDelivery: document.querySelector("#customerSelectedRestaurantDelivery"),
+  selectedRestaurantStatus: document.querySelector("#customerSelectedRestaurantStatus"),
+  noActiveOrder: document.querySelector("#customerNoActiveOrder"),
+  profileDetails: document.querySelector("#customerProfileDetails"),
   categoryTabs: document.querySelector("#customerCategoryTabs"),
   menuSearchInput: document.querySelector("#customerMenuSearchInput"),
   menuSearchClearButton: document.querySelector("#customerMenuSearchClearButton"),
@@ -92,6 +102,28 @@ const CUSTOMER_I18N = {
     menuUpdated: "Menu actualizado.",
     heroSubtitle: "Escanea, elige y envia tu pedido.",
     warning: "App de prueba: si algo sale diferente, el restaurante confirmara el pedido y cualquier ajuste antes de prepararlo.",
+    testEnvironment: "Entorno de prueba",
+    homeEyebrow: "Cerca de ti",
+    deliveryLocation: "Direccion de entrega",
+    locationNotSet: "Agrega una direccion al hacer tu pedido",
+    navHome: "Inicio",
+    navOrders: "Pedidos",
+    navReservations: "Reservas",
+    navProfile: "Perfil",
+    customerNavigationAria: "Navegacion del cliente",
+    backToRestaurants: "Volver",
+    restaurantOpen: "Abierto",
+    deliveryCalculatedAtCheckout: "Domicilio calculado con tu direccion",
+    ordersEyebrow: "Seguimiento",
+    activeOrderTitle: "Pedido activo",
+    noActiveOrder: "No tienes un pedido activo.",
+    reservationsEyebrow: "Tus mesas",
+    reservationsEmpty: "No tienes reservas registradas.",
+    profileEyebrow: "Cuenta y preferencias",
+    profileName: "Nombre",
+    profilePhone: "Telefono",
+    profileAddress: "Direccion",
+    profileNotSet: "Sin registrar",
     privacySummary: "Privacidad y datos",
     legalNotice: "Usamos los datos que escribes para crear tu cuenta, preparar el pedido, entregarlo, guardar historial y responder por chat. La app usa cookies tecnicas/localStorage para mantener sesion, idioma, carrito y funcionamiento.",
     accountPanelAria: "Cuenta del cliente",
@@ -304,6 +336,28 @@ const CUSTOMER_I18N = {
     menuUpdated: "Menu zaktualizowane.",
     heroSubtitle: "Zeskanuj, wybierz i wyslij zamowienie.",
     warning: "Aplikacja testowa: jesli cos bedzie nie tak, restauracja potwierdzi zamowienie i korekty przed przygotowaniem.",
+    testEnvironment: "Srodowisko testowe",
+    homeEyebrow: "W poblizu",
+    deliveryLocation: "Adres dostawy",
+    locationNotSet: "Dodaj adres podczas skladania zamowienia",
+    navHome: "Start",
+    navOrders: "Zamowienia",
+    navReservations: "Rezerwacje",
+    navProfile: "Profil",
+    customerNavigationAria: "Nawigacja klienta",
+    backToRestaurants: "Wstecz",
+    restaurantOpen: "Otwarte",
+    deliveryCalculatedAtCheckout: "Dostawa obliczana dla Twojego adresu",
+    ordersEyebrow: "Sledzenie",
+    activeOrderTitle: "Aktywne zamowienie",
+    noActiveOrder: "Nie masz aktywnego zamowienia.",
+    reservationsEyebrow: "Twoje stoliki",
+    reservationsEmpty: "Nie masz zapisanych rezerwacji.",
+    profileEyebrow: "Konto i preferencje",
+    profileName: "Imie i nazwisko",
+    profilePhone: "Telefon",
+    profileAddress: "Adres",
+    profileNotSet: "Brak danych",
     privacySummary: "Prywatnosc i dane",
     legalNotice: "Uzywamy podanych danych do utworzenia konta, przygotowania zamowienia, dostawy, historii i czatu. Aplikacja uzywa technicznego localStorage/cookies do sesji, jezyka, koszyka i dzialania.",
     accountPanelAria: "Konto klienta",
@@ -516,6 +570,28 @@ const CUSTOMER_I18N = {
     menuUpdated: "Menu updated.",
     heroSubtitle: "Scan, choose, and send your order.",
     warning: "Test app: if something is different, the restaurant will confirm the order and any adjustment before preparing it.",
+    testEnvironment: "Test environment",
+    homeEyebrow: "Near you",
+    deliveryLocation: "Delivery address",
+    locationNotSet: "Add an address when placing your order",
+    navHome: "Home",
+    navOrders: "Orders",
+    navReservations: "Reservations",
+    navProfile: "Profile",
+    customerNavigationAria: "Customer navigation",
+    backToRestaurants: "Back",
+    restaurantOpen: "Open",
+    deliveryCalculatedAtCheckout: "Delivery calculated for your address",
+    ordersEyebrow: "Tracking",
+    activeOrderTitle: "Active order",
+    noActiveOrder: "You do not have an active order.",
+    reservationsEyebrow: "Your tables",
+    reservationsEmpty: "You do not have any reservations.",
+    profileEyebrow: "Account and preferences",
+    profileName: "Name",
+    profilePhone: "Phone",
+    profileAddress: "Address",
+    profileNotSet: "Not provided",
     privacySummary: "Privacy and data",
     legalNotice: "We use the data you enter to create your account, prepare the order, deliver it, keep history, and answer by chat. The app uses technical cookies/localStorage for session, language, cart, and operation.",
     accountPanelAria: "Customer account",
@@ -1066,6 +1142,9 @@ function customerSetLanguage(language) {
   customerRenderAccount();
   customerRenderHistory();
   customerRenderRestaurantDirectory();
+  customerRenderLocationSummary();
+  customerRenderProfileDetails();
+  customerRenderSelectedRestaurantDetails();
 }
 
 function customerOrderTypeText(value) {
@@ -1116,6 +1195,7 @@ let customerChatLoadedOnce = false;
 let customerMenuRealtimeChannel = null;
 let customerMenuRealtimeStoreId = "";
 let customerMenuRealtimeTimer = null;
+let customerCurrentView = customerStoreId ? "store" : "home";
 
 const CUSTOMER_DELIVERY_RATES = {
   baseKm: 1.5,
@@ -1126,6 +1206,98 @@ const CUSTOMER_DELIVERY_RATES = {
   longPerKm: 2.5,
   extraLongPerKm: 3.5,
 };
+
+function customerSetView(view, options = {}) {
+  const allowedViews = new Set(["home", "store", "orders", "reservations", "profile"]);
+  let nextView = allowedViews.has(view) ? view : "home";
+  if (nextView === "store" && !customerStoreId) nextView = "home";
+  customerCurrentView = nextView;
+
+  customerElements.views.forEach((section) => {
+    section.hidden = section.dataset.customerView !== nextView;
+  });
+  customerElements.viewButtons.forEach((button) => {
+    const isCurrent = button.dataset.customerViewTarget === nextView;
+    if (isCurrent) button.setAttribute("aria-current", "page");
+    else button.removeAttribute("aria-current");
+  });
+  document.body.dataset.customerView = nextView;
+
+  if (nextView === "profile") customerRenderProfileDetails();
+  if (nextView === "orders") customerRenderActiveOrderState();
+  if (!options.keepScroll) window.scrollTo({ top: 0, behavior: options.instant ? "auto" : "smooth" });
+}
+
+function customerRenderLocationSummary() {
+  if (!customerElements.topLocation) return;
+  const address = customerNormalizeText(
+    customerElements.addressInput?.value || customerElements.registerAddressInput?.value
+  );
+  const neighborhood = customerNormalizeText(
+    customerElements.neighborhoodInput?.value || customerElements.registerNeighborhoodInput?.value
+  );
+  const summary = [address, neighborhood].filter(Boolean).join(", ");
+  customerElements.topLocation.removeAttribute("data-i18n");
+  customerElements.topLocation.textContent = summary || customerT("locationNotSet");
+}
+
+function customerRenderProfileDetails() {
+  if (!customerElements.profileDetails) return;
+  const fullName = customerNormalizeText(
+    customerElements.nameInput?.value || customerElements.registerNameInput?.value
+  );
+  const phone = customerNormalizeText(
+    customerElements.phoneInput?.value || customerElements.registerPhoneInput?.value
+  );
+  const address = customerNormalizeText(
+    [
+      customerElements.addressInput?.value || customerElements.registerAddressInput?.value,
+      customerElements.neighborhoodInput?.value || customerElements.registerNeighborhoodInput?.value,
+    ]
+      .filter(Boolean)
+      .join(", ")
+  );
+  const fallback = customerT("profileNotSet");
+  customerElements.profileDetails.innerHTML = `
+    <div><span>${customerEscapeHtml(customerT("profileName"))}</span><strong>${customerEscapeHtml(fullName || fallback)}</strong></div>
+    <div><span>${customerEscapeHtml(customerT("profilePhone"))}</span><strong>${customerEscapeHtml(phone || fallback)}</strong></div>
+    <div><span>${customerEscapeHtml(customerT("profileAddress"))}</span><strong>${customerEscapeHtml(address || fallback)}</strong></div>
+  `;
+}
+
+function customerRenderSelectedRestaurantDetails() {
+  const selected = customerSelectedRestaurant();
+  const description = selected?.description || "";
+  const address = selected?.address || customerSettings.restaurantAddress || customerT("restaurantNoAddress");
+
+  if (customerElements.selectedRestaurantDescription) {
+    customerElements.selectedRestaurantDescription.textContent = description;
+    customerElements.selectedRestaurantDescription.hidden = !description;
+  }
+  if (customerElements.selectedRestaurantAddress) {
+    customerElements.selectedRestaurantAddress.textContent = address;
+  }
+  if (customerElements.selectedRestaurantStatus) {
+    customerElements.selectedRestaurantStatus.textContent = customerT("restaurantOpen");
+  }
+  if (customerElements.selectedRestaurantDelivery) {
+    const hasDistance = customerElements.orderType?.value === "Domicilio" && customerNormalizeDistance(customerElements.distanceInput?.value) > 0;
+    customerElements.selectedRestaurantDelivery.textContent = hasDistance
+      ? `${customerElements.distanceInput.value} km / ${customerFormatMoney(customerDeliveryFee())}`
+      : customerT("deliveryCalculatedAtCheckout");
+  }
+}
+
+function customerRenderActiveOrderState() {
+  if (!customerElements.noActiveOrder) return;
+  const hasActiveOrder = Boolean(
+    customerTrackedOrder ||
+      (customerElements.trackingStatus && !customerElements.trackingStatus.hidden) ||
+      (customerElements.paymentBox && !customerElements.paymentBox.hidden) ||
+      (customerElements.chatPanel && !customerElements.chatPanel.hidden)
+  );
+  customerElements.noActiveOrder.hidden = hasActiveOrder;
+}
 const CUSTOMER_PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 
 function customerRoundMoney(value) {
@@ -1311,6 +1483,8 @@ function customerApplyProfileFields(profile = {}) {
   customerSetInputIfEmpty(customerElements.neighborhoodInput, address.neighborhood);
   customerSetInputIfEmpty(customerElements.referenceInput, address.reference);
   customerSetInputIfEmpty(customerElements.distanceInput, address.distanceKm);
+  customerRenderLocationSummary();
+  customerRenderProfileDetails();
 }
 
 function customerProfileFromMetadata() {
@@ -1353,6 +1527,8 @@ function customerRenderAccount() {
       if (fallbackName) customerElements.nameInput.value = fallbackName;
     }
   }
+  customerRenderLocationSummary();
+  customerRenderProfileDetails();
 }
 
 function customerUrlLooksLikeRecovery() {
@@ -1741,6 +1917,7 @@ function customerOpenHistoryOrder(orderId) {
   customerStartStatusTracking(row.id, row.public_token, row.order_json?.paymentMethod || "", "");
   customerSetTrackingStatus(customerStatusText(row), customerStatusType(row.status));
   customerRenderPaymentBox(row.id, Number(row.total) || 0, row.order_json || {});
+  customerSetView("orders");
   customerElements.chatPanel?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -1755,6 +1932,7 @@ function customerSetTrackingStatus(message, type = "") {
   customerElements.trackingStatus.textContent = message;
   customerElements.trackingStatus.dataset.type = type;
   customerElements.trackingStatus.hidden = !message;
+  customerRenderActiveOrderState();
 }
 
 function customerEscapeHtml(value) {
@@ -1844,7 +2022,7 @@ function customerRenderRestaurantDirectory() {
   if (!customerElements.restaurantList) return;
 
   const selected = customerSelectedRestaurant();
-  const compactSingleRestaurant = Boolean(customerStoreId && selected && customerRestaurants.length === 1 && !customerRestaurantSearchQuery);
+  const compactSingleRestaurant = false;
   customerElements.restaurantPanel?.classList.toggle("is-compact", compactSingleRestaurant);
 
   if (customerElements.restaurantTitle) {
@@ -1908,25 +2086,25 @@ function customerRenderRestaurantDirectory() {
         .join("");
       return `
         <article class="customer-restaurant-card ${isSelected ? "is-selected" : ""}" data-store-id="${customerEscapeHtml(
-        restaurant.userId
-      )}">
+         restaurant.userId
+      )}" role="button" tabindex="0" aria-label="${customerEscapeHtml(`${restaurant.name}, ${restaurant.address || customerT("restaurantNoAddress")}`)}">
           ${
             restaurant.logoUrl
               ? `<img src="${customerEscapeHtml(restaurant.logoUrl)}" alt="${customerEscapeHtml(restaurant.name)}" loading="lazy" />`
               : `<div class="customer-restaurant-initials">${customerEscapeHtml(initials || "R")}</div>`
           }
-          <div class="customer-restaurant-info">
-            <strong>${customerEscapeHtml(restaurant.name)}</strong>
-            <span>${customerEscapeHtml(restaurant.address || customerT("restaurantNoAddress"))}</span>
-            ${restaurant.phone ? `<small>${customerEscapeHtml(restaurant.phone)}</small>` : ""}
-          </div>
-          <button class="customer-map-button" type="button" data-action="choose-restaurant" ${
-            isSelected ? "disabled" : ""
-          }>${customerEscapeHtml(isSelected ? customerT("restaurantCurrent") : customerT("restaurantChoose"))}</button>
-        </article>
-      `;
+           <div class="customer-restaurant-info">
+             <strong>${customerEscapeHtml(restaurant.name)}</strong>
+             <small class="customer-restaurant-state">${customerEscapeHtml(customerT("restaurantOpen"))}</small>
+             <span>${customerEscapeHtml(restaurant.address || customerT("restaurantNoAddress"))}</span>
+             <small>${customerEscapeHtml(customerT("deliveryCalculatedAtCheckout"))}</small>
+           </div>
+           <span class="customer-restaurant-chevron" aria-hidden="true">&gt;</span>
+         </article>
+       `;
     })
     .join("");
+  customerRenderSelectedRestaurantDetails();
 }
 
 async function customerLoadRestaurantDirectory(options = {}) {
@@ -1976,13 +2154,15 @@ async function customerSelectRestaurant(storeId, options = {}) {
   if (options.updateUrl !== false) {
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("store", customerStoreId);
-    nextUrl.searchParams.set("app", "v66");
+    nextUrl.searchParams.set("app", "v68");
     window.history.replaceState({}, "", nextUrl.toString());
   }
 
   customerApplyMenuSearch("");
   customerRenderRestaurantDirectory();
   await customerLoadMenu({ skipDirectory: true });
+  customerRenderSelectedRestaurantDetails();
+  customerSetView("store");
 }
 
 async function customerFetchPublicMenu(storeId) {
@@ -2186,6 +2366,7 @@ function customerApplyBusinessName() {
   const appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
   if (appleTitle) appleTitle.setAttribute("content", name);
   customerRenderRestaurantDirectory();
+  customerRenderSelectedRestaurantDetails();
 }
 
 function customerNormalizeDistance(value) {
@@ -2234,7 +2415,6 @@ function customerDeliveryDestination() {
   return [
     customerElements.addressInput.value.trim(),
     customerElements.neighborhoodInput.value.trim(),
-    "Poland",
   ].filter(Boolean).join(", ");
 }
 
@@ -2366,9 +2546,10 @@ async function customerUseLocation() {
       customerSetMapResult(customerT("locationReceived"), "ok");
       customerElements.useLocationButton.disabled = false;
 
-      if (customerSettings.googleMapsApiKey) {
-        const addressFilled = await customerReverseGeocodeLocation(customerLocationCoords);
-        customerSetMapResult(
+       if (customerSettings.googleMapsApiKey) {
+         const addressFilled = await customerReverseGeocodeLocation(customerLocationCoords);
+         customerRenderLocationSummary();
+         customerSetMapResult(
           addressFilled ? customerT("locationAddressFilled") : customerT("locationAddressUnavailable"),
           addressFilled ? "ok" : ""
         );
@@ -2413,7 +2594,8 @@ async function customerCalculateDistanceWithMaps() {
     await customerLoadGoogleMaps();
     const destination = customerDeliveryDestinationForMaps();
     customerMapDistance = await customerGetGoogleMapsDistance(origin, destination);
-    customerElements.distanceInput.value = customerMapDistance.distanceKm;
+     customerElements.distanceInput.value = customerMapDistance.distanceKm;
+     customerRenderLocationSummary();
     customerSetMapResult(
       customerT("mapsResult", {
         distance: customerMapDistance.distanceText,
@@ -2466,6 +2648,7 @@ function customerRenderDeliveryFields() {
     customerSetMapResult(customerT("manualDistanceHelp"), "");
   }
   customerRenderCart();
+  customerRenderLocationSummary();
 }
 
 function customerDeliveryPayload() {
@@ -2504,6 +2687,7 @@ function customerClearPaymentBox() {
   if (!customerElements.paymentBox) return;
   customerElements.paymentBox.hidden = true;
   customerElements.paymentBox.innerHTML = "";
+  customerRenderActiveOrderState();
 }
 
 function customerRenderPaymentBox(orderId, total, payload) {
@@ -2536,6 +2720,7 @@ function customerRenderPaymentBox(orderId, total, payload) {
     ${actionHtml}
   `;
   customerElements.paymentBox.hidden = false;
+  customerRenderActiveOrderState();
 }
 
 async function customerRequestNotificationPermission() {
@@ -2671,6 +2856,7 @@ function customerStartChat(orderId, publicToken) {
   customerKnownChatMessageIds = new Set();
   customerChatLoadedOnce = false;
   customerElements.chatPanel.hidden = false;
+  customerRenderActiveOrderState();
   customerRenderChatMessages([]);
   customerSetChatStatus("");
   customerLoadChatMessages().catch(() => {});
@@ -2996,6 +3182,7 @@ function customerRenderCart() {
   customerElements.deliveryFeeRow.hidden = customerElements.orderType.value !== "Domicilio";
   customerElements.deliveryFeeLabel.textContent = customerFormatMoney(customerDeliveryFee());
   customerElements.sendButton.disabled = customerCart.length === 0;
+  customerRenderSelectedRestaurantDetails();
 }
 
 function customerAddItem(dish) {
@@ -3070,11 +3257,6 @@ async function customerLoadMenu(options = {}) {
     await customerLoadRestaurantDirectory({ silent: true });
   }
 
-  if (!customerStoreId && customerRestaurants.length === 1) {
-    await customerSelectRestaurant(customerRestaurants[0].userId);
-    return;
-  }
-
   if (!customerStoreId) {
     customerStopMenuRealtime();
     customerMenu = CUSTOMER_DEFAULT_MENU;
@@ -3084,6 +3266,7 @@ async function customerLoadMenu(options = {}) {
     customerRenderCategories();
     customerRenderMenu();
     customerRenderCart();
+    customerSetView("home", { keepScroll: true });
     return;
   }
 
@@ -3105,8 +3288,8 @@ async function customerLoadMenu(options = {}) {
   }
 
   customerSettings = {
-    businessName: customerNormalizeBusinessName(data.settings?.businessName),
-    businessLogoUrl: customerNormalizeText(data.settings?.businessLogoUrl),
+    businessName: customerNormalizeBusinessName(data.settings?.businessName || customerSelectedRestaurant()?.name),
+    businessLogoUrl: customerNormalizeText(data.settings?.businessLogoUrl || customerSelectedRestaurant()?.logoUrl),
     currencySymbol: data.settings?.currencySymbol || "$",
     currencyPosition: data.settings?.currencyPosition === "after" ? "after" : "before",
     moneyFormat: data.settings?.moneyFormat === "eu" ? "eu" : "us",
@@ -3118,6 +3301,7 @@ async function customerLoadMenu(options = {}) {
     bankTransferNote: customerNormalizeText(data.settings?.bankTransferNote),
   };
   customerApplyBusinessName();
+  customerRenderSelectedRestaurantDetails();
 
   const loadedMenu = customerNormalizeMenu(data.menu || {});
   if (!customerMenuProductCount(loadedMenu)) {
@@ -3142,6 +3326,7 @@ async function customerLoadMenu(options = {}) {
   customerRenderMenu();
   customerRenderDeliveryFields();
   customerRenderCart();
+  customerRenderSelectedRestaurantDetails();
 }
 
 async function customerRefreshMenu() {
@@ -3259,6 +3444,7 @@ async function customerSendOrder() {
   customerRenderCart();
   customerSetStatus(customerT("orderSent"), "ok");
   customerLoadHistory().catch(() => {});
+  customerSetView("orders");
 }
 
 customerElements.categoryTabs.addEventListener("click", (event) => {
@@ -3339,9 +3525,18 @@ customerElements.restaurantSearchInput?.addEventListener("input", () => {
 });
 customerElements.refreshRestaurantsButton?.addEventListener("click", () => customerLoadRestaurantDirectory());
 customerElements.restaurantList?.addEventListener("click", (event) => {
-  const button = event.target.closest('button[data-action="choose-restaurant"]');
   const card = event.target.closest(".customer-restaurant-card");
-  if (!button || !card) return;
+  if (!card) return;
+  customerSelectRestaurant(card.dataset.storeId).catch((error) => {
+    console.error(error);
+    customerSetStatus(customerT("menuLoadError"), "error");
+  });
+});
+customerElements.restaurantList?.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  const card = event.target.closest(".customer-restaurant-card");
+  if (!card) return;
+  event.preventDefault();
   customerSelectRestaurant(card.dataset.storeId).catch((error) => {
     console.error(error);
     customerSetStatus(customerT("menuLoadError"), "error");
@@ -3359,7 +3554,10 @@ customerElements.notesInput.addEventListener("input", () => {
   customerElements.notesInput.value = customerNormalizeNoteDraft(customerElements.notesInput.value);
 });
 
-customerElements.orderType.addEventListener("change", customerRenderDeliveryFields);
+customerElements.orderType.addEventListener("change", () => {
+  customerRenderDeliveryFields();
+  customerRenderSelectedRestaurantDetails();
+});
 customerElements.paymentMethod.addEventListener("change", customerRenderCart);
 customerElements.distanceInput.addEventListener("input", customerRenderCart);
 customerElements.languageSelect.addEventListener("change", () => customerSetLanguage(customerElements.languageSelect.value));
@@ -3375,6 +3573,28 @@ customerElements.useLocationButton.addEventListener("click", customerUseLocation
 customerElements.calculateDistanceButton.addEventListener("click", customerCalculateDistanceWithMaps);
 customerElements.chatSendButton.addEventListener("click", customerSendChatMessage);
 customerElements.sendButton.addEventListener("click", customerSendOrder);
+customerElements.backToRestaurantsButton?.addEventListener("click", () => customerSetView("home"));
+customerElements.viewButtons.forEach((button) => {
+  button.addEventListener("click", () => customerSetView(button.dataset.customerViewTarget));
+});
+
+[customerElements.registerAddressInput, customerElements.registerNeighborhoodInput].forEach((input) => {
+  input?.addEventListener("input", () => {
+    customerRenderLocationSummary();
+    customerRenderProfileDetails();
+  });
+});
+
+[customerElements.addressInput, customerElements.neighborhoodInput].forEach((input) => {
+  input?.addEventListener("input", () => {
+    customerMapDistance = null;
+    customerLocationCoords = null;
+    if (customerElements.distanceInput) customerElements.distanceInput.value = "";
+    customerRenderLocationSummary();
+    customerRenderProfileDetails();
+    customerRenderCart();
+  });
+});
 
 window.addEventListener("online", () => {
   if (!customerStoreId) return;
@@ -3410,6 +3630,10 @@ window.addEventListener(
 customerMountAuthDialog();
 customerApplyBusinessName();
 customerApplyTranslations();
+customerRenderLocationSummary();
+customerRenderProfileDetails();
+customerRenderActiveOrderState();
+customerSetView(customerCurrentView, { instant: true });
 if ("serviceWorker" in navigator && window.location.protocol.startsWith("http")) {
   navigator.serviceWorker.register("./service-worker.js").catch(() => {});
 }
