@@ -325,3 +325,19 @@ VERSION v56 - MEJORAS SOLICITADAS
 - Colaborador: botones para compartir ubicacion actual y abrir GPS.
 - Impresion: se redujo el espacio blanco al final del ticket.
 - Supabase: ejecutar MIGRACION-FASE5-V56-PEDIDOS-INVITADO-MEJORAS.sql para activar pedidos invitados.
+
+VERSION v71 - MESEROS, CAJA CENTRAL Y TICKETS COMPACTOS
+
+- Se agrego mesero.html como estacion movil separada para personal autorizado.
+- El propietario administra su personal desde el panel central.
+- El boton ahora se llama Estaciones y permite autorizar Mesero, Caja, Cocina, Empaque, Despacho o Encargado.
+- Cocina, Empaque y Despacho tienen tablero operativo propio y sincronizado en tiempo real.
+- El mesero envia pedidos con mesa, cliente, tipo, pago y notas; Supabase recalcula productos, precios y total.
+- La caja recibe pedidos de clientes y meseros en tiempo real, mantiene alarma y permite Aceptar e imprimir.
+- La sesion del mesero usa almacenamiento separado y no reemplaza la sesion de la caja.
+- Los pedidos pendientes del mesero se conservan localmente y se reintentan sin duplicarse al volver internet.
+- Se redujo el espacio final del ticket y se conserva el ancho configurable de la impresora.
+- Se evita mostrar la pantalla de inicio de sesion mientras se comprueba una sesion existente.
+- El cliente escucha cambios del perfil del restaurante; un restaurante eliminado/desactivado desaparece sin recargar.
+- MIGRACION-FASE1-V71-MESEROS-ESTACIONES.sql incluye Realtime, permisos, validacion segura y reparacion idempotente de eliminacion logica.
+- Cache PWA actualizado a rc-ordera-v71.

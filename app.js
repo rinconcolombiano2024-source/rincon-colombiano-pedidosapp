@@ -33,7 +33,7 @@ const STORAGE_KEYS = {
 
 const DEFAULT_BUSINESS_NAME = "RINCON COLOMBIANO";
 const DEFAULT_DELIVERY_MINIMUM_FEE = 20;
-const APP_VERSION = "v70";
+const APP_VERSION = "v71";
 const PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 const PLATFORM_APP_NAME = "RC ORDERA";
 
@@ -76,6 +76,7 @@ const elements = {
   openSignInButton: document.querySelector("#openSignInButton"),
   signOutButton: document.querySelector("#signOutButton"),
   qrButton: document.querySelector("#qrButton"),
+  waiterTeamButton: document.querySelector("#waiterTeamButton"),
   clientAlarmButton: document.querySelector("#clientAlarmButton"),
   clientOrdersButton: document.querySelector("#clientOrdersButton"),
   clientOrdersBadge: document.querySelector("#clientOrdersBadge"),
@@ -141,6 +142,17 @@ const elements = {
   clientOrdersDialog: document.querySelector("#clientOrdersDialog"),
   clientOrdersList: document.querySelector("#clientOrdersList"),
   refreshClientOrdersButton: document.querySelector("#refreshClientOrdersButton"),
+  waiterTeamDialog: document.querySelector("#waiterTeamDialog"),
+  waiterLinkInput: document.querySelector("#waiterLinkInput"),
+  copyWaiterLinkButton: document.querySelector("#copyWaiterLinkButton"),
+  openWaiterLinkButton: document.querySelector("#openWaiterLinkButton"),
+  waiterMemberEmailInput: document.querySelector("#waiterMemberEmailInput"),
+  waiterMemberNameInput: document.querySelector("#waiterMemberNameInput"),
+  waiterStationSelect: document.querySelector("#waiterStationSelect"),
+  authorizeWaiterButton: document.querySelector("#authorizeWaiterButton"),
+  waiterTeamMessage: document.querySelector("#waiterTeamMessage"),
+  waiterMembersList: document.querySelector("#waiterMembersList"),
+  refreshWaiterMembersButton: document.querySelector("#refreshWaiterMembersButton"),
   installAppButton: document.querySelector("#installAppButton"),
   installHelpDialog: document.querySelector("#installHelpDialog"),
   editMenuButton: document.querySelector("#editMenuButton"),
@@ -226,6 +238,7 @@ let editingNoteItemId = null;
 let toastTimer = null;
 let pendingClientOrders = [];
 let clientOrdersTimer = null;
+let clientOrdersChannel = null;
 let clientAlarmTimer = null;
 let clientAlarmAudioContext = null;
 let clientAlarmEnabled = readClientAlarmEnabled();
@@ -234,6 +247,7 @@ let clientChatLoadedOnce = false;
 const cloudState = {
   client: null,
   configured: false,
+  authChecked: false,
   ready: false,
   user: null,
   loading: false,
@@ -989,11 +1003,15 @@ function setAuthScreenVisible(visible) {
 }
 
 function renderCloudState(message = "") {
+  document.body.classList.toggle("auth-checking", !cloudState.authChecked);
+  if (!cloudState.authChecked) return;
+
   if (!cloudState.configured) {
     setAuthScreenVisible(false);
     elements.openSignInButton.hidden = true;
     elements.signOutButton.hidden = true;
     elements.qrButton.hidden = true;
+    if (elements.waiterTeamButton) elements.waiterTeamButton.hidden = true;
     elements.clientAlarmButton.hidden = true;
     elements.clientOrdersButton.hidden = true;
     stopClientAlarm();
@@ -1007,6 +1025,7 @@ function renderCloudState(message = "") {
   elements.openSignInButton.hidden = Boolean(cloudState.user) || cloudState.recoveringPassword;
   elements.signOutButton.hidden = !cloudState.user;
   elements.qrButton.hidden = false;
+  if (elements.waiterTeamButton) elements.waiterTeamButton.hidden = !cloudState.user;
   elements.clientAlarmButton.hidden = !cloudState.user;
   elements.clientOrdersButton.hidden = false;
   updateClientOrdersBadge();
@@ -1077,11 +1096,13 @@ function loadSupabaseLibrary() {
 async function initializeCloud() {
   cloudState.configured = hasSupabaseConfig();
   if (!cloudState.configured) {
+    cloudState.authChecked = true;
     renderCloudState();
     return;
   }
 
   if (!window.supabase?.createClient && !(await loadSupabaseLibrary())) {
+    cloudState.authChecked = true;
     renderCloudState(hasKnownCloudSession() ? "" : "No se pudo cargar Supabase. Revisa la conexion a internet.");
     return;
   }
@@ -1091,6 +1112,7 @@ async function initializeCloud() {
   const { data, error } = await cloudState.client.auth.getSession();
   if (error) throw error;
   cloudState.user = data.session?.user || null;
+  cloudState.authChecked = true;
   if (cloudState.user) rememberCloudSession(cloudState.user);
   renderCloudState();
 
@@ -1107,6 +1129,7 @@ async function initializeCloud() {
     } else {
       pendingClientOrders = [];
       stopClientOrdersPolling();
+      stopClientOrdersRealtime();
       stopClientAlarm();
       updateClientOrdersBadge();
     }
@@ -1220,6 +1243,7 @@ async function loadCloudData() {
       setCloudError(moduleError, { moduleOnly: true });
     }
     startClientOrdersPolling();
+    startClientOrdersRealtime();
     updateCloudStatus();
     maybeAskShiftServer();
     return { ok: true, warning: cloudState.moduleWarning };
@@ -1677,6 +1701,31 @@ function stopClientOrdersPolling() {
   }
 }
 
+function stopClientOrdersRealtime() {
+  if (clientOrdersChannel && cloudState.client?.removeChannel) {
+    cloudState.client.removeChannel(clientOrdersChannel).catch(() => {});
+  }
+  clientOrdersChannel = null;
+}
+
+function startClientOrdersRealtime() {
+  stopClientOrdersRealtime();
+  if (!canUseCustomerModule()) return;
+  clientOrdersChannel = cloudState.client
+    .channel(`restaurant-incoming-orders-${cloudState.user.id}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "customer_orders",
+        filter: `user_id=eq.${cloudState.user.id}`,
+      },
+      () => refreshClientOrders({ silent: true }).catch(() => {})
+    )
+    .subscribe();
+}
+
 async function refreshClientOrders(options = {}) {
   const { silent = false } = options;
   const previousIds = new Set(pendingClientOrders.filter((order) => order.status === "pending").map((order) => order.id));
@@ -1684,14 +1733,14 @@ async function refreshClientOrders(options = {}) {
     pendingClientOrders = [];
     updateClientOrdersBadge();
     if (elements.clientOrdersDialog.open) {
-      elements.clientOrdersList.innerHTML = `<div class="monthly-empty">Inicia sesion para recibir pedidos de clientes.</div>`;
+      elements.clientOrdersList.innerHTML = `<div class="monthly-empty">Inicia sesion para recibir pedidos de clientes y meseros.</div>`;
     }
     return;
   }
 
   if (!navigator.onLine) {
     if (!silent || elements.clientOrdersDialog.open) {
-      elements.clientOrdersList.innerHTML = `<div class="monthly-empty">Sin internet. Los pedidos del cliente necesitan conexion.</div>`;
+      elements.clientOrdersList.innerHTML = `<div class="monthly-empty">Sin internet. Los pedidos recibidos necesitan conexion.</div>`;
     }
     return;
   }
@@ -1699,18 +1748,29 @@ async function refreshClientOrders(options = {}) {
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
 
-  const { data, error } = await cloudState.client
+  let { data, error } = await cloudState.client
     .from("customer_orders")
-    .select("id, status, table_label, customer_name, order_type, order_json, total, created_at, assigned_courier_user_id, courier_assignment_status")
+    .select("id, status, table_label, customer_name, order_type, order_json, total, created_at, assigned_courier_user_id, courier_assignment_status, source, created_by_user_id, server_name, station_status")
     .eq("user_id", cloudState.user.id)
     .in("status", ["pending", "accepted", "sent"])
     .gte("created_at", startOfDay.toISOString())
     .order("created_at", { ascending: true })
     .limit(100);
 
+  if (error && /source|created_by_user_id|server_name|column/i.test(String(error.message || ""))) {
+    ({ data, error } = await cloudState.client
+      .from("customer_orders")
+      .select("id, status, table_label, customer_name, order_type, order_json, total, created_at, assigned_courier_user_id, courier_assignment_status")
+      .eq("user_id", cloudState.user.id)
+      .in("status", ["pending", "accepted", "sent"])
+      .gte("created_at", startOfDay.toISOString())
+      .order("created_at", { ascending: true })
+      .limit(100));
+  }
+
   if (error) {
     if (!silent || elements.clientOrdersDialog.open) {
-      elements.clientOrdersList.innerHTML = `<div class="monthly-empty">No se pudieron cargar pedidos de clientes. Revisa internet, inicia sesion y vuelve a intentar.</div>`;
+      elements.clientOrdersList.innerHTML = `<div class="monthly-empty">No se pudieron cargar los pedidos recibidos. Revisa internet, inicia sesion y vuelve a intentar.</div>`;
     }
     throw error;
   }
@@ -1727,10 +1787,17 @@ async function refreshClientOrders(options = {}) {
   updateClientOrdersBadge();
   renderClientOrders();
   if (newOrdersCount > 0) {
-    showToast(`${newOrdersCount} pedido cliente nuevo.`);
+    const waiterOrdersCount = pendingClientOrders.filter(
+      (order) => order.status === "pending" && !previousIds.has(order.id) && order.source === "waiter"
+    ).length;
+    showToast(
+      waiterOrdersCount === newOrdersCount
+        ? `${newOrdersCount} pedido de mesero nuevo.`
+        : `${newOrdersCount} pedido recibido.`
+    );
     showRestaurantNotification(
-      "Pedido cliente nuevo",
-      `${newOrdersCount} pedido pendiente esperando aceptacion.`
+      waiterOrdersCount === newOrdersCount ? "Pedido de mesero nuevo" : "Pedido nuevo",
+      `${newOrdersCount} pedido pendiente esperando aceptacion e impresion.`
     );
     syncClientAlarm();
   }
@@ -1884,7 +1951,7 @@ function renderClientChat(order) {
 function renderClientOrders() {
   if (!elements.clientOrdersList) return;
   if (!pendingClientOrders.length) {
-    elements.clientOrdersList.innerHTML = `<div class="monthly-empty">No hay pedidos de clientes de hoy.</div>`;
+    elements.clientOrdersList.innerHTML = `<div class="monthly-empty">No hay pedidos recibidos hoy.</div>`;
     return;
   }
 
@@ -1898,6 +1965,10 @@ function renderClientOrders() {
       const customerLabel = [order.table_label, order.customer_name].filter(Boolean).join(" - ") || "Cliente QR";
       const paymentMethod = paymentMethodLabel(order.order_json?.paymentMethod);
       const deliverySummary = formatDeliverySummary(order.order_json?.delivery);
+      const isWaiterOrder = order.source === "waiter" || order.order_json?.source === "waiter";
+      const sourceLabel = isWaiterOrder
+        ? `Mesero: ${order.server_name || order.order_json?.serverName || "Personal autorizado"}`
+        : "Pedido de cliente";
 
       return `
         <article class="client-order-card" data-client-order-id="${escapeHtml(order.id)}">
@@ -1905,6 +1976,7 @@ function renderClientOrders() {
             <div>
               <strong>${escapeHtml(customerLabel)}</strong>
               <span>${escapeHtml(orderTypeLabel(order.order_type))}${timeText ? ` / ${escapeHtml(timeText)}` : ""}</span>
+              <span class="client-order-source ${isWaiterOrder ? "is-waiter" : ""}">${escapeHtml(sourceLabel)}</span>
               <span>Estado: ${clientOrderStatusLabel(order.status)}</span>
               <span>Pago: ${escapeHtml(paymentMethod)}</span>
             </div>
@@ -2011,17 +2083,20 @@ function orderFromClientOrder(clientOrder) {
   const payload = clientOrder.order_json || {};
   const tableLabel = String(clientOrder.table_label || payload.table || "").trim();
   const customerName = String(clientOrder.customer_name || payload.customer || "").trim();
-  const customerLabel = [tableLabel, customerName].filter(Boolean).join(" - ") || "Cliente QR";
+  const isWaiterOrder = clientOrder.source === "waiter" || payload.source === "waiter";
+  const customerLabel = [tableLabel, customerName].filter(Boolean).join(" - ") || (isWaiterOrder ? "Pedido de mesero" : "Cliente QR");
   const clientNote = normalizeNoteText(payload.notes);
-  const qrNote = `PEDIDO CLIENTE QR ${String(clientOrder.id || "").slice(0, 8).toUpperCase()}`;
+  const sourceNote = `${isWaiterOrder ? "PEDIDO MESERO" : "PEDIDO CLIENTE QR"} ${String(clientOrder.id || "").slice(0, 8).toUpperCase()}`;
 
   return {
     ...createBlankOrder(),
     type: normalizeOrderType(clientOrder.order_type || payload.type),
     paymentMethod: normalizePaymentMethod(payload.paymentMethod),
     customer: customerLabel,
-    server: shiftServerName || elements.serverName.value.trim() || "Caja",
-    notes: [clientNote, qrNote].filter(Boolean).join(" | "),
+    server: isWaiterOrder
+      ? String(clientOrder.server_name || payload.serverName || "Mesero").trim()
+      : shiftServerName || elements.serverName.value.trim() || "Caja",
+    notes: [clientNote, sourceNote].filter(Boolean).join(" | "),
     delivery: normalizeDeliveryInfo(payload.delivery),
     items: clientOrderItems(clientOrder)
       .map((item) => ({
@@ -2054,15 +2129,28 @@ async function acceptClientOrder(orderId) {
   if (!(await upsertCurrentOrder())) return;
 
   const acceptedOrderId = currentOrder.id;
-  const { error } = await cloudState.client
+  let { error } = await cloudState.client
     .from("customer_orders")
     .update({
       status: "accepted",
+      station_status: "received",
       restaurant_order_id: acceptedOrderId,
       updated_at: new Date().toISOString(),
     })
     .eq("id", orderId)
     .eq("user_id", cloudState.user.id);
+
+  if (error && /station_status|column/i.test(String(error.message || ""))) {
+    ({ error } = await cloudState.client
+      .from("customer_orders")
+      .update({
+        status: "accepted",
+        restaurant_order_id: acceptedOrderId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", orderId)
+      .eq("user_id", cloudState.user.id));
+  }
 
   if (error) {
     alert("El pedido se guardo, pero no se pudo marcar como aceptado en la bandeja.");
@@ -2082,7 +2170,8 @@ async function acceptClientOrder(orderId) {
   renderPrintTicket(currentOrder);
   applyReceiptPrintStyle();
   window.print();
-  showToast(`Pedido cliente aceptado como ${formatTicket(currentOrder.ticketNumber)}.`);
+  const sourceLabel = clientOrder.source === "waiter" || clientOrder.order_json?.source === "waiter" ? "Pedido de mesero" : "Pedido de cliente";
+  showToast(`${sourceLabel} aceptado e impreso como ${formatTicket(currentOrder.ticketNumber)}.`);
 }
 
 async function updateClientOrderStatus(orderId, nextStatus, successMessage, options = {}) {
@@ -2314,18 +2403,166 @@ function openClientPage() {
   if (link) window.open(link, "_blank", "noopener");
 }
 
+function buildWaiterLink() {
+  if (!cloudState.user) return "";
+  const url = new URL("./mesero.html", window.location.href);
+  url.searchParams.set("store", cloudState.user.id);
+  url.searchParams.set("app", APP_VERSION);
+  return url.toString();
+}
+
+function setWaiterTeamMessage(message = "", type = "") {
+  if (!elements.waiterTeamMessage) return;
+  elements.waiterTeamMessage.textContent = message;
+  elements.waiterTeamMessage.dataset.type = type;
+  elements.waiterTeamMessage.hidden = !message;
+}
+
+function waiterMembershipError(error) {
+  const message = String(error?.message || "");
+  if (/Employee account was not found/i.test(message)) {
+    return "Ese correo aun no tiene cuenta. El empleado debe crearla desde el enlace del personal y confirmar su correo.";
+  }
+  if (/function .* does not exist|schema cache|PGRST202|42883/i.test(message)) {
+    return "Las estaciones del restaurante necesitan la migracion V71 en Supabase.";
+  }
+  if (/Restaurant owner profile is missing/i.test(message)) {
+    return "Primero completa y guarda el perfil del restaurante.";
+  }
+  return message || "No fue posible actualizar el equipo.";
+}
+
+function restaurantStationLabel(station) {
+  return {
+    waiter: "Mesero",
+    cashier: "Caja",
+    kitchen: "Cocina",
+    packing: "Empaque",
+    dispatch: "Despacho",
+    manager: "Encargado",
+  }[station] || "Personal";
+}
+
+function renderWaiterMembers(rows = []) {
+  if (!elements.waiterMembersList) return;
+  if (!rows.length) {
+    elements.waiterMembersList.innerHTML = `<div class="monthly-empty">Aun no hay personal autorizado.</div>`;
+    return;
+  }
+  elements.waiterMembersList.innerHTML = rows
+    .map(
+      (row) => `
+        <article class="waiter-member-row ${row.active ? "" : "is-inactive"}" data-member-id="${escapeHtml(row.member_user_id)}" data-station="${escapeHtml(row.station)}">
+          <div>
+            <strong>${escapeHtml(row.display_name || restaurantStationLabel(row.station))}</strong>
+            <small>${escapeHtml(row.member_email || "")}</small>
+          </div>
+          <span>${escapeHtml(restaurantStationLabel(row.station))}<br>${row.active ? "Activo" : "Desactivado"}</span>
+          <button type="button" data-action="toggle-waiter" data-next-active="${row.active ? "false" : "true"}">${row.active ? "Desactivar" : "Reactivar"}</button>
+        </article>`
+    )
+    .join("") || `<div class="monthly-empty">Aun no hay personal autorizado.</div>`;
+}
+
+async function loadWaiterMembers() {
+  if (!cloudState.client || !cloudState.user) return;
+  elements.waiterMembersList.innerHTML = `<div class="monthly-empty">Cargando equipo...</div>`;
+  const { data, error } = await cloudState.client.rpc("list_current_restaurant_staff");
+  if (error) {
+    renderWaiterMembers([]);
+    setWaiterTeamMessage(waiterMembershipError(error), "error");
+    return;
+  }
+  setWaiterTeamMessage("");
+  renderWaiterMembers(Array.isArray(data) ? data : []);
+}
+
+async function openWaiterTeamDialog() {
+  if (!cloudState.user) {
+    openSignInScreen();
+    return;
+  }
+  elements.waiterLinkInput.value = buildWaiterLink();
+  setWaiterTeamMessage("");
+  elements.waiterTeamDialog.showModal();
+  await loadWaiterMembers();
+}
+
+async function copyWaiterLink() {
+  const link = elements.waiterLinkInput.value;
+  if (!link) return;
+  try {
+    await navigator.clipboard.writeText(link);
+  } catch {
+    elements.waiterLinkInput.select();
+    document.execCommand?.("copy");
+  }
+  showToast("Enlace del personal copiado.");
+}
+
+function openWaiterLink() {
+  const link = elements.waiterLinkInput.value;
+  if (link) window.open(link, "_blank", "noopener");
+}
+
+async function authorizeWaiter() {
+  const email = elements.waiterMemberEmailInput.value.trim();
+  const displayName = elements.waiterMemberNameInput.value.trim();
+  const station = elements.waiterStationSelect?.value || "waiter";
+  const stationLabel = restaurantStationLabel(station);
+  if (!email) {
+    setWaiterTeamMessage("Escribe el correo del empleado.", "error");
+    elements.waiterMemberEmailInput.focus();
+    return;
+  }
+  elements.authorizeWaiterButton.disabled = true;
+  setWaiterTeamMessage(`Autorizando ${stationLabel.toLowerCase()}...`);
+  try {
+    const { error } = await cloudState.client.rpc("grant_current_restaurant_staff", {
+      p_email: email,
+      p_station: station,
+      p_display_name: displayName,
+    });
+    if (error) throw error;
+    elements.waiterMemberEmailInput.value = "";
+    elements.waiterMemberNameInput.value = "";
+    setWaiterTeamMessage(`${stationLabel} autorizado. Ya puede entrar desde su telefono.`, "ok");
+    await loadWaiterMembers();
+    showToast(`${stationLabel} autorizado correctamente.`);
+  } catch (error) {
+    setWaiterTeamMessage(waiterMembershipError(error), "error");
+  } finally {
+    elements.authorizeWaiterButton.disabled = false;
+  }
+}
+
+async function toggleWaiterMembership(memberId, station, nextActive) {
+  const { error } = await cloudState.client.rpc("set_current_restaurant_staff_active", {
+    p_member_user_id: memberId,
+    p_station: station,
+    p_active: nextActive,
+  });
+  if (error) {
+    setWaiterTeamMessage(waiterMembershipError(error), "error");
+    return;
+  }
+  const label = restaurantStationLabel(station);
+  showToast(nextActive ? `${label} reactivado.` : `${label} desactivado.`);
+  await loadWaiterMembers();
+}
+
 async function openClientOrdersDialog() {
   if (!cloudState.configured) {
-    alert("La conexion de la nube no esta configurada. Revisa Supabase antes de recibir pedidos de clientes.");
+    alert("La conexion de la nube no esta configurada. Revisa Supabase antes de recibir pedidos.");
     return;
   }
   if (!cloudState.user) {
-    alert("Inicia sesion para ver pedidos de clientes.");
+    alert("Inicia sesion para ver pedidos recibidos.");
     openSignInScreen();
     return;
   }
   elements.clientOrdersDialog.showModal();
-  elements.clientOrdersList.innerHTML = `<div class="monthly-empty">Cargando pedidos de clientes...</div>`;
+  elements.clientOrdersList.innerHTML = `<div class="monthly-empty">Cargando pedidos recibidos...</div>`;
   try {
     await refreshClientOrders();
   } catch (error) {
@@ -3879,17 +4116,27 @@ function applyReceiptPrintStyle() {
   style.textContent = `
     @media print {
       @page { margin: 0; size: ${width}mm auto; }
+      html, body {
+        width: ${width}mm !important;
+        min-height: 0 !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
       .print-ticket {
         box-sizing: border-box !important;
         width: ${contentWidth}mm !important;
-        padding: 2mm !important;
+        min-height: 0 !important;
+        height: auto !important;
+        padding: 1.5mm 2mm 0.5mm !important;
+        overflow: visible !important;
         break-after: auto !important;
         page-break-after: auto !important;
       }
       .print-ticket::after {
         content: "" !important;
         display: block !important;
-        height: 4mm !important;
+        height: 1mm !important;
       }
     }
   `;
@@ -4757,6 +5004,17 @@ elements.signOutButton.addEventListener("click", signOut);
 elements.closeRestaurantButton?.addEventListener("click", toggleRestaurantActive);
 elements.requestRestaurantDeletionButton?.addEventListener("click", requestRestaurantDeletion);
 elements.qrButton.addEventListener("click", openQrDialog);
+elements.waiterTeamButton?.addEventListener("click", openWaiterTeamDialog);
+elements.copyWaiterLinkButton?.addEventListener("click", copyWaiterLink);
+elements.openWaiterLinkButton?.addEventListener("click", openWaiterLink);
+elements.authorizeWaiterButton?.addEventListener("click", authorizeWaiter);
+elements.refreshWaiterMembersButton?.addEventListener("click", loadWaiterMembers);
+elements.waiterMembersList?.addEventListener("click", (event) => {
+  const button = event.target.closest('button[data-action="toggle-waiter"]');
+  const row = event.target.closest("[data-member-id]");
+  if (!button || !row) return;
+  toggleWaiterMembership(row.dataset.memberId, row.dataset.station, button.dataset.nextActive === "true");
+});
 elements.clientAlarmButton.addEventListener("click", toggleClientAlarm);
 elements.qrTableInput.addEventListener("input", updateQrPreview);
 elements.copyQrLinkButton.addEventListener("click", copyQrLink);
@@ -4927,6 +5185,7 @@ window.addEventListener("appinstalled", () => {
 window.addEventListener("beforeunload", () => {
   syncFormToOrder();
   saveCurrentOrderDraft();
+  stopClientOrdersRealtime();
 });
 
 let pullToRefreshStartY = 0;
@@ -4977,6 +5236,8 @@ renderOrder();
 renderHistory();
 initializeCloud().catch((error) => {
   console.error(error);
+  cloudState.authChecked = true;
+  renderCloudState();
   const friendlyMessage = navigator.onLine ? setCloudError(error) : "Sin internet. Puedes continuar con los datos guardados.";
   elements.authMessage.textContent = friendlyMessage;
 });

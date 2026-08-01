@@ -15,7 +15,7 @@
     <link rel="apple-touch-icon" href="app-icon-192.png" />
     <link rel="stylesheet" href="styles.css" />
   </head>
-  <body>
+  <body class="auth-checking">
     <section class="auth-screen" id="authScreen" hidden>
       <div class="auth-landing" aria-label="Acceso a la plataforma">
         <img class="brand-logo auth-brand-logo" id="authLogoImage" alt="Logo del restaurante" hidden />
@@ -141,9 +141,10 @@
           <button class="sign-in-top-button" id="openSignInButton" type="button">Iniciar sesion</button>
           <button class="sign-out-button" id="signOutButton" type="button" hidden>Cerrar sesion</button>
           <button class="sign-in-top-button" id="qrButton" type="button">QR cliente</button>
+          <button class="sign-in-top-button" id="waiterTeamButton" type="button">Estaciones</button>
           <button class="sign-in-top-button" id="clientAlarmButton" type="button">Activar alarma</button>
           <button class="sign-in-top-button client-orders-button" id="clientOrdersButton" type="button">
-            Pedidos cliente <span id="clientOrdersBadge" hidden>0</span>
+            Pedidos recibidos <span id="clientOrdersBadge" hidden>0</span>
           </button>
           <button class="install-button" id="installAppButton" type="button">Descargar app</button>
           <div class="ticket-counter" aria-live="polite">
@@ -636,6 +637,57 @@
         <div class="client-orders-list" id="clientOrdersList"></div>
         <div class="dialog-actions">
           <button id="refreshClientOrdersButton" value="default" type="button">Actualizar</button>
+          <button value="cancel" type="submit">Cerrar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="waiterTeamDialog" class="monthly-dialog">
+      <form method="dialog" class="monthly-form waiter-team-form">
+        <div class="monthly-dialog-header">
+          <div>
+            <p class="eyebrow">Equipo del restaurante</p>
+            <h2>Personal y estaciones</h2>
+          </div>
+          <button class="icon-button" value="cancel" type="submit" title="Cerrar" aria-label="Cerrar">
+            <span aria-hidden="true">x</span>
+          </button>
+        </div>
+        <p>El empleado crea su cuenta desde el enlace y el propietario autoriza aqui su estacion. Cada persona solo ve las acciones de su permiso.</p>
+        <label class="settings-wide-field">
+          Enlace para telefonos del personal
+          <div class="waiter-link-row">
+            <input id="waiterLinkInput" type="text" readonly />
+            <button id="copyWaiterLinkButton" type="button">Copiar</button>
+            <button id="openWaiterLinkButton" type="button">Abrir</button>
+          </div>
+        </label>
+        <div class="waiter-member-fields">
+          <label>
+            Correo del empleado
+            <input id="waiterMemberEmailInput" type="email" placeholder="mesero@correo.com" autocomplete="off" />
+          </label>
+          <label>
+            Nombre visible
+            <input id="waiterMemberNameInput" type="text" placeholder="Nombre del mesero" autocomplete="off" />
+          </label>
+          <label>
+            Estacion
+            <select id="waiterStationSelect">
+              <option value="waiter">Mesero</option>
+              <option value="cashier">Caja</option>
+              <option value="kitchen">Cocina</option>
+              <option value="packing">Empaque</option>
+              <option value="dispatch">Despacho</option>
+              <option value="manager">Encargado</option>
+            </select>
+          </label>
+          <button id="authorizeWaiterButton" type="button">Autorizar personal</button>
+        </div>
+        <p class="auth-message" id="waiterTeamMessage"></p>
+        <div class="waiter-members-list" id="waiterMembersList"></div>
+        <div class="dialog-actions">
+          <button id="refreshWaiterMembersButton" value="default" type="button">Actualizar</button>
           <button value="cancel" type="submit">Cerrar</button>
         </div>
       </form>

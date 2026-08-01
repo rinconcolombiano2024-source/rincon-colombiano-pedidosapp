@@ -2886,6 +2886,492 @@ dialog::backdrop {
   display: none;
 }
 
+body.auth-checking::before {
+  content: "Verificando sesion segura...";
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #f4f6f9;
+  color: #102038;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+body.auth-checking > :not(script) {
+  visibility: hidden;
+}
+
+.waiter-link-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+}
+
+.waiter-member-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.waiter-member-fields #authorizeWaiterButton {
+  min-height: 44px;
+}
+
+.waiter-members-list {
+  display: grid;
+  gap: 8px;
+  min-height: 80px;
+}
+
+.waiter-member-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.waiter-member-row span,
+.waiter-member-row small {
+  display: block;
+}
+
+.waiter-member-row.is-inactive {
+  opacity: 0.65;
+}
+
+.restaurant-station-board {
+  display: grid;
+  gap: 16px;
+  width: min(1080px, 100%);
+  margin: 0 auto;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-top: 5px solid var(--colombia-yellow);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: var(--shadow);
+}
+
+.restaurant-station-board[hidden] {
+  display: none;
+}
+
+.restaurant-station-help {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.restaurant-station-orders {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.restaurant-station-order {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--blue);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.restaurant-station-order header,
+.restaurant-station-order footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.restaurant-station-order h2,
+.restaurant-station-order p {
+  margin: 0;
+}
+
+.restaurant-station-items {
+  display: grid;
+  gap: 6px;
+  padding: 10px 0;
+  border-top: 1px dashed var(--line);
+  border-bottom: 1px dashed var(--line);
+}
+
+.restaurant-station-note {
+  padding: 10px;
+  border: 1px solid #e9bd35;
+  border-radius: 6px;
+  background: #fff8dd;
+  color: #151515;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.restaurant-station-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.restaurant-station-actions button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--green);
+  color: #ffffff;
+  font-weight: 900;
+}
+
+/* Estacion movil de mesero */
+.waiter-page {
+  min-height: 100vh;
+  margin: 0;
+  background: #f3f6f8;
+  color: #102038;
+}
+
+.waiter-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 72px;
+  padding: 10px max(16px, env(safe-area-inset-left));
+  border-bottom: 4px solid #f4cf24;
+  background: #1f8f4d;
+  color: #ffffff;
+}
+
+.waiter-brand,
+.waiter-session-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.waiter-brand img {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: #ffffff;
+}
+
+.waiter-brand span,
+.waiter-brand strong {
+  display: block;
+}
+
+.waiter-brand span {
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.waiter-brand strong {
+  font-size: 18px;
+}
+
+.waiter-status {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.waiter-status[data-type="error"] {
+  color: #ffe36d;
+}
+
+.waiter-status[data-type="offline"] {
+  color: #ffffff;
+}
+
+.waiter-session-actions button,
+.waiter-panel button,
+.waiter-auth-card button,
+.waiter-access-card button {
+  min-height: 44px;
+  border: 1px solid #cfd9e5;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #102038;
+  font-weight: 900;
+}
+
+.waiter-shell {
+  width: min(1440px, calc(100% - 24px));
+  margin: 0 auto;
+  padding: 20px 0 96px;
+}
+
+.waiter-auth-card,
+.waiter-access-card {
+  width: min(620px, 100%);
+  margin: 6vh auto 0;
+  padding: 24px;
+  border: 1px solid #d6dee8;
+  border-top: 5px solid #f4cf24;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 18px 50px rgba(16, 32, 56, 0.12);
+}
+
+.waiter-auth-card h1,
+.waiter-access-card h1 {
+  margin: 4px 0 8px;
+  font-size: 28px;
+}
+
+.waiter-auth-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.waiter-auth-form label,
+.waiter-order-fields label,
+.waiter-search,
+.waiter-notes {
+  display: grid;
+  gap: 6px;
+  color: #42526a;
+  font-weight: 800;
+}
+
+.waiter-auth-form input,
+.waiter-order-fields input,
+.waiter-order-fields select,
+.waiter-search input,
+.waiter-notes textarea,
+.waiter-cart-item input {
+  width: 100%;
+  min-height: 46px;
+  box-sizing: border-box;
+  border: 1px solid #cfd9e5;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #102038;
+  font: inherit;
+}
+
+.waiter-auth-actions {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.waiter-auth-actions button:first-child,
+.waiter-send-button {
+  border-color: #1f8f4d !important;
+  background: #1f8f4d !important;
+  color: #ffffff !important;
+}
+
+.waiter-mobile-nav {
+  display: none;
+}
+
+.waiter-layout {
+  display: grid;
+  grid-template-columns: minmax(360px, 1.15fr) minmax(360px, 0.95fr) minmax(280px, 0.7fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.waiter-panel {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid #d6dee8;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 12px 30px rgba(16, 32, 56, 0.08);
+}
+
+.waiter-order-panel {
+  position: sticky;
+  top: 92px;
+}
+
+.waiter-panel-heading,
+.waiter-total-row,
+.waiter-sent-card > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.waiter-panel-heading h2 {
+  margin: 2px 0 0;
+  font-size: 22px;
+}
+
+.waiter-search {
+  margin: 18px 0 12px;
+}
+
+.waiter-category-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: thin;
+}
+
+.waiter-category-tabs button {
+  flex: 0 0 auto;
+  padding: 0 14px;
+}
+
+.waiter-category-tabs button.is-active {
+  border-color: #1f8f4d;
+  background: #e9f7ef;
+  color: #126a38;
+}
+
+.waiter-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.waiter-product {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 10px;
+  min-height: 82px !important;
+  padding: 8px;
+  text-align: left;
+}
+
+.waiter-product:not(:has(img)) {
+  grid-template-columns: 1fr;
+}
+
+.waiter-product img {
+  width: 64px;
+  height: 64px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.waiter-product span,
+.waiter-product small {
+  display: block;
+}
+
+.waiter-product small {
+  margin-top: 8px;
+  color: #1f8f4d;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.waiter-product.is-unavailable {
+  opacity: 0.55;
+}
+
+.waiter-order-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.waiter-cart,
+.waiter-sent-list {
+  display: grid;
+  gap: 10px;
+}
+
+.waiter-cart-item,
+.waiter-sent-card {
+  padding: 12px;
+  border: 1px solid #d6dee8;
+  border-left: 4px solid #1f8f4d;
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+
+.waiter-cart-item > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.waiter-quantity {
+  display: grid;
+  grid-template-columns: 40px 36px 40px 1fr;
+  gap: 6px;
+  align-items: center;
+  margin: 10px 0;
+  text-align: center;
+}
+
+.waiter-quantity button {
+  min-height: 38px;
+}
+
+.waiter-cart-item input,
+.waiter-notes textarea {
+  padding: 10px;
+  text-transform: uppercase;
+  font-weight: 900;
+}
+
+.waiter-notes {
+  margin-top: 16px;
+}
+
+.waiter-total-row {
+  margin: 18px 0 10px;
+  padding-top: 14px;
+  border-top: 2px solid #102038;
+  font-size: 20px;
+}
+
+.waiter-send-button {
+  width: 100%;
+  min-height: 54px !important;
+}
+
+.waiter-send-button:disabled {
+  opacity: 0.55;
+}
+
+.waiter-sent-card {
+  border-left-color: #f4cf24;
+}
+
+.waiter-sent-card p {
+  margin: 10px 0;
+  color: #42526a;
+}
+
+.waiter-empty {
+  padding: 28px 16px;
+  border: 1px dashed #b9c6d6;
+  border-radius: 8px;
+  color: #607089;
+  text-align: center;
+  font-weight: 800;
+}
+
 @media (max-width: 1180px) {
   .workspace {
     grid-template-columns: minmax(300px, 0.9fr) minmax(420px, 1.1fr);
@@ -2977,8 +3463,105 @@ dialog::backdrop {
     display: grid;
   }
 
+  .waiter-link-row,
+  .waiter-member-fields,
+  .waiter-member-row,
+  .restaurant-station-orders {
+    grid-template-columns: 1fr;
+  }
+
   .monthly-table-row.header {
     display: none;
+  }
+}
+
+@media (max-width: 980px) {
+  .waiter-topbar {
+    align-items: flex-start;
+  }
+
+  .waiter-session-actions {
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
+  .waiter-shell {
+    width: min(100% - 16px, 760px);
+    padding-top: 10px;
+  }
+
+  .waiter-mobile-nav {
+    position: fixed;
+    right: 8px;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    left: 8px;
+    z-index: 30;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    padding: 6px;
+    border: 1px solid #cfd9e5;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 10px 28px rgba(16, 32, 56, 0.2);
+  }
+
+  .waiter-mobile-nav button {
+    min-height: 48px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    font-weight: 900;
+  }
+
+  .waiter-mobile-nav button.is-active {
+    background: #1f8f4d;
+    color: #ffffff;
+  }
+
+  .waiter-layout {
+    display: block;
+  }
+
+  .waiter-panel {
+    display: none;
+  }
+
+  .waiter-panel.is-mobile-active {
+    display: block;
+  }
+
+  .waiter-order-panel {
+    position: static;
+  }
+}
+
+@media (max-width: 560px) {
+  .waiter-brand strong {
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .waiter-status {
+    display: none;
+  }
+
+  .waiter-auth-card,
+  .waiter-access-card,
+  .waiter-panel {
+    padding: 16px;
+  }
+
+  .waiter-auth-form,
+  .waiter-auth-actions,
+  .waiter-order-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .waiter-menu-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -3002,7 +3585,9 @@ dialog::backdrop {
     width: auto;
     max-width: 100%;
     margin: 0;
-    padding: 4mm;
+    min-height: 0;
+    height: auto;
+    padding: 1.5mm 2mm 0.5mm;
     break-after: auto;
     page-break-after: auto;
     color: #000000;
@@ -3013,7 +3598,7 @@ dialog::backdrop {
   .print-ticket::after {
     content: "";
     display: block;
-    height: 4mm;
+    height: 1mm;
   }
 
   .print-ticket h1,

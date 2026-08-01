@@ -2038,7 +2038,7 @@ function customerClearRestaurantSelection(messageKey = "") {
 
   const nextUrl = new URL(window.location.href);
   nextUrl.searchParams.delete("store");
-  nextUrl.searchParams.set("app", "v70");
+  nextUrl.searchParams.set("app", "v71");
   window.history.replaceState({}, "", nextUrl.toString());
 
   customerApplyBusinessName();
@@ -2191,7 +2191,7 @@ async function customerSelectRestaurant(storeId, options = {}) {
   if (options.updateUrl !== false) {
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("store", customerStoreId);
-    nextUrl.searchParams.set("app", "v70");
+    nextUrl.searchParams.set("app", "v71");
     window.history.replaceState({}, "", nextUrl.toString());
   }
 
@@ -2283,6 +2283,20 @@ function customerStartMenuRealtime() {
         if (storeId !== customerStoreId) return;
         customerSetStatus(customerT("menuRealtimeConnecting"), "");
         customerScheduleMenuRealtimeRefetch();
+      }
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "restaurant_profiles",
+        filter: `user_id=eq.${storeId}`,
+      },
+      async () => {
+        if (storeId !== customerStoreId) return;
+        await customerLoadRestaurantDirectory({ silent: true });
+        if (storeId === customerStoreId) customerScheduleMenuRealtimeRefetch();
       }
     )
     .subscribe((status) => {

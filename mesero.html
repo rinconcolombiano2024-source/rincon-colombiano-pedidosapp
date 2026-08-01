@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>RC ORDERA - Estacion de restaurante</title>
+    <meta name="theme-color" content="#1f8f4d" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="app-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="app-icon-192.png" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="waiter-page">
+    <header class="waiter-topbar">
+      <div class="waiter-brand">
+        <img id="waiterLogo" alt="Logo del restaurante" hidden />
+        <div>
+          <span>RC ORDERA</span>
+          <strong id="waiterRestaurantName">Estacion de restaurante</strong>
+        </div>
+      </div>
+      <div class="waiter-session-actions">
+        <span id="waiterConnectionStatus" class="waiter-status">Verificando acceso...</span>
+        <button id="waiterSignOutButton" type="button" hidden>Cerrar sesion</button>
+      </div>
+    </header>
+
+    <main class="waiter-shell">
+      <section class="waiter-auth-card" id="waiterAuthCard" aria-live="polite">
+        <p class="eyebrow">Acceso de personal</p>
+        <h1>Estacion de restaurante</h1>
+        <p>Ingresa con tu cuenta. El propietario debe autorizar este correo en su panel.</p>
+        <form id="waiterAuthForm" class="waiter-auth-form">
+          <label>
+            Correo electronico
+            <input id="waiterEmail" type="email" autocomplete="email" required />
+          </label>
+          <label>
+            Contrasena
+            <input id="waiterPassword" type="password" autocomplete="current-password" minlength="6" required />
+          </label>
+          <div class="waiter-auth-actions">
+            <button id="waiterSignInButton" type="submit">Iniciar sesion</button>
+            <button id="waiterSignUpButton" type="button">Crear cuenta de empleado</button>
+          </div>
+        </form>
+        <p id="waiterAuthMessage" class="auth-message"></p>
+      </section>
+
+      <section class="waiter-access-card" id="waiterAccessCard" hidden>
+        <h1>Falta autorizacion</h1>
+        <p id="waiterAccessMessage">Pide al propietario que autorice tu correo en una estacion.</p>
+        <button id="waiterRetryAccessButton" type="button">Revisar autorizacion</button>
+      </section>
+
+      <section class="waiter-app" id="waiterApp" hidden>
+        <nav class="waiter-mobile-nav" aria-label="Secciones">
+          <button class="is-active" type="button" data-waiter-view="menu">Menu</button>
+          <button type="button" data-waiter-view="order">Pedido <span id="waiterCartBadge">0</span></button>
+          <button type="button" data-waiter-view="sent">Enviados</button>
+        </nav>
+
+        <div class="waiter-layout">
+          <section class="waiter-panel waiter-menu-panel" data-waiter-panel="menu">
+            <div class="waiter-panel-heading">
+              <div>
+                <p class="eyebrow">Menu del restaurante</p>
+                <h2>Agregar productos</h2>
+              </div>
+              <button id="waiterRefreshButton" type="button" title="Actualizar menu">Actualizar</button>
+            </div>
+            <label class="waiter-search">
+              Buscar producto
+              <input id="waiterSearchInput" type="search" placeholder="Nombre del plato" autocomplete="off" />
+            </label>
+            <div class="waiter-category-tabs" id="waiterCategoryTabs"></div>
+            <div class="waiter-menu-grid" id="waiterMenuGrid"></div>
+          </section>
+
+          <section class="waiter-panel waiter-order-panel" data-waiter-panel="order">
+            <div class="waiter-panel-heading">
+              <div>
+                <p class="eyebrow">Pedido actual</p>
+                <h2 id="waiterServerLabel">Mesero</h2>
+              </div>
+              <button id="waiterClearOrderButton" type="button">Limpiar</button>
+            </div>
+
+            <div class="waiter-order-fields">
+              <label>
+                Mesa
+                <input id="waiterTableInput" type="text" placeholder="Ej: Mesa 4" autocomplete="off" />
+              </label>
+              <label>
+                Cliente opcional
+                <input id="waiterCustomerInput" type="text" placeholder="Nombre" autocomplete="off" />
+              </label>
+              <label>
+                Tipo de pedido
+                <select id="waiterOrderType">
+                  <option value="Comer en el punto">Comer en el punto</option>
+                  <option value="Para llevar">Para llevar</option>
+                  <option value="Domicilio">Domicilio</option>
+                </select>
+              </label>
+              <label>
+                Metodo de pago
+                <select id="waiterPaymentMethod">
+                  <option value="Pago en caja">Pago en caja</option>
+                  <option value="Efectivo">Efectivo</option>
+                  <option value="Transferencia">Transferencia</option>
+                  <option value="Datafono">Datafono / tarjeta</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="waiter-cart" id="waiterCart"></div>
+            <label class="waiter-notes">
+              Notas para cocina
+              <textarea id="waiterNotes" rows="3" placeholder="SIN CEBOLLA, SALSA APARTE..."></textarea>
+            </label>
+            <div class="waiter-total-row">
+              <span>Total</span>
+              <strong id="waiterTotal">0</strong>
+            </div>
+            <button class="waiter-send-button" id="waiterSendOrderButton" type="button">Enviar a caja y cocina</button>
+            <p id="waiterOrderMessage" class="auth-message" aria-live="polite"></p>
+          </section>
+
+          <section class="waiter-panel waiter-sent-panel" data-waiter-panel="sent">
+            <div class="waiter-panel-heading">
+              <div>
+                <p class="eyebrow">Seguimiento</p>
+                <h2>Pedidos enviados</h2>
+              </div>
+              <button id="waiterRefreshSentButton" type="button">Actualizar</button>
+            </div>
+            <div id="waiterSentOrders" class="waiter-sent-list"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="restaurant-station-board" id="restaurantStationBoard" hidden>
+        <div class="waiter-panel-heading">
+          <div>
+            <p class="eyebrow" id="restaurantStationEyebrow">Estacion operativa</p>
+            <h1 id="restaurantStationTitle">Pedidos activos</h1>
+          </div>
+          <button id="restaurantStationRefreshButton" type="button">Actualizar</button>
+        </div>
+        <p id="restaurantStationHelp" class="restaurant-station-help"></p>
+        <div id="restaurantStationOrders" class="restaurant-station-orders" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <div class="toast-notice" id="waiterToast" role="status" aria-live="polite" hidden></div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="mesero.js"></script>
+  </body>
+</html>

@@ -1,0 +1,54 @@
+RC ORDERA - REPORTE DE VALIDACION V71
+
+FUNCIONES IMPLEMENTADAS
+
+- Estacion movil independiente para meseros.
+- Tableros operativos separados para Cocina, Empaque y Despacho.
+- Asignacion de Caja y Encargado con permiso para toma de pedidos.
+- Autorizacion y revocacion de meseros por el propietario.
+- Sesion de mesero separada de la sesion de caja.
+- Precios y totales validados en Supabase al enviar.
+- Pedidos de mesero sincronizados por Realtime con la caja central.
+- Consulta periodica de respaldo ante reconexion de Realtime.
+- Alarma de pedido pendiente y origen/nombre del mesero visibles.
+- Aceptacion, consecutivo, guardado e impresion desde la caja central.
+- Cola local del mesero ante perdida temporal de internet.
+- Ultima cola operativa visible sin internet en Cocina, Empaque y Despacho; las acciones sensibles esperan confirmacion de la nube.
+- Ticket compacto con alimentacion final minima.
+- Pantalla de acceso sin mostrar brevemente Iniciar sesion cuando la sesion aun se esta comprobando.
+- Eliminacion logica confirmada y sincronizada con el cliente.
+- Cache PWA actualizado a v71.
+
+PRUEBAS REALIZADAS
+
+- Sintaxis de todos los archivos JavaScript: OK.
+- Balance de reglas CSS: 658 aperturas / 658 cierres.
+- Identificadores HTML duplicados: ninguno.
+- Selectores JavaScript frente a HTML: OK en restaurante, cliente, mesero, colaborador y administrador.
+- Archivos esenciales de PWA y estacion de mesero: presentes.
+- Claves privadas service_role/sb_secret en archivos publicos: no encontradas.
+- Acceso inicial movil 390 x 844: sin desbordamiento horizontal.
+- Ventana de acceso restaurante movil: campos visibles y sin superposicion.
+- Acceso inicial escritorio 1366 x 768: distribucion correcta.
+- Estacion de mesero movil 390 x 844: formulario completo, sin desbordamiento y sin controles de administracion.
+- Perfil cliente movil: sin desbordamiento horizontal.
+- Migracion V71: no contiene DROP TABLE ni borrado de pedidos.
+
+SEGURIDAD VERIFICADA EN CODIGO
+
+- Solo un propietario autenticado y con restaurante activo puede autorizar personal.
+- El mesero solo obtiene acceso con membresia activa para ese restaurante.
+- Cocina, Empaque y Despacho solo pueden ejecutar las transiciones asignadas a su estacion.
+- Un restaurante inactivo bloquea la estacion del mesero.
+- El mesero no envia precios finales confiados desde el telefono: Supabase los recalcula con el menu real.
+- El identificador del pedido permite reintentos sin crear el mismo pedido dos veces.
+- La caja solo consulta y actualiza pedidos vinculados a su propio usuario de restaurante.
+
+PENDIENTE DE PRUEBA REAL
+
+- Ejecutar MIGRACION-FASE1-V71-MESEROS-ESTACIONES.sql en Supabase.
+- Publicar v71 en Vercel.
+- Probar con dos equipos y dos cuentas reales: propietario/caja y mesero.
+- Confirmar el corte fisico con el controlador de cada impresora termica.
+
+No se declara validada la comunicacion real de nube hasta completar esos cuatro pasos.
