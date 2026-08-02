@@ -3013,13 +3013,22 @@ body.auth-checking > :not(script) {
 
 .waiter-member-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(180px, 1fr) minmax(130px, auto) minmax(180px, auto);
   gap: 12px;
   align-items: center;
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #ffffff;
+}
+
+.waiter-member-row > div:first-child {
+  min-width: 0;
+}
+
+.waiter-member-row strong,
+.waiter-member-row small {
+  overflow-wrap: anywhere;
 }
 
 .waiter-member-row span,
@@ -3029,6 +3038,27 @@ body.auth-checking > :not(script) {
 
 .waiter-member-row.is-inactive {
   opacity: 0.65;
+}
+
+.waiter-member-row.is-pending {
+  border-color: #e0a800;
+  background: #fffaf0;
+}
+
+.waiter-member-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.waiter-member-actions button {
+  min-height: 42px;
+}
+
+.waiter-member-actions .secondary-action {
+  background: #ffffff;
+  color: var(--ink);
 }
 
 .restaurant-station-board {
@@ -3560,6 +3590,14 @@ body.auth-checking > :not(script) {
   .waiter-member-row,
   .restaurant-station-orders {
     grid-template-columns: 1fr;
+  }
+
+  .waiter-member-actions {
+    justify-content: stretch;
+  }
+
+  .waiter-member-actions button {
+    flex: 1 1 180px;
   }
 
   .monthly-table-row.header {

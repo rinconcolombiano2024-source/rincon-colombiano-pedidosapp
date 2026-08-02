@@ -604,7 +604,7 @@ async function waiterAuthorize() {
     waiterElements.app.hidden = true;
     waiterElements.stationBoard.hidden = true;
     waiterElements.accessCard.hidden = false;
-    waiterElements.accessMessage.textContent = `La cuenta ${waiterUser.email || "actual"} inicio sesion, pero aun no esta autorizada para una estacion de este restaurante.`;
+    waiterElements.accessMessage.textContent = `La cuenta ${waiterUser.email || "actual"} inicio sesion, pero la invitacion aun no esta activa. Pide al propietario que pulse Confirmar autorizacion y despues pulsa Activar autorizacion aqui.`;
     waiterSetStatus("Sin autorizacion", "error");
     return;
   }
@@ -637,6 +637,18 @@ async function waiterAuthorize() {
     await waiterLoadStationOrders();
   }
   waiterStartRealtime();
+}
+
+async function waiterActivateAuthorization() {
+  waiterElements.retryAccessButton.disabled = true;
+  waiterElements.retryAccessButton.textContent = "Activando...";
+  try {
+    await waiterAuthorize();
+    if (waiterMembership?.active) waiterShowToast("Autorizacion confirmada. Bienvenido a tu estacion.");
+  } finally {
+    waiterElements.retryAccessButton.disabled = false;
+    waiterElements.retryAccessButton.textContent = "Activar autorizacion";
+  }
 }
 
 async function waiterSignIn(event) {
@@ -746,7 +758,7 @@ async function waiterInitialize() {
 waiterElements.authForm.addEventListener("submit", waiterSignIn);
 waiterElements.signUpButton.addEventListener("click", waiterSignUp);
 waiterElements.signOutButton.addEventListener("click", waiterSignOut);
-waiterElements.retryAccessButton.addEventListener("click", waiterAuthorize);
+waiterElements.retryAccessButton.addEventListener("click", waiterActivateAuthorization);
 waiterElements.refreshButton.addEventListener("click", () => waiterLoadMenu().catch((error) => waiterSetMessage(waiterElements.orderMessage, error.message, "error")));
 waiterElements.refreshSentButton.addEventListener("click", waiterLoadSentOrders);
 waiterElements.stationRefreshButton.addEventListener("click", waiterLoadStationOrders);

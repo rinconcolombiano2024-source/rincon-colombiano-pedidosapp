@@ -372,3 +372,10 @@ CORRECCION V73 - COLA ADMINISTRATIVA DE COLABORADORES (02/08/2026)
 - El panel muestra mensajes claros ante migracion ausente o permiso denegado y evita solicitudes dobles.
 - Cache PWA actualizado a `rc-ordera-v73-admin-review`.
 - Ver `REPORTE-VALIDACION-V73-COLA-ADMIN-COLABORADORES.md`.
+
+CORRECCION V73 - CONFIRMACION VISIBLE DE PERSONAL (02/08/2026)
+- Las invitaciones pendientes muestran `Confirmar autorizacion` y `Cancelar invitacion`.
+- Confirmar vuelve a consultar Supabase y solo muestra exito cuando crea una membresia activa.
+- La estacion muestra `Activar autorizacion` para reclamar una invitacion valida del mismo correo.
+- Se corrigio la distribucion visual de nombre, correo, estado y botones en la tarjeta de personal.
+- Cache PWA actualizado a `rc-ordera-v73-staff-confirm`.

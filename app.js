@@ -2627,15 +2627,19 @@ function renderWaiterMembers(rows = []) {
       (row) => {
         const pending = row.pending === true;
         const statusLabel = pending ? "Invitacion pendiente" : row.active ? "Activo" : "Desactivado";
-        const buttonLabel = pending ? "Cancelar invitacion" : row.active ? "Desactivar" : "Reactivar";
+        const rowStateClass = pending ? "is-pending" : row.active ? "" : "is-inactive";
+        const actions = pending
+          ? `<button type="button" data-action="confirm-waiter">Confirmar autorizacion</button>
+             <button type="button" class="secondary-action" data-action="toggle-waiter" data-next-active="false">Cancelar invitacion</button>`
+          : `<button type="button" data-action="toggle-waiter" data-next-active="${row.active ? "false" : "true"}">${row.active ? "Desactivar" : "Reactivar"}</button>`;
         return `
-        <article class="waiter-member-row ${row.active ? "" : "is-inactive"}" data-member-id="${escapeHtml(row.member_user_id || "")}" data-member-email="${escapeHtml(row.member_email || "")}" data-station="${escapeHtml(row.station)}" data-pending="${pending}">
+        <article class="waiter-member-row ${rowStateClass}" data-member-id="${escapeHtml(row.member_user_id || "")}" data-member-email="${escapeHtml(row.member_email || "")}" data-member-name="${escapeHtml(row.display_name || "")}" data-station="${escapeHtml(row.station)}" data-pending="${pending}">
           <div>
             <strong>${escapeHtml(row.display_name || restaurantStationLabel(row.station))}</strong>
             <small>${escapeHtml(row.member_email || "")}</small>
           </div>
           <span>${escapeHtml(restaurantStationLabel(row.station))}<br>${statusLabel}</span>
-          <button type="button" data-action="toggle-waiter" data-next-active="${pending || row.active ? "false" : "true"}">${buttonLabel}</button>
+          <div class="waiter-member-actions">${actions}</div>
         </article>`;
       }
     )
@@ -2751,6 +2755,31 @@ async function toggleWaiterMembership(memberId, memberEmail, station, nextActive
   const label = restaurantStationLabel(station);
   showToast(pending ? "Invitacion cancelada." : nextActive ? `${label} reactivado.` : `${label} desactivado.`);
   await loadWaiterMembers();
+}
+
+async function confirmWaiterInvitation(memberEmail, station, displayName) {
+  setWaiterTeamMessage("Confirmando autorizacion con Supabase...");
+  const { data, error } = await cloudState.client.rpc("invite_current_restaurant_staff", {
+    p_email: memberEmail,
+    p_station: station,
+    p_display_name: displayName || "",
+  });
+  if (error) {
+    setWaiterTeamMessage(waiterMembershipError(error), "error");
+    return false;
+  }
+  const result = Array.isArray(data) ? data[0] : data;
+  await loadWaiterMembers();
+  if (result?.pending) {
+    setWaiterTeamMessage(
+      `La invitacion sigue pendiente. Confirma que ${memberEmail} haya creado y confirmado su cuenta con ese mismo correo.`,
+      "error"
+    );
+    return false;
+  }
+  setWaiterTeamMessage(`${restaurantStationLabel(station)} autorizado correctamente. Ya puede entrar desde su dispositivo.`, "ok");
+  showToast("Personal autorizado correctamente.");
+  return true;
 }
 
 async function openClientOrdersDialog() {
@@ -5344,9 +5373,19 @@ elements.openWaiterLinkButton?.addEventListener("click", openWaiterLink);
 elements.authorizeWaiterButton?.addEventListener("click", authorizeWaiter);
 elements.refreshWaiterMembersButton?.addEventListener("click", loadWaiterMembers);
 elements.waiterMembersList?.addEventListener("click", async (event) => {
-  const button = event.target.closest('button[data-action="toggle-waiter"]');
+  const button = event.target.closest("button[data-action]");
   const row = event.target.closest("[data-member-id]");
   if (!button || !row) return;
+  if (button.dataset.action === "confirm-waiter") {
+    button.disabled = true;
+    try {
+      await confirmWaiterInvitation(row.dataset.memberEmail, row.dataset.station, row.dataset.memberName);
+    } finally {
+      if (button.isConnected) button.disabled = false;
+    }
+    return;
+  }
+  if (button.dataset.action !== "toggle-waiter") return;
   const pending = row.dataset.pending === "true";
   const nextActive = button.dataset.nextActive === "true";
   if (!nextActive) {

@@ -37,8 +37,10 @@ Repite esta prueba en Cliente, Restaurante, Colaborador y Estacion:
 5. Si el empleado aun no tiene cuenta, debe aparecer `Invitacion pendiente`.
 6. Copia el enlace del personal y abrelo en el telefono del empleado.
 7. El empleado crea o confirma su cuenta con el mismo correo autorizado.
-8. Al iniciar sesion, la invitacion se activa automaticamente y abre su estacion.
-9. El propietario puede desactivar el acceso o cancelar una invitacion pendiente.
+8. El propietario pulsa `Confirmar autorizacion` en la invitacion pendiente.
+9. La tarjeta debe cambiar a `Activo` y mostrar la confirmacion de Supabase.
+10. En el telefono, el empleado pulsa `Activar autorizacion` y entra a su estacion.
+11. El propietario puede desactivar el acceso o cancelar una invitacion pendiente.
 
 ## 5. Comprobacion en la nube
 
@@ -49,4 +51,3 @@ En `Table Editor` pueden revisarse, sin editar manualmente:
 - `user_roles`: rol `restaurant_employee` activo para el restaurante correcto.
 
 No es necesario usar Codespace para esta migracion. Se ejecuta en el SQL Editor de Supabase.
-
