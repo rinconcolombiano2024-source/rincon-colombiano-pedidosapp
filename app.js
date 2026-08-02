@@ -37,7 +37,7 @@ const STORAGE_KEYS = {
 
 const DEFAULT_BUSINESS_NAME = "RINCON COLOMBIANO";
 const DEFAULT_DELIVERY_MINIMUM_FEE = 20;
-const APP_VERSION = "v72";
+const APP_VERSION = "v73";
 const PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 const PLATFORM_APP_NAME = "RC ORDERA";
 const RESTAURANT_WEEK_DAYS = [
@@ -2591,10 +2591,16 @@ function waiterMembershipError(error) {
     return "Ese correo aun no tiene cuenta. El empleado debe crearla desde el enlace del personal y confirmar su correo.";
   }
   if (/function .* does not exist|schema cache|PGRST202|42883/i.test(message)) {
-    return "Las estaciones del restaurante necesitan la migracion V71 en Supabase.";
+    return "La autorizacion de personal necesita la migracion V73 en Supabase.";
   }
   if (/Restaurant owner profile is missing/i.test(message)) {
     return "Primero completa y guarda el perfil del restaurante.";
+  }
+  if (/Employee email is invalid/i.test(message)) {
+    return "Escribe un correo electronico valido para el empleado.";
+  }
+  if (/Owner cannot be added as staff/i.test(message)) {
+    return "El propietario ya tiene control del restaurante y no necesita agregarse como empleado.";
   }
   return message || "No fue posible actualizar el equipo.";
 }
@@ -2618,15 +2624,20 @@ function renderWaiterMembers(rows = []) {
   }
   elements.waiterMembersList.innerHTML = rows
     .map(
-      (row) => `
-        <article class="waiter-member-row ${row.active ? "" : "is-inactive"}" data-member-id="${escapeHtml(row.member_user_id)}" data-station="${escapeHtml(row.station)}">
+      (row) => {
+        const pending = row.pending === true;
+        const statusLabel = pending ? "Invitacion pendiente" : row.active ? "Activo" : "Desactivado";
+        const buttonLabel = pending ? "Cancelar invitacion" : row.active ? "Desactivar" : "Reactivar";
+        return `
+        <article class="waiter-member-row ${row.active ? "" : "is-inactive"}" data-member-id="${escapeHtml(row.member_user_id || "")}" data-member-email="${escapeHtml(row.member_email || "")}" data-station="${escapeHtml(row.station)}" data-pending="${pending}">
           <div>
             <strong>${escapeHtml(row.display_name || restaurantStationLabel(row.station))}</strong>
             <small>${escapeHtml(row.member_email || "")}</small>
           </div>
-          <span>${escapeHtml(restaurantStationLabel(row.station))}<br>${row.active ? "Activo" : "Desactivado"}</span>
-          <button type="button" data-action="toggle-waiter" data-next-active="${row.active ? "false" : "true"}">${row.active ? "Desactivar" : "Reactivar"}</button>
-        </article>`
+          <span>${escapeHtml(restaurantStationLabel(row.station))}<br>${statusLabel}</span>
+          <button type="button" data-action="toggle-waiter" data-next-active="${pending || row.active ? "false" : "true"}">${buttonLabel}</button>
+        </article>`;
+      }
     )
     .join("") || `<div class="monthly-empty">Aun no hay personal autorizado.</div>`;
 }
@@ -2634,7 +2645,10 @@ function renderWaiterMembers(rows = []) {
 async function loadWaiterMembers() {
   if (!cloudState.client || !cloudState.user) return;
   elements.waiterMembersList.innerHTML = `<div class="monthly-empty">Cargando equipo...</div>`;
-  const { data, error } = await cloudState.client.rpc("list_current_restaurant_staff");
+  let { data, error } = await cloudState.client.rpc("list_current_restaurant_team");
+  if (error && isMissingRestaurantRpc(error)) {
+    ({ data, error } = await cloudState.client.rpc("list_current_restaurant_staff"));
+  }
   if (error) {
     renderWaiterMembers([]);
     setWaiterTeamMessage(waiterMembershipError(error), "error");
@@ -2685,17 +2699,30 @@ async function authorizeWaiter() {
   elements.authorizeWaiterButton.disabled = true;
   setWaiterTeamMessage(`Autorizando ${stationLabel.toLowerCase()}...`);
   try {
-    const { error } = await cloudState.client.rpc("grant_current_restaurant_staff", {
+    let { data, error } = await cloudState.client.rpc("invite_current_restaurant_staff", {
       p_email: email,
       p_station: station,
       p_display_name: displayName,
     });
+    if (error && isMissingRestaurantRpc(error)) {
+      ({ data, error } = await cloudState.client.rpc("grant_current_restaurant_staff", {
+        p_email: email,
+        p_station: station,
+        p_display_name: displayName,
+      }));
+    }
     if (error) throw error;
+    const result = Array.isArray(data) ? data[0] : data;
     elements.waiterMemberEmailInput.value = "";
     elements.waiterMemberNameInput.value = "";
-    setWaiterTeamMessage(`${stationLabel} autorizado. Ya puede entrar desde su telefono.`, "ok");
+    setWaiterTeamMessage(
+      result?.pending
+        ? `Invitacion guardada para ${email}. Comparte el enlace; el permiso se activara cuando cree o confirme su cuenta.`
+        : `${stationLabel} autorizado. Ya puede entrar desde su telefono.`,
+      "ok"
+    );
     await loadWaiterMembers();
-    showToast(`${stationLabel} autorizado correctamente.`);
+    showToast(result?.pending ? "Invitacion de personal guardada." : `${stationLabel} autorizado correctamente.`);
   } catch (error) {
     setWaiterTeamMessage(waiterMembershipError(error), "error");
   } finally {
@@ -2703,18 +2730,26 @@ async function authorizeWaiter() {
   }
 }
 
-async function toggleWaiterMembership(memberId, station, nextActive) {
-  const { error } = await cloudState.client.rpc("set_current_restaurant_staff_active", {
-    p_member_user_id: memberId,
+async function toggleWaiterMembership(memberId, memberEmail, station, nextActive, pending = false) {
+  let { error } = await cloudState.client.rpc("set_current_restaurant_staff_access", {
+    p_member_user_id: memberId || null,
+    p_email: memberEmail || "",
     p_station: station,
     p_active: nextActive,
   });
+  if (error && isMissingRestaurantRpc(error) && memberId) {
+    ({ error } = await cloudState.client.rpc("set_current_restaurant_staff_active", {
+      p_member_user_id: memberId,
+      p_station: station,
+      p_active: nextActive,
+    }));
+  }
   if (error) {
     setWaiterTeamMessage(waiterMembershipError(error), "error");
     return;
   }
   const label = restaurantStationLabel(station);
-  showToast(nextActive ? `${label} reactivado.` : `${label} desactivado.`);
+  showToast(pending ? "Invitacion cancelada." : nextActive ? `${label} reactivado.` : `${label} desactivado.`);
   await loadWaiterMembers();
 }
 
@@ -3065,15 +3100,18 @@ function friendlyAuthError(error) {
 
 async function signOut() {
   if (!cloudState.client) return;
-  await cloudState.client.auth.signOut();
-  cloudState.user = null;
-  cloudState.ready = false;
-  pendingClientOrders = [];
-  stopClientOrdersPolling();
-  stopClientAlarm();
-  clearRememberedCloudSession();
-  updateClientOrdersBadge();
-  renderCloudState("Sesion cerrada.");
+  try {
+    await cloudState.client.auth.signOut({ scope: "local" });
+  } finally {
+    cloudState.user = null;
+    cloudState.ready = false;
+    pendingClientOrders = [];
+    stopClientOrdersPolling();
+    stopClientAlarm();
+    clearRememberedCloudSession();
+    updateClientOrdersBadge();
+    window.location.replace(`index.html?app=${APP_VERSION}`);
+  }
 }
 
 function readMenuCatalog() {
@@ -5305,11 +5343,30 @@ elements.copyWaiterLinkButton?.addEventListener("click", copyWaiterLink);
 elements.openWaiterLinkButton?.addEventListener("click", openWaiterLink);
 elements.authorizeWaiterButton?.addEventListener("click", authorizeWaiter);
 elements.refreshWaiterMembersButton?.addEventListener("click", loadWaiterMembers);
-elements.waiterMembersList?.addEventListener("click", (event) => {
+elements.waiterMembersList?.addEventListener("click", async (event) => {
   const button = event.target.closest('button[data-action="toggle-waiter"]');
   const row = event.target.closest("[data-member-id]");
   if (!button || !row) return;
-  toggleWaiterMembership(row.dataset.memberId, row.dataset.station, button.dataset.nextActive === "true");
+  const pending = row.dataset.pending === "true";
+  const nextActive = button.dataset.nextActive === "true";
+  if (!nextActive) {
+    const prompt = pending
+      ? "¿Cancelar esta invitacion de personal?"
+      : "¿Desactivar el acceso de este empleado?";
+    if (!window.confirm(prompt)) return;
+  }
+  button.disabled = true;
+  try {
+    await toggleWaiterMembership(
+      row.dataset.memberId,
+      row.dataset.memberEmail,
+      row.dataset.station,
+      nextActive,
+      pending
+    );
+  } finally {
+    if (button.isConnected) button.disabled = false;
+  }
 });
 elements.clientAlarmButton.addEventListener("click", toggleClientAlarm);
 elements.qrTableInput.addEventListener("input", updateQrPreview);

@@ -191,6 +191,20 @@
   justify-content: flex-end;
 }
 
+.customer-account-actions[hidden],
+.customer-sign-out-button[hidden] {
+  display: none !important;
+}
+
+.customer-platform-home-link {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  margin-top: 12px;
+  text-decoration: none;
+}
+
 .customer-auth-modal {
   display: grid;
   gap: 14px;

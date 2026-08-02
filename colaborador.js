@@ -1216,8 +1216,13 @@ function courierProfilePayloadForMetadata() {
 
 async function courierSignOut() {
   if (!courierClient) return;
-  await courierClient.auth.signOut();
-  courierSetMessage(courierElements.authMessage, "Sesion cerrada.", "ok");
+  try {
+    await courierClient.auth.signOut({ scope: "local" });
+  } finally {
+    courierUser = null;
+    courierProfile = null;
+    window.location.replace("index.html?app=v73");
+  }
 }
 
 function courierToggleAvailability() {

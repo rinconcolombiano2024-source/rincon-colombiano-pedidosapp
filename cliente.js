@@ -110,6 +110,7 @@ const CUSTOMER_I18N = {
     navOrders: "Pedidos",
     navReservations: "Reservas",
     navProfile: "Perfil",
+    platformHome: "Volver a la pantalla principal",
     customerNavigationAria: "Navegacion del cliente",
     backToRestaurants: "Volver",
     restaurantOpen: "Abierto",
@@ -352,6 +353,7 @@ const CUSTOMER_I18N = {
     navOrders: "Zamowienia",
     navReservations: "Rezerwacje",
     navProfile: "Profil",
+    platformHome: "Wroc do ekranu glownego",
     customerNavigationAria: "Nawigacja klienta",
     backToRestaurants: "Wstecz",
     restaurantOpen: "Otwarte",
@@ -594,6 +596,7 @@ const CUSTOMER_I18N = {
     navOrders: "Orders",
     navReservations: "Reservations",
     navProfile: "Profile",
+    platformHome: "Back to the main screen",
     customerNavigationAria: "Customer navigation",
     backToRestaurants: "Back",
     restaurantOpen: "Open",
@@ -1621,11 +1624,13 @@ async function customerSignInWithEmail() {
     return;
   }
   customerSetAuthMessage(customerT("signingIn"));
-  const { error } = await client.auth.signInWithPassword({ email, password });
+  const { data, error } = await client.auth.signInWithPassword({ email, password });
   if (error) {
     customerSetAuthMessage(customerFriendlyAuthError(error), "error");
     return;
   }
+  customerUser = data?.user || data?.session?.user || null;
+  customerRenderAccount();
   customerElements.authPassword.value = "";
   customerSetAuthMessage(customerT("signedIn"), "ok");
 }
@@ -1766,8 +1771,14 @@ async function customerUpdateRecoveredPassword() {
 
 async function customerSignOut() {
   if (!customerClient) return;
-  await customerClient.auth.signOut();
-  customerSetAuthMessage(customerT("signedOut"), "ok");
+  try {
+    await customerClient.auth.signOut({ scope: "local" });
+  } finally {
+    customerUser = null;
+    customerHistoryRows = [];
+    customerRenderAccount();
+    window.location.replace("index.html?app=v73");
+  }
 }
 
 function customerProfilePayload() {
@@ -2049,7 +2060,7 @@ function customerScheduleDirectoryRefresh() {
 function customerStartDirectoryRealtime() {
   if (!customerClient?.channel || customerDirectoryRealtimeChannel) return;
   customerDirectoryRealtimeChannel = customerClient
-    .channel("public-restaurant-directory-v72")
+    .channel("public-restaurant-directory-v73")
     .on(
       "postgres_changes",
       { event: "*", schema: "public", table: "restaurant_profiles" },
@@ -2118,7 +2129,7 @@ function customerClearRestaurantSelection(messageKey = "") {
 
   const nextUrl = new URL(window.location.href);
   nextUrl.searchParams.delete("store");
-  nextUrl.searchParams.set("app", "v72");
+  nextUrl.searchParams.set("app", "v73");
   window.history.replaceState({}, "", nextUrl.toString());
 
   customerApplyBusinessName();
@@ -2276,7 +2287,7 @@ async function customerSelectRestaurant(storeId, options = {}) {
   if (options.updateUrl !== false) {
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("store", customerStoreId);
-    nextUrl.searchParams.set("app", "v72");
+    nextUrl.searchParams.set("app", "v73");
     window.history.replaceState({}, "", nextUrl.toString());
   }
 

@@ -351,3 +351,14 @@ ACTUALIZACION V72 - NUBE, HORARIOS, REALTIME Y ELIMINACION SEGURA (01/08/2026)
 - El administrador unico se recupera con `MIGRACION-FASE1-V72-RECUPERAR-ADMIN-UNICO.sql`; la contrasena nunca se incluye en el frontend.
 - Ejecutar `MIGRACION-FASE1-V72-NUBE-HORARIOS-REALTIME.sql`, luego la migracion de administrador y desplegar la Edge Function.
 - Ver instrucciones completas en `GUIA-PUESTA-EN-MARCHA-V72.md` y resultados en `REPORTE-VALIDACION-V72-NUBE-REALTIME.md`.
+
+ACTUALIZACION V73 - SESIONES Y AUTORIZACION DE PERSONAL (02/08/2026)
+- Cerrar sesion en Cliente, Restaurante, Colaborador o Estacion regresa a la pantalla principal.
+- El perfil del cliente oculta los botones de iniciar sesion y registro cuando existe una sesion activa.
+- El propietario puede autorizar personal aunque la cuenta del empleado todavia no exista.
+- La invitacion queda pendiente y se activa automaticamente cuando el empleado entra con el correo autorizado.
+- Las invitaciones y membresias se mantienen separadas por restaurante y se vinculan por UUID al activarse.
+- El propietario puede cancelar una invitacion, desactivar o reactivar personal con confirmacion.
+- Cache y manifest PWA actualizados a V73.
+- Ejecutar `MIGRACION-FASE1-V73-AUTORIZACION-PERSONAL.sql` despues de V71.
+- Ver `GUIA-ACTUALIZACION-V73.md` y `REPORTE-VALIDACION-V73-SESIONES-PERSONAL.md`.

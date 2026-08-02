@@ -572,6 +572,19 @@ function waiterStartRealtime() {
 async function waiterAuthorize() {
   if (!waiterClient || !waiterUser || !waiterStoreId) return;
   waiterSetStatus("Verificando autorizacion...");
+  const claimResult = await waiterClient.rpc("claim_my_restaurant_staff_invitation", {
+    p_restaurant_user_id: waiterStoreId,
+  });
+  if (claimResult.error && !["42883", "PGRST202"].includes(claimResult.error.code)) {
+    waiterElements.authCard.hidden = true;
+    waiterElements.app.hidden = true;
+    waiterElements.stationBoard.hidden = true;
+    waiterElements.accessCard.hidden = false;
+    waiterElements.accessMessage.textContent = "No fue posible activar la invitacion. Revisa la conexion e intentalo nuevamente.";
+    waiterSetStatus("Error de autorizacion", "error");
+    console.error(claimResult.error);
+    return;
+  }
   const { data, error } = await waiterClient.rpc("get_my_restaurant_station", {
     p_restaurant_user_id: waiterStoreId,
   });
@@ -657,15 +670,23 @@ async function waiterSignUp() {
     return;
   }
   if (data.session) {
-    waiterSetMessage(waiterElements.authMessage, "Cuenta creada. Ahora el propietario debe autorizar este correo.", "ok");
+    waiterSetMessage(waiterElements.authMessage, "Cuenta creada. Verificando la autorizacion del restaurante...", "ok");
+    waiterUser = data.user;
+    await waiterAuthorize();
   } else {
-    waiterSetMessage(waiterElements.authMessage, "Cuenta creada. Revisa tu correo, confirma la cuenta y luego pide autorizacion al propietario.", "ok");
+    waiterSetMessage(waiterElements.authMessage, "Cuenta creada. Revisa tu correo y confirma la cuenta. La autorizacion pendiente se activara al iniciar sesion.", "ok");
   }
 }
 
 async function waiterSignOut() {
   waiterStopRealtime();
-  await waiterClient.auth.signOut();
+  try {
+    await waiterClient.auth.signOut({ scope: "local" });
+  } finally {
+    waiterUser = null;
+    waiterMembership = null;
+    window.location.replace("index.html?app=v73");
+  }
 }
 
 function waiterRenderLoggedOut() {
