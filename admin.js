@@ -140,6 +140,26 @@ function adminStatusLabel(status) {
   return "Pendiente de revision";
 }
 
+function adminCourierRpcMessage(error, action = "load") {
+  const code = String(error?.code || error?.status || "");
+  const message = String(error?.message || "");
+  if (code === "PGRST202" || /get_courier_review_queue|review_courier_profile|schema cache/i.test(message)) {
+    return "Falta instalar la migracion V73 de revision de colaboradores en Supabase.";
+  }
+  if (code === "42501" || /not authorized|permission denied/i.test(message)) {
+    return "Esta cuenta no tiene permiso administrativo para revisar colaboradores.";
+  }
+  if (/courier profile not found/i.test(message)) {
+    return "La solicitud del colaborador ya no existe. Actualiza la lista.";
+  }
+  if (/invalid courier status|courier user id is required/i.test(message)) {
+    return "La solicitud contiene un estado no valido. Actualiza la lista e intenta nuevamente.";
+  }
+  return action === "review"
+    ? "No se pudo actualizar el colaborador. Revisa la conexion e intenta nuevamente."
+    : "No se pudo cargar la revision de colaboradores. Revisa la conexion e intenta nuevamente.";
+}
+
 function adminCourierDocumentRef(value) {
   const ref = String(value || "").trim();
   if (!ref) return "";
@@ -278,11 +298,11 @@ async function adminLoadCouriers() {
   if (error) {
     adminSetMessage(
       adminElements.authMessage,
-      "No se pudo cargar la revision de colaboradores. Confirma que esta cuenta sea la administradora autorizada y que la nube tenga los permisos activos.",
+      adminCourierRpcMessage(error),
       "error"
     );
     if (adminElements.courierList) {
-      adminElements.courierList.innerHTML = `<div class="customer-empty">Sin permiso para ver colaboradores o configuracion pendiente en la nube.</div>`;
+      adminElements.courierList.innerHTML = `<div class="customer-empty">${adminEscapeHtml(adminCourierRpcMessage(error))}</div>`;
     }
     return;
   }
@@ -320,8 +340,8 @@ async function adminReviewCourier(userId, status) {
     p_status: status,
   });
   if (error) {
-    adminSetMessage(adminElements.authMessage, error.message || "No se pudo actualizar el colaborador.", "error");
-    return;
+    adminSetMessage(adminElements.authMessage, adminCourierRpcMessage(error, "review"), "error");
+    return false;
   }
   adminSetMessage(
     adminElements.authMessage,
@@ -329,6 +349,7 @@ async function adminReviewCourier(userId, status) {
     "ok"
   );
   await adminLoadCouriers();
+  return true;
 }
 
 async function adminSignIn() {
@@ -615,18 +636,23 @@ adminElements.cancelRecoveryButton?.addEventListener("click", () => adminHidePas
 adminElements.signOutButton?.addEventListener("click", adminSignOut);
 adminElements.refreshCouriersButton?.addEventListener("click", adminLoadCouriers);
 adminElements.installButton?.addEventListener("click", adminInstallPanel);
-adminElements.courierList?.addEventListener("click", (event) => {
+adminElements.courierList?.addEventListener("click", async (event) => {
   const button = event.target.closest("button[data-action]");
-  if (!button) return;
+  if (!button || button.disabled) return;
   if (button.dataset.action === "open-doc") {
-    adminOpenCourierDocument(button.dataset.doc);
+    await adminOpenCourierDocument(button.dataset.doc);
     return;
   }
 
   const card = event.target.closest(".platform-courier-card");
   if (!card) return;
-  if (button.dataset.action === "approve") adminReviewCourier(card.dataset.courierId, "approved");
-  if (button.dataset.action === "reject") adminReviewCourier(card.dataset.courierId, "rejected");
+  button.disabled = true;
+  try {
+    if (button.dataset.action === "approve") await adminReviewCourier(card.dataset.courierId, "approved");
+    if (button.dataset.action === "reject") await adminReviewCourier(card.dataset.courierId, "rejected");
+  } finally {
+    if (button.isConnected) button.disabled = false;
+  }
 });
 
 window.addEventListener("beforeinstallprompt", (event) => {

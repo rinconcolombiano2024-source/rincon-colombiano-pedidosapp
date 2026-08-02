@@ -184,14 +184,14 @@ security definer
 set search_path = public
 as $$
   select
-    'member:' || m.member_user_id::text || ':' || m.station,
-    m.member_user_id,
-    coalesce(au.email, '')::text,
-    m.station,
-    m.display_name,
-    m.active,
-    false,
-    m.updated_at
+    'member:' || m.member_user_id::text || ':' || m.station as record_key,
+    m.member_user_id as member_user_id,
+    coalesce(au.email, '')::text as member_email,
+    m.station as station,
+    m.display_name as display_name,
+    m.active as active,
+    false as pending,
+    m.updated_at as updated_at
   from public.restaurant_staff_memberships m
   join auth.users au on au.id = m.member_user_id
   where m.restaurant_user_id = auth.uid()
@@ -199,14 +199,14 @@ as $$
   union all
 
   select
-    'invite:' || i.email,
-    null::uuid,
-    i.email,
-    i.station,
-    i.display_name,
-    false,
-    true,
-    i.updated_at
+    'invite:' || i.email as record_key,
+    null::uuid as member_user_id,
+    i.email as member_email,
+    i.station as station,
+    i.display_name as display_name,
+    false as active,
+    true as pending,
+    i.updated_at as updated_at
   from public.restaurant_staff_invitations i
   where i.restaurant_user_id = auth.uid()
     and i.status = 'pending'

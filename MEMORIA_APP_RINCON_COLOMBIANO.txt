@@ -362,3 +362,13 @@ ACTUALIZACION V73 - SESIONES Y AUTORIZACION DE PERSONAL (02/08/2026)
 - Cache y manifest PWA actualizados a V73.
 - Ejecutar `MIGRACION-FASE1-V73-AUTORIZACION-PERSONAL.sql` despues de V71.
 - Ver `GUIA-ACTUALIZACION-V73.md` y `REPORTE-VALIDACION-V73-SESIONES-PERSONAL.md`.
+
+CORRECCION V73 - COLA ADMINISTRATIVA DE COLABORADORES (02/08/2026)
+- Se confirmo que admin.js llama `get_courier_review_queue()` sin parametros.
+- Aprobar o rechazar usa `review_courier_profile(p_user_id, p_status)`.
+- Se agrego `MIGRACION-V73-REPARAR-COLA-REVISION-COLABORADORES.sql` para reparar ambas RPC sin borrar datos.
+- Las RPC exigen platform_admin global activo y solo conceden ejecucion a authenticated.
+- La cola devuelve las 25 columnas que renderiza el panel administrativo.
+- El panel muestra mensajes claros ante migracion ausente o permiso denegado y evita solicitudes dobles.
+- Cache PWA actualizado a `rc-ordera-v73-admin-review`.
+- Ver `REPORTE-VALIDACION-V73-COLA-ADMIN-COLABORADORES.md`.
