@@ -431,6 +431,7 @@
             <input id="restaurantAddressInput" type="text" placeholder="Direccion completa del restaurante" autocomplete="street-address" />
           </label>
           <button id="useRestaurantLocationButton" type="button">Usar ubicacion actual</button>
+          <p class="settings-location-status" id="restaurantLocationStatus" hidden></p>
           <label class="settings-wide-field">
             Google Maps API key
             <input id="googleMapsApiKeyInput" type="text" placeholder="AIza..." autocomplete="off" />
@@ -459,12 +460,21 @@
           <button id="saveCustomerSettingsButton" type="button">Guardar cliente</button>
         </section>
 
+        <section class="settings-card restaurant-hours-card">
+          <div>
+            <h3>Horario de atencion</h3>
+            <p>Define el horario habitual. Caja controla manualmente si hoy el restaurante recibe pedidos.</p>
+          </div>
+          <div class="restaurant-hours-grid" id="restaurantHoursGrid" aria-label="Horario semanal"></div>
+          <button id="saveRestaurantHoursButton" type="button">Guardar horario</button>
+        </section>
+
         <section class="settings-card restaurant-danger-card">
           <div>
             <h3>Estado del restaurante</h3>
-            <p id="restaurantStatusText">Restaurante activo para clientes.</p>
+            <p id="restaurantStatusText">Cargando estado operativo...</p>
           </div>
-          <button id="closeRestaurantButton" type="button">Cerrar restaurante</button>
+          <button id="closeRestaurantButton" type="button">Abrir atencion</button>
           <button id="requestRestaurantDeletionButton" type="button">Eliminar restaurante</button>
         </section>
 
@@ -689,6 +699,26 @@
         <div class="dialog-actions">
           <button id="refreshWaiterMembersButton" value="default" type="button">Actualizar</button>
           <button value="cancel" type="submit">Cerrar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="restaurantDeletionDialog" class="monthly-dialog restaurant-deletion-dialog">
+      <form method="dialog">
+        <h2>Eliminar cuenta del restaurante</h2>
+        <p>Esta accion elimina la cuenta de acceso, el menu, los pedidos, los reportes y los datos asociados. No se puede deshacer.</p>
+        <label>
+          Contrasena actual
+          <input id="restaurantDeletionPasswordInput" type="password" autocomplete="current-password" placeholder="Confirma tu contrasena" />
+        </label>
+        <label>
+          Escribe ELIMINAR
+          <input id="restaurantDeletionConfirmationInput" type="text" autocomplete="off" placeholder="ELIMINAR" />
+        </label>
+        <p class="customer-map-result" id="restaurantDeletionMessage" hidden></p>
+        <div class="dialog-actions">
+          <button id="cancelRestaurantDeletionButton" type="button">Cancelar</button>
+          <button id="confirmRestaurantDeletionButton" type="button">Eliminar definitivamente</button>
         </div>
       </form>
     </dialog>

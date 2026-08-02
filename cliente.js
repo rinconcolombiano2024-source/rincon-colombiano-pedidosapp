@@ -113,6 +113,9 @@ const CUSTOMER_I18N = {
     customerNavigationAria: "Navegacion del cliente",
     backToRestaurants: "Volver",
     restaurantOpen: "Abierto",
+    restaurantClosed: "Cerrado",
+    restaurantClosedBrowse: "Puedes revisar el menu, pero el restaurante no recibe pedidos en este momento.",
+    restaurantClosedOrder: "El restaurante esta cerrado y no puede recibir el pedido ahora.",
     deliveryCalculatedAtCheckout: "Domicilio calculado con tu direccion",
     ordersEyebrow: "Seguimiento",
     activeOrderTitle: "Pedido activo",
@@ -285,6 +288,10 @@ const CUSTOMER_I18N = {
     locationAddressFilled: "Ubicacion recibida y direccion aproximada completada.",
     locationAddressUnavailable: "Ubicacion recibida. No pude convertirla en direccion, pero puedo calcular la distancia con coordenadas.",
     locationError: "No se pudo obtener la ubicacion. Puedes escribir la direccion y kilometros manualmente.",
+    locationSecureRequired: "La ubicacion requiere abrir RC ORDERA desde la direccion segura HTTPS publicada.",
+    locationPermissionDenied: "Permiso de ubicacion denegado. Habilitalo en el navegador o escribe la direccion.",
+    locationUnavailable: "El dispositivo no pudo determinar la ubicacion. Intenta nuevamente o escribe la direccion.",
+    locationTimeout: "La ubicacion tardo demasiado. Intenta nuevamente o escribe la direccion.",
     mapsNeedAddress: "El restaurante debe configurar su direccion para usar Google Maps.",
     mapsNeedKey: "Falta configurar Google Maps API key. Puedes escribir km manualmente.",
     mapsNeedDestination: "Escribe la direccion o permite usar tu ubicacion antes de calcular.",
@@ -348,6 +355,9 @@ const CUSTOMER_I18N = {
     customerNavigationAria: "Nawigacja klienta",
     backToRestaurants: "Wstecz",
     restaurantOpen: "Otwarte",
+    restaurantClosed: "Zamkniete",
+    restaurantClosedBrowse: "Mozesz przegladac menu, ale restauracja nie przyjmuje teraz zamowien.",
+    restaurantClosedOrder: "Restauracja jest zamknieta i nie moze teraz przyjac zamowienia.",
     deliveryCalculatedAtCheckout: "Dostawa obliczana dla Twojego adresu",
     ordersEyebrow: "Sledzenie",
     activeOrderTitle: "Aktywne zamowienie",
@@ -520,6 +530,10 @@ const CUSTOMER_I18N = {
     locationAddressFilled: "Lokalizacja odebrana i przyblizony adres uzupelniony.",
     locationAddressUnavailable: "Lokalizacja odebrana. Nie udalo sie zamienic jej na adres, ale mozna liczyc dystans z koordynatow.",
     locationError: "Nie udalo sie pobrac lokalizacji. Mozesz wpisac adres i kilometry recznie.",
+    locationSecureRequired: "Lokalizacja wymaga bezpiecznego adresu HTTPS opublikowanej aplikacji RC ORDERA.",
+    locationPermissionDenied: "Odmowiono dostepu do lokalizacji. Wlacz uprawnienie lub wpisz adres.",
+    locationUnavailable: "Urzadzenie nie moglo ustalic lokalizacji. Sprobuj ponownie lub wpisz adres.",
+    locationTimeout: "Ustalanie lokalizacji trwalo zbyt dlugo. Sprobuj ponownie lub wpisz adres.",
     mapsNeedAddress: "Restauracja musi skonfigurowac adres, aby uzyc Google Maps.",
     mapsNeedKey: "Brakuje klucza Google Maps API. Mozesz wpisac km recznie.",
     mapsNeedDestination: "Wpisz adres albo pozwol uzyc lokalizacji przed obliczeniem.",
@@ -583,6 +597,9 @@ const CUSTOMER_I18N = {
     customerNavigationAria: "Customer navigation",
     backToRestaurants: "Back",
     restaurantOpen: "Open",
+    restaurantClosed: "Closed",
+    restaurantClosedBrowse: "You can browse the menu, but the restaurant is not accepting orders right now.",
+    restaurantClosedOrder: "The restaurant is closed and cannot accept this order right now.",
     deliveryCalculatedAtCheckout: "Delivery calculated for your address",
     ordersEyebrow: "Tracking",
     activeOrderTitle: "Active order",
@@ -755,6 +772,10 @@ const CUSTOMER_I18N = {
     locationAddressFilled: "Location received and approximate address filled in.",
     locationAddressUnavailable: "Location received. I could not convert it into an address, but distance can be calculated with coordinates.",
     locationError: "Could not get location. You can enter address and kilometers manually.",
+    locationSecureRequired: "Location requires opening RC ORDERA from its published secure HTTPS address.",
+    locationPermissionDenied: "Location permission was denied. Enable it in the browser or enter the address.",
+    locationUnavailable: "The device could not determine your location. Try again or enter the address.",
+    locationTimeout: "Location took too long. Try again or enter the address.",
     mapsNeedAddress: "The restaurant must configure its address to use Google Maps.",
     mapsNeedKey: "Google Maps API key is missing. You can enter km manually.",
     mapsNeedDestination: "Enter the address or allow location before calculating.",
@@ -1182,6 +1203,10 @@ let customerSettings = {
   deliveryFee: 0,
   deliveryMinimumFee: 20,
   restaurantAddress: "",
+  restaurantOperationalOpen: false,
+  openingHours: {},
+  restaurantLatitude: null,
+  restaurantLongitude: null,
   googleMapsApiKey: "",
   bankAccount: "",
   bankTransferNote: "",
@@ -1198,6 +1223,8 @@ let customerChatLoadedOnce = false;
 let customerMenuRealtimeChannel = null;
 let customerMenuRealtimeStoreId = "";
 let customerMenuRealtimeTimer = null;
+let customerDirectoryRealtimeChannel = null;
+let customerDirectoryRealtimeTimer = null;
 let customerCurrentView = customerStoreId ? "store" : "home";
 
 const CUSTOMER_DELIVERY_RATES = {
@@ -1272,6 +1299,7 @@ function customerRenderSelectedRestaurantDetails() {
   const selected = customerSelectedRestaurant();
   const description = selected?.description || "";
   const address = selected?.address || customerSettings.restaurantAddress || customerT("restaurantNoAddress");
+  const isOpen = selected ? selected.operationalOpen === true : customerSettings.restaurantOperationalOpen === true;
 
   if (customerElements.selectedRestaurantDescription) {
     customerElements.selectedRestaurantDescription.textContent = description;
@@ -1281,7 +1309,9 @@ function customerRenderSelectedRestaurantDetails() {
     customerElements.selectedRestaurantAddress.textContent = address;
   }
   if (customerElements.selectedRestaurantStatus) {
-    customerElements.selectedRestaurantStatus.textContent = customerT("restaurantOpen");
+    customerElements.selectedRestaurantStatus.textContent = customerT(isOpen ? "restaurantOpen" : "restaurantClosed");
+    customerElements.selectedRestaurantStatus.classList.toggle("is-open", isOpen);
+    customerElements.selectedRestaurantStatus.classList.toggle("is-closed", !isOpen);
   }
   if (customerElements.selectedRestaurantDelivery) {
     const hasDistance = customerElements.orderType?.value === "Domicilio" && customerNormalizeDistance(customerElements.distanceInput?.value) > 0;
@@ -1404,7 +1434,11 @@ function customerOpenAuthDialog(mode = "login") {
   if (customerElements.authDialog?.showModal && !customerElements.authDialog.open) {
     customerElements.authDialog.showModal();
   }
-  window.setTimeout(() => customerElements.authEmail?.focus(), 50);
+  window.setTimeout(() => {
+    customerElements.authDialog?.scrollTo?.({ top: 0, behavior: "instant" });
+    customerElements.authModalForm?.scrollTo?.({ top: 0, behavior: "instant" });
+    customerElements.authEmail?.focus({ preventScroll: true });
+  }, 50);
 }
 
 function customerCloseAuthDialog() {
@@ -1980,8 +2014,55 @@ function customerNormalizeRestaurantProfile(row = {}) {
     address: customerNormalizeText(row.public_address || row.publicAddress),
     phone: customerNormalizeText(row.phone),
     description: customerNormalizeText(row.description),
+    operationalOpen: row.operational_open === true || row.operationalOpen === true,
+    openingHours: row.opening_hours || row.openingHours || {},
+    latitude: Number.isFinite(Number(row.latitude)) ? Number(row.latitude) : null,
+    longitude: Number.isFinite(Number(row.longitude)) ? Number(row.longitude) : null,
     updatedAt: customerNormalizeText(row.updated_at || row.updatedAt),
   };
+}
+
+function customerIsMissingRpc(error) {
+  const code = String(error?.code || error?.status || "");
+  const message = String(error?.message || "").toLowerCase();
+  return code === "PGRST202" || code === "42883" || message.includes("could not find the function");
+}
+
+function customerStopDirectoryRealtime() {
+  if (customerDirectoryRealtimeTimer) {
+    window.clearTimeout(customerDirectoryRealtimeTimer);
+    customerDirectoryRealtimeTimer = null;
+  }
+  const channel = customerDirectoryRealtimeChannel;
+  customerDirectoryRealtimeChannel = null;
+  if (channel && customerClient?.removeChannel) customerClient.removeChannel(channel).catch(() => {});
+}
+
+function customerScheduleDirectoryRefresh() {
+  if (customerDirectoryRealtimeTimer) window.clearTimeout(customerDirectoryRealtimeTimer);
+  customerDirectoryRealtimeTimer = window.setTimeout(() => {
+    customerDirectoryRealtimeTimer = null;
+    customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
+  }, 300);
+}
+
+function customerStartDirectoryRealtime() {
+  if (!customerClient?.channel || customerDirectoryRealtimeChannel) return;
+  customerDirectoryRealtimeChannel = customerClient
+    .channel("public-restaurant-directory-v72")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "restaurant_profiles" },
+      customerScheduleDirectoryRefresh
+    )
+    .subscribe((status) => {
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        window.setTimeout(() => {
+          customerStopDirectoryRealtime();
+          customerStartDirectoryRealtime();
+        }, 2000);
+      }
+    });
 }
 
 function customerRestaurantDedupeKey(restaurant) {
@@ -2006,11 +2087,6 @@ function customerDeduplicateRestaurants(restaurants = []) {
       byIdentity.set(key, restaurant);
       return;
     }
-    if (restaurant.userId === customerStoreId) {
-      byIdentity.set(key, restaurant);
-      return;
-    }
-    if (current.userId === customerStoreId) return;
     if (customerRestaurantIsNewer(restaurant, current)) byIdentity.set(key, restaurant);
   });
 
@@ -2034,11 +2110,15 @@ function customerClearRestaurantSelection(messageKey = "") {
     businessName: "RC ORDERA",
     businessLogoUrl: "",
     restaurantAddress: "",
+    restaurantOperationalOpen: false,
+    openingHours: {},
+    restaurantLatitude: null,
+    restaurantLongitude: null,
   };
 
   const nextUrl = new URL(window.location.href);
   nextUrl.searchParams.delete("store");
-  nextUrl.searchParams.set("app", "v71");
+  nextUrl.searchParams.set("app", "v72");
   window.history.replaceState({}, "", nextUrl.toString());
 
   customerApplyBusinessName();
@@ -2111,6 +2191,7 @@ function customerRenderRestaurantDirectory() {
   customerElements.restaurantList.innerHTML = visibleRestaurants
     .map((restaurant) => {
       const isSelected = restaurant.userId === customerStoreId;
+      const isOpen = restaurant.operationalOpen === true;
       const initials = restaurant.name
         .split(/\s+/)
         .filter(Boolean)
@@ -2128,7 +2209,7 @@ function customerRenderRestaurantDirectory() {
           }
            <div class="customer-restaurant-info">
              <strong>${customerEscapeHtml(restaurant.name)}</strong>
-             <small class="customer-restaurant-state">${customerEscapeHtml(customerT("restaurantOpen"))}</small>
+             <small class="customer-restaurant-state ${isOpen ? "is-open" : "is-closed"}">${customerEscapeHtml(customerT(isOpen ? "restaurantOpen" : "restaurantClosed"))}</small>
              <span>${customerEscapeHtml(restaurant.address || customerT("restaurantNoAddress"))}</span>
              <small>${customerEscapeHtml(customerT("deliveryCalculatedAtCheckout"))}</small>
            </div>
@@ -2151,11 +2232,15 @@ async function customerLoadRestaurantDirectory(options = {}) {
     )}</div>`;
   }
 
-  const { data, error } = await client
-    .from("restaurant_profiles")
-    .select("user_id, business_name, logo_url, public_address, phone, description, updated_at")
-    .eq("active", true)
-    .order("business_name", { ascending: true });
+  customerStartDirectoryRealtime();
+  let { data, error } = await client.rpc("get_public_restaurant_directory");
+  if (error && customerIsMissingRpc(error)) {
+    ({ data, error } = await client
+      .from("restaurant_profiles")
+      .select("user_id, business_name, logo_url, public_address, phone, description, updated_at")
+      .eq("active", true)
+      .order("business_name", { ascending: true }));
+  }
 
   if (error) {
     customerElements.restaurantList.innerHTML = `<div class="customer-empty">${customerEscapeHtml(
@@ -2191,7 +2276,7 @@ async function customerSelectRestaurant(storeId, options = {}) {
   if (options.updateUrl !== false) {
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("store", customerStoreId);
-    nextUrl.searchParams.set("app", "v71");
+    nextUrl.searchParams.set("app", "v72");
     window.history.replaceState({}, "", nextUrl.toString());
   }
 
@@ -2200,6 +2285,9 @@ async function customerSelectRestaurant(storeId, options = {}) {
   await customerLoadMenu({ skipDirectory: true });
   customerRenderSelectedRestaurantDetails();
   customerSetView("store");
+  if (customerSelectedRestaurant()?.operationalOpen !== true) {
+    customerSetStatus(customerT("restaurantClosedBrowse"), "error");
+  }
 }
 
 async function customerFetchPublicMenu(storeId) {
@@ -2573,10 +2661,10 @@ async function customerReverseGeocodeLocation(coords) {
         customerAddressComponent(result, ["locality"]) ||
         customerAddressComponent(result, ["administrative_area_level_2"]);
 
-      if (approximateAddress && !customerElements.addressInput.value.trim()) {
+      if (approximateAddress) {
         customerElements.addressInput.value = approximateAddress;
       }
-      if (neighborhood && !customerElements.neighborhoodInput.value.trim()) {
+      if (neighborhood) {
         customerElements.neighborhoodInput.value = neighborhood;
       }
       resolve(Boolean(approximateAddress || neighborhood));
@@ -2593,6 +2681,10 @@ async function customerUseLocation() {
     customerSetMapResult(customerT("locationUnsupported"), "error");
     return;
   }
+  if (!window.isSecureContext && !["localhost", "127.0.0.1"].includes(window.location.hostname)) {
+    customerSetMapResult(customerT("locationSecureRequired"), "error");
+    return;
+  }
 
   customerElements.useLocationButton.disabled = true;
   customerSetMapResult(customerT("locationRequest"), "");
@@ -2603,28 +2695,42 @@ async function customerUseLocation() {
         lat: position.coords.latitude,
         lng: position.coords.longitude,
       };
+      customerElements.addressInput.value = `${customerLocationCoords.lat.toFixed(6)}, ${customerLocationCoords.lng.toFixed(6)}`;
       customerSetMapResult(customerT("locationReceived"), "ok");
-      customerElements.useLocationButton.disabled = false;
+      try {
+        if (customerSettings.googleMapsApiKey) {
+          const addressFilled = await customerReverseGeocodeLocation(customerLocationCoords);
+          customerRenderLocationSummary();
+          customerSetMapResult(
+            addressFilled ? customerT("locationAddressFilled") : customerT("locationAddressUnavailable"),
+            addressFilled ? "ok" : ""
+          );
+        }
 
-       if (customerSettings.googleMapsApiKey) {
-         const addressFilled = await customerReverseGeocodeLocation(customerLocationCoords);
-         customerRenderLocationSummary();
-         customerSetMapResult(
-          addressFilled ? customerT("locationAddressFilled") : customerT("locationAddressUnavailable"),
-          addressFilled ? "ok" : ""
-        );
-      }
-
-      if (customerCanUseGoogleMaps()) {
-        await customerCalculateDistanceWithMaps();
-      } else {
+        if (customerCanUseGoogleMaps()) {
+          await customerCalculateDistanceWithMaps();
+        } else {
+          customerSetMapResult(customerT("locationReceivedManual"), "");
+        }
+      } catch (error) {
+        console.warn("La ubicacion se obtuvo, pero no fue posible consultar Google Maps.", error);
         customerSetMapResult(customerT("locationReceivedManual"), "");
+      } finally {
+        customerElements.useLocationButton.disabled = false;
+        customerRenderLocationSummary();
       }
     },
-    () => {
+    (error) => {
       customerLocationCoords = null;
       customerElements.useLocationButton.disabled = false;
-      customerSetMapResult(customerT("locationError"), "error");
+      const key = error?.code === 1
+        ? "locationPermissionDenied"
+        : error?.code === 2
+          ? "locationUnavailable"
+          : error?.code === 3
+            ? "locationTimeout"
+            : "locationError";
+      customerSetMapResult(customerT(key), "error");
     },
     { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
   );
@@ -3358,6 +3464,17 @@ async function customerLoadMenu(options = {}) {
     deliveryFee: customerNormalizeMoney(data.settings?.deliveryFee),
     deliveryMinimumFee: customerNormalizeDeliveryMinimumFee(data.settings?.deliveryMinimumFee),
     restaurantAddress: customerNormalizeText(data.settings?.restaurantAddress),
+    restaurantOperationalOpen:
+      typeof data.settings?.restaurantOperationalOpen === "boolean"
+        ? data.settings.restaurantOperationalOpen
+        : customerSelectedRestaurant()?.operationalOpen === true,
+    openingHours: data.settings?.openingHours || customerSelectedRestaurant()?.openingHours || {},
+    restaurantLatitude: Number.isFinite(Number(data.settings?.restaurantLatitude))
+      ? Number(data.settings.restaurantLatitude)
+      : customerSelectedRestaurant()?.latitude ?? null,
+    restaurantLongitude: Number.isFinite(Number(data.settings?.restaurantLongitude))
+      ? Number(data.settings.restaurantLongitude)
+      : customerSelectedRestaurant()?.longitude ?? null,
     googleMapsApiKey: customerNormalizeText(data.settings?.googleMapsApiKey),
     bankAccount: customerNormalizeText(data.settings?.bankAccount),
     bankTransferNote: customerNormalizeText(data.settings?.bankTransferNote),
@@ -3419,6 +3536,11 @@ async function customerSendOrder() {
 
   if (!customerCart.length) {
     customerSetStatus(customerT("addProductFirst"), "error");
+    return;
+  }
+
+  if (customerSelectedRestaurant()?.operationalOpen !== true && customerSettings.restaurantOperationalOpen !== true) {
+    customerSetStatus(customerT("restaurantClosedOrder"), "error");
     return;
   }
 
@@ -3659,15 +3781,23 @@ customerElements.viewButtons.forEach((button) => {
 });
 
 window.addEventListener("online", () => {
-  if (!customerStoreId) return;
-  customerStartMenuRealtime();
-  customerRefreshMenu().catch(() => {
-    customerSetStatus(customerT("menuRealtimeError"), "error");
-  });
+  customerStartDirectoryRealtime();
+  customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
+  if (customerStoreId) {
+    customerStartMenuRealtime();
+    customerRefreshMenu().catch(() => {
+      customerSetStatus(customerT("menuRealtimeError"), "error");
+    });
+  }
 });
 
 window.addEventListener("offline", () => {
   if (customerStoreId) customerSetStatus(customerT("noConnection"), "error");
+});
+
+window.addEventListener("beforeunload", () => {
+  customerStopDirectoryRealtime();
+  customerStopMenuRealtime();
 });
 
 let customerPullToRefreshStartY = 0;

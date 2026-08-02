@@ -29,13 +29,26 @@ const STORAGE_KEYS = {
   legalAddress: "rincon_colombiano_legal_address",
   deliveryMinimumFee: "rincon_colombiano_delivery_minimum_fee",
   currentOrderDraft: "rincon_colombiano_current_order_draft",
+  restaurantOperationalOpen: "rc_ordera_restaurant_operational_open",
+  restaurantOpeningHours: "rc_ordera_restaurant_opening_hours",
+  restaurantLatitude: "rc_ordera_restaurant_latitude",
+  restaurantLongitude: "rc_ordera_restaurant_longitude",
 };
 
 const DEFAULT_BUSINESS_NAME = "RINCON COLOMBIANO";
 const DEFAULT_DELIVERY_MINIMUM_FEE = 20;
-const APP_VERSION = "v71";
+const APP_VERSION = "v72";
 const PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 const PLATFORM_APP_NAME = "RC ORDERA";
+const RESTAURANT_WEEK_DAYS = [
+  ["monday", "Lunes"],
+  ["tuesday", "Martes"],
+  ["wednesday", "Miercoles"],
+  ["thursday", "Jueves"],
+  ["friday", "Viernes"],
+  ["saturday", "Sabado"],
+  ["sunday", "Domingo"],
+];
 
 const EMPTY_MENU_CATALOG = {
   Entradas: [],
@@ -192,14 +205,23 @@ const elements = {
   deliveryMinimumFeeInput: document.querySelector("#deliveryMinimumFeeInput"),
   restaurantAddressInput: document.querySelector("#restaurantAddressInput"),
   useRestaurantLocationButton: document.querySelector("#useRestaurantLocationButton"),
+  restaurantLocationStatus: document.querySelector("#restaurantLocationStatus"),
   googleMapsApiKeyInput: document.querySelector("#googleMapsApiKeyInput"),
   bankAccountInput: document.querySelector("#bankAccountInput"),
   bankTransferNoteInput: document.querySelector("#bankTransferNoteInput"),
   onlinePaymentProviderSelect: document.querySelector("#onlinePaymentProviderSelect"),
   onlinePaymentNoteInput: document.querySelector("#onlinePaymentNoteInput"),
   restaurantStatusText: document.querySelector("#restaurantStatusText"),
+  restaurantHoursGrid: document.querySelector("#restaurantHoursGrid"),
+  saveRestaurantHoursButton: document.querySelector("#saveRestaurantHoursButton"),
   closeRestaurantButton: document.querySelector("#closeRestaurantButton"),
   requestRestaurantDeletionButton: document.querySelector("#requestRestaurantDeletionButton"),
+  restaurantDeletionDialog: document.querySelector("#restaurantDeletionDialog"),
+  restaurantDeletionPasswordInput: document.querySelector("#restaurantDeletionPasswordInput"),
+  restaurantDeletionConfirmationInput: document.querySelector("#restaurantDeletionConfirmationInput"),
+  restaurantDeletionMessage: document.querySelector("#restaurantDeletionMessage"),
+  cancelRestaurantDeletionButton: document.querySelector("#cancelRestaurantDeletionButton"),
+  confirmRestaurantDeletionButton: document.querySelector("#confirmRestaurantDeletionButton"),
   saveCustomerSettingsButton: document.querySelector("#saveCustomerSettingsButton"),
   toastNotice: document.querySelector("#toastNotice"),
 };
@@ -229,6 +251,10 @@ let onlinePaymentProvider = readOnlinePaymentProvider();
 let onlinePaymentNote = readOnlinePaymentNote();
 let businessLogoUrl = readBusinessLogoUrl();
 let restaurantActive = readRestaurantActive();
+let restaurantOperationalOpen = readRestaurantOperationalOpen();
+let restaurantOpeningHours = readRestaurantOpeningHours();
+let restaurantLatitude = readCoordinate(STORAGE_KEYS.restaurantLatitude);
+let restaurantLongitude = readCoordinate(STORAGE_KEYS.restaurantLongitude);
 let legalBusinessName = readLegalBusinessName();
 let taxId = readTaxId();
 let businessPhone = readBusinessPhone();
@@ -710,6 +736,10 @@ function currentSettingsPayload() {
     onlinePaymentNote,
     businessLogoUrl,
     restaurantActive,
+    restaurantOperationalOpen,
+    openingHours: restaurantOpeningHours,
+    restaurantLatitude,
+    restaurantLongitude,
     legalBusinessName,
     taxId,
     businessPhone,
@@ -728,6 +758,10 @@ function currentRestaurantPublicProfilePayload() {
     phone: normalizeTextSetting(businessPhone),
     description: "",
     active: restaurantActive,
+    operational_open: restaurantOperationalOpen,
+    opening_hours: restaurantOpeningHours,
+    latitude: restaurantLatitude,
+    longitude: restaurantLongitude,
     updated_at: new Date().toISOString(),
   };
 }
@@ -876,12 +910,22 @@ function applyPublicRestaurantProfileFallback(profile = {}, options = {}) {
   restaurantAddress = assignText(restaurantAddress, profile.public_address);
   businessPhone = assignText(businessPhone, profile.phone);
   if (typeof profile.active === "boolean") restaurantActive = profile.active;
+  if (typeof profile.operational_open === "boolean") restaurantOperationalOpen = profile.operational_open;
+  if (profile.opening_hours && typeof profile.opening_hours === "object") {
+    restaurantOpeningHours = normalizeOpeningHours(profile.opening_hours);
+  }
+  if (profile.latitude !== null && profile.latitude !== undefined) restaurantLatitude = normalizeCoordinate(profile.latitude);
+  if (profile.longitude !== null && profile.longitude !== undefined) restaurantLongitude = normalizeCoordinate(profile.longitude);
 
   localStorage.setItem(STORAGE_KEYS.businessName, businessName);
   localStorage.setItem(STORAGE_KEYS.businessLogoUrl, businessLogoUrl);
   localStorage.setItem(STORAGE_KEYS.restaurantAddress, restaurantAddress);
   localStorage.setItem(STORAGE_KEYS.businessPhone, businessPhone);
   localStorage.setItem(STORAGE_KEYS.restaurantActive, restaurantActive ? "1" : "0");
+  localStorage.setItem(STORAGE_KEYS.restaurantOperationalOpen, restaurantOperationalOpen ? "1" : "0");
+  localStorage.setItem(STORAGE_KEYS.restaurantOpeningHours, JSON.stringify(restaurantOpeningHours));
+  storeCoordinate(STORAGE_KEYS.restaurantLatitude, restaurantLatitude);
+  storeCoordinate(STORAGE_KEYS.restaurantLongitude, restaurantLongitude);
   applyBusinessNameToUi();
 }
 
@@ -930,6 +974,10 @@ function localStoreCurrentSettings() {
   localStorage.setItem(STORAGE_KEYS.onlinePaymentProvider, onlinePaymentProvider);
   localStorage.setItem(STORAGE_KEYS.onlinePaymentNote, onlinePaymentNote);
   localStorage.setItem(STORAGE_KEYS.restaurantActive, restaurantActive ? "1" : "0");
+  localStorage.setItem(STORAGE_KEYS.restaurantOperationalOpen, restaurantOperationalOpen ? "1" : "0");
+  localStorage.setItem(STORAGE_KEYS.restaurantOpeningHours, JSON.stringify(restaurantOpeningHours));
+  storeCoordinate(STORAGE_KEYS.restaurantLatitude, restaurantLatitude);
+  storeCoordinate(STORAGE_KEYS.restaurantLongitude, restaurantLongitude);
 }
 
 function applySettingsPayload(settings = {}) {
@@ -954,6 +1002,16 @@ function applySettingsPayload(settings = {}) {
   onlinePaymentProvider = normalizeOnlinePaymentProvider(settings.onlinePaymentProvider ?? onlinePaymentProvider);
   onlinePaymentNote = preserveTextSetting(settings.onlinePaymentNote, onlinePaymentNote);
   if (typeof settings.restaurantActive === "boolean") restaurantActive = settings.restaurantActive;
+  if (typeof settings.restaurantOperationalOpen === "boolean") restaurantOperationalOpen = settings.restaurantOperationalOpen;
+  if (settings.openingHours && typeof settings.openingHours === "object") {
+    restaurantOpeningHours = normalizeOpeningHours(settings.openingHours);
+  }
+  if (settings.restaurantLatitude !== null && settings.restaurantLatitude !== undefined) {
+    restaurantLatitude = normalizeCoordinate(settings.restaurantLatitude);
+  }
+  if (settings.restaurantLongitude !== null && settings.restaurantLongitude !== undefined) {
+    restaurantLongitude = normalizeCoordinate(settings.restaurantLongitude);
+  }
   localStoreCurrentSettings();
   applyBusinessNameToUi();
 }
@@ -1163,7 +1221,7 @@ async function loadCloudData() {
     const restaurantProfile = restaurantProfileFromUserMetadata();
     const { data: publicProfileRow, error: publicProfileError } = await cloudState.client
       .from("restaurant_profiles")
-      .select("business_name, logo_url, public_address, phone, active")
+      .select("business_name, logo_url, public_address, phone, active, operational_open, opening_hours, latitude, longitude, deleted_at")
       .eq("user_id", cloudState.user.id)
       .maybeSingle();
     if (!publicProfileError && typeof publicProfileRow?.active === "boolean") {
@@ -1171,6 +1229,24 @@ async function loadCloudData() {
       localStorage.setItem(STORAGE_KEYS.restaurantActive, restaurantActive ? "1" : "0");
     } else if (publicProfileError) {
       console.warn("No se pudo leer el estado publico del restaurante.", publicProfileError);
+    }
+
+    const { data: ownerRole, error: ownerRoleError } = await cloudState.client
+      .from("user_roles")
+      .select("status")
+      .eq("user_id", cloudState.user.id)
+      .eq("role", "restaurant_owner")
+      .eq("status", "active")
+      .limit(1)
+      .maybeSingle();
+    if (ownerRoleError) console.warn("No se pudo comprobar el rol del restaurante.", ownerRoleError);
+
+    const accountType = normalizeTextSetting(cloudState.user?.user_metadata?.account_type).toLowerCase();
+    if (!publicProfileRow && !ownerRole && accountType !== "restaurant") {
+      const accessMessage = "Esta cuenta no tiene un restaurante registrado. Entra desde Cliente o completa el registro de restaurante.";
+      elements.authMessage.textContent = accessMessage;
+      await cloudState.client.auth.signOut();
+      return { ok: false, reason: "not-restaurant", message: accessMessage };
     }
 
     if (hasRestaurantOwnerRegistration(restaurantProfile, settingsRow)) {
@@ -1260,6 +1336,36 @@ async function loadCloudData() {
 async function saveCloudSettings() {
   if (!cloudState.client || !cloudState.user) return;
 
+  const rpcProfile = currentRestaurantPublicProfilePayload();
+  const { data: rpcData, error: rpcError } = await cloudState.client.rpc("save_current_restaurant_state", {
+    p_menu: normalizeMenuCatalog(menuCatalog),
+    p_settings: currentSettingsPayload(),
+    p_profile: {
+      businessName: rpcProfile.business_name,
+      logoUrl: rpcProfile.logo_url,
+      publicAddress: rpcProfile.public_address,
+      phone: rpcProfile.phone,
+      description: rpcProfile.description,
+      active: rpcProfile.active,
+      operationalOpen: rpcProfile.operational_open,
+      openingHours: rpcProfile.opening_hours,
+      latitude: rpcProfile.latitude,
+      longitude: rpcProfile.longitude,
+    },
+  });
+
+  if (!rpcError) {
+    const confirmed = Array.isArray(rpcData) ? rpcData[0] : rpcData;
+    if (!confirmed?.settings || !confirmed?.profile) {
+      throw new Error("Supabase no devolvio la confirmacion completa del restaurante.");
+    }
+    applySettingsPayload(confirmed.settings);
+    applyPublicRestaurantProfileFallback(confirmed.profile);
+    return confirmed;
+  }
+
+  if (!isMissingRestaurantRpc(rpcError)) throw rpcError;
+
   const { data, error } = await cloudState.client.from("app_settings").upsert({
     user_id: cloudState.user.id,
     menu: normalizeMenuCatalog(menuCatalog),
@@ -1281,7 +1387,7 @@ async function saveRestaurantPublicProfile() {
   try {
     const { data: currentProfile, error: currentProfileError } = await cloudState.client
       .from("restaurant_profiles")
-      .select("business_name, logo_url, public_address, phone, description, active")
+      .select("business_name, logo_url, public_address, phone, description, active, operational_open, opening_hours, latitude, longitude")
       .eq("user_id", cloudState.user.id)
       .maybeSingle();
     if (!currentProfileError && currentProfile) {
@@ -1298,6 +1404,11 @@ async function saveRestaurantPublicProfile() {
         phone: preserveTextSetting(payload.phone, currentProfile.phone),
         description: preserveTextSetting(payload.description, currentProfile.description, { preserveExisting: true }),
         active: typeof payload.active === "boolean" ? payload.active : currentProfile.active !== false,
+        operational_open:
+          typeof payload.operational_open === "boolean" ? payload.operational_open : currentProfile.operational_open === true,
+        opening_hours: payload.opening_hours || currentProfile.opening_hours || normalizeOpeningHours(),
+        latitude: payload.latitude ?? currentProfile.latitude ?? null,
+        longitude: payload.longitude ?? currentProfile.longitude ?? null,
       };
     }
   } catch (error) {
@@ -1307,7 +1418,7 @@ async function saveRestaurantPublicProfile() {
   const { data, error } = await cloudState.client
     .from("restaurant_profiles")
     .upsert(payload)
-    .select("user_id, business_name, logo_url, public_address, phone, description, active, updated_at")
+    .select("user_id, business_name, logo_url, public_address, phone, description, active, operational_open, opening_hours, latitude, longitude, updated_at")
     .single();
 
   if (error) {
@@ -1418,77 +1529,133 @@ async function persistRestaurantDeletionRequestInCloud() {
   return { requestRecorded: true };
 }
 
-async function setRestaurantActive(nextActive) {
+async function verifyRestaurantOperationalOpenInCloud(expectedOpen) {
+  const { data, error } = await cloudState.client
+    .from("restaurant_profiles")
+    .select("user_id, operational_open, updated_at")
+    .eq("user_id", cloudState.user.id)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data || data.operational_open !== Boolean(expectedOpen)) {
+    throw new Error("Supabase no confirmo el estado operativo del restaurante.");
+  }
+  return data;
+}
+
+async function persistRestaurantOperationalOpenInCloud(nextOpen) {
+  const expectedOpen = Boolean(nextOpen);
+  const { error } = await cloudState.client.rpc("set_current_restaurant_operational_open", {
+    p_open: expectedOpen,
+  });
+  if (error) throw error;
+  return verifyRestaurantOperationalOpenInCloud(expectedOpen);
+}
+
+async function setRestaurantOperationalOpen(nextOpen) {
   if (!cloudState.client || !cloudState.user) {
     showToast("Inicia sesion para cambiar el estado del restaurante.");
     return;
   }
 
-  const message = nextActive
-    ? "Reabrir restaurante para que aparezca en la app del cliente?"
-    : "Cerrar restaurante? Dejaremos de mostrarlo en la app del cliente, pero no se borran pedidos ni reportes.";
+  const message = nextOpen
+    ? "Abrir la atencion y permitir nuevos pedidos de clientes?"
+    : "Cerrar la atencion? El menu seguira visible, pero el cliente no podra enviar pedidos nuevos.";
   if (!confirm(message)) return;
 
-  const previousActive = restaurantActive;
+  const previousOpen = restaurantOperationalOpen;
   if (elements.closeRestaurantButton) elements.closeRestaurantButton.disabled = true;
   if (elements.restaurantStatusText) elements.restaurantStatusText.textContent = "Actualizando estado en la nube...";
   try {
-    await persistRestaurantActiveInCloud(nextActive);
-    restaurantActive = Boolean(nextActive);
+    await persistRestaurantOperationalOpenInCloud(nextOpen);
+    restaurantOperationalOpen = Boolean(nextOpen);
     localStoreCurrentSettings();
     renderRestaurantStatus();
-    const settingsResult = await saveSettingsWhenPossible({ silent: true });
-    showToast(restaurantActive ? "Restaurante reabierto para clientes." : "Restaurante cerrado para clientes.");
-    if (!settingsResult.synced) {
-      showToast("Estado confirmado. Otros ajustes quedaron pendientes de sincronizar.");
-    }
+    showToast(restaurantOperationalOpen ? "Atencion abierta y sincronizada con clientes." : "Atencion cerrada y sincronizada con clientes.");
   } catch (error) {
     console.error(error);
-    restaurantActive = previousActive;
+    restaurantOperationalOpen = previousOpen;
     localStoreCurrentSettings();
     renderRestaurantStatus();
-    alert("No se pudo confirmar el cambio en Supabase. El restaurante conserva su estado anterior.");
+    alert("No se pudo confirmar el cambio en Supabase. La atencion conserva su estado anterior.");
   } finally {
     if (elements.closeRestaurantButton) elements.closeRestaurantButton.disabled = false;
   }
 }
 
-async function toggleRestaurantActive() {
-  await setRestaurantActive(!restaurantActive);
+async function toggleRestaurantOperationalOpen() {
+  await setRestaurantOperationalOpen(!restaurantOperationalOpen);
 }
 
-async function requestRestaurantDeletion() {
+function setRestaurantDeletionMessage(message = "", type = "") {
+  if (!elements.restaurantDeletionMessage) return;
+  elements.restaurantDeletionMessage.textContent = message;
+  elements.restaurantDeletionMessage.dataset.type = type;
+  elements.restaurantDeletionMessage.hidden = !message;
+}
+
+function requestRestaurantDeletion() {
   if (!cloudState.client || !cloudState.user) {
-    showToast("Inicia sesion para solicitar eliminacion.");
+    showToast("Inicia sesion para eliminar la cuenta.");
     return;
   }
-  const detail = prompt(
-    "Escribe ELIMINAR para solicitar eliminar/desactivar la cuenta del restaurante. No borraremos pedidos ni datos contables automaticamente."
-  );
-  if (normalizeTextSetting(detail).toUpperCase() !== "ELIMINAR") {
-    showToast("Solicitud cancelada.");
+  if (elements.restaurantDeletionPasswordInput) elements.restaurantDeletionPasswordInput.value = "";
+  if (elements.restaurantDeletionConfirmationInput) elements.restaurantDeletionConfirmationInput.value = "";
+  setRestaurantDeletionMessage("");
+  elements.restaurantDeletionDialog?.showModal();
+  window.setTimeout(() => elements.restaurantDeletionPasswordInput?.focus(), 50);
+}
+
+function clearRestaurantLocalData() {
+  Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key));
+}
+
+async function confirmRestaurantDeletion() {
+  const password = elements.restaurantDeletionPasswordInput?.value || "";
+  const confirmation = normalizeTextSetting(elements.restaurantDeletionConfirmationInput?.value).toUpperCase();
+  if (!password) {
+    setRestaurantDeletionMessage("Escribe la contrasena actual.", "error");
+    elements.restaurantDeletionPasswordInput?.focus();
+    return;
+  }
+  if (confirmation !== "ELIMINAR") {
+    setRestaurantDeletionMessage("Escribe ELIMINAR para confirmar.", "error");
+    elements.restaurantDeletionConfirmationInput?.focus();
     return;
   }
 
-  if (elements.requestRestaurantDeletionButton) elements.requestRestaurantDeletionButton.disabled = true;
-  if (elements.restaurantStatusText) elements.restaurantStatusText.textContent = "Eliminando restaurante de la app del cliente...";
+  elements.confirmRestaurantDeletionButton.disabled = true;
+  elements.cancelRestaurantDeletionButton.disabled = true;
+  setRestaurantDeletionMessage("Verificando identidad y eliminando la cuenta...", "");
   try {
-    const result = await persistRestaurantDeletionRequestInCloud();
-    restaurantActive = false;
-    localStoreCurrentSettings();
-    renderRestaurantStatus();
-    await saveSettingsWhenPossible({ silent: true });
-    showToast(
-      result.requestRecorded
-        ? "Restaurante eliminado de la app del cliente. La solicitud quedo registrada."
-        : "Restaurante eliminado de la app del cliente. La solicitud administrativa quedo pendiente."
-    );
+    const email = normalizeTextSetting(cloudState.user?.email);
+    const { error: authError } = await cloudState.client.auth.signInWithPassword({ email, password });
+    if (authError) throw new Error("La contrasena no es correcta. La cuenta no fue eliminada.");
+
+    const { data, error } = await cloudState.client.functions.invoke("delete-own-restaurant-account", {
+      body: { confirmation: "ELIMINAR" },
+    });
+    if (error) throw error;
+    if (!data?.deleted) throw new Error(data?.message || "Supabase no confirmo la eliminacion.");
+
+    clearRestaurantLocalData();
+    try {
+      await cloudState.client.auth.signOut({ scope: "local" });
+    } catch {
+      // La cuenta ya fue eliminada en el servidor; se limpia el navegador igualmente.
+    }
+    elements.restaurantDeletionDialog?.close();
+    alert("La cuenta del restaurante y sus datos fueron eliminados de RC ORDERA.");
+    window.location.replace(`index.html?app=${APP_VERSION}`);
   } catch (error) {
     console.error(error);
-    renderRestaurantStatus();
-    alert("No se pudo confirmar la eliminacion en Supabase. El restaurante sigue conservando su estado anterior.");
+    const message = /failed to send|function|404/i.test(String(error?.message || ""))
+      ? "No se pudo ejecutar la eliminacion segura. Despliega la funcion delete-own-restaurant-account en Supabase e intenta de nuevo. La cuenta sigue intacta."
+      : error.message || "No se pudo confirmar la eliminacion. La cuenta sigue intacta.";
+    setRestaurantDeletionMessage(message, "error");
   } finally {
-    if (elements.requestRestaurantDeletionButton) elements.requestRestaurantDeletionButton.disabled = false;
+    elements.confirmRestaurantDeletionButton.disabled = false;
+    elements.cancelRestaurantDeletionButton.disabled = false;
   }
 }
 
@@ -3137,6 +3304,52 @@ function readRestaurantActive() {
   return localStorage.getItem(STORAGE_KEYS.restaurantActive) !== "0";
 }
 
+function readRestaurantOperationalOpen() {
+  return localStorage.getItem(STORAGE_KEYS.restaurantOperationalOpen) === "1";
+}
+
+function normalizeClockTime(value, fallback) {
+  const text = String(value || "").trim();
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(text) ? text : fallback;
+}
+
+function normalizeOpeningHours(value = {}) {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  return Object.fromEntries(
+    RESTAURANT_WEEK_DAYS.map(([key]) => {
+      const row = source[key] && typeof source[key] === "object" ? source[key] : {};
+      return [key, {
+        enabled: row.enabled === true,
+        open: normalizeClockTime(row.open, "09:00"),
+        close: normalizeClockTime(row.close, "22:00"),
+      }];
+    })
+  );
+}
+
+function readRestaurantOpeningHours() {
+  try {
+    return normalizeOpeningHours(JSON.parse(localStorage.getItem(STORAGE_KEYS.restaurantOpeningHours) || "{}"));
+  } catch {
+    return normalizeOpeningHours();
+  }
+}
+
+function normalizeCoordinate(value) {
+  const number = Number.parseFloat(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function readCoordinate(key) {
+  return normalizeCoordinate(localStorage.getItem(key));
+}
+
+function storeCoordinate(key, value) {
+  const coordinate = normalizeCoordinate(value);
+  if (coordinate === null) localStorage.removeItem(key);
+  else localStorage.setItem(key, String(coordinate));
+}
+
 function readLegalBusinessName() {
   return normalizeTextSetting(localStorage.getItem(STORAGE_KEYS.legalBusinessName) || "");
 }
@@ -3285,29 +3498,98 @@ async function saveCurrencySymbol() {
   }
 }
 
+function renderRestaurantHours() {
+  if (!elements.restaurantHoursGrid) return;
+  restaurantOpeningHours = normalizeOpeningHours(restaurantOpeningHours);
+  elements.restaurantHoursGrid.innerHTML = RESTAURANT_WEEK_DAYS.map(([key, label]) => {
+    const day = restaurantOpeningHours[key];
+    return `
+      <div class="restaurant-hours-row" data-day="${key}">
+        <label class="restaurant-day-toggle">
+          <input type="checkbox" data-hours-enabled ${day.enabled ? "checked" : ""} />
+          <span>${label}</span>
+        </label>
+        <label>
+          <span>Abrir</span>
+          <input type="time" data-hours-open value="${day.open}" ${day.enabled ? "" : "disabled"} />
+        </label>
+        <label>
+          <span>Cerrar</span>
+          <input type="time" data-hours-close value="${day.close}" ${day.enabled ? "" : "disabled"} />
+        </label>
+      </div>
+    `;
+  }).join("");
+}
+
+function readRestaurantHoursFromForm() {
+  const nextHours = {};
+  elements.restaurantHoursGrid?.querySelectorAll("[data-day]").forEach((row) => {
+    const key = row.dataset.day;
+    const enabled = Boolean(row.querySelector("[data-hours-enabled]")?.checked);
+    const open = normalizeClockTime(row.querySelector("[data-hours-open]")?.value, "09:00");
+    const close = normalizeClockTime(row.querySelector("[data-hours-close]")?.value, "22:00");
+    if (enabled && open === close) throw new Error(`El horario de ${key} debe tener horas diferentes.`);
+    nextHours[key] = { enabled, open, close };
+  });
+  return normalizeOpeningHours(nextHours);
+}
+
+async function saveRestaurantHours() {
+  if (elements.saveRestaurantHoursButton) elements.saveRestaurantHoursButton.disabled = true;
+  try {
+    restaurantOpeningHours = readRestaurantHoursFromForm();
+    localStoreCurrentSettings();
+    const result = await saveSettingsWhenPossible();
+    showToast(syncResultMessage("Horario guardado.", result));
+  } catch (error) {
+    alert(error.message || "Revisa el horario antes de guardar.");
+  } finally {
+    if (elements.saveRestaurantHoursButton) elements.saveRestaurantHoursButton.disabled = false;
+  }
+}
+
+function setRestaurantLocationStatus(message = "", type = "") {
+  if (!elements.restaurantLocationStatus) return;
+  elements.restaurantLocationStatus.textContent = message;
+  elements.restaurantLocationStatus.dataset.type = type;
+  elements.restaurantLocationStatus.hidden = !message;
+}
+
 function useRestaurantCurrentLocation() {
   if (!navigator.geolocation) {
     alert("Este dispositivo no permite obtener ubicacion.");
     return;
   }
+  if (!window.isSecureContext && !["localhost", "127.0.0.1"].includes(window.location.hostname)) {
+    setRestaurantLocationStatus("La ubicacion requiere abrir RC ORDERA desde la direccion HTTPS publicada en Vercel.", "error");
+    return;
+  }
 
   elements.useRestaurantLocationButton.disabled = true;
-  showToast("Solicitando ubicacion del restaurante...");
+  setRestaurantLocationStatus("Solicitando ubicacion del restaurante...");
   navigator.geolocation.getCurrentPosition(
     async (position) => {
-      const lat = Number(position.coords.latitude).toFixed(6);
-      const lng = Number(position.coords.longitude).toFixed(6);
-      restaurantAddress = `${lat}, ${lng}`;
-      elements.restaurantAddressInput.value = restaurantAddress;
-      localStorage.setItem(STORAGE_KEYS.restaurantAddress, restaurantAddress);
+      restaurantLatitude = Number(position.coords.latitude);
+      restaurantLongitude = Number(position.coords.longitude);
+      if (!normalizeTextSetting(elements.restaurantAddressInput?.value)) {
+        restaurantAddress = `${restaurantLatitude.toFixed(6)}, ${restaurantLongitude.toFixed(6)}`;
+        elements.restaurantAddressInput.value = restaurantAddress;
+      }
+      localStoreCurrentSettings();
       const result = await saveSettingsWhenPossible();
       updateQrPreview();
       elements.useRestaurantLocationButton.disabled = false;
-      showToast(syncResultMessage("Ubicacion actual guardada para domicilio.", result));
+      setRestaurantLocationStatus(syncResultMessage("Ubicacion exacta guardada para domicilio.", result), result.synced ? "ok" : "");
     },
-    () => {
+    (error) => {
       elements.useRestaurantLocationButton.disabled = false;
-      alert("No pude obtener la ubicacion. Permite ubicacion en el navegador o escribe la direccion manualmente.");
+      const messages = {
+        1: "Permiso de ubicacion denegado. Puedes escribir la direccion manualmente o habilitar el permiso del navegador.",
+        2: "El dispositivo no pudo determinar la ubicacion. Intenta cerca de una ventana o escribe la direccion.",
+        3: "La ubicacion tardo demasiado. Intenta nuevamente o escribe la direccion manualmente.",
+      };
+      setRestaurantLocationStatus(messages[error?.code] || "No fue posible obtener la ubicacion.", "error");
     },
     { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
   );
@@ -3333,6 +3615,7 @@ function renderCurrencySettings() {
   elements.bankTransferNoteInput.value = bankTransferNote;
   if (elements.onlinePaymentProviderSelect) elements.onlinePaymentProviderSelect.value = onlinePaymentProvider;
   if (elements.onlinePaymentNoteInput) elements.onlinePaymentNoteInput.value = onlinePaymentNote;
+  renderRestaurantHours();
   renderRestaurantStatus();
   applyBusinessNameToUi();
   applyReceiptPrintStyle();
@@ -3340,12 +3623,15 @@ function renderCurrencySettings() {
 
 function renderRestaurantStatus() {
   if (elements.restaurantStatusText) {
-    elements.restaurantStatusText.textContent = restaurantActive
-      ? "Restaurante activo para clientes."
-      : "Restaurante cerrado: no aparece en la app del cliente.";
+    elements.restaurantStatusText.textContent = !restaurantActive
+      ? "La cuenta del restaurante esta desactivada."
+      : restaurantOperationalOpen
+        ? "Atencion abierta: los clientes pueden enviar pedidos."
+        : "Atencion cerrada: el menu es visible, pero no recibe pedidos nuevos.";
   }
   if (elements.closeRestaurantButton) {
-    elements.closeRestaurantButton.textContent = restaurantActive ? "Cerrar restaurante" : "Reabrir restaurante";
+    elements.closeRestaurantButton.textContent = restaurantOperationalOpen ? "Cerrar atencion" : "Abrir atencion";
+    elements.closeRestaurantButton.disabled = !restaurantActive;
   }
 }
 
@@ -5001,8 +5287,18 @@ if (elements.refreshAppButton) {
 }
 elements.openSignInButton.addEventListener("click", openSignInScreen);
 elements.signOutButton.addEventListener("click", signOut);
-elements.closeRestaurantButton?.addEventListener("click", toggleRestaurantActive);
+elements.closeRestaurantButton?.addEventListener("click", toggleRestaurantOperationalOpen);
 elements.requestRestaurantDeletionButton?.addEventListener("click", requestRestaurantDeletion);
+elements.confirmRestaurantDeletionButton?.addEventListener("click", confirmRestaurantDeletion);
+elements.cancelRestaurantDeletionButton?.addEventListener("click", () => elements.restaurantDeletionDialog?.close());
+elements.saveRestaurantHoursButton?.addEventListener("click", saveRestaurantHours);
+elements.restaurantHoursGrid?.addEventListener("change", (event) => {
+  if (!event.target.matches("[data-hours-enabled]")) return;
+  const row = event.target.closest("[data-day]");
+  row?.querySelectorAll("input[type='time']").forEach((input) => {
+    input.disabled = !event.target.checked;
+  });
+});
 elements.qrButton.addEventListener("click", openQrDialog);
 elements.waiterTeamButton?.addEventListener("click", openWaiterTeamDialog);
 elements.copyWaiterLinkButton?.addEventListener("click", copyWaiterLink);

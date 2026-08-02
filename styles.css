@@ -2435,6 +2435,7 @@ dialog {
   position: fixed;
   top: 50%;
   left: 50%;
+  margin: 0;
   width: min(420px, calc(100% - 32px));
   max-height: calc(100dvh - 32px);
   border: 0;
@@ -2525,6 +2526,75 @@ dialog::backdrop {
 
 .restaurant-danger-card button:first-of-type {
   background: #7c2d12;
+}
+
+.restaurant-hours-card {
+  align-items: stretch;
+}
+
+.restaurant-hours-grid {
+  display: grid;
+  gap: 8px;
+  grid-column: 1 / -1;
+}
+
+.restaurant-hours-row {
+  display: grid;
+  grid-template-columns: minmax(130px, 1fr) minmax(120px, 0.8fr) minmax(120px, 0.8fr);
+  gap: 10px;
+  align-items: end;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.restaurant-hours-row:last-child {
+  border-bottom: 0;
+}
+
+.restaurant-hours-row label {
+  margin: 0;
+}
+
+.restaurant-day-toggle {
+  display: flex;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+}
+
+.restaurant-day-toggle input {
+  width: 20px;
+  height: 20px;
+}
+
+.settings-location-status {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  background: #f7f9fc;
+}
+
+.settings-location-status[data-type="ok"] {
+  color: #176b3a;
+  border-color: #9fd4b7;
+  background: #edf9f1;
+}
+
+.settings-location-status[data-type="error"] {
+  color: #a72c22;
+  border-color: #efb3ae;
+  background: #fff4f2;
+}
+
+.restaurant-deletion-dialog form {
+  display: grid;
+  gap: 14px;
+}
+
+.restaurant-deletion-dialog #confirmRestaurantDeletionButton {
+  background: #b42318;
 }
 
 .settings-wide-field {
@@ -3459,6 +3529,14 @@ body.auth-checking > :not(script) {
     grid-column: 1 / -1;
   }
 
+  .restaurant-hours-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .restaurant-day-toggle {
+    grid-column: 1 / -1;
+  }
+
   .product-section-header {
     display: grid;
   }
@@ -3881,6 +3959,20 @@ body.auth-checking > :not(script) {
   color: var(--green) !important;
   font-size: 0.74rem !important;
   text-transform: uppercase;
+}
+
+.customer-restaurant-state.is-closed,
+.customer-open-badge.is-closed {
+  color: #9b2c24 !important;
+  background: #fff1ef;
+  border-color: #efb3ae;
+}
+
+.customer-restaurant-state.is-open,
+.customer-open-badge.is-open {
+  color: #176b3a !important;
+  background: #edf9f1;
+  border-color: #9fd4b7;
 }
 
 .customer-restaurant-chevron {

@@ -1,0 +1,6 @@
+supabase/
+MIGRACION-*.sql
+supabase-schema.sql
+*.txt
+outputs/
+

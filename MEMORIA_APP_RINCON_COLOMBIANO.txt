@@ -341,3 +341,13 @@ VERSION v71 - MESEROS, CAJA CENTRAL Y TICKETS COMPACTOS
 - El cliente escucha cambios del perfil del restaurante; un restaurante eliminado/desactivado desaparece sin recargar.
 - MIGRACION-FASE1-V71-MESEROS-ESTACIONES.sql incluye Realtime, permisos, validacion segura y reparacion idempotente de eliminacion logica.
 - Cache PWA actualizado a rc-ordera-v71.
+ACTUALIZACION V72 - NUBE, HORARIOS, REALTIME Y ELIMINACION SEGURA (01/08/2026)
+- `active` vuelve a representar una cuenta de restaurante vigente; `operational_open` controla abierto/cerrado para clientes.
+- El cliente consulta `get_public_restaurant_directory`, elimina duplicados y descarta restaurantes borrados.
+- Menu, perfil y estado se actualizan mediante Realtime; el menu se filtra por `user_id`.
+- Se agrego horario semanal editable y apertura/cierre operativo desde caja.
+- El guardado principal usa `save_current_restaurant_state` para confirmar menu, configuracion y perfil en una operacion.
+- La eliminacion definitiva exige contrasena y `ELIMINAR`, y llama la Edge Function `delete-own-restaurant-account`.
+- El administrador unico se recupera con `MIGRACION-FASE1-V72-RECUPERAR-ADMIN-UNICO.sql`; la contrasena nunca se incluye en el frontend.
+- Ejecutar `MIGRACION-FASE1-V72-NUBE-HORARIOS-REALTIME.sql`, luego la migracion de administrador y desplegar la Edge Function.
+- Ver instrucciones completas en `GUIA-PUESTA-EN-MARCHA-V72.md` y resultados en `REPORTE-VALIDACION-V72-NUBE-REALTIME.md`.
