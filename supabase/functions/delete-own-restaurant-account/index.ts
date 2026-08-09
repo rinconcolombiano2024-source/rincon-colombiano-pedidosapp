@@ -64,6 +64,21 @@ Deno.serve(async (request) => {
     return jsonResponse(404, { deleted: false, message: "No existe un restaurante asociado a esta cuenta." });
   }
 
+  // Retira primero el restaurante del directorio publico. Si una operacion posterior falla,
+  // los clientes nunca siguen viendo una cuenta cuya eliminacion ya fue confirmada.
+  const { error: hideRestaurantError } = await admin
+    .from("restaurant_profiles")
+    .update({
+      active: false,
+      operational_open: false,
+      deleted_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", user.id);
+  if (hideRestaurantError) {
+    return jsonResponse(500, { deleted: false, message: "No fue posible retirar el restaurante del directorio publico." });
+  }
+
   // Esta relacion usa ON DELETE RESTRICT para quien concedio permisos.
   // Se limpia antes de borrar Auth para que no queden accesos de personal huerfanos.
   const { error: grantedMembershipError } = await admin
@@ -97,4 +112,3 @@ Deno.serve(async (request) => {
 
   return jsonResponse(200, { deleted: true });
 });
-
