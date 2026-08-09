@@ -4032,6 +4032,57 @@ customerElements.viewButtons.forEach((button) => {
     customerRenderCart();
   });
 });
+customerElements.editProfileButton?.addEventListener("click", () => {
+  if (!customerUser) return;
+
+  const fullName = customerNormalizeText(
+    customerElements.nameInput?.value || customerElements.registerNameInput?.value
+  );
+
+  const phone = customerNormalizeText(
+    customerElements.phoneInput?.value || customerElements.registerPhoneInput?.value
+  );
+
+  const address = customerNormalizeText(
+    customerElements.addressInput?.value || customerElements.registerAddressInput?.value
+  );
+
+  const neighborhood = customerNormalizeText(
+    customerElements.neighborhoodInput?.value || customerElements.registerNeighborhoodInput?.value
+  );
+
+  customerElements.profileDetails.innerHTML = `
+    <label>
+      <span>${customerEscapeHtml(customerT("profileName"))}</span>
+      <input id="customerProfileEditName" type="text" value="${customerEscapeHtml(fullName)}">
+    </label>
+
+    <label>
+      <span>${customerEscapeHtml(customerT("profilePhone"))}</span>
+      <input id="customerProfileEditPhone" type="tel" value="${customerEscapeHtml(phone)}">
+    </label>
+
+    <label>
+      <span>${customerEscapeHtml(customerT("profileAddress"))}</span>
+      <input id="customerProfileEditAddress" type="text" value="${customerEscapeHtml(address)}">
+    </label>
+
+    <label>
+      <span>Barrio / ciudad</span>
+      <input id="customerProfileEditNeighborhood" type="text" value="${customerEscapeHtml(neighborhood)}">
+    </label>
+
+    <div class="customer-profile-edit-buttons">
+      <button class="customer-map-button" id="customerProfileSaveButton" type="button">
+        Guardar cambios
+      </button>
+
+      <button class="customer-map-button" id="customerProfileCancelButton" type="button">
+        Cancelar
+      </button>
+    </div>
+  `;
+});
 
 window.addEventListener("online", () => {
   customerStartDirectoryRealtime();
