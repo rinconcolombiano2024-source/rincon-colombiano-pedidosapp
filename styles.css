@@ -2455,7 +2455,7 @@ dialog {
   border: 0;
   border-radius: 8px;
   padding: 0;
-  overflow: auto;
+  overflow: hidden;
   box-shadow: 0 28px 80px rgba(17, 24, 39, 0.28);
   transform: translate(-50%, -50%);
   z-index: 100;
@@ -2469,11 +2469,25 @@ dialog::backdrop {
   background: rgba(17, 24, 39, 0.45);
 }
 
+dialog > form {
+  box-sizing: border-box;
+  max-height: calc(100dvh - 32px);
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 .counter-form {
   display: grid;
   gap: 14px;
   max-height: calc(100dvh - 32px);
-  overflow: auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 20px;
 }
 
@@ -2493,17 +2507,34 @@ dialog::backdrop {
 
 .monthly-form {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
-  max-height: min(86vh, 760px);
-  overflow: auto;
+  max-height: min(calc(100dvh - 32px), 760px);
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 20px;
+}
+
+.monthly-form > * {
+  min-width: 0;
+}
+
+.monthly-form > .settings-wide-field {
+  grid-column: 1 / -1;
 }
 
 .menu-editor-form {
   display: grid;
   gap: 16px;
-  max-height: min(88vh, 820px);
-  overflow: auto;
+  max-height: min(calc(100dvh - 32px), 820px);
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 20px;
 }
 
@@ -2512,6 +2543,17 @@ dialog::backdrop {
   align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
+}
+
+.monthly-form > .dialog-actions,
+.menu-editor-form > .dialog-actions {
+  position: sticky;
+  bottom: -20px;
+  z-index: 2;
+  margin: 0 -20px -20px;
+  padding: 14px 20px 20px;
+  border-top: 1px solid var(--line);
+  background: #ffffff;
 }
 
 .settings-card {

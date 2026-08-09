@@ -379,3 +379,17 @@ CORRECCION V73 - CONFIRMACION VISIBLE DE PERSONAL (02/08/2026)
 - La estacion muestra `Activar autorizacion` para reclamar una invitacion valida del mismo correo.
 - Se corrigio la distribucion visual de nombre, correo, estado y botones en la tarjeta de personal.
 - Cache PWA actualizado a `rc-ordera-v73-staff-confirm`.
+
+ACTUALIZACION V74 - ESTABILIZACION DE APROBACIONES, UBICACION Y ELIMINACION (09/08/2026)
+- El administrador solo confirma aprobar/rechazar despues de volver a leer el estado real en Supabase.
+- El colaborador aprobado recibe el cambio mediante Realtime y su guardado ya no puede devolver el estado a pendiente.
+- Un trigger impide que un colaborador se autoapruebe o altere los datos de revision.
+- El propietario dispone de confirmacion real para personal y estaciones; la interfaz quedo ordenada en movil y escritorio.
+- Cliente, restaurante y colaborador detectan pais, zona horaria, idioma y coordenadas durante el registro cuando existe permiso.
+- El cliente traduce categorias, nombres y descripciones sin cambiar los datos historicos del pedido.
+- Restaurantes inactivos o con deleted_at quedan fuera incluso de la consulta publica de respaldo.
+- El directorio se vuelve a comprobar silenciosamente para retirar restaurantes eliminados aunque RLS oculte el evento Realtime.
+- Las ventanas de cierre y menu tienen un unico desplazamiento interno y acciones accesibles.
+- La PWA V74 conserva la pagina correcta sin conexion para Cliente, Colaborador, Estacion y Administracion.
+- Ejecutar MIGRACION-FASE1-V74-ESTABILIZACION-APROBACIONES-UBICACION-ELIMINACION.sql y redeplegar la Edge Function de eliminacion.
+- Ver GUIA-ACTUALIZACION-V74.md, VALIDACION-V74.sql y REPORTE-VALIDACION-V74-ESTABILIZACION.md.

@@ -37,7 +37,7 @@ const STORAGE_KEYS = {
 
 const DEFAULT_BUSINESS_NAME = "RINCON COLOMBIANO";
 const DEFAULT_DELIVERY_MINIMUM_FEE = 20;
-const APP_VERSION = "v73";
+const APP_VERSION = "v74";
 const PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 const PLATFORM_APP_NAME = "RC ORDERA";
 const RESTAURANT_WEEK_DAYS = [
@@ -49,6 +49,54 @@ const RESTAURANT_WEEK_DAYS = [
   ["saturday", "Sabado"],
   ["sunday", "Domingo"],
 ];
+
+function detectRegionalDefaults(coords = null) {
+  const latitude = Number(coords?.latitude ?? coords?.lat);
+  const longitude = Number(coords?.longitude ?? coords?.lng);
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+  const browserLanguage = String(navigator.language || "es").toLowerCase();
+  let countryCode = "";
+
+  if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+    if (latitude >= 49 && latitude <= 55.2 && longitude >= 14 && longitude <= 24.3) countryCode = "PL";
+    if (latitude >= -5 && latitude <= 14.5 && longitude >= -82 && longitude <= -66) countryCode = "CO";
+  }
+  if (!countryCode && timezone === "Europe/Warsaw") countryCode = "PL";
+  if (!countryCode && timezone === "America/Bogota") countryCode = "CO";
+  if (!countryCode && /^pl(?:-|$)/.test(browserLanguage)) countryCode = "PL";
+  if (!countryCode && /^es-co(?:-|$)/.test(browserLanguage)) countryCode = "CO";
+
+  const preferredLanguage = browserLanguage.startsWith("pl")
+    ? "pl"
+    : browserLanguage.startsWith("en")
+      ? "en"
+      : "es";
+  return {
+    countryCode,
+    country: countryCode === "PL" ? "Polonia" : countryCode === "CO" ? "Colombia" : "",
+    city: "",
+    timezone,
+    preferredLanguage,
+    latitude: Number.isFinite(latitude) ? latitude : null,
+    longitude: Number.isFinite(longitude) ? longitude : null,
+  };
+}
+
+function registrationPosition() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation || (!window.isSecureContext && !["localhost", "127.0.0.1"].includes(window.location.hostname))) {
+      resolve(null);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => resolve(position.coords),
+      () => resolve(null),
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
+    );
+  });
+}
+
+let restaurantRegistrationRegion = detectRegionalDefaults();
 
 const EMPTY_MENU_CATALOG = {
   Entradas: [],
@@ -762,6 +810,10 @@ function currentRestaurantPublicProfilePayload() {
     opening_hours: restaurantOpeningHours,
     latitude: restaurantLatitude,
     longitude: restaurantLongitude,
+    country_code: restaurantRegistrationRegion.countryCode,
+    city: restaurantRegistrationRegion.city,
+    timezone: restaurantRegistrationRegion.timezone,
+    preferred_language: restaurantRegistrationRegion.preferredLanguage,
     updated_at: new Date().toISOString(),
   };
 }
@@ -776,6 +828,13 @@ function restaurantSignupProfileFromInputs(email = "") {
     businessEmail: normalizeTextSetting(email || elements.authEmail?.value || ""),
     ownerName: normalizeTextSetting(elements.authOwnerNameInput?.value || ""),
     legalConsent: Boolean(elements.authLegalConsentInput?.checked),
+    countryCode: restaurantRegistrationRegion.countryCode,
+    country: restaurantRegistrationRegion.country,
+    city: restaurantRegistrationRegion.city,
+    timezone: restaurantRegistrationRegion.timezone,
+    preferredLanguage: restaurantRegistrationRegion.preferredLanguage,
+    latitude: restaurantRegistrationRegion.latitude,
+    longitude: restaurantRegistrationRegion.longitude,
   };
 }
 
@@ -790,6 +849,17 @@ function restaurantProfileFromUserMetadata() {
     businessPhone: profile.businessPhone || metadata.business_phone || "",
     businessEmail: profile.businessEmail || metadata.business_email || cloudState.user?.email || "",
     ownerName: profile.ownerName || metadata.owner_name || "",
+    countryCode: profile.countryCode || metadata.country_code || "",
+    country: profile.country || metadata.country || "",
+    city: profile.city || metadata.city || "",
+    timezone: profile.timezone || metadata.timezone || "",
+    preferredLanguage: profile.preferredLanguage || metadata.preferred_language || "es",
+    latitude: Number.isFinite(Number(profile.latitude ?? metadata.registration_latitude))
+      ? Number(profile.latitude ?? metadata.registration_latitude)
+      : null,
+    longitude: Number.isFinite(Number(profile.longitude ?? metadata.registration_longitude))
+      ? Number(profile.longitude ?? metadata.registration_longitude)
+      : null,
   };
 }
 
@@ -825,9 +895,12 @@ function restaurantOwnerUserProfilePayload(profile = restaurantProfileFromUserMe
     last_name: nameParts.lastName,
     full_name: fullName,
     phone: normalizeTextSetting(profile.businessPhone || businessPhone),
-    country: "",
-    city: "",
-    preferred_language: "es",
+    country: normalizeTextSetting(profile.country || restaurantRegistrationRegion.country),
+    city: normalizeTextSetting(profile.city || restaurantRegistrationRegion.city),
+    preferred_language: profile.preferredLanguage || restaurantRegistrationRegion.preferredLanguage || "es",
+    registration_latitude: profile.latitude ?? restaurantRegistrationRegion.latitude,
+    registration_longitude: profile.longitude ?? restaurantRegistrationRegion.longitude,
+    detected_timezone: profile.timezone || restaurantRegistrationRegion.timezone,
     status: "active",
     updated_at: new Date().toISOString(),
   };
@@ -876,6 +949,16 @@ function applyRestaurantProfile(profile = {}, options = {}) {
   restaurantAddress = assignText(restaurantAddress, profile.legalAddress);
   businessPhone = assignText(businessPhone, profile.businessPhone);
   businessEmail = assignText(businessEmail, profile.businessEmail);
+  restaurantRegistrationRegion = {
+    ...restaurantRegistrationRegion,
+    countryCode: profile.countryCode || restaurantRegistrationRegion.countryCode,
+    country: profile.country || restaurantRegistrationRegion.country,
+    city: profile.city || restaurantRegistrationRegion.city,
+    timezone: profile.timezone || restaurantRegistrationRegion.timezone,
+    preferredLanguage: profile.preferredLanguage || restaurantRegistrationRegion.preferredLanguage,
+    latitude: profile.latitude ?? restaurantRegistrationRegion.latitude,
+    longitude: profile.longitude ?? restaurantRegistrationRegion.longitude,
+  };
 
   localStorage.setItem(STORAGE_KEYS.businessName, businessName);
   localStorage.setItem(STORAGE_KEYS.legalBusinessName, legalBusinessName);
@@ -916,6 +999,13 @@ function applyPublicRestaurantProfileFallback(profile = {}, options = {}) {
   }
   if (profile.latitude !== null && profile.latitude !== undefined) restaurantLatitude = normalizeCoordinate(profile.latitude);
   if (profile.longitude !== null && profile.longitude !== undefined) restaurantLongitude = normalizeCoordinate(profile.longitude);
+  restaurantRegistrationRegion = {
+    ...restaurantRegistrationRegion,
+    countryCode: normalizeTextSetting(profile.country_code) || restaurantRegistrationRegion.countryCode,
+    city: normalizeTextSetting(profile.city) || restaurantRegistrationRegion.city,
+    timezone: normalizeTextSetting(profile.timezone) || restaurantRegistrationRegion.timezone,
+    preferredLanguage: normalizeTextSetting(profile.preferred_language) || restaurantRegistrationRegion.preferredLanguage,
+  };
 
   localStorage.setItem(STORAGE_KEYS.businessName, businessName);
   localStorage.setItem(STORAGE_KEYS.businessLogoUrl, businessLogoUrl);
@@ -1221,7 +1311,7 @@ async function loadCloudData() {
     const restaurantProfile = restaurantProfileFromUserMetadata();
     const { data: publicProfileRow, error: publicProfileError } = await cloudState.client
       .from("restaurant_profiles")
-      .select("business_name, logo_url, public_address, phone, active, operational_open, opening_hours, latitude, longitude, deleted_at")
+      .select("business_name, logo_url, public_address, phone, active, operational_open, opening_hours, latitude, longitude, country_code, city, timezone, preferred_language, deleted_at")
       .eq("user_id", cloudState.user.id)
       .maybeSingle();
     if (!publicProfileError && typeof publicProfileRow?.active === "boolean") {
@@ -1632,6 +1722,18 @@ async function confirmRestaurantDeletion() {
     const { error: authError } = await cloudState.client.auth.signInWithPassword({ email, password });
     if (authError) throw new Error("La contrasena no es correcta. La cuenta no fue eliminada.");
 
+    const { data: preparedRows, error: prepareError } = await cloudState.client.rpc(
+      "prepare_current_restaurant_deletion"
+    );
+    if (prepareError) throw prepareError;
+    const prepared = Array.isArray(preparedRows) ? preparedRows[0] : preparedRows;
+    if (!prepared?.hidden_from_customers) {
+      throw new Error("Supabase no confirmo que el restaurante salio del directorio de clientes.");
+    }
+    restaurantActive = false;
+    restaurantOperationalOpen = false;
+    localStoreCurrentSettings();
+
     const { data, error } = await cloudState.client.functions.invoke("delete-own-restaurant-account", {
       body: { confirmation: "ELIMINAR" },
     });
@@ -1650,7 +1752,7 @@ async function confirmRestaurantDeletion() {
   } catch (error) {
     console.error(error);
     const message = /failed to send|function|404/i.test(String(error?.message || ""))
-      ? "No se pudo ejecutar la eliminacion segura. Despliega la funcion delete-own-restaurant-account en Supabase e intenta de nuevo. La cuenta sigue intacta."
+      ? "El restaurante ya quedo oculto para los clientes, pero falta borrar la cuenta de acceso. Despliega la funcion delete-own-restaurant-account en Supabase y vuelve a confirmar la eliminacion."
       : error.message || "No se pudo confirmar la eliminacion. La cuenta sigue intacta.";
     setRestaurantDeletionMessage(message, "error");
   } finally {
@@ -2660,6 +2762,7 @@ async function loadWaiterMembers() {
   }
   setWaiterTeamMessage("");
   renderWaiterMembers(Array.isArray(data) ? data : []);
+  return Array.isArray(data) ? data : [];
 }
 
 async function openWaiterTeamDialog() {
@@ -2759,22 +2862,35 @@ async function toggleWaiterMembership(memberId, memberEmail, station, nextActive
 
 async function confirmWaiterInvitation(memberEmail, station, displayName) {
   setWaiterTeamMessage("Confirmando autorizacion con Supabase...");
-  const { data, error } = await cloudState.client.rpc("invite_current_restaurant_staff", {
+  let { data, error } = await cloudState.client.rpc("confirm_current_restaurant_staff_invitation", {
     p_email: memberEmail,
-    p_station: station,
-    p_display_name: displayName || "",
   });
+  if (error && isMissingRestaurantRpc(error)) {
+    ({ data, error } = await cloudState.client.rpc("invite_current_restaurant_staff", {
+      p_email: memberEmail,
+      p_station: station,
+      p_display_name: displayName || "",
+    }));
+  }
   if (error) {
     setWaiterTeamMessage(waiterMembershipError(error), "error");
     return false;
   }
   const result = Array.isArray(data) ? data[0] : data;
-  await loadWaiterMembers();
+  const confirmedTeam = await loadWaiterMembers();
   if (result?.pending) {
     setWaiterTeamMessage(
       `La invitacion sigue pendiente. Confirma que ${memberEmail} haya creado y confirmado su cuenta con ese mismo correo.`,
       "error"
     );
+    return false;
+  }
+  const normalizedEmail = String(memberEmail || "").trim().toLowerCase();
+  const confirmedMember = confirmedTeam?.find(
+    (row) => String(row.member_email || "").trim().toLowerCase() === normalizedEmail && row.active === true && row.pending !== true
+  );
+  if (!result?.active || !confirmedMember) {
+    setWaiterTeamMessage("Supabase no confirmo la membresia activa. Actualiza la lista e intenta nuevamente.", "error");
     return false;
   }
   setWaiterTeamMessage(`${restaurantStationLabel(station)} autorizado correctamente. Ya puede entrar desde su dispositivo.`, "ok");
@@ -2888,6 +3004,13 @@ async function signUpWithEmail() {
     return;
   }
 
+  elements.authMessage.textContent = "Detectando pais e idioma...";
+  const registrationCoords = await registrationPosition();
+  restaurantRegistrationRegion = detectRegionalDefaults(registrationCoords);
+  if (registrationCoords) {
+    restaurantLatitude = Number(registrationCoords.latitude);
+    restaurantLongitude = Number(registrationCoords.longitude);
+  }
   const profile = restaurantSignupProfileFromInputs(email);
   if (!normalizeTextSetting(elements.authRestaurantNameInput?.value || "")) {
     elements.authMessage.textContent = "Escribe el nombre comercial del restaurante para registrarlo.";
@@ -2943,6 +3066,13 @@ async function signUpWithEmail() {
           business_phone: profile.businessPhone,
           business_email: profile.businessEmail,
           owner_name: profile.ownerName,
+          country_code: profile.countryCode,
+          country: profile.country,
+          city: profile.city,
+          timezone: profile.timezone,
+          preferred_language: profile.preferredLanguage,
+          registration_latitude: profile.latitude,
+          registration_longitude: profile.longitude,
           privacy_accepted_at: new Date().toISOString(),
           restaurant_profile: profile,
         },

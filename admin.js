@@ -304,11 +304,13 @@ async function adminLoadCouriers() {
     if (adminElements.courierList) {
       adminElements.courierList.innerHTML = `<div class="customer-empty">${adminEscapeHtml(adminCourierRpcMessage(error))}</div>`;
     }
-    return;
+    return null;
   }
 
   adminSetMessage(adminElements.authMessage, "Colaboradores actualizados.", "ok");
-  adminRenderCourierList(Array.isArray(data) ? data : []);
+  const rows = Array.isArray(data) ? data : [];
+  adminRenderCourierList(rows);
+  return rows;
 }
 
 async function adminOpenCourierDocument(ref) {
@@ -343,12 +345,23 @@ async function adminReviewCourier(userId, status) {
     adminSetMessage(adminElements.authMessage, adminCourierRpcMessage(error, "review"), "error");
     return false;
   }
+  const rows = await adminLoadCouriers();
+  const confirmed = rows?.find((row) => row.user_id === userId);
+  if (!confirmed || confirmed.status !== status) {
+    adminSetMessage(
+      adminElements.authMessage,
+      "Supabase no confirmo el nuevo estado. La accion no se mostrara como completada; actualiza e intenta nuevamente.",
+      "error"
+    );
+    return false;
+  }
   adminSetMessage(
     adminElements.authMessage,
-    status === "approved" ? "Colaborador aprobado para trabajar." : "Solicitud rechazada.",
+    status === "approved"
+      ? "Colaborador aprobado y confirmado en Supabase. Ya puede trabajar."
+      : "Solicitud rechazada y confirmada en Supabase.",
     "ok"
   );
-  await adminLoadCouriers();
   return true;
 }
 

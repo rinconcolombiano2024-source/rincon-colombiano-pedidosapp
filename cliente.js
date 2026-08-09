@@ -970,6 +970,44 @@ const customerParams = new URLSearchParams(window.location.search);
 let customerStoreId = String(customerParams.get("store") || "").trim();
 const customerTableFromQr = String(customerParams.get("mesa") || customerParams.get("table") || "").trim();
 
+function customerDetectedRegion(coords = null) {
+  const latitude = Number(coords?.latitude ?? coords?.lat);
+  const longitude = Number(coords?.longitude ?? coords?.lng);
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+  const browserLanguage = String(navigator.language || "es").toLowerCase();
+  let countryCode = "";
+  if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+    if (latitude >= 49 && latitude <= 55.2 && longitude >= 14 && longitude <= 24.3) countryCode = "PL";
+    if (latitude >= -5 && latitude <= 14.5 && longitude >= -82 && longitude <= -66) countryCode = "CO";
+  }
+  if (!countryCode && timezone === "Europe/Warsaw") countryCode = "PL";
+  if (!countryCode && timezone === "America/Bogota") countryCode = "CO";
+  if (!countryCode && browserLanguage.startsWith("pl")) countryCode = "PL";
+  if (!countryCode && browserLanguage.startsWith("es-co")) countryCode = "CO";
+  return {
+    countryCode,
+    country: countryCode === "PL" ? "Polonia" : countryCode === "CO" ? "Colombia" : "",
+    city: "",
+    timezone,
+    latitude: Number.isFinite(latitude) ? latitude : null,
+    longitude: Number.isFinite(longitude) ? longitude : null,
+  };
+}
+
+function customerRegistrationPosition() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation || (!window.isSecureContext && !["localhost", "127.0.0.1"].includes(window.location.hostname))) {
+      resolve(null);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => resolve(position.coords),
+      () => resolve(null),
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
+    );
+  });
+}
+
 function customerInitialLanguage() {
   const fromUrl = String(customerParams.get("lang") || "").toLowerCase();
   const saved = String(localStorage.getItem(CUSTOMER_LANGUAGE_KEY) || localStorage.getItem(CUSTOMER_APP_LANGUAGE_KEY) || "").toLowerCase();
@@ -982,6 +1020,7 @@ function customerInitialLanguage() {
 }
 
 let customerLanguage = customerInitialLanguage();
+let customerRegistrationRegion = customerDetectedRegion();
 let customerDescriptionTranslations = customerReadDescriptionTranslationCache();
 let customerDescriptionTranslationRequests = new Set();
 let customerDescriptionTranslationFailures = new Map();
@@ -1012,7 +1051,7 @@ function customerSaveDescriptionTranslationCache() {
 }
 
 function customerDescriptionTranslationKey(language, text) {
-  return `${language}|${String(text || "").trim()}`;
+  return `auto>${language}|${String(text || "").trim()}`;
 }
 
 function customerNormalizeDescriptionForFallback(text) {
@@ -1048,29 +1087,35 @@ function customerFallbackDescriptionTranslation(text, language) {
   return translated && translated !== customerNormalizeDescriptionForFallback(description) ? translated : description;
 }
 
+function customerMenuTextDisplay(text) {
+  const cleanText = customerNormalizeProductDescription(text);
+  if (!cleanText) return "";
+  const key = customerDescriptionTranslationKey(customerLanguage, cleanText);
+  return customerDescriptionTranslations[key] || customerFallbackDescriptionTranslation(cleanText, customerLanguage);
+}
+
 function customerDescriptionDisplay(dish) {
-  const description = customerNormalizeProductDescription(dish?.description || "");
-  if (!description || customerLanguage === "es") return description;
-  const key = customerDescriptionTranslationKey(customerLanguage, description);
-  return customerDescriptionTranslations[key] || customerFallbackDescriptionTranslation(description, customerLanguage);
+  return customerMenuTextDisplay(dish?.description || "");
 }
 
 function customerScheduleDescriptionRender() {
   if (customerDescriptionTranslationRenderTimer) return;
   customerDescriptionTranslationRenderTimer = window.setTimeout(() => {
     customerDescriptionTranslationRenderTimer = null;
+    customerRenderCategories();
     customerRenderMenu();
+    customerRenderSelectedRestaurantDetails();
   }, 120);
 }
 
 async function customerFetchDescriptionTranslation(text, language) {
   const description = customerNormalizeProductDescription(text);
-  const targetLanguage = language === "pl" ? "pl" : language === "en" ? "en" : "";
-  if (!description || !targetLanguage || targetLanguage === "es") return description;
+  const targetLanguage = ["es", "pl", "en"].includes(language) ? language : "";
+  if (!description || !targetLanguage) return description;
 
   const sources = [
     async () => {
-      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=es&tl=${encodeURIComponent(
+      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(
         targetLanguage
       )}&dt=t&q=${encodeURIComponent(description)}`;
       const response = await fetch(url);
@@ -1079,7 +1124,7 @@ async function customerFetchDescriptionTranslation(text, language) {
       return String((data?.[0] || []).map((part) => part?.[0] || "").join("")).trim();
     },
     async () => {
-      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(description)}&langpair=es|${encodeURIComponent(
+      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(description)}&langpair=autodetect|${encodeURIComponent(
         targetLanguage
       )}`;
       const response = await fetch(url);
@@ -1093,7 +1138,7 @@ async function customerFetchDescriptionTranslation(text, language) {
   for (const source of sources) {
     try {
       const translated = customerNormalizeProductDescription(await source());
-      if (translated && translated.toLowerCase() !== description.toLowerCase()) return translated;
+      if (translated) return translated;
     } catch (error) {
       lastError = error;
     }
@@ -1101,12 +1146,13 @@ async function customerFetchDescriptionTranslation(text, language) {
 
   const fallback = customerFallbackDescriptionTranslation(description, targetLanguage);
   if (fallback && fallback.toLowerCase() !== description.toLowerCase()) return fallback;
+  if (targetLanguage === "es" && fallback) return fallback;
   throw lastError || new Error("translation unavailable");
 }
 
-function customerQueueDescriptionTranslation(dish) {
-  const description = customerNormalizeProductDescription(dish?.description || "");
-  if (!description || customerLanguage === "es" || !window.navigator.onLine) return;
+function customerQueueMenuTextTranslation(text) {
+  const description = customerNormalizeProductDescription(text);
+  if (!description || !window.navigator.onLine) return;
 
   const key = customerDescriptionTranslationKey(customerLanguage, description);
   const failedAt = customerDescriptionTranslationFailures.get(key);
@@ -1123,7 +1169,7 @@ function customerQueueDescriptionTranslation(dish) {
   customerFetchDescriptionTranslation(description, customerLanguage)
     .then((translated) => {
       const cleanTranslated = customerNormalizeProductDescription(translated);
-      if (cleanTranslated && cleanTranslated.toLowerCase() !== description.toLowerCase()) {
+      if (cleanTranslated) {
         customerDescriptionTranslations[key] = cleanTranslated;
         customerSaveDescriptionTranslationCache();
         customerScheduleDescriptionRender();
@@ -1135,6 +1181,10 @@ function customerQueueDescriptionTranslation(dish) {
     .finally(() => {
       customerDescriptionTranslationRequests.delete(key);
     });
+}
+
+function customerQueueDescriptionTranslation(dish) {
+  customerQueueMenuTextTranslation(dish?.description || "");
 }
 
 function customerApplyTranslations() {
@@ -1228,6 +1278,7 @@ let customerMenuRealtimeStoreId = "";
 let customerMenuRealtimeTimer = null;
 let customerDirectoryRealtimeChannel = null;
 let customerDirectoryRealtimeTimer = null;
+let customerDirectoryPollTimer = null;
 let customerCurrentView = customerStoreId ? "store" : "home";
 
 const CUSTOMER_DELIVERY_RATES = {
@@ -1300,7 +1351,9 @@ function customerRenderProfileDetails() {
 
 function customerRenderSelectedRestaurantDetails() {
   const selected = customerSelectedRestaurant();
-  const description = selected?.description || "";
+  const originalDescription = selected?.description || "";
+  const description = customerMenuTextDisplay(originalDescription);
+  customerQueueMenuTextTranslation(originalDescription);
   const address = selected?.address || customerSettings.restaurantAddress || customerT("restaurantNoAddress");
   const isOpen = selected ? selected.operationalOpen === true : customerSettings.restaurantOperationalOpen === true;
 
@@ -1498,6 +1551,10 @@ function customerRegisteredAddressPayload() {
       customerInputValue(customerElements.registerNeighborhoodInput) || customerInputValue(customerElements.neighborhoodInput),
     reference: customerInputValue(customerElements.registerReferenceInput) || customerInputValue(customerElements.referenceInput),
     distanceKm: customerInputValue(customerElements.distanceInput),
+    country: customerRegistrationRegion.country,
+    countryCode: customerRegistrationRegion.countryCode,
+    latitude: customerRegistrationRegion.latitude,
+    longitude: customerRegistrationRegion.longitude,
   };
 }
 
@@ -1511,6 +1568,14 @@ function customerApplyRegisterFieldsToOrder() {
 
 function customerApplyProfileFields(profile = {}) {
   const address = profile.default_address || {};
+  customerRegistrationRegion = {
+    ...customerRegistrationRegion,
+    country: address.country || customerRegistrationRegion.country,
+    countryCode: address.countryCode || customerRegistrationRegion.countryCode,
+    city: address.neighborhood || customerRegistrationRegion.city,
+    latitude: Number.isFinite(Number(address.latitude)) ? Number(address.latitude) : customerRegistrationRegion.latitude,
+    longitude: Number.isFinite(Number(address.longitude)) ? Number(address.longitude) : customerRegistrationRegion.longitude,
+  };
   customerSetInputIfEmpty(customerElements.registerNameInput, profile.full_name);
   customerSetInputIfEmpty(customerElements.registerPhoneInput, profile.phone);
   customerSetInputIfEmpty(customerElements.registerAddressInput, address.address);
@@ -1532,7 +1597,12 @@ function customerProfileFromMetadata() {
   return {
     full_name: metadata.full_name || "",
     phone: metadata.phone || "",
-    default_address: metadata.default_address || {},
+    default_address: metadata.default_address || {
+      country: metadata.country || "",
+      countryCode: metadata.country_code || "",
+      latitude: metadata.registration_latitude ?? null,
+      longitude: metadata.registration_longitude ?? null,
+    },
   };
 }
 
@@ -1664,6 +1734,23 @@ async function customerSignUpWithEmail() {
     return;
   }
 
+  customerSetAuthMessage(customerT("locationRequest"));
+  const registrationCoords = await customerRegistrationPosition();
+  customerRegistrationRegion = customerDetectedRegion(registrationCoords);
+  if (registrationCoords) {
+    customerLocationCoords = {
+      lat: Number(registrationCoords.latitude),
+      lng: Number(registrationCoords.longitude),
+    };
+    if (customerSettings.googleMapsApiKey) {
+      try {
+        await customerReverseGeocodeLocation(customerLocationCoords);
+      } catch {
+        // El registro continua con coordenadas y pais detectado.
+      }
+    }
+  }
+
   if (!customerElements.registerNameInput.value.trim()) customerElements.registerNameInput.value = fullName;
   customerApplyRegisterFieldsToOrder();
   customerSetAuthMessage(customerT("signingUp"));
@@ -1677,6 +1764,12 @@ async function customerSignUpWithEmail() {
         full_name: fullName,
         phone: customerInputValue(customerElements.registerPhoneInput),
         default_address: customerRegisteredAddressPayload(),
+        country: customerRegistrationRegion.country,
+        country_code: customerRegistrationRegion.countryCode,
+        preferred_language: customerLanguage,
+        timezone: customerRegistrationRegion.timezone,
+        registration_latitude: customerRegistrationRegion.latitude,
+        registration_longitude: customerRegistrationRegion.longitude,
         privacy_accepted_at: new Date().toISOString(),
       },
     },
@@ -1777,7 +1870,7 @@ async function customerSignOut() {
     customerUser = null;
     customerHistoryRows = [];
     customerRenderAccount();
-    window.location.replace("index.html?app=v73");
+    window.location.replace("index.html?app=v74");
   }
 }
 
@@ -1793,6 +1886,10 @@ function customerProfilePayload() {
       neighborhood: customerInputValue(customerElements.neighborhoodInput) || registeredAddress.neighborhood,
       reference: customerInputValue(customerElements.referenceInput) || registeredAddress.reference,
       distanceKm: customerInputValue(customerElements.distanceInput) || registeredAddress.distanceKm,
+      country: registeredAddress.country,
+      countryCode: registeredAddress.countryCode,
+      latitude: registeredAddress.latitude,
+      longitude: registeredAddress.longitude,
     },
     language: customerLanguage,
     updated_at: new Date().toISOString(),
@@ -1819,9 +1916,12 @@ function customerGeneralProfilePayload() {
     last_name: nameParts.lastName,
     full_name: profile.full_name,
     phone: profile.phone,
-    country: "",
+    country: customerRegistrationRegion.country || defaultAddress.country || "",
     city: customerNormalizeText(defaultAddress.neighborhood || ""),
     preferred_language: customerLanguage,
+    registration_latitude: customerRegistrationRegion.latitude ?? defaultAddress.latitude ?? null,
+    registration_longitude: customerRegistrationRegion.longitude ?? defaultAddress.longitude ?? null,
+    detected_timezone: customerRegistrationRegion.timezone,
     status: "active",
     updated_at: new Date().toISOString(),
   };
@@ -2044,6 +2144,10 @@ function customerStopDirectoryRealtime() {
     window.clearTimeout(customerDirectoryRealtimeTimer);
     customerDirectoryRealtimeTimer = null;
   }
+  if (customerDirectoryPollTimer) {
+    window.clearInterval(customerDirectoryPollTimer);
+    customerDirectoryPollTimer = null;
+  }
   const channel = customerDirectoryRealtimeChannel;
   customerDirectoryRealtimeChannel = null;
   if (channel && customerClient?.removeChannel) customerClient.removeChannel(channel).catch(() => {});
@@ -2058,9 +2162,16 @@ function customerScheduleDirectoryRefresh() {
 }
 
 function customerStartDirectoryRealtime() {
+  if (!customerDirectoryPollTimer) {
+    customerDirectoryPollTimer = window.setInterval(() => {
+      if (document.visibilityState === "visible" && window.navigator.onLine) {
+        customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
+      }
+    }, 15000);
+  }
   if (!customerClient?.channel || customerDirectoryRealtimeChannel) return;
   customerDirectoryRealtimeChannel = customerClient
-    .channel("public-restaurant-directory-v73")
+    .channel("public-restaurant-directory-v74")
     .on(
       "postgres_changes",
       { event: "*", schema: "public", table: "restaurant_profiles" },
@@ -2129,7 +2240,7 @@ function customerClearRestaurantSelection(messageKey = "") {
 
   const nextUrl = new URL(window.location.href);
   nextUrl.searchParams.delete("store");
-  nextUrl.searchParams.set("app", "v73");
+  nextUrl.searchParams.set("app", "v74");
   window.history.replaceState({}, "", nextUrl.toString());
 
   customerApplyBusinessName();
@@ -2248,8 +2359,9 @@ async function customerLoadRestaurantDirectory(options = {}) {
   if (error && customerIsMissingRpc(error)) {
     ({ data, error } = await client
       .from("restaurant_profiles")
-      .select("user_id, business_name, logo_url, public_address, phone, description, updated_at")
+      .select("user_id, business_name, logo_url, public_address, phone, description, operational_open, opening_hours, latitude, longitude, updated_at")
       .eq("active", true)
+      .is("deleted_at", null)
       .order("business_name", { ascending: true }));
   }
 
@@ -2287,7 +2399,7 @@ async function customerSelectRestaurant(storeId, options = {}) {
   if (options.updateUrl !== false) {
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("store", customerStoreId);
-    nextUrl.searchParams.set("app", "v73");
+    nextUrl.searchParams.set("app", "v74");
     window.history.replaceState({}, "", nextUrl.toString());
   }
 
@@ -2315,6 +2427,7 @@ async function customerFetchPublicMenu(storeId) {
     .select("user_id")
     .eq("user_id", storeId)
     .eq("active", true)
+    .is("deleted_at", null)
     .maybeSingle();
   if (profileError) throw rpcError || profileError;
   if (!activeProfile) return null;
@@ -2665,19 +2778,36 @@ async function customerReverseGeocodeLocation(coords) {
       }
 
       const result = results[0];
-      const approximateAddress = String(result.formatted_address || "").replace(/,\s*Poland$/i, "").trim();
+      const approximateAddress = String(result.formatted_address || "")
+        .replace(/,\s*(Poland|Polska|Colombia)$/i, "")
+        .trim();
       const neighborhood =
         customerAddressComponent(result, ["sublocality"]) ||
         customerAddressComponent(result, ["neighborhood"]) ||
         customerAddressComponent(result, ["locality"]) ||
         customerAddressComponent(result, ["administrative_area_level_2"]);
+      const countryCode = String(
+        (result.address_components || []).find((entry) => entry.types.includes("country"))?.short_name || ""
+      ).toUpperCase();
 
       if (approximateAddress) {
         customerElements.addressInput.value = approximateAddress;
+        if (customerElements.registerAddressInput && !customerElements.registerAddressInput.value.trim()) {
+          customerElements.registerAddressInput.value = approximateAddress;
+        }
       }
       if (neighborhood) {
         customerElements.neighborhoodInput.value = neighborhood;
+        if (customerElements.registerNeighborhoodInput && !customerElements.registerNeighborhoodInput.value.trim()) {
+          customerElements.registerNeighborhoodInput.value = neighborhood;
+        }
       }
+      customerRegistrationRegion = {
+        ...customerRegistrationRegion,
+        countryCode: ["PL", "CO"].includes(countryCode) ? countryCode : customerRegistrationRegion.countryCode,
+        country: countryCode === "PL" ? "Polonia" : countryCode === "CO" ? "Colombia" : customerRegistrationRegion.country,
+        city: neighborhood || customerRegistrationRegion.city,
+      };
       resolve(Boolean(approximateAddress || neighborhood));
     });
   });
@@ -3256,13 +3386,17 @@ function customerRenderCategories() {
 
   customerElements.categoryTabs.innerHTML = categories
     .map(
-      (category) => `
+      (category) => {
+        const translatedCategory = customerMenuTextDisplay(category) || category;
+        customerQueueMenuTextTranslation(category);
+        return `
         <button type="button" data-category="${customerEscapeHtml(category)}" aria-selected="${
         !customerSearchQuery && category === customerActiveCategory
       }">
-          ${customerEscapeHtml(category)}
+          ${customerEscapeHtml(translatedCategory)}
         </button>
-      `
+      `;
+      }
     )
     .join("");
 }
@@ -3305,7 +3439,11 @@ function customerRenderMenu() {
   customerElements.menuGrid.innerHTML = entries
     .map(
       ({ category, dish, index }) => {
+        const displayName = customerMenuTextDisplay(dish.name) || dish.name;
+        const displayCategory = customerMenuTextDisplay(category) || category;
         const description = customerDescriptionDisplay(dish);
+        customerQueueMenuTextTranslation(dish.name);
+        customerQueueMenuTextTranslation(category);
         customerQueueDescriptionTranslation(dish);
         return `
           <button
@@ -3315,10 +3453,10 @@ function customerRenderMenu() {
             data-index="${index}"
             ${customerProductAvailable(dish) ? "" : "disabled aria-disabled=\"true\""}
           >
-            ${dish.imageUrl ? `<img src="${customerEscapeHtml(dish.imageUrl)}" alt="${customerEscapeHtml(dish.name)}" loading="lazy" />` : ""}
-            <strong>${customerEscapeHtml(dish.name)}</strong>
+            ${dish.imageUrl ? `<img src="${customerEscapeHtml(dish.imageUrl)}" alt="${customerEscapeHtml(displayName)}" loading="lazy" />` : ""}
+            <strong>${customerEscapeHtml(displayName)}</strong>
             ${description ? `<small>${customerEscapeHtml(description)}</small>` : ""}
-            ${searchQuery ? `<small>${customerEscapeHtml(category)}</small>` : ""}
+            ${searchQuery ? `<small>${customerEscapeHtml(displayCategory)}</small>` : ""}
             <span>${customerFormatMoney(dish.price)}</span>
             ${customerProductAvailable(dish) ? "" : `<em>${customerEscapeHtml(customerT("unavailable"))}</em>`}
           </button>
@@ -3800,6 +3938,12 @@ window.addEventListener("online", () => {
       customerSetStatus(customerT("menuRealtimeError"), "error");
     });
   }
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible" || !window.navigator.onLine) return;
+  customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
+  if (customerStoreId) customerRefreshMenu().catch(() => {});
 });
 
 window.addEventListener("offline", () => {

@@ -1,4 +1,4 @@
-const CACHE_NAME = "rc-ordera-v73-staff-confirm";
+const CACHE_NAME = "rc-ordera-v74-stability";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -52,10 +52,12 @@ self.addEventListener("fetch", (event) => {
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
         return response;
       })
-      .catch(() =>
-        caches
-          .match(event.request)
-          .then((cached) => cached || caches.match("./index.html"))
-      )
+      .catch(async () => {
+        const cachedRequest = await caches.match(event.request, { ignoreSearch: true });
+        if (cachedRequest) return cachedRequest;
+        const pageName = requestUrl.pathname.split("/").pop() || "index.html";
+        const pageFallbacks = new Set(["index.html", "cliente.html", "colaborador.html", "mesero.html", "admin.html"]);
+        return caches.match(pageFallbacks.has(pageName) ? `./${pageName}` : "./index.html");
+      })
   );
 });

@@ -1,6 +1,38 @@
 const COURIER_PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 const COURIER_DOCUMENT_BUCKET = "courier-documents";
 
+function courierDetectedRegion(coords = null) {
+  const latitude = Number(coords?.latitude ?? coords?.lat);
+  const longitude = Number(coords?.longitude ?? coords?.lng);
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+  const browserLanguage = String(navigator.language || "es").toLowerCase();
+  let countryCode = "";
+  if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+    if (latitude >= 49 && latitude <= 55.2 && longitude >= 14 && longitude <= 24.3) countryCode = "PL";
+    if (latitude >= -5 && latitude <= 14.5 && longitude >= -82 && longitude <= -66) countryCode = "CO";
+  }
+  if (!countryCode && timezone === "Europe/Warsaw") countryCode = "PL";
+  if (!countryCode && timezone === "America/Bogota") countryCode = "CO";
+  if (!countryCode && browserLanguage.startsWith("pl")) countryCode = "PL";
+  if (!countryCode && browserLanguage.startsWith("es-co")) countryCode = "CO";
+  const savedLanguage = String(localStorage.getItem("rincon_colombiano_app_language") || "").toLowerCase();
+  const preferredLanguage = ["es", "pl", "en"].includes(savedLanguage)
+    ? savedLanguage
+    : browserLanguage.startsWith("pl")
+      ? "pl"
+      : browserLanguage.startsWith("en")
+        ? "en"
+        : "es";
+  return {
+    country: countryCode === "PL" ? "Polonia" : countryCode === "CO" ? "Colombia" : "",
+    countryCode,
+    timezone,
+    preferredLanguage,
+    latitude: Number.isFinite(latitude) ? latitude : null,
+    longitude: Number.isFinite(longitude) ? longitude : null,
+  };
+}
+
 const courierElements = {
   accountSummary: document.querySelector("#courierAccountSummary"),
   authFields: document.querySelector("#courierAuthFields"),
@@ -89,6 +121,8 @@ let courierAssignments = [];
 let courierActiveAssignmentId = "";
 let courierOffersTimer = null;
 let courierCurrentView = "profile";
+let courierApprovalChannel = null;
+let courierRegistrationRegion = courierDetectedRegion();
 
 const COURIER_VERIFICATION_EMAIL = "pedidosapprinconcolombiano@gmail.com";
 const COURIER_FILE_FIELDS = [
@@ -762,15 +796,16 @@ function courierGeneralProfilePayload() {
     phone: courierInputValue(courierElements.phoneInput),
     country: courierInputValue(courierElements.countryInput),
     city: courierInputValue(courierElements.cityInput),
-    preferred_language: "es",
+    preferred_language: courierRegistrationRegion.preferredLanguage,
+    registration_latitude: courierRegistrationRegion.latitude,
+    registration_longitude: courierRegistrationRegion.longitude,
+    detected_timezone: courierRegistrationRegion.timezone,
     status: "active",
     updated_at: new Date().toISOString(),
   };
 }
 
 function courierProfilePayload() {
-  const preservedStatus = courierProfile?.status;
-  const status = preservedStatus === "approved" || preservedStatus === "suspended" ? preservedStatus : "pending_review";
   const termsAcceptedAt = courierProfile?.terms_accepted_at || new Date().toISOString();
   return {
     user_id: courierUser.id,
@@ -794,7 +829,6 @@ function courierProfilePayload() {
     insurance_url: courierInputValue(courierElements.insuranceFileUrlInput),
     bank_account: courierInputValue(courierElements.bankInput),
     availability: { text: courierInputValue(courierElements.availabilityInput) },
-    status,
     terms_accepted_at: termsAcceptedAt,
     updated_at: new Date().toISOString(),
   };
@@ -969,9 +1003,12 @@ async function courierSaveProfile() {
     if (error) throw error;
     await courierLoadProfile();
     const missingDocs = courierMissingDocumentLabels();
+    const isApproved = courierProfile?.status === "approved";
     courierSetMessage(
       courierElements.profileMessage,
-      missingDocs.length
+      isApproved
+        ? "Perfil actualizado. Tu aprobacion permanece activa."
+        : missingDocs.length
         ? `Solicitud guardada. Para revision completa faltan: ${missingDocs.join(", ")}. Puedes subirlos aqui o enviarlos a ${COURIER_VERIFICATION_EMAIL}.`
         : "Solicitud guardada con documentos. Queda pendiente de revision y aprobacion para empezar a trabajar.",
       "ok"
@@ -996,12 +1033,36 @@ async function courierLoadProfile() {
     return;
   }
 
+  const { data: approvalRows, error: approvalError } = await courierClient.rpc("get_my_courier_approval");
+  const approval = Array.isArray(approvalRows) ? approvalRows[0] : approvalRows;
+  if (!approvalError && approval) {
+    data.status = approval.approved === true ? "approved" : approval.profile_status || data.status;
+  }
   courierProfile = data;
   courierApplyProfileFields(data);
   courierRender();
   if (data.status === "approved") {
     courierLoadDeliveryOffers({ silent: true }).catch(() => {});
   }
+}
+
+function courierStopApprovalRealtime() {
+  const channel = courierApprovalChannel;
+  courierApprovalChannel = null;
+  if (channel && courierClient?.removeChannel) courierClient.removeChannel(channel).catch(() => {});
+}
+
+function courierStartApprovalRealtime() {
+  courierStopApprovalRealtime();
+  if (!courierClient?.channel || !courierUser) return;
+  courierApprovalChannel = courierClient
+    .channel(`courier-approval-${courierUser.id}`)
+    .on(
+      "postgres_changes",
+      { event: "UPDATE", schema: "public", table: "courier_profiles", filter: `user_id=eq.${courierUser.id}` },
+      () => courierLoadProfile().catch(() => {})
+    )
+    .subscribe();
 }
 
 async function courierSignIn() {
@@ -1041,6 +1102,16 @@ async function courierSignUp() {
     courierSetMessage(courierElements.authMessage, "Usa correo y contrasena de minimo 6 caracteres.", "error");
     return;
   }
+  courierSetMessage(courierElements.authMessage, "Detectando pais e idioma...");
+  try {
+    const position = await courierCurrentPosition();
+    courierRegistrationRegion = courierDetectedRegion(position.coords);
+  } catch {
+    courierRegistrationRegion = courierDetectedRegion();
+  }
+  if (!courierInputValue(courierElements.countryInput) && courierRegistrationRegion.country) {
+    courierElements.countryInput.value = courierRegistrationRegion.country;
+  }
   if (!courierValidateProfile()) return;
 
   const profile = courierProfilePayloadForMetadata();
@@ -1053,6 +1124,11 @@ async function courierSignUp() {
       data: {
         account_type: "platform_courier",
         full_name: `${profile.first_name} ${profile.last_name}`.trim(),
+        preferred_language: courierRegistrationRegion.preferredLanguage,
+        country_code: courierRegistrationRegion.countryCode,
+        timezone: courierRegistrationRegion.timezone,
+        registration_latitude: courierRegistrationRegion.latitude,
+        registration_longitude: courierRegistrationRegion.longitude,
         ...profile,
       },
     },
@@ -1211,6 +1287,11 @@ function courierProfilePayloadForMetadata() {
     photo_url: courierInputValue(courierElements.photoUrlInput),
     verification_selfie_url: courierInputValue(courierElements.selfieUrlInput),
     work_permit_url: courierInputValue(courierElements.workPermitUrlInput),
+    preferred_language: courierRegistrationRegion.preferredLanguage,
+    country_code: courierRegistrationRegion.countryCode,
+    timezone: courierRegistrationRegion.timezone,
+    registration_latitude: courierRegistrationRegion.latitude,
+    registration_longitude: courierRegistrationRegion.longitude,
   };
 }
 
@@ -1219,9 +1300,10 @@ async function courierSignOut() {
   try {
     await courierClient.auth.signOut({ scope: "local" });
   } finally {
+    courierStopApprovalRealtime();
     courierUser = null;
     courierProfile = null;
-    window.location.replace("index.html?app=v73");
+    window.location.replace("index.html?app=v74");
   }
 }
 
@@ -1279,12 +1361,14 @@ async function courierInitialize() {
   courierRender();
   if (courierRecoveringPassword) courierShowPasswordRecoveryForm();
   if (courierUser) await courierLoadProfile();
+  if (courierUser) courierStartApprovalRealtime();
 
   client.auth.onAuthStateChange(async (event, session) => {
     courierUser = session?.user || null;
     courierProfile = null;
     courierAssignments = [];
     courierAvailable = false;
+    courierStopApprovalRealtime();
     if (event === "PASSWORD_RECOVERY") {
       courierSetView("profile", { instant: true });
       courierShowPasswordRecoveryForm();
@@ -1292,7 +1376,10 @@ async function courierInitialize() {
     }
     courierSetView(courierUser ? "home" : "profile", { instant: true });
     courierRender();
-    if (courierUser) await courierLoadProfile();
+    if (courierUser) {
+      await courierLoadProfile();
+      courierStartApprovalRealtime();
+    }
   });
 }
 
