@@ -1332,6 +1332,9 @@ function customerRenderLocationSummary() {
 
 function customerRenderProfileDetails() {
   if (!customerElements.profileDetails) return;
+  if (customerElements.profileEditActions) {
+  customerElements.profileEditActions.hidden = !customerUser;
+}
   const fullName = customerNormalizeText(
     customerElements.nameInput?.value || customerElements.registerNameInput?.value
   );
