@@ -4088,7 +4088,54 @@ customerElements.editProfileButton?.addEventListener("click", () => {
     ?.addEventListener("click", () => {
       customerRenderProfileDetails();
       });
-    });
+    document
+  .querySelector("#customerProfileSaveButton")
+  ?.addEventListener("click", async () => {
+    if (!customerUser) return;
+
+    const newName = customerNormalizeText(
+      document.querySelector("#customerProfileEditName")?.value
+    );
+
+    const newPhone = customerNormalizeText(
+      document.querySelector("#customerProfileEditPhone")?.value
+    );
+
+    const newAddress = customerNormalizeText(
+      document.querySelector("#customerProfileEditAddress")?.value
+    );
+
+    const newNeighborhood = customerNormalizeText(
+      document.querySelector("#customerProfileEditNeighborhood")?.value
+    );
+
+    if (customerElements.nameInput) {
+      customerElements.nameInput.value = newName;
+    }
+
+    if (customerElements.phoneInput) {
+      customerElements.phoneInput.value = newPhone;
+    }
+
+    if (customerElements.addressInput) {
+      customerElements.addressInput.value = newAddress;
+    }
+
+    if (customerElements.neighborhoodInput) {
+      customerElements.neighborhoodInput.value = newNeighborhood;
+    }
+
+    try {
+      await customerSaveProfile();
+
+      customerRenderLocationSummary();
+      customerRenderProfileDetails();
+    } catch (error) {
+      console.error("Error guardando perfil del cliente:", error);
+      alert("No se pudo guardar el perfil.");
+    }
+  });
+
 window.addEventListener("online", () => {
   customerStartDirectoryRealtime();
   customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
