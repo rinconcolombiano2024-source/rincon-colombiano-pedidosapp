@@ -26,6 +26,9 @@ function courierDetectedRegion(coords = null) {
   return {
     country: countryCode === "PL" ? "Polonia" : countryCode === "CO" ? "Colombia" : "",
     countryCode,
+    city: "",
+    region: "",
+    postalCode: "",
     timezone,
     preferredLanguage,
     latitude: Number.isFinite(latitude) ? latitude : null,
@@ -56,6 +59,8 @@ const courierElements = {
   birthDateInput: document.querySelector("#courierBirthDateInput"),
   countryInput: document.querySelector("#courierCountryInput"),
   cityInput: document.querySelector("#courierCityInput"),
+  regionInput: document.querySelector("#courierRegionInput"),
+  postalCodeInput: document.querySelector("#courierPostalCodeInput"),
   addressInput: document.querySelector("#courierAddressInput"),
   identityInput: document.querySelector("#courierIdentityInput"),
   identityFileInput: document.querySelector("#courierIdentityFileInput"),
@@ -122,6 +127,8 @@ let courierActiveAssignmentId = "";
 let courierOffersTimer = null;
 let courierCurrentView = "profile";
 let courierApprovalChannel = null;
+let courierLocationWatchId = null;
+let courierLastLocationWriteAt = 0;
 let courierRegistrationRegion = courierDetectedRegion();
 
 const COURIER_VERIFICATION_EMAIL = "pedidosapprinconcolombiano@gmail.com";
@@ -691,6 +698,56 @@ async function courierShareLocation(options = {}) {
   }
 }
 
+function courierStopLocationWatch() {
+  if (courierLocationWatchId !== null && navigator.geolocation) {
+    navigator.geolocation.clearWatch(courierLocationWatchId);
+  }
+  courierLocationWatchId = null;
+}
+
+function courierSyncLocationWatch() {
+  const shouldWatch = Boolean(
+    navigator.geolocation
+    && courierUser
+    && courierProfile?.status === "approved"
+    && courierAvailable
+  );
+  if (!shouldWatch) {
+    courierStopLocationWatch();
+    return;
+  }
+  if (courierLocationWatchId !== null) return;
+
+  courierLocationWatchId = navigator.geolocation.watchPosition(
+    (position) => {
+      courierLastLocation = {
+        lat: Number(position.coords.latitude).toFixed(6),
+        lng: Number(position.coords.longitude).toFixed(6),
+        accuracy: Math.round(position.coords.accuracy || 0),
+        updatedAt: new Date().toISOString(),
+      };
+      courierRegistrationRegion = {
+        ...courierRegistrationRegion,
+        ...courierDetectedRegion(position.coords),
+        city: courierRegistrationRegion.city,
+        region: courierRegistrationRegion.region,
+        postalCode: courierRegistrationRegion.postalCode,
+      };
+      const now = Date.now();
+      if (now - courierLastLocationWriteAt >= 10000) {
+        courierLastLocationWriteAt = now;
+        courierPersistLiveLocation(true).catch((error) => {
+          courierSetMessage(courierElements.locationMessage, courierFriendlyDeliveryError(error), "error");
+        });
+      }
+    },
+    (error) => {
+      courierSetMessage(courierElements.locationMessage, courierFriendlyDeliveryError(error), "error");
+    },
+    { enableHighAccuracy: true, timeout: 20000, maximumAge: 10000 }
+  );
+}
+
 function courierOpenGps() {
   const url = courierGpsUrl();
   if (!url) {
@@ -796,6 +853,9 @@ function courierGeneralProfilePayload() {
     phone: courierInputValue(courierElements.phoneInput),
     country: courierInputValue(courierElements.countryInput),
     city: courierInputValue(courierElements.cityInput),
+    country_code: courierRegistrationRegion.countryCode,
+    region: courierInputValue(courierElements.regionInput),
+    postal_code: courierInputValue(courierElements.postalCodeInput),
     preferred_language: courierRegistrationRegion.preferredLanguage,
     registration_latitude: courierRegistrationRegion.latitude,
     registration_longitude: courierRegistrationRegion.longitude,
@@ -815,6 +875,13 @@ function courierProfilePayload() {
     birth_date: courierInputValue(courierElements.birthDateInput) || null,
     country: courierInputValue(courierElements.countryInput),
     city: courierInputValue(courierElements.cityInput),
+    country_code: courierRegistrationRegion.countryCode,
+    region: courierInputValue(courierElements.regionInput),
+    postal_code: courierInputValue(courierElements.postalCodeInput),
+    preferred_language: courierRegistrationRegion.preferredLanguage,
+    detected_timezone: courierRegistrationRegion.timezone,
+    registration_latitude: courierRegistrationRegion.latitude,
+    registration_longitude: courierRegistrationRegion.longitude,
     address: courierInputValue(courierElements.addressInput),
     identity_document: courierInputValue(courierElements.identityInput),
     identity_document_url: courierInputValue(courierElements.identityFileUrlInput),
@@ -845,6 +912,9 @@ function courierMetadataProfile() {
     birth_date: metadata.birth_date || "",
     country: metadata.country || "",
     city: metadata.city || "",
+    country_code: metadata.country_code || "",
+    region: metadata.region || "",
+    postal_code: metadata.postal_code || "",
     address: metadata.address || "",
     identity_document: metadata.identity_document || "",
     identity_document_url: metadata.identity_document_url || "",
@@ -864,12 +934,30 @@ function courierMetadataProfile() {
 }
 
 function courierApplyProfileFields(profile = {}) {
+  courierRegistrationRegion = {
+    ...courierRegistrationRegion,
+    countryCode: courierNormalizeText(profile.country_code || courierRegistrationRegion.countryCode).toUpperCase(),
+    country: courierNormalizeText(profile.country || courierRegistrationRegion.country),
+    city: courierNormalizeText(profile.city || courierRegistrationRegion.city),
+    region: courierNormalizeText(profile.region || courierRegistrationRegion.region),
+    postalCode: courierNormalizeText(profile.postal_code || courierRegistrationRegion.postalCode),
+    preferredLanguage: courierNormalizeText(profile.preferred_language || courierRegistrationRegion.preferredLanguage),
+    timezone: courierNormalizeText(profile.detected_timezone || courierRegistrationRegion.timezone),
+    latitude: Number.isFinite(Number(profile.registration_latitude))
+      ? Number(profile.registration_latitude)
+      : courierRegistrationRegion.latitude,
+    longitude: Number.isFinite(Number(profile.registration_longitude))
+      ? Number(profile.registration_longitude)
+      : courierRegistrationRegion.longitude,
+  };
   courierElements.firstNameInput.value = profile.first_name || "";
   courierElements.lastNameInput.value = profile.last_name || "";
   courierElements.phoneInput.value = profile.phone || "";
   courierElements.birthDateInput.value = profile.birth_date || "";
   courierElements.countryInput.value = profile.country || "";
   courierElements.cityInput.value = profile.city || "";
+  courierElements.regionInput.value = profile.region || "";
+  courierElements.postalCodeInput.value = profile.postal_code || "";
   courierElements.addressInput.value = profile.address || "";
   courierElements.identityInput.value = profile.identity_document || "";
   courierElements.identityFileUrlInput.value = profile.identity_document_url || "";
@@ -920,6 +1008,7 @@ function courierRender() {
   courierRenderVehicleRequirements();
   courierRenderDeliveryOffers();
   courierSyncOffersPolling();
+  courierSyncLocationWatch();
 }
 
 function courierValidateProfile() {
@@ -930,6 +1019,7 @@ function courierValidateProfile() {
     [courierElements.birthDateInput, "Escribe tu fecha de nacimiento."],
     [courierElements.countryInput, "Escribe tu pais."],
     [courierElements.cityInput, "Escribe tu ciudad."],
+    [courierElements.regionInput, "Escribe tu provincia, departamento o region."],
     [courierElements.addressInput, "Escribe tu direccion."],
     [courierElements.identityInput, "Escribe tu documento de identidad."],
     [courierElements.vehicleTypeInput, "Selecciona el tipo de vehiculo."],
@@ -987,6 +1077,14 @@ async function courierSaveProfile() {
     return;
   }
   if (!courierValidateProfile()) return;
+
+  courierRegistrationRegion = {
+    ...courierRegistrationRegion,
+    country: courierInputValue(courierElements.countryInput) || courierRegistrationRegion.country,
+    city: courierInputValue(courierElements.cityInput) || courierRegistrationRegion.city,
+    region: courierInputValue(courierElements.regionInput) || courierRegistrationRegion.region,
+    postalCode: courierInputValue(courierElements.postalCodeInput) || courierRegistrationRegion.postalCode,
+  };
 
   courierSetMessage(courierElements.profileMessage, "Guardando solicitud...");
   try {
@@ -1079,14 +1177,24 @@ async function courierSignIn() {
     return;
   }
 
+  courierElements.signInButton.disabled = true;
   courierSetMessage(courierElements.authMessage, "Iniciando sesion...");
-  const { error } = await client.auth.signInWithPassword({ email, password });
-  if (error) {
-    courierSetMessage(courierElements.authMessage, courierFriendlyAuthError(error), "error");
-    return;
+  try {
+    const { data, error } = await client.auth.signInWithPassword({ email, password });
+    if (error) {
+      courierSetMessage(courierElements.authMessage, courierFriendlyAuthError(error), "error");
+      return;
+    }
+    courierUser = data?.user || data?.session?.user || null;
+    courierElements.passwordInput.value = "";
+    courierSetView("home", { instant: true });
+    courierRender();
+    await courierLoadProfile();
+    courierStartApprovalRealtime();
+    courierSetMessage(courierElements.authMessage, "Sesion iniciada.", "ok");
+  } finally {
+    courierElements.signInButton.disabled = false;
   }
-  courierElements.passwordInput.value = "";
-  courierSetMessage(courierElements.authMessage, "Sesion iniciada.", "ok");
 }
 
 async function courierSignUp() {
@@ -1105,12 +1213,35 @@ async function courierSignUp() {
   courierSetMessage(courierElements.authMessage, "Detectando pais e idioma...");
   try {
     const position = await courierCurrentPosition();
-    courierRegistrationRegion = courierDetectedRegion(position.coords);
+    const detected = courierDetectedRegion(position.coords);
+    courierRegistrationRegion = {
+      ...courierRegistrationRegion,
+      ...detected,
+      city: courierInputValue(courierElements.cityInput) || courierRegistrationRegion.city,
+      region: courierInputValue(courierElements.regionInput) || courierRegistrationRegion.region,
+      postalCode: courierInputValue(courierElements.postalCodeInput) || courierRegistrationRegion.postalCode,
+    };
   } catch {
-    courierRegistrationRegion = courierDetectedRegion();
+    const detected = courierDetectedRegion();
+    courierRegistrationRegion = {
+      ...courierRegistrationRegion,
+      ...detected,
+      city: courierInputValue(courierElements.cityInput) || courierRegistrationRegion.city,
+      region: courierInputValue(courierElements.regionInput) || courierRegistrationRegion.region,
+      postalCode: courierInputValue(courierElements.postalCodeInput) || courierRegistrationRegion.postalCode,
+    };
   }
   if (!courierInputValue(courierElements.countryInput) && courierRegistrationRegion.country) {
     courierElements.countryInput.value = courierRegistrationRegion.country;
+  }
+  const enteredCountry = courierInputValue(courierElements.countryInput).toLowerCase();
+  if (!courierRegistrationRegion.countryCode && /polonia|poland|polska/.test(enteredCountry)) {
+    courierRegistrationRegion.countryCode = "PL";
+    courierRegistrationRegion.timezone = "Europe/Warsaw";
+  }
+  if (!courierRegistrationRegion.countryCode && /colombia/.test(enteredCountry)) {
+    courierRegistrationRegion.countryCode = "CO";
+    courierRegistrationRegion.timezone = "America/Bogota";
   }
   if (!courierValidateProfile()) return;
 
@@ -1273,6 +1404,8 @@ function courierProfilePayloadForMetadata() {
     birth_date: courierInputValue(courierElements.birthDateInput),
     country: courierInputValue(courierElements.countryInput),
     city: courierInputValue(courierElements.cityInput),
+    region: courierInputValue(courierElements.regionInput),
+    postal_code: courierInputValue(courierElements.postalCodeInput),
     address: courierInputValue(courierElements.addressInput),
     identity_document: courierInputValue(courierElements.identityInput),
     identity_document_url: courierInputValue(courierElements.identityFileUrlInput),
@@ -1301,9 +1434,10 @@ async function courierSignOut() {
     await courierClient.auth.signOut({ scope: "local" });
   } finally {
     courierStopApprovalRealtime();
+    courierStopLocationWatch();
     courierUser = null;
     courierProfile = null;
-    window.location.replace("index.html?app=v75");
+    window.location.replace("index.html?app=v76");
   }
 }
 
@@ -1369,6 +1503,7 @@ async function courierInitialize() {
     courierAssignments = [];
     courierAvailable = false;
     courierStopApprovalRealtime();
+    courierStopLocationWatch();
     if (event === "PASSWORD_RECOVERY") {
       courierSetView("profile", { instant: true });
       courierShowPasswordRecoveryForm();

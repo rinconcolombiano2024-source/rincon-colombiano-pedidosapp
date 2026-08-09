@@ -144,7 +144,7 @@ function adminCourierRpcMessage(error, action = "load") {
   const code = String(error?.code || error?.status || "");
   const message = String(error?.message || "");
   if (code === "PGRST202" || /get_courier_review_queue|review_courier_profile|schema cache/i.test(message)) {
-    return "Falta instalar la migracion V73 de revision de colaboradores en Supabase.";
+    return "Falta instalar la migracion V76 de autorizaciones y revision de colaboradores en Supabase.";
   }
   if (code === "42501" || /not authorized|permission denied/i.test(message)) {
     return "Esta cuenta no tiene permiso administrativo para revisar colaboradores.";

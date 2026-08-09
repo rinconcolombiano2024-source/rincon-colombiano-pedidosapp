@@ -36,9 +36,9 @@ const STORAGE_KEYS = {
   restaurantLongitude: "rc_ordera_restaurant_longitude",
 };
 
-const DEFAULT_BUSINESS_NAME = "RINCON COLOMBIANO";
+const DEFAULT_BUSINESS_NAME = "MI RESTAURANTE";
 const DEFAULT_DELIVERY_MINIMUM_FEE = 20;
-const APP_VERSION = "v75";
+const APP_VERSION = "v76";
 const PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 const PLATFORM_APP_NAME = "RC ORDERA";
 const RESTAURANT_WEEK_DAYS = [
@@ -76,6 +76,8 @@ function detectRegionalDefaults(coords = null) {
     countryCode,
     country: countryCode === "PL" ? "Polonia" : countryCode === "CO" ? "Colombia" : "",
     city: "",
+    region: "",
+    postalCode: "",
     timezone,
     preferredLanguage,
     latitude: Number.isFinite(latitude) ? latitude : null,
@@ -99,9 +101,7 @@ function registrationPosition() {
 
 let restaurantRegistrationRegion = detectRegionalDefaults();
 
-const EMPTY_MENU_CATALOG = {
-  Entradas: [],
-};
+const EMPTY_MENU_CATALOG = {};
 
 const elements = {
   authScreen: document.querySelector("#authScreen"),
@@ -119,6 +119,10 @@ const elements = {
   authLegalNameInput: document.querySelector("#authLegalNameInput"),
   authTaxIdInput: document.querySelector("#authTaxIdInput"),
   authLegalAddressInput: document.querySelector("#authLegalAddressInput"),
+  authCountryCodeInput: document.querySelector("#authCountryCodeInput"),
+  authCityInput: document.querySelector("#authCityInput"),
+  authRegionInput: document.querySelector("#authRegionInput"),
+  authPostalCodeInput: document.querySelector("#authPostalCodeInput"),
   authBusinessPhoneInput: document.querySelector("#authBusinessPhoneInput"),
   authOwnerNameInput: document.querySelector("#authOwnerNameInput"),
   authLegalConsentInput: document.querySelector("#authLegalConsentInput"),
@@ -173,6 +177,13 @@ const elements = {
   downloadTicketPdfButton: document.querySelector("#downloadTicketPdfButton"),
   cancelOrderButton: document.querySelector("#cancelOrderButton"),
   historyList: document.querySelector("#historyList"),
+  ticketHistoryButton: document.querySelector("#ticketHistoryButton"),
+  ticketHistoryDialog: document.querySelector("#ticketHistoryDialog"),
+  ticketHistorySearchInput: document.querySelector("#ticketHistorySearchInput"),
+  ticketHistoryDateInput: document.querySelector("#ticketHistoryDateInput"),
+  ticketHistoryPaymentFilter: document.querySelector("#ticketHistoryPaymentFilter"),
+  ticketHistoryList: document.querySelector("#ticketHistoryList"),
+  refreshTicketHistoryButton: document.querySelector("#refreshTicketHistoryButton"),
   printTicket: document.querySelector("#printTicket"),
   counterButton: document.querySelector("#counterButton"),
   counterDialog: document.querySelector("#counterDialog"),
@@ -255,10 +266,16 @@ const elements = {
   currencyPositionSelect: document.querySelector("#currencyPositionSelect"),
   moneyFormatSelect: document.querySelector("#moneyFormatSelect"),
   receiptWidthInput: document.querySelector("#receiptWidthInput"),
+  connectThermalPrinterButton: document.querySelector("#connectThermalPrinterButton"),
+  thermalPrinterStatus: document.querySelector("#thermalPrinterStatus"),
   saveCurrencyButton: document.querySelector("#saveCurrencyButton"),
   deliveryFeeInput: document.querySelector("#deliveryFeeInput"),
   deliveryMinimumFeeInput: document.querySelector("#deliveryMinimumFeeInput"),
   restaurantAddressInput: document.querySelector("#restaurantAddressInput"),
+  restaurantCountryCodeInput: document.querySelector("#restaurantCountryCodeInput"),
+  restaurantCityInput: document.querySelector("#restaurantCityInput"),
+  restaurantRegionInput: document.querySelector("#restaurantRegionInput"),
+  restaurantPostalCodeInput: document.querySelector("#restaurantPostalCodeInput"),
   useRestaurantLocationButton: document.querySelector("#useRestaurantLocationButton"),
   restaurantLocationStatus: document.querySelector("#restaurantLocationStatus"),
   googleMapsApiKeyInput: document.querySelector("#googleMapsApiKeyInput"),
@@ -289,6 +306,7 @@ let nextTicket = initializeDailyTicket();
 let savedOrders = readOrders();
 let shiftServerName = readShiftServerName();
 let currentOrder = readCurrentOrderDraft();
+let thermalPrinterPort = null;
 let deferredInstallPrompt = null;
 let editingProduct = null;
 let businessName = readBusinessName();
@@ -324,6 +342,7 @@ let clientOrdersChannel = null;
 let clientAlarmTimer = null;
 let clientAlarmAudioContext = null;
 let clientAlarmEnabled = readClientAlarmEnabled();
+let restaurantMapsScriptPromise = null;
 let restaurantStatusSyncTimer = null;
 let restaurantStatusSyncing = false;
 let clientChatKnownMessageIds = new Set();
@@ -347,6 +366,7 @@ function createBlankOrder() {
     ticketNumber: null,
     type: "Comer en el punto",
     paymentMethod: "Pago en caja",
+    paymentStatus: "pending",
     customer: "",
     server: shiftServerName,
     notes: "",
@@ -378,6 +398,7 @@ function normalizeCurrentOrderDraft(order) {
   });
   normalized.type = normalizeOrderType(normalized.type);
   normalized.paymentMethod = normalizePaymentMethod(normalized.paymentMethod);
+  normalized.paymentStatus = normalizePaymentStatus(normalized.paymentStatus, normalized.saved ? "unverified" : "pending");
   normalized.server = String(normalized.server || shiftServerName || "").trim();
   normalized.businessDate = normalized.saved ? orderBusinessDate(normalized) : todayKey;
   normalized.syncStatus = normalized.syncStatus || (normalized.saved ? "local" : "local");
@@ -464,6 +485,7 @@ function readOrders() {
           normalizeOrderNotes({
             ...order,
             type: normalizeOrderType(order.type),
+            paymentStatus: normalizePaymentStatus(order.paymentStatus, "unverified"),
             businessDate: orderBusinessDate(order),
             syncStatus: order.syncStatus || "synced",
           })
@@ -804,6 +826,13 @@ function currentSettingsPayload() {
     businessPhone,
     businessEmail,
     legalAddress,
+    restaurantCountryCode: restaurantRegistrationRegion.countryCode,
+    restaurantCountry: restaurantRegistrationRegion.country,
+    restaurantCity: restaurantRegistrationRegion.city,
+    restaurantRegion: restaurantRegistrationRegion.region,
+    restaurantPostalCode: restaurantRegistrationRegion.postalCode,
+    restaurantTimezone: restaurantRegistrationRegion.timezone,
+    restaurantPreferredLanguage: restaurantRegistrationRegion.preferredLanguage,
   };
 }
 
@@ -823,6 +852,8 @@ function currentRestaurantPublicProfilePayload() {
     longitude: restaurantLongitude,
     country_code: restaurantRegistrationRegion.countryCode,
     city: restaurantRegistrationRegion.city,
+    region: restaurantRegistrationRegion.region,
+    postal_code: restaurantRegistrationRegion.postalCode,
     timezone: restaurantRegistrationRegion.timezone,
     preferred_language: restaurantRegistrationRegion.preferredLanguage,
     updated_at: new Date().toISOString(),
@@ -835,13 +866,20 @@ function restaurantSignupProfileFromInputs(email = "") {
     legalBusinessName: normalizeTextSetting(elements.authLegalNameInput?.value || ""),
     taxId: normalizeTextSetting(elements.authTaxIdInput?.value || ""),
     legalAddress: normalizeTextSetting(elements.authLegalAddressInput?.value || ""),
+    countryCode: normalizeTextSetting(elements.authCountryCodeInput?.value || restaurantRegistrationRegion.countryCode).toUpperCase(),
+    country:
+      normalizeTextSetting(elements.authCountryCodeInput?.value || restaurantRegistrationRegion.countryCode).toUpperCase() === "PL"
+        ? "Polonia"
+        : normalizeTextSetting(elements.authCountryCodeInput?.value || restaurantRegistrationRegion.countryCode).toUpperCase() === "CO"
+          ? "Colombia"
+          : restaurantRegistrationRegion.country,
+    city: normalizeTextSetting(elements.authCityInput?.value || restaurantRegistrationRegion.city),
+    region: normalizeTextSetting(elements.authRegionInput?.value || restaurantRegistrationRegion.region),
+    postalCode: normalizeTextSetting(elements.authPostalCodeInput?.value || restaurantRegistrationRegion.postalCode),
     businessPhone: normalizeTextSetting(elements.authBusinessPhoneInput?.value || ""),
     businessEmail: normalizeTextSetting(email || elements.authEmail?.value || ""),
     ownerName: normalizeTextSetting(elements.authOwnerNameInput?.value || ""),
     legalConsent: Boolean(elements.authLegalConsentInput?.checked),
-    countryCode: restaurantRegistrationRegion.countryCode,
-    country: restaurantRegistrationRegion.country,
-    city: restaurantRegistrationRegion.city,
     timezone: restaurantRegistrationRegion.timezone,
     preferredLanguage: restaurantRegistrationRegion.preferredLanguage,
     latitude: restaurantRegistrationRegion.latitude,
@@ -863,6 +901,8 @@ function restaurantProfileFromUserMetadata() {
     countryCode: profile.countryCode || metadata.country_code || "",
     country: profile.country || metadata.country || "",
     city: profile.city || metadata.city || "",
+    region: profile.region || metadata.region || "",
+    postalCode: profile.postalCode || metadata.postal_code || "",
     timezone: profile.timezone || metadata.timezone || "",
     preferredLanguage: profile.preferredLanguage || metadata.preferred_language || "es",
     latitude: Number.isFinite(Number(profile.latitude ?? metadata.registration_latitude))
@@ -908,6 +948,9 @@ function restaurantOwnerUserProfilePayload(profile = restaurantProfileFromUserMe
     phone: normalizeTextSetting(profile.businessPhone || businessPhone),
     country: normalizeTextSetting(profile.country || restaurantRegistrationRegion.country),
     city: normalizeTextSetting(profile.city || restaurantRegistrationRegion.city),
+    country_code: normalizeTextSetting(profile.countryCode || restaurantRegistrationRegion.countryCode).toUpperCase(),
+    region: normalizeTextSetting(profile.region || restaurantRegistrationRegion.region),
+    postal_code: normalizeTextSetting(profile.postalCode || restaurantRegistrationRegion.postalCode),
     preferred_language: profile.preferredLanguage || restaurantRegistrationRegion.preferredLanguage || "es",
     registration_latitude: profile.latitude ?? restaurantRegistrationRegion.latitude,
     registration_longitude: profile.longitude ?? restaurantRegistrationRegion.longitude,
@@ -965,6 +1008,8 @@ function applyRestaurantProfile(profile = {}, options = {}) {
     countryCode: profile.countryCode || restaurantRegistrationRegion.countryCode,
     country: profile.country || restaurantRegistrationRegion.country,
     city: profile.city || restaurantRegistrationRegion.city,
+    region: profile.region || restaurantRegistrationRegion.region,
+    postalCode: profile.postalCode || restaurantRegistrationRegion.postalCode,
     timezone: profile.timezone || restaurantRegistrationRegion.timezone,
     preferredLanguage: profile.preferredLanguage || restaurantRegistrationRegion.preferredLanguage,
     latitude: profile.latitude ?? restaurantRegistrationRegion.latitude,
@@ -1017,6 +1062,8 @@ function applyPublicRestaurantProfileFallback(profile = {}, options = {}) {
     ...restaurantRegistrationRegion,
     countryCode: normalizeTextSetting(profile.country_code) || restaurantRegistrationRegion.countryCode,
     city: normalizeTextSetting(profile.city) || restaurantRegistrationRegion.city,
+    region: normalizeTextSetting(profile.region) || restaurantRegistrationRegion.region,
+    postalCode: normalizeTextSetting(profile.postal_code) || restaurantRegistrationRegion.postalCode,
     timezone: normalizeTextSetting(profile.timezone) || restaurantRegistrationRegion.timezone,
     preferredLanguage: normalizeTextSetting(profile.preferred_language) || restaurantRegistrationRegion.preferredLanguage,
   };
@@ -1102,6 +1149,17 @@ function applySettingsPayload(settings = {}) {
   deliveryFee = normalizeMoneyValue(settings.deliveryFee ?? deliveryFee);
   deliveryMinimumFee = normalizeDeliveryMinimumFee(settings.deliveryMinimumFee ?? deliveryMinimumFee);
   restaurantAddress = preserveTextSetting(settings.restaurantAddress, restaurantAddress);
+  restaurantRegistrationRegion = {
+    ...restaurantRegistrationRegion,
+    countryCode: normalizeTextSetting(settings.restaurantCountryCode) || restaurantRegistrationRegion.countryCode,
+    country: normalizeTextSetting(settings.restaurantCountry) || restaurantRegistrationRegion.country,
+    city: normalizeTextSetting(settings.restaurantCity) || restaurantRegistrationRegion.city,
+    region: normalizeTextSetting(settings.restaurantRegion) || restaurantRegistrationRegion.region,
+    postalCode: normalizeTextSetting(settings.restaurantPostalCode) || restaurantRegistrationRegion.postalCode,
+    timezone: normalizeTextSetting(settings.restaurantTimezone) || restaurantRegistrationRegion.timezone,
+    preferredLanguage:
+      normalizeTextSetting(settings.restaurantPreferredLanguage) || restaurantRegistrationRegion.preferredLanguage,
+  };
   googleMapsApiKey = preserveTextSetting(settings.googleMapsApiKey, googleMapsApiKey);
   bankAccount = preserveTextSetting(settings.bankAccount, bankAccount);
   bankTransferNote = preserveTextSetting(settings.bankTransferNote, bankTransferNote);
@@ -1332,7 +1390,7 @@ async function loadCloudData() {
     const restaurantProfile = restaurantProfileFromUserMetadata();
     const { data: publicProfileRow, error: publicProfileError } = await cloudState.client
       .from("restaurant_profiles")
-      .select("business_name, logo_url, public_address, phone, active, operational_open, operational_mode, opening_hours, latitude, longitude, country_code, city, timezone, preferred_language, deleted_at")
+      .select("business_name, logo_url, public_address, phone, active, operational_open, operational_mode, opening_hours, latitude, longitude, country_code, city, region, postal_code, timezone, preferred_language, deleted_at")
       .eq("user_id", cloudState.user.id)
       .maybeSingle();
     if (!publicProfileError && typeof publicProfileRow?.active === "boolean") {
@@ -1463,9 +1521,16 @@ async function saveCloudSettings() {
       description: rpcProfile.description,
       active: rpcProfile.active,
       operationalOpen: rpcProfile.operational_open,
+      operationalMode: restaurantOperationalMode,
       openingHours: rpcProfile.opening_hours,
       latitude: rpcProfile.latitude,
       longitude: rpcProfile.longitude,
+      countryCode: rpcProfile.country_code,
+      city: rpcProfile.city,
+      region: rpcProfile.region,
+      postalCode: rpcProfile.postal_code,
+      timezone: rpcProfile.timezone,
+      preferredLanguage: rpcProfile.preferred_language,
     },
   });
 
@@ -1502,7 +1567,7 @@ async function saveRestaurantPublicProfile() {
   try {
     const { data: currentProfile, error: currentProfileError } = await cloudState.client
       .from("restaurant_profiles")
-      .select("business_name, logo_url, public_address, phone, description, active, operational_open, opening_hours, latitude, longitude")
+      .select("business_name, logo_url, public_address, phone, description, active, operational_open, operational_mode, opening_hours, latitude, longitude, country_code, city, region, postal_code, timezone, preferred_language")
       .eq("user_id", cloudState.user.id)
       .maybeSingle();
     if (!currentProfileError && currentProfile) {
@@ -1524,6 +1589,12 @@ async function saveRestaurantPublicProfile() {
         opening_hours: payload.opening_hours || currentProfile.opening_hours || normalizeOpeningHours(),
         latitude: payload.latitude ?? currentProfile.latitude ?? null,
         longitude: payload.longitude ?? currentProfile.longitude ?? null,
+        country_code: preserveTextSetting(payload.country_code, currentProfile.country_code),
+        city: preserveTextSetting(payload.city, currentProfile.city),
+        region: preserveTextSetting(payload.region, currentProfile.region),
+        postal_code: preserveTextSetting(payload.postal_code, currentProfile.postal_code),
+        timezone: preserveTextSetting(payload.timezone, currentProfile.timezone),
+        preferred_language: preserveTextSetting(payload.preferred_language, currentProfile.preferred_language),
       };
     }
   } catch (error) {
@@ -1533,7 +1604,7 @@ async function saveRestaurantPublicProfile() {
   const { data, error } = await cloudState.client
     .from("restaurant_profiles")
     .upsert(payload)
-    .select("user_id, business_name, logo_url, public_address, phone, description, active, operational_open, opening_hours, latitude, longitude, updated_at")
+    .select("user_id, business_name, logo_url, public_address, phone, description, active, operational_open, operational_mode, opening_hours, latitude, longitude, country_code, city, region, postal_code, timezone, preferred_language, updated_at")
     .single();
 
   if (error) {
@@ -1789,7 +1860,7 @@ async function setRestaurantOperationalMode(nextMode) {
     restaurantOperationalOpen = previousOpen;
     localStoreCurrentSettings();
     renderRestaurantStatus();
-    alert("No se pudo confirmar el modo de atencion. Ejecuta la migracion V75 y vuelve a intentarlo.");
+    alert("No se pudo confirmar el modo de atencion. Ejecuta la migracion V76 y vuelve a intentarlo.");
     return false;
   } finally {
     setRestaurantStatusControlsDisabled(false);
@@ -2594,8 +2665,7 @@ async function acceptClientOrder(orderId) {
   }
 
   renderPrintTicket(currentOrder);
-  applyReceiptPrintStyle();
-  window.print();
+  await printRenderedTicket();
   const sourceLabel = clientOrder.source === "waiter" || clientOrder.order_json?.source === "waiter" ? "Pedido de mesero" : "Pedido de cliente";
   showToast(`${sourceLabel} aceptado e impreso como ${formatTicket(currentOrder.ticketNumber)}.`);
 }
@@ -3163,7 +3233,25 @@ async function signUpWithEmail() {
 
   elements.authMessage.textContent = "Detectando pais e idioma...";
   const registrationCoords = await registrationPosition();
-  restaurantRegistrationRegion = detectRegionalDefaults(registrationCoords);
+  const detectedRegion = detectRegionalDefaults(registrationCoords);
+  restaurantRegistrationRegion = {
+    ...restaurantRegistrationRegion,
+    ...detectedRegion,
+    countryCode: normalizeTextSetting(elements.authCountryCodeInput?.value || detectedRegion.countryCode).toUpperCase(),
+    city: normalizeTextSetting(elements.authCityInput?.value || restaurantRegistrationRegion.city),
+    region: normalizeTextSetting(elements.authRegionInput?.value || restaurantRegistrationRegion.region),
+    postalCode: normalizeTextSetting(elements.authPostalCodeInput?.value || restaurantRegistrationRegion.postalCode),
+  };
+  restaurantRegistrationRegion.country = restaurantRegistrationRegion.countryCode === "PL"
+    ? "Polonia"
+    : restaurantRegistrationRegion.countryCode === "CO"
+      ? "Colombia"
+      : restaurantRegistrationRegion.country;
+  restaurantRegistrationRegion.timezone = restaurantRegistrationRegion.countryCode === "PL"
+    ? "Europe/Warsaw"
+    : restaurantRegistrationRegion.countryCode === "CO"
+      ? "America/Bogota"
+      : detectedRegion.timezone;
   if (registrationCoords) {
     restaurantLatitude = Number(registrationCoords.latitude);
     restaurantLongitude = Number(registrationCoords.longitude);
@@ -3226,6 +3314,8 @@ async function signUpWithEmail() {
           country_code: profile.countryCode,
           country: profile.country,
           city: profile.city,
+          region: profile.region,
+          postal_code: profile.postalCode,
           timezone: profile.timezone,
           preferred_language: profile.preferredLanguage,
           registration_latitude: profile.latitude,
@@ -3524,8 +3614,6 @@ function normalizeMenuCatalog(menu) {
     }
   });
 
-  if (!Object.keys(normalized).length) normalized.Entradas = [];
-
   return normalized;
 }
 
@@ -3534,7 +3622,7 @@ function saveMenuCatalog() {
   localStorage.setItem(STORAGE_KEYS.menu, JSON.stringify(menuCatalog));
 
   if (!menuCatalog[activeCategory]) {
-    activeCategory = Object.keys(menuCatalog)[0] || "Entradas";
+    activeCategory = Object.keys(menuCatalog)[0] || "";
   }
 
   renderCategories();
@@ -3837,6 +3925,20 @@ async function saveCurrencySymbol() {
     deliveryFee = normalizeMoneyValue(elements.deliveryFeeInput.value);
     deliveryMinimumFee = normalizeDeliveryMinimumFee(elements.deliveryMinimumFeeInput?.value);
     restaurantAddress = readTextInputPreservingValue(elements.restaurantAddressInput, restaurantAddress);
+    const countryCode = normalizeTextSetting(elements.restaurantCountryCodeInput?.value || restaurantRegistrationRegion.countryCode).toUpperCase();
+    restaurantRegistrationRegion = {
+      ...restaurantRegistrationRegion,
+      countryCode,
+      country: countryCode === "PL" ? "Polonia" : countryCode === "CO" ? "Colombia" : restaurantRegistrationRegion.country,
+      city: readTextInputPreservingValue(elements.restaurantCityInput, restaurantRegistrationRegion.city),
+      region: readTextInputPreservingValue(elements.restaurantRegionInput, restaurantRegistrationRegion.region),
+      postalCode: readTextInputPreservingValue(elements.restaurantPostalCodeInput, restaurantRegistrationRegion.postalCode),
+      timezone: countryCode === "PL"
+        ? "Europe/Warsaw"
+        : countryCode === "CO"
+          ? "America/Bogota"
+          : restaurantRegistrationRegion.timezone,
+    };
     googleMapsApiKey = readTextInputPreservingValue(elements.googleMapsApiKeyInput, googleMapsApiKey);
     bankAccount = readTextInputPreservingValue(elements.bankAccountInput, bankAccount);
     bankTransferNote = readTextInputPreservingValue(elements.bankTransferNoteInput, bankTransferNote);
@@ -3921,6 +4023,74 @@ function setRestaurantLocationStatus(message = "", type = "") {
   elements.restaurantLocationStatus.hidden = !message;
 }
 
+function loadRestaurantGoogleMaps() {
+  if (window.google?.maps?.Geocoder) return Promise.resolve();
+  if (!googleMapsApiKey) return Promise.reject(new Error("Configura primero la clave web de Google Maps."));
+  if (restaurantMapsScriptPromise) return restaurantMapsScriptPromise;
+
+  restaurantMapsScriptPromise = new Promise((resolve, reject) => {
+    const callbackName = `rcOrderaRestaurantMaps_${Date.now()}`;
+    const script = document.createElement("script");
+    window[callbackName] = () => {
+      delete window[callbackName];
+      resolve();
+    };
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(googleMapsApiKey)}&callback=${callbackName}`;
+    script.async = true;
+    script.defer = true;
+    script.addEventListener("error", () => {
+      delete window[callbackName];
+      restaurantMapsScriptPromise = null;
+      reject(new Error("No se pudo cargar Google Maps."));
+    }, { once: true });
+    document.head.appendChild(script);
+  });
+  return restaurantMapsScriptPromise;
+}
+
+function restaurantAddressComponent(result, type, shortName = false) {
+  const component = (result?.address_components || []).find((entry) => entry.types.includes(type));
+  return component ? String(shortName ? component.short_name : component.long_name).trim() : "";
+}
+
+async function reverseGeocodeRestaurantLocation(latitude, longitude) {
+  if (!googleMapsApiKey) return false;
+  await loadRestaurantGoogleMaps();
+  return new Promise((resolve) => {
+    const geocoder = new google.maps.Geocoder();
+    geocoder.geocode({ location: { lat: latitude, lng: longitude } }, (results, status) => {
+      if (status !== "OK" || !results?.length) {
+        resolve(false);
+        return;
+      }
+      const result = results[0];
+      const countryCode = restaurantAddressComponent(result, "country", true).toUpperCase();
+      const city = restaurantAddressComponent(result, "locality")
+        || restaurantAddressComponent(result, "postal_town")
+        || restaurantAddressComponent(result, "administrative_area_level_2");
+      const region = restaurantAddressComponent(result, "administrative_area_level_1");
+      const postalCode = restaurantAddressComponent(result, "postal_code");
+      const formattedAddress = normalizeTextSetting(result.formatted_address);
+
+      if (formattedAddress) restaurantAddress = formattedAddress;
+      restaurantRegistrationRegion = {
+        ...restaurantRegistrationRegion,
+        countryCode: countryCode || restaurantRegistrationRegion.countryCode,
+        country: countryCode === "PL" ? "Polonia" : countryCode === "CO" ? "Colombia" : restaurantRegistrationRegion.country,
+        city: city || restaurantRegistrationRegion.city,
+        region: region || restaurantRegistrationRegion.region,
+        postalCode: postalCode || restaurantRegistrationRegion.postalCode,
+        timezone: countryCode === "PL"
+          ? "Europe/Warsaw"
+          : countryCode === "CO"
+            ? "America/Bogota"
+            : restaurantRegistrationRegion.timezone,
+      };
+      resolve(true);
+    });
+  });
+}
+
 function useRestaurantCurrentLocation() {
   if (!navigator.geolocation) {
     alert("Este dispositivo no permite obtener ubicacion.");
@@ -3937,10 +4107,16 @@ function useRestaurantCurrentLocation() {
     async (position) => {
       restaurantLatitude = Number(position.coords.latitude);
       restaurantLongitude = Number(position.coords.longitude);
-      if (!normalizeTextSetting(elements.restaurantAddressInput?.value)) {
-        restaurantAddress = `${restaurantLatitude.toFixed(6)}, ${restaurantLongitude.toFixed(6)}`;
-        elements.restaurantAddressInput.value = restaurantAddress;
+      let addressResolved = false;
+      try {
+        addressResolved = await reverseGeocodeRestaurantLocation(restaurantLatitude, restaurantLongitude);
+      } catch (error) {
+        console.warn("No se pudo completar la direccion del restaurante.", error);
       }
+      if (!addressResolved && !normalizeTextSetting(elements.restaurantAddressInput?.value)) {
+        restaurantAddress = `${restaurantLatitude.toFixed(6)}, ${restaurantLongitude.toFixed(6)}`;
+      }
+      renderCurrencySettings();
       localStoreCurrentSettings();
       const result = await saveSettingsWhenPossible();
       updateQrPreview();
@@ -3975,6 +4151,10 @@ function renderCurrencySettings() {
   elements.deliveryFeeInput.value = deliveryFee;
   if (elements.deliveryMinimumFeeInput) elements.deliveryMinimumFeeInput.value = deliveryMinimumFee;
   elements.restaurantAddressInput.value = restaurantAddress;
+  if (elements.restaurantCountryCodeInput) elements.restaurantCountryCodeInput.value = restaurantRegistrationRegion.countryCode || "";
+  if (elements.restaurantCityInput) elements.restaurantCityInput.value = restaurantRegistrationRegion.city || "";
+  if (elements.restaurantRegionInput) elements.restaurantRegionInput.value = restaurantRegistrationRegion.region || "";
+  if (elements.restaurantPostalCodeInput) elements.restaurantPostalCodeInput.value = restaurantRegistrationRegion.postalCode || "";
   elements.googleMapsApiKeyInput.value = googleMapsApiKey;
   elements.bankAccountInput.value = bankAccount;
   elements.bankTransferNoteInput.value = bankTransferNote;
@@ -4129,6 +4309,18 @@ function paymentMethodLabel(method) {
   return value;
 }
 
+function normalizePaymentStatus(status, fallback = "pending") {
+  const value = String(status || "").trim().toLowerCase();
+  return ["pending", "paid", "unverified"].includes(value) ? value : fallback;
+}
+
+function paymentStatusLabel(status) {
+  const value = normalizePaymentStatus(status, "unverified");
+  if (value === "paid") return "Cobrado";
+  if (value === "pending") return "Por cobrar";
+  return "Sin confirmar";
+}
+
 function normalizeDeliveryInfo(delivery) {
   if (!delivery || typeof delivery !== "object") return null;
   const normalized = {
@@ -4251,7 +4443,11 @@ function renderMenu() {
 
   if (!entries.length) {
     elements.menuGrid.innerHTML = `<div class="empty-menu-category">${
-      searchQuery ? `No encontre productos con "${escapeHtml(menuSearchQuery)}".` : "No hay productos en esta categoria."
+      searchQuery
+        ? `No encontre productos con "${escapeHtml(menuSearchQuery)}".`
+        : activeCategory
+          ? "No hay productos en esta categoria."
+          : "Crea una categoria y agrega los productos reales de tu restaurante."
     }</div>`;
     return;
   }
@@ -4291,11 +4487,13 @@ function applyMenuSearch(value) {
 function renderMenuEditor() {
   const categories = Object.keys(menuCatalog);
   if (!categories.includes(activeCategory)) {
-    activeCategory = categories[0] || "Entradas";
+    activeCategory = categories[0] || "";
   }
 
   elements.categoryNameInput.value = activeCategory;
-  elements.activeProductCategoryLabel.textContent = `Categoria: ${activeCategory}`;
+  elements.activeProductCategoryLabel.textContent = activeCategory
+    ? `Categoria: ${activeCategory}`
+    : "Primero crea una categoria";
   elements.editorCategoryList.innerHTML = categories
     .map(
       (category) => `
@@ -4321,6 +4519,10 @@ function renderMenuEditor() {
       `
     )
     .join("");
+  elements.newProductButton.disabled = categories.length === 0;
+  elements.saveProductButton.disabled = categories.length === 0;
+  elements.renameCategoryButton.disabled = categories.length === 0;
+  elements.deleteCategoryButton.disabled = categories.length === 0;
 
   renderProductList();
 }
@@ -4329,7 +4531,9 @@ function renderProductList() {
   const products = menuCatalog[activeCategory] || [];
 
   if (!products.length) {
-    elements.productList.innerHTML = `<div class="editor-empty">Esta categoria no tiene productos todavia.</div>`;
+    elements.productList.innerHTML = `<div class="editor-empty">${activeCategory
+      ? "Esta categoria no tiene productos todavia."
+      : "No hay categorias. Crea la primera para comenzar el menu."}</div>`;
     return;
   }
 
@@ -4381,11 +4585,18 @@ function clearProductForm() {
   if (elements.productImageFileInput) elements.productImageFileInput.value = "";
   elements.productCategorySelect.value = activeCategory;
   elements.saveProductButton.textContent = "Agregar producto";
+  elements.saveProductButton.disabled = !activeCategory;
+  elements.newProductButton.disabled = !activeCategory;
   elements.cancelEditProductButton.hidden = true;
   editingProduct = null;
 }
 
 function startNewProduct() {
+  if (!activeCategory) {
+    alert("Primero crea una categoria.");
+    elements.categoryNameInput?.focus();
+    return;
+  }
   clearProductForm();
   elements.productCategorySelect.value = activeCategory;
   elements.productNameInput.focus();
@@ -4496,11 +4707,6 @@ async function deleteCategory() {
   const activeKey = categoryIdentityKey(targetCategory);
   const categoriesToDelete = categories.filter((category) => categoryIdentityKey(category) === activeKey);
 
-  if (categories.length - categoriesToDelete.length < 1) {
-    alert("Debe quedar al menos una categoria.");
-    return;
-  }
-
   const deletedCategory = targetCategory;
   const deleteLabel =
     categoriesToDelete.length > 1 ? `${deletedCategory} (${categoriesToDelete.length} categorias repetidas)` : deletedCategory;
@@ -4508,7 +4714,7 @@ async function deleteCategory() {
   if (!shouldDelete) return;
 
   categoriesToDelete.forEach((category) => delete menuCatalog[category]);
-  activeCategory = Object.keys(menuCatalog)[0];
+  activeCategory = Object.keys(menuCatalog)[0] || "";
   const result = await saveMenuCatalog();
   clearProductForm();
   renderMenuEditor();
@@ -4782,8 +4988,7 @@ function structuredCloneOrder(order) {
 async function printCurrentOrder() {
   if (!(await upsertCurrentOrder())) return;
   renderPrintTicket(currentOrder);
-  applyReceiptPrintStyle();
-  window.print();
+  await printRenderedTicket();
 }
 
 function applyReceiptPrintStyle() {
@@ -4823,6 +5028,149 @@ function applyReceiptPrintStyle() {
       }
     }
   `;
+}
+
+function setThermalPrinterStatus(message, type = "") {
+  if (!elements.thermalPrinterStatus) return;
+  elements.thermalPrinterStatus.textContent = message;
+  elements.thermalPrinterStatus.dataset.type = type;
+}
+
+function thermalPrinterCanConnect() {
+  return Boolean(navigator.serial && window.isSecureContext);
+}
+
+async function openThermalPrinterPort(port) {
+  if (!port) return false;
+  if (!port.readable && !port.writable) await port.open({ baudRate: 9600 });
+  thermalPrinterPort = port;
+  setThermalPrinterStatus("Impresora directa conectada. Cada ticket enviara la orden de corte.", "ok");
+  return true;
+}
+
+async function restoreThermalPrinterPort() {
+  if (!thermalPrinterCanConnect() || thermalPrinterPort) return;
+  try {
+    const ports = await navigator.serial.getPorts();
+    if (ports.length) await openThermalPrinterPort(ports[0]);
+    else setThermalPrinterStatus("Impresion del sistema; el corte automatico depende del controlador de la impresora.");
+  } catch {
+    setThermalPrinterStatus("Impresion del sistema; conecta nuevamente la impresora para enviar corte directo.", "error");
+  }
+}
+
+async function connectThermalPrinter() {
+  if (!thermalPrinterCanConnect()) {
+    setThermalPrinterStatus(
+      "Este navegador no permite conexion ESC/POS directa. Usa Chrome o Edge por HTTPS y activa el corte automatico en el controlador.",
+      "error"
+    );
+    return;
+  }
+  if (elements.connectThermalPrinterButton) elements.connectThermalPrinterButton.disabled = true;
+  try {
+    const port = await navigator.serial.requestPort();
+    await openThermalPrinterPort(port);
+  } catch (error) {
+    if (error?.name !== "NotFoundError") {
+      setThermalPrinterStatus("No se pudo conectar la impresora. Revisa el cable y vuelve a intentarlo.", "error");
+    }
+  } finally {
+    if (elements.connectThermalPrinterButton) elements.connectThermalPrinterButton.disabled = false;
+  }
+}
+
+function thermalTicketText() {
+  const text = String(elements.printTicket?.innerText || elements.printTicket?.textContent || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\x0A\x0D\x20-\x7E]/g, "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return `${text}\n\n\n`;
+}
+
+async function printWithThermalPrinter() {
+  if (!thermalPrinterPort?.writable) return false;
+  const writer = thermalPrinterPort.writable.getWriter();
+  try {
+    const encoder = new TextEncoder();
+    await writer.write(new Uint8Array([0x1b, 0x40]));
+    await writer.write(encoder.encode(thermalTicketText()));
+    await writer.write(new Uint8Array([0x1d, 0x56, 0x00]));
+    setThermalPrinterStatus("Ticket impreso y orden de corte enviada.", "ok");
+    return true;
+  } finally {
+    writer.releaseLock();
+  }
+}
+
+function printTicketWithSystemDialog() {
+  const width = normalizeReceiptWidth(receiptWidthMm);
+  const printFrame = document.createElement("iframe");
+  printFrame.title = "Impresion de ticket RC ORDERA";
+  printFrame.style.position = "fixed";
+  printFrame.style.right = "0";
+  printFrame.style.bottom = "0";
+  printFrame.style.width = "1px";
+  printFrame.style.height = "1px";
+  printFrame.style.border = "0";
+  printFrame.style.opacity = "0";
+  printFrame.setAttribute("aria-hidden", "true");
+  document.body.appendChild(printFrame);
+  const printDocument = printFrame.contentDocument;
+  if (!printDocument) {
+    printFrame.remove();
+    applyReceiptPrintStyle();
+    window.print();
+    return;
+  }
+  printDocument.open();
+  printDocument.write(`<!doctype html><html><head><meta charset="utf-8"><title>RC ORDERA - Ticket</title><style>
+    @page { size: ${width}mm auto; margin: 0; }
+    * { box-sizing: border-box; }
+    html, body { width: ${width}mm; min-height: 0; margin: 0; padding: 0; background: #fff; color: #000; }
+    body { font-family: Arial, sans-serif; font-size: 10pt; }
+    .print-ticket { width: ${Math.max(42, width - 4)}mm; min-height: 0; margin: 0; padding: 1.5mm 2mm 0.5mm; }
+    .receipt-brand, .receipt-number, .receipt-order-type, .receipt-total { text-align: center; font-weight: 800; }
+    .receipt-brand { font-size: 13pt; }
+    .receipt-number { font-size: 16pt; margin: 1mm 0; }
+    .receipt-order-type { font-size: 11pt; }
+    .receipt-divider { border-top: 1px dashed #000; margin: 1.5mm 0; }
+    .receipt-row { display: flex; justify-content: space-between; gap: 2mm; }
+    .receipt-row span { text-align: right; overflow-wrap: anywhere; }
+    .receipt-item { margin: 1.5mm 0; break-inside: avoid; }
+    .receipt-note, .receipt-note-block { font-weight: 800; text-transform: uppercase; overflow-wrap: anywhere; }
+    p { margin: 1mm 0; }
+  </style></head><body><div class="print-ticket">${elements.printTicket.innerHTML}</div></body></html>`);
+  printDocument.close();
+  const cleanup = () => window.setTimeout(() => printFrame.remove(), 250);
+  printFrame.contentWindow?.addEventListener("afterprint", cleanup, { once: true });
+  window.setTimeout(() => {
+    try {
+      printFrame.contentWindow?.focus();
+      printFrame.contentWindow?.print();
+    } catch {
+      cleanup();
+      applyReceiptPrintStyle();
+      window.print();
+    }
+  }, 100);
+  window.setTimeout(cleanup, 120000);
+}
+
+async function printRenderedTicket() {
+  if (thermalPrinterPort?.writable) {
+    try {
+      if (await printWithThermalPrinter()) return;
+    } catch (error) {
+      console.warn("Fallo la impresion termica directa.", error);
+      thermalPrinterPort = null;
+      setThermalPrinterStatus("Se perdio la conexion directa. Se abrira la impresion del sistema.", "error");
+    }
+  }
+  printTicketWithSystemDialog();
 }
 
 function renderPrintTicket(order) {
@@ -5004,7 +5352,104 @@ async function downloadCurrentTicketPdf() {
   if (!(await upsertCurrentOrder())) return;
   const blob = createReceiptPdfBlob(currentOrder);
   const ticketName = String(currentOrder.ticketNumber).padStart(4, "0");
-  downloadBlob(blob, `rincon-colombiano-ticket-${ticketName}.pdf`);
+  downloadBlob(blob, `rc-ordera-ticket-${ticketName}.pdf`);
+}
+
+function ticketHistorySearchText(order) {
+  return normalizeSearchText([
+    order.ticketNumber,
+    order.customer,
+    order.server,
+    order.type,
+    order.paymentMethod,
+    ...orderItemsList(order).map((item) => itemReportName(item)),
+  ].join(" "));
+}
+
+function filteredTicketHistory() {
+  const query = normalizeSearchText(elements.ticketHistorySearchInput?.value || "");
+  const date = String(elements.ticketHistoryDateInput?.value || "").trim();
+  const payment = String(elements.ticketHistoryPaymentFilter?.value || "all");
+  return savedOrders
+    .filter((order) => !date || orderBusinessDate(order) === date)
+    .filter((order) => payment === "all" || normalizePaymentStatus(order.paymentStatus, "unverified") === payment)
+    .filter((order) => !query || ticketHistorySearchText(order).includes(query))
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+}
+
+function renderTicketHistory() {
+  if (!elements.ticketHistoryList) return;
+  const orders = filteredTicketHistory();
+  if (!orders.length) {
+    elements.ticketHistoryList.innerHTML = '<div class="monthly-empty">No hay tickets que coincidan con los filtros.</div>';
+    return;
+  }
+  elements.ticketHistoryList.innerHTML = orders.slice(0, 500).map((order) => {
+    const status = normalizePaymentStatus(order.paymentStatus, "unverified");
+    const created = new Date(order.createdAt || 0);
+    const createdLabel = Number.isNaN(created.getTime())
+      ? orderBusinessDate(order)
+      : created.toLocaleString("es-US", { dateStyle: "short", timeStyle: "short" });
+    return `
+      <article class="ticket-history-card" data-ticket-id="${escapeHtml(order.id)}">
+        <div class="ticket-history-card-main">
+          <div>
+            <strong>${formatTicket(order.ticketNumber)}</strong>
+            <span>${escapeHtml(order.customer || "Sin mesa/cliente")}</span>
+          </div>
+          <div class="ticket-history-amount">
+            <strong>${formatMoney(orderTotal(order))}</strong>
+            <span class="payment-status-badge is-${status}">${escapeHtml(paymentStatusLabel(status))}</span>
+          </div>
+        </div>
+        <div class="history-meta">
+          <span>${escapeHtml(createdLabel)}</span>
+          <span>${orderItemsCount(order)} productos</span>
+          <span>${escapeHtml(paymentMethodLabel(order.paymentMethod))}</span>
+        </div>
+        <div class="ticket-history-actions">
+          <button type="button" data-action="open-ticket">Abrir</button>
+          <button type="button" data-action="print-ticket">Reimprimir</button>
+          <button type="button" data-action="toggle-payment" data-next-status="${status === "paid" ? "pending" : "paid"}">
+            ${status === "paid" ? "Marcar por cobrar" : "Marcar cobrado"}
+          </button>
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
+function openTicketHistoryDialog() {
+  if (!elements.ticketHistoryDialog) return;
+  if (elements.ticketHistoryDateInput) elements.ticketHistoryDateInput.value = "";
+  if (elements.ticketHistoryPaymentFilter) elements.ticketHistoryPaymentFilter.value = "all";
+  if (elements.ticketHistorySearchInput) elements.ticketHistorySearchInput.value = "";
+  renderTicketHistory();
+  elements.ticketHistoryDialog.showModal();
+}
+
+async function updateTicketPaymentStatus(orderId, status) {
+  const index = savedOrders.findIndex((order) => order.id === orderId);
+  if (index < 0) return;
+  const nextStatus = normalizePaymentStatus(status, "pending");
+  savedOrders[index].paymentStatus = nextStatus;
+  savedOrders[index].updatedAt = new Date().toISOString();
+  saveOrders();
+  if (currentOrder.id === orderId) currentOrder = structuredCloneOrder(savedOrders[index]);
+  if (cloudState.user && navigator.onLine) {
+    try {
+      await saveCloudOrder(savedOrders[index]);
+      savedOrders[index].syncStatus = "synced";
+    } catch (error) {
+      console.error(error);
+      savedOrders[index].syncStatus = "pending";
+    }
+    saveOrders();
+  }
+  renderHistory();
+  renderTicketHistory();
+  renderOrder();
+  showToast(`Ticket ${formatTicket(savedOrders[index].ticketNumber)}: ${paymentStatusLabel(nextStatus)}.`);
 }
 
 function renderHistory() {
@@ -5034,6 +5479,9 @@ function renderHistory() {
           <div class="history-meta">
             <span>${escapeHtml(order.customer || "Sin mesa")}</span>
             <span>${itemCount} items</span>
+          </div>
+          <div class="payment-status-badge is-${normalizePaymentStatus(order.paymentStatus, "unverified")}">
+            ${escapeHtml(paymentStatusLabel(order.paymentStatus))}
           </div>
           ${needsCloudSync(order) ? `<div class="sync-badge">Pendiente nube</div>` : ""}
           <button type="button" data-history-id="${escapeHtml(order.id)}">Abrir / reimprimir</button>
@@ -5345,7 +5793,7 @@ function renderPrintDailyClose(report) {
   `;
 }
 
-function printDailyClose() {
+async function printDailyClose() {
   const report = renderDailyClose(elements.closeDayInput.value || todayKey);
   if (!report.tickets) {
     alert("No hay pedidos guardados para imprimir en ese dia.");
@@ -5353,8 +5801,7 @@ function printDailyClose() {
   }
 
   renderPrintDailyClose(report);
-  applyReceiptPrintStyle();
-  window.print();
+  await printRenderedTicket();
 }
 
 function renderPrintMonthlyClose(report) {
@@ -5407,7 +5854,7 @@ function renderPrintMonthlyClose(report) {
   `;
 }
 
-function printMonthlyClose() {
+async function printMonthlyClose() {
   const report = renderMonthlyClose(elements.closeMonthInput.value || currentMonthKey());
   if (!report.tickets) {
     alert("No hay pedidos guardados para imprimir en ese mes.");
@@ -5415,8 +5862,7 @@ function printMonthlyClose() {
   }
 
   renderPrintMonthlyClose(report);
-  applyReceiptPrintStyle();
-  window.print();
+  await printRenderedTicket();
 }
 
 function startNewOrder() {
@@ -5768,6 +6214,7 @@ elements.saveOrderButton.addEventListener("click", async () => {
 
 elements.printOrderButton.addEventListener("click", printCurrentOrder);
 elements.downloadTicketPdfButton.addEventListener("click", downloadCurrentTicketPdf);
+elements.connectThermalPrinterButton?.addEventListener("click", connectThermalPrinter);
 elements.correctOrderButton.addEventListener("click", beginCorrectCurrentOrder);
 elements.cancelOrderButton.addEventListener("click", cancelCurrentOrder);
 elements.newOrderButton.addEventListener("click", startNewOrder);
@@ -5777,6 +6224,37 @@ elements.historyList.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-history-id]");
   if (!button) return;
   loadOrder(button.dataset.historyId);
+});
+
+elements.ticketHistoryButton?.addEventListener("click", openTicketHistoryDialog);
+elements.refreshTicketHistoryButton?.addEventListener("click", renderTicketHistory);
+elements.ticketHistorySearchInput?.addEventListener("input", renderTicketHistory);
+elements.ticketHistoryDateInput?.addEventListener("change", renderTicketHistory);
+elements.ticketHistoryPaymentFilter?.addEventListener("change", renderTicketHistory);
+elements.ticketHistoryList?.addEventListener("click", async (event) => {
+  const button = event.target.closest("button[data-action]");
+  const card = event.target.closest("[data-ticket-id]");
+  if (!button || !card) return;
+  const order = savedOrders.find((item) => item.id === card.dataset.ticketId);
+  if (!order) return;
+  if (button.dataset.action === "open-ticket") {
+    loadOrder(order.id);
+    elements.ticketHistoryDialog?.close();
+    return;
+  }
+  if (button.dataset.action === "print-ticket") {
+    renderPrintTicket(order);
+    await printRenderedTicket();
+    return;
+  }
+  if (button.dataset.action === "toggle-payment") {
+    button.disabled = true;
+    try {
+      await updateTicketPaymentStatus(order.id, button.dataset.nextStatus);
+    } finally {
+      if (button.isConnected) button.disabled = false;
+    }
+  }
 });
 
 elements.counterButton.addEventListener("click", () => {
@@ -5966,6 +6444,7 @@ if ("serviceWorker" in navigator && window.location.protocol.startsWith("http"))
 
 applyBusinessNameToUi();
 applyReceiptPrintStyle();
+restoreThermalPrinterPort();
 renderCategories();
 renderMenu();
 renderOrder();

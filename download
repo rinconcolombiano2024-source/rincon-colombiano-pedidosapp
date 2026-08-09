@@ -1,6 +1,12 @@
 supabase/
 MIGRACION-*.sql
 supabase-schema.sql
+VALIDACION-*.sql
+GUIA-*
+REPORTE-*
+INSTRUCCIONES-*
+MEMORIA_*
+qa-*
+*.cjs
 *.txt
 outputs/
-

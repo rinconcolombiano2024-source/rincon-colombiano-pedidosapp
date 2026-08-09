@@ -93,6 +93,26 @@
               <input id="authLegalAddressInput" type="text" placeholder="Direccion completa del restaurante" autocomplete="street-address" />
             </label>
             <label>
+              Pais
+              <select id="authCountryCodeInput">
+                <option value="">Seleccionar</option>
+                <option value="PL">Polonia</option>
+                <option value="CO">Colombia</option>
+              </select>
+            </label>
+            <label>
+              Ciudad
+              <input id="authCityInput" type="text" placeholder="Ciudad" autocomplete="address-level2" />
+            </label>
+            <label>
+              Provincia / region
+              <input id="authRegionInput" type="text" placeholder="Provincia, departamento o voivodato" autocomplete="address-level1" />
+            </label>
+            <label>
+              Codigo postal
+              <input id="authPostalCodeInput" type="text" placeholder="Codigo postal" autocomplete="postal-code" />
+            </label>
+            <label>
               Telefono del restaurante
               <input id="authBusinessPhoneInput" type="tel" placeholder="Telefono de contacto" autocomplete="tel" />
             </label>
@@ -132,7 +152,7 @@
           <img class="brand-logo" id="appLogoImage" alt="Logo del restaurante" hidden />
           <div>
             <p class="eyebrow">Sistema de pedidos</p>
-            <h1 id="appBusinessName">RINCON COLOMBIANO</h1>
+            <h1 id="appBusinessName">MI RESTAURANTE</h1>
           </div>
         </div>
         <div class="topbar-actions">
@@ -283,6 +303,7 @@
             <div class="header-actions">
               <button class="close-month-button" id="dailyCloseButton" type="button">Cierre dia</button>
               <button class="close-month-button" id="monthlyCloseButton" type="button">Cierre mes</button>
+              <button class="close-month-button" id="ticketHistoryButton" type="button">Historial</button>
               <button class="icon-button" id="counterButton" type="button" title="Cambiar proximo numero" aria-label="Cambiar proximo numero">
                 <span aria-hidden="true">#</span>
               </button>
@@ -374,7 +395,7 @@
           </div>
           <label class="settings-wide-field">
             Nombre del restaurante
-            <input id="businessNameInput" type="text" placeholder="RINCON COLOMBIANO" autocomplete="organization" />
+            <input id="businessNameInput" type="text" placeholder="Nombre del restaurante" autocomplete="organization" />
           </label>
           <label class="settings-wide-field">
             Logo del restaurante
@@ -426,6 +447,10 @@
             Ancho ticket mm
             <input id="receiptWidthInput" type="number" min="50" max="120" step="1" placeholder="80" />
           </label>
+          <div class="thermal-printer-control settings-wide-field">
+            <button id="connectThermalPrinterButton" type="button">Conectar impresora termica</button>
+            <span id="thermalPrinterStatus" role="status">Impresion del sistema; configura el corte en el controlador.</span>
+          </div>
           <button id="saveCurrencyButton" type="button">Guardar ajustes</button>
         </section>
 
@@ -445,6 +470,26 @@
           <label class="settings-wide-field">
             Direccion restaurante
             <input id="restaurantAddressInput" type="text" placeholder="Direccion completa del restaurante" autocomplete="street-address" />
+          </label>
+          <label>
+            Pais
+            <select id="restaurantCountryCodeInput">
+              <option value="">Seleccionar</option>
+              <option value="PL">Polonia</option>
+              <option value="CO">Colombia</option>
+            </select>
+          </label>
+          <label>
+            Ciudad
+            <input id="restaurantCityInput" type="text" placeholder="Ciudad" autocomplete="address-level2" />
+          </label>
+          <label>
+            Provincia / region
+            <input id="restaurantRegionInput" type="text" placeholder="Provincia, departamento o voivodato" autocomplete="address-level1" />
+          </label>
+          <label>
+            Codigo postal
+            <input id="restaurantPostalCodeInput" type="text" placeholder="Codigo postal" autocomplete="postal-code" />
           </label>
           <button id="useRestaurantLocationButton" type="button">Usar ubicacion actual</button>
           <p class="settings-location-status" id="restaurantLocationStatus" hidden></p>
@@ -714,6 +759,44 @@
         <div class="waiter-members-list" id="waiterMembersList"></div>
         <div class="dialog-actions">
           <button id="refreshWaiterMembersButton" value="default" type="button">Actualizar</button>
+          <button value="cancel" type="submit">Cerrar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="ticketHistoryDialog" class="monthly-dialog ticket-history-dialog">
+      <form method="dialog" class="monthly-form">
+        <div class="monthly-dialog-header">
+          <div>
+            <p class="eyebrow">Archivo operativo</p>
+            <h2>Historial de tickets</h2>
+          </div>
+          <button class="icon-button" value="cancel" type="submit" title="Cerrar" aria-label="Cerrar">
+            <span aria-hidden="true">x</span>
+          </button>
+        </div>
+        <div class="ticket-history-filters">
+          <label>
+            Buscar
+            <input id="ticketHistorySearchInput" type="search" placeholder="Numero, cliente o producto" autocomplete="off" />
+          </label>
+          <label>
+            Fecha
+            <input id="ticketHistoryDateInput" type="date" />
+          </label>
+          <label>
+            Cobro
+            <select id="ticketHistoryPaymentFilter">
+              <option value="all">Todos</option>
+              <option value="pending">Por cobrar</option>
+              <option value="paid">Cobrados</option>
+              <option value="unverified">Sin confirmar</option>
+            </select>
+          </label>
+        </div>
+        <div class="ticket-history-list" id="ticketHistoryList"></div>
+        <div class="dialog-actions">
+          <button id="refreshTicketHistoryButton" value="default" type="button">Actualizar</button>
           <button value="cancel" type="submit">Cerrar</button>
         </div>
       </form>

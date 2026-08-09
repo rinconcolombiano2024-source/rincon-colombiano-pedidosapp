@@ -1,6 +1,4 @@
-const CUSTOMER_DEFAULT_MENU = {
-  Entradas: [],
-};
+const CUSTOMER_DEFAULT_MENU = {};
 
 const customerElements = {
   languageSelect: document.querySelector("#customerLanguageSelect"),
@@ -92,7 +90,7 @@ const customerElements = {
 const CUSTOMER_LANGUAGE_KEY = "rincon_colombiano_customer_language";
 const CUSTOMER_APP_LANGUAGE_KEY = "rincon_colombiano_app_language";
 const CUSTOMER_TRANSLATION_CACHE_KEY = "rincon_colombiano_description_translations_v1";
-const CUSTOMER_DELIVERY_MARKUP = 1.1;
+const CUSTOMER_DELIVERY_MARKUP = 1.3;
 const CUSTOMER_I18N = {
   es: {
     heroEyebrow: "Pedido del cliente",
@@ -117,6 +115,7 @@ const CUSTOMER_I18N = {
     restaurantClosed: "Cerrado",
     restaurantClosedBrowse: "Puedes revisar el menu, pero el restaurante no recibe pedidos en este momento.",
     restaurantClosedOrder: "El restaurante esta cerrado y no puede recibir el pedido ahora.",
+    restaurantRegionMismatch: "Este restaurante pertenece a otro pais. Actualiza tu ubicacion y elige un restaurante de tu region.",
     deliveryCalculatedAtCheckout: "Domicilio calculado con tu direccion",
     ordersEyebrow: "Seguimiento",
     activeOrderTitle: "Pedido activo",
@@ -237,7 +236,7 @@ const CUSTOMER_I18N = {
     distancePlaceholder: "Ej: 3.4",
     useLocation: "Usar mi ubicacion",
     calculateMaps: "Calcular con Google Maps",
-    deliveryHelp: "Domicilio: minimo configurado por el restaurante; si la distancia supera ese valor, se calcula por tramos con Google Maps o km aproximados e incluye ajuste operativo del 10%.",
+    deliveryHelp: "Domicilio: minimo configurado por el restaurante; si la distancia supera ese valor, se calcula por tramos con Google Maps o km aproximados e incluye ajuste operativo del 30%.",
     kitchenNotesLabel: "Notas para cocina",
     kitchenNotesPlaceholder: "Ej: sin cebolla, salsa aparte...",
     estimatedTotal: "Total estimado",
@@ -360,6 +359,7 @@ const CUSTOMER_I18N = {
     restaurantClosed: "Zamkniete",
     restaurantClosedBrowse: "Mozesz przegladac menu, ale restauracja nie przyjmuje teraz zamowien.",
     restaurantClosedOrder: "Restauracja jest zamknieta i nie moze teraz przyjac zamowienia.",
+    restaurantRegionMismatch: "Ta restauracja znajduje sie w innym kraju. Zaktualizuj lokalizacje i wybierz restauracje w swoim regionie.",
     deliveryCalculatedAtCheckout: "Dostawa obliczana dla Twojego adresu",
     ordersEyebrow: "Sledzenie",
     activeOrderTitle: "Aktywne zamowienie",
@@ -480,7 +480,7 @@ const CUSTOMER_I18N = {
     distancePlaceholder: "Np. 3.4",
     useLocation: "Uzyj mojej lokalizacji",
     calculateMaps: "Oblicz w Google Maps",
-    deliveryHelp: "Dostawa: obowiazuje minimum ustawione przez restauracje; jesli dystans przekracza ten koszt, cena liczona jest progami z Google Maps albo przyblizonych km i zawiera 10% korekty operacyjnej.",
+    deliveryHelp: "Dostawa: obowiazuje minimum ustawione przez restauracje; jesli dystans przekracza ten koszt, cena liczona jest progami z Google Maps albo przyblizonych km i zawiera 30% korekty operacyjnej.",
     kitchenNotesLabel: "Uwagi do kuchni",
     kitchenNotesPlaceholder: "Np. bez cebuli, sos osobno...",
     estimatedTotal: "Suma szacunkowa",
@@ -603,6 +603,7 @@ const CUSTOMER_I18N = {
     restaurantClosed: "Closed",
     restaurantClosedBrowse: "You can browse the menu, but the restaurant is not accepting orders right now.",
     restaurantClosedOrder: "The restaurant is closed and cannot accept this order right now.",
+    restaurantRegionMismatch: "This restaurant belongs to another country. Update your location and choose a restaurant in your region.",
     deliveryCalculatedAtCheckout: "Delivery calculated for your address",
     ordersEyebrow: "Tracking",
     activeOrderTitle: "Active order",
@@ -723,7 +724,7 @@ const CUSTOMER_I18N = {
     distancePlaceholder: "Ex: 3.4",
     useLocation: "Use my location",
     calculateMaps: "Calculate with Google Maps",
-    deliveryHelp: "Delivery: the restaurant minimum applies; if distance is higher than that amount, the price is calculated by tiers using Google Maps or approximate km and includes a 10% operating adjustment.",
+    deliveryHelp: "Delivery: the restaurant minimum applies; if distance is higher than that amount, the price is calculated by tiers using Google Maps or approximate km and includes a 30% operating adjustment.",
     kitchenNotesLabel: "Kitchen notes",
     kitchenNotesPlaceholder: "Ex: no onion, sauce on the side...",
     estimatedTotal: "Estimated total",
@@ -988,6 +989,8 @@ function customerDetectedRegion(coords = null) {
     countryCode,
     country: countryCode === "PL" ? "Polonia" : countryCode === "CO" ? "Colombia" : "",
     city: "",
+    region: "",
+    postalCode: "",
     timezone,
     latitude: Number.isFinite(latitude) ? latitude : null,
     longitude: Number.isFinite(longitude) ? longitude : null,
@@ -1244,7 +1247,7 @@ let customerHistoryRows = [];
 let customerRestaurants = [];
 let customerRestaurantSearchQuery = "";
 let customerMenu = CUSTOMER_DEFAULT_MENU;
-let customerActiveCategory = "Entradas";
+let customerActiveCategory = "";
 let customerSearchQuery = "";
 let customerCart = [];
 let customerSettings = {
@@ -1553,6 +1556,9 @@ function customerRegisteredAddressPayload() {
     distanceKm: customerInputValue(customerElements.distanceInput),
     country: customerRegistrationRegion.country,
     countryCode: customerRegistrationRegion.countryCode,
+    city: customerRegistrationRegion.city,
+    region: customerRegistrationRegion.region,
+    postalCode: customerRegistrationRegion.postalCode,
     latitude: customerRegistrationRegion.latitude,
     longitude: customerRegistrationRegion.longitude,
   };
@@ -1572,7 +1578,9 @@ function customerApplyProfileFields(profile = {}) {
     ...customerRegistrationRegion,
     country: address.country || customerRegistrationRegion.country,
     countryCode: address.countryCode || customerRegistrationRegion.countryCode,
-    city: address.neighborhood || customerRegistrationRegion.city,
+    city: address.city || address.neighborhood || customerRegistrationRegion.city,
+    region: address.region || customerRegistrationRegion.region,
+    postalCode: address.postalCode || customerRegistrationRegion.postalCode,
     latitude: Number.isFinite(Number(address.latitude)) ? Number(address.latitude) : customerRegistrationRegion.latitude,
     longitude: Number.isFinite(Number(address.longitude)) ? Number(address.longitude) : customerRegistrationRegion.longitude,
   };
@@ -1600,6 +1608,9 @@ function customerProfileFromMetadata() {
     default_address: metadata.default_address || {
       country: metadata.country || "",
       countryCode: metadata.country_code || "",
+      city: metadata.city || "",
+      region: metadata.region || "",
+      postalCode: metadata.postal_code || "",
       latitude: metadata.registration_latitude ?? null,
       longitude: metadata.registration_longitude ?? null,
     },
@@ -1766,6 +1777,9 @@ async function customerSignUpWithEmail() {
         default_address: customerRegisteredAddressPayload(),
         country: customerRegistrationRegion.country,
         country_code: customerRegistrationRegion.countryCode,
+        city: customerRegistrationRegion.city,
+        region: customerRegistrationRegion.region,
+        postal_code: customerRegistrationRegion.postalCode,
         preferred_language: customerLanguage,
         timezone: customerRegistrationRegion.timezone,
         registration_latitude: customerRegistrationRegion.latitude,
@@ -1870,7 +1884,7 @@ async function customerSignOut() {
     customerUser = null;
     customerHistoryRows = [];
     customerRenderAccount();
-    window.location.replace("index.html?app=v75");
+    window.location.replace("index.html?app=v76");
   }
 }
 
@@ -1888,6 +1902,9 @@ function customerProfilePayload() {
       distanceKm: customerInputValue(customerElements.distanceInput) || registeredAddress.distanceKm,
       country: registeredAddress.country,
       countryCode: registeredAddress.countryCode,
+      city: registeredAddress.city,
+      region: registeredAddress.region,
+      postalCode: registeredAddress.postalCode,
       latitude: registeredAddress.latitude,
       longitude: registeredAddress.longitude,
     },
@@ -1917,7 +1934,10 @@ function customerGeneralProfilePayload() {
     full_name: profile.full_name,
     phone: profile.phone,
     country: customerRegistrationRegion.country || defaultAddress.country || "",
-    city: customerNormalizeText(defaultAddress.neighborhood || ""),
+    city: customerNormalizeText(defaultAddress.city || defaultAddress.neighborhood || customerRegistrationRegion.city || ""),
+    country_code: customerNormalizeText(defaultAddress.countryCode || customerRegistrationRegion.countryCode || "").toUpperCase(),
+    region: customerNormalizeText(defaultAddress.region || customerRegistrationRegion.region || ""),
+    postal_code: customerNormalizeText(defaultAddress.postalCode || customerRegistrationRegion.postalCode || ""),
     preferred_language: customerLanguage,
     registration_latitude: customerRegistrationRegion.latitude ?? defaultAddress.latitude ?? null,
     registration_longitude: customerRegistrationRegion.longitude ?? defaultAddress.longitude ?? null,
@@ -2129,6 +2149,10 @@ function customerNormalizeRestaurantProfile(row = {}) {
     openingHours: row.opening_hours || row.openingHours || {},
     latitude: Number.isFinite(Number(row.latitude)) ? Number(row.latitude) : null,
     longitude: Number.isFinite(Number(row.longitude)) ? Number(row.longitude) : null,
+    countryCode: customerNormalizeText(row.country_code || row.countryCode).toUpperCase(),
+    city: customerNormalizeText(row.city),
+    region: customerNormalizeText(row.region),
+    postalCode: customerNormalizeText(row.postal_code || row.postalCode),
     updatedAt: customerNormalizeText(row.updated_at || row.updatedAt),
   };
 }
@@ -2170,11 +2194,15 @@ function customerStartDirectoryRealtime() {
     }, 15000);
   }
   if (!customerClient?.channel || customerDirectoryRealtimeChannel) return;
+  const changeFilter = { event: "*", schema: "public", table: "restaurant_profiles" };
+  if (customerRegistrationRegion.countryCode) {
+    changeFilter.filter = `country_code=eq.${customerRegistrationRegion.countryCode}`;
+  }
   customerDirectoryRealtimeChannel = customerClient
-    .channel("public-restaurant-directory-v75")
+    .channel(`public-restaurant-directory-v76-${customerRegistrationRegion.countryCode || "all"}`)
     .on(
       "postgres_changes",
-      { event: "*", schema: "public", table: "restaurant_profiles" },
+      changeFilter,
       customerScheduleDirectoryRefresh
     )
     .subscribe((status) => {
@@ -2223,7 +2251,7 @@ function customerClearRestaurantSelection(messageKey = "") {
   customerStoreId = "";
   customerStopMenuRealtime();
   customerMenu = CUSTOMER_DEFAULT_MENU;
-  customerActiveCategory = "Entradas";
+  customerActiveCategory = "";
   customerCart = [];
   customerMapDistance = null;
   customerLocationCoords = null;
@@ -2240,7 +2268,7 @@ function customerClearRestaurantSelection(messageKey = "") {
 
   const nextUrl = new URL(window.location.href);
   nextUrl.searchParams.delete("store");
-  nextUrl.searchParams.set("app", "v75");
+  nextUrl.searchParams.set("app", "v76");
   window.history.replaceState({}, "", nextUrl.toString());
 
   customerApplyBusinessName();
@@ -2355,14 +2383,20 @@ async function customerLoadRestaurantDirectory(options = {}) {
   }
 
   customerStartDirectoryRealtime();
-  let { data, error } = await client.rpc("get_public_restaurant_directory");
+  let { data, error } = await client.rpc("get_public_restaurant_directory_by_region", {
+    p_country_code: customerRegistrationRegion.countryCode || "",
+    p_city: customerRegistrationRegion.city || "",
+    p_region: customerRegistrationRegion.region || "",
+  });
   if (error && customerIsMissingRpc(error)) {
-    ({ data, error } = await client
+    let query = client
       .from("restaurant_profiles")
-      .select("user_id, business_name, logo_url, public_address, phone, description, operational_open, opening_hours, latitude, longitude, updated_at")
+      .select("user_id, business_name, logo_url, public_address, phone, description, operational_open, opening_hours, latitude, longitude, country_code, city, region, postal_code, updated_at")
       .eq("active", true)
-      .is("deleted_at", null)
-      .order("business_name", { ascending: true }));
+      .is("deleted_at", null);
+    if (customerRegistrationRegion.countryCode) query = query.eq("country_code", customerRegistrationRegion.countryCode);
+    if (customerRegistrationRegion.region) query = query.ilike("region", customerRegistrationRegion.region);
+    ({ data, error } = await query.order("business_name", { ascending: true }));
   }
 
   if (error) {
@@ -2374,7 +2408,15 @@ async function customerLoadRestaurantDirectory(options = {}) {
 
   customerRestaurants = customerDeduplicateRestaurants((Array.isArray(data) ? data : [])
     .map(customerNormalizeRestaurantProfile)
-    .filter(Boolean));
+    .filter(Boolean)
+    .filter((restaurant) =>
+      !customerRegistrationRegion.countryCode
+      || restaurant.countryCode === customerRegistrationRegion.countryCode
+    )
+    .filter((restaurant) =>
+      !customerRegistrationRegion.region
+      || customerNormalizeSearchText(restaurant.region) === customerNormalizeSearchText(customerRegistrationRegion.region)
+    ));
   if (customerStoreId && !customerSelectedRestaurant()) {
     customerClearRestaurantSelection("restaurantUnavailable");
     return;
@@ -2399,7 +2441,7 @@ async function customerSelectRestaurant(storeId, options = {}) {
   if (options.updateUrl !== false) {
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("store", customerStoreId);
-    nextUrl.searchParams.set("app", "v75");
+    nextUrl.searchParams.set("app", "v76");
     window.history.replaceState({}, "", nextUrl.toString());
   }
 
@@ -2581,7 +2623,6 @@ function customerNormalizeMenu(menu) {
     }
   });
 
-  if (!Object.keys(normalized).length) normalized.Entradas = [];
   return normalized;
 }
 
@@ -2759,10 +2800,10 @@ function customerGetGoogleMapsDistance(origin, destination) {
   });
 }
 
-function customerAddressComponent(result, types = []) {
+function customerAddressComponent(result, types = [], shortName = false) {
   const components = result?.address_components || [];
   const component = components.find((entry) => types.every((type) => entry.types.includes(type)));
-  return component?.long_name || "";
+  return (shortName ? component?.short_name : component?.long_name) || "";
 }
 
 async function customerReverseGeocodeLocation(coords) {
@@ -2784,11 +2825,14 @@ async function customerReverseGeocodeLocation(coords) {
       const neighborhood =
         customerAddressComponent(result, ["sublocality"]) ||
         customerAddressComponent(result, ["neighborhood"]) ||
-        customerAddressComponent(result, ["locality"]) ||
-        customerAddressComponent(result, ["administrative_area_level_2"]);
-      const countryCode = String(
-        (result.address_components || []).find((entry) => entry.types.includes("country"))?.short_name || ""
-      ).toUpperCase();
+        customerAddressComponent(result, ["sublocality_level_1"]);
+      const city = customerAddressComponent(result, ["locality"])
+        || customerAddressComponent(result, ["postal_town"])
+        || customerAddressComponent(result, ["administrative_area_level_2"]);
+      const region = customerAddressComponent(result, ["administrative_area_level_1"]);
+      const postalCode = customerAddressComponent(result, ["postal_code"]);
+      const countryCode = String(customerAddressComponent(result, ["country"], true)).toUpperCase();
+      const previousCountryCode = customerRegistrationRegion.countryCode;
 
       if (approximateAddress) {
         customerElements.addressInput.value = approximateAddress;
@@ -2796,19 +2840,30 @@ async function customerReverseGeocodeLocation(coords) {
           customerElements.registerAddressInput.value = approximateAddress;
         }
       }
-      if (neighborhood) {
-        customerElements.neighborhoodInput.value = neighborhood;
+      if (neighborhood || city) {
+        customerElements.neighborhoodInput.value = neighborhood || city;
         if (customerElements.registerNeighborhoodInput && !customerElements.registerNeighborhoodInput.value.trim()) {
-          customerElements.registerNeighborhoodInput.value = neighborhood;
+          customerElements.registerNeighborhoodInput.value = neighborhood || city;
         }
       }
       customerRegistrationRegion = {
         ...customerRegistrationRegion,
         countryCode: ["PL", "CO"].includes(countryCode) ? countryCode : customerRegistrationRegion.countryCode,
         country: countryCode === "PL" ? "Polonia" : countryCode === "CO" ? "Colombia" : customerRegistrationRegion.country,
-        city: neighborhood || customerRegistrationRegion.city,
+        city: city || customerRegistrationRegion.city,
+        region: region || customerRegistrationRegion.region,
+        postalCode: postalCode || customerRegistrationRegion.postalCode,
+        timezone: countryCode === "PL"
+          ? "Europe/Warsaw"
+          : countryCode === "CO"
+            ? "America/Bogota"
+            : customerRegistrationRegion.timezone,
       };
-      resolve(Boolean(approximateAddress || neighborhood));
+      if (countryCode && countryCode !== previousCountryCode) {
+        customerStopDirectoryRealtime();
+        customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
+      }
+      resolve(Boolean(approximateAddress || neighborhood || city));
     });
   });
 }
@@ -2835,6 +2890,13 @@ async function customerUseLocation() {
       customerLocationCoords = {
         lat: position.coords.latitude,
         lng: position.coords.longitude,
+      };
+      customerRegistrationRegion = {
+        ...customerRegistrationRegion,
+        ...customerDetectedRegion(position.coords),
+        city: customerRegistrationRegion.city,
+        region: customerRegistrationRegion.region,
+        postalCode: customerRegistrationRegion.postalCode,
       };
       customerElements.addressInput.value = `${customerLocationCoords.lat.toFixed(6)}, ${customerLocationCoords.lng.toFixed(6)}`;
       customerSetMapResult(customerT("locationReceived"), "ok");
@@ -2965,24 +3027,30 @@ function customerDeliveryPayload() {
   const minimumFee = customerNormalizeDeliveryMinimumFee(customerSettings.deliveryMinimumFee);
   const extraFee = customerNormalizeMoney(customerSettings.deliveryFee);
   const feeBeforeExtra = Math.max(minimumFee, calculatedFee);
+  const currencyLabel = customerNormalizeText(customerSettings.currencySymbol || "");
   return {
     name: customerElements.nameInput.value.trim(),
     phone: customerElements.phoneInput.value.trim(),
     address: customerElements.addressInput.value.trim(),
     neighborhood: customerElements.neighborhoodInput.value.trim(),
     reference: customerElements.referenceInput.value.trim(),
+    country: customerRegistrationRegion.country,
+    countryCode: customerRegistrationRegion.countryCode,
+    city: customerRegistrationRegion.city,
+    region: customerRegistrationRegion.region,
+    postalCode: customerRegistrationRegion.postalCode,
     distanceKm,
     calculatedFee,
     minimumFee,
     extraFee,
-    markupPercent: 10,
+    markupPercent: 30,
     fee: customerRoundMoney(feeBeforeExtra + extraFee),
     mapDistanceText: customerMapDistance?.distanceText || "",
     mapDurationText: customerMapDistance?.durationText || "",
     mapOrigin: customerMapDistance?.origin || customerSettings.restaurantAddress || "",
     mapDestination: customerMapDistance?.destination || customerDeliveryDestination(),
     location: customerLocationCoords,
-    tariff: `MINIMO=${minimumFee} PLN; BASE 1.5KM=4.50 PLN; 1.5-6KM=1.50 PLN/KM; 6-8KM=2.50 PLN/KM; +8KM=3.50 PLN/KM; AJUSTE OPERATIVO=10%`,
+    tariff: `MONEDA=${currencyLabel}; MINIMO=${minimumFee}; BASE 1.5KM=4.50; 1.5-6KM=1.50/KM; 6-8KM=2.50/KM; +8KM=3.50/KM; AJUSTE OPERATIVO=30%`,
   };
 }
 
@@ -3381,7 +3449,7 @@ function customerStartStatusTracking(orderId, publicToken, paymentMethod, paymen
 function customerRenderCategories() {
   const categories = Object.keys(customerMenu);
   if (!categories.includes(customerActiveCategory)) {
-    customerActiveCategory = categories[0] || "Entradas";
+    customerActiveCategory = categories[0] || "";
   }
 
   customerElements.categoryTabs.innerHTML = categories
@@ -3641,7 +3709,7 @@ async function customerLoadMenu(options = {}) {
   }
 
   customerMenu = loadedMenu;
-  customerActiveCategory = Object.keys(customerMenu)[0] || "Entradas";
+  customerActiveCategory = Object.keys(customerMenu)[0] || "";
   customerSyncCartWithCurrentMenu();
 
   if (customerTableFromQr) {
@@ -3689,6 +3757,24 @@ async function customerSendOrder() {
   }
 
   const selectedRestaurant = customerSelectedRestaurant();
+  if (
+    selectedRestaurant?.countryCode
+    && customerRegistrationRegion.countryCode
+    && selectedRestaurant.countryCode !== customerRegistrationRegion.countryCode
+  ) {
+    customerSetStatus(customerT("restaurantRegionMismatch"), "error");
+    await customerLoadRestaurantDirectory({ silent: true });
+    return;
+  }
+  if (
+    selectedRestaurant?.region
+    && customerRegistrationRegion.region
+    && customerNormalizeSearchText(selectedRestaurant.region) !== customerNormalizeSearchText(customerRegistrationRegion.region)
+  ) {
+    customerSetStatus(customerT("restaurantRegionMismatch"), "error");
+    await customerLoadRestaurantDirectory({ silent: true });
+    return;
+  }
   const restaurantAcceptsOrders = selectedRestaurant
     ? selectedRestaurant.operationalOpen === true
     : customerSettings.restaurantOperationalOpen === true;
@@ -3756,13 +3842,16 @@ async function customerSendOrder() {
     if (/restaurant is closed/i.test(String(error?.message || ""))) {
       customerSetStatus(customerT("restaurantClosedOrder"), "error");
       customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
+    } else if (/restaurant (country|region) does not match/i.test(String(error?.message || ""))) {
+      customerSetStatus(customerT("restaurantRegionMismatch"), "error");
+      customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
     }
     insertedOrder = null;
   }
 
   if (!insertedOrder) {
     customerElements.sendButton.disabled = false;
-    if (customerElements.status.textContent !== customerT("restaurantClosedOrder")) {
+    if (![customerT("restaurantClosedOrder"), customerT("restaurantRegionMismatch")].includes(customerElements.status.textContent)) {
       customerSetStatus(customerT("sendOrderError"), "error");
     }
     return;

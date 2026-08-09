@@ -405,3 +405,18 @@ ACTUALIZACION V75 - ESTADO POR HORARIO Y AUTORIZACIONES (09/08/2026)
 - La PWA y todos los enlaces internos quedaron versionados como V75.
 - Ejecutar MIGRACION-FASE1-V75-ESTADO-HORARIO-AUTORIZACIONES.sql antes de desplegar los archivos V75.
 - Ver GUIA-ACTUALIZACION-V75.md, VALIDACION-V75.sql y REPORTE-VALIDACION-V75-ESTADO-AUTORIZACIONES.md.
+
+ACTUALIZACION V76 - REGION, AUTORIZACIONES, IMPRESION E HISTORIAL (09/08/2026)
+- El estado abierto/cerrado queda visible en la pantalla principal y puede calcularse automaticamente con horario y zona horaria.
+- Restaurante, cliente y colaborador conservan pais, ciudad, provincia, codigo postal y coordenadas.
+- El cliente filtra restaurantes por pais y Supabase rechaza domicilios entre paises diferentes.
+- La tarifa de domicilio visible al cliente aumenta 30 por ciento.
+- Se corrigio la confirmacion de personal para evitar la referencia ambigua member_user_id.
+- V76 incluye la cola administrativa exacta, aprobacion atomica y confirmacion de colaboradores.
+- El colaborador autenticado ve su panel sin repetir el formulario de inicio de sesion.
+- La impresion usa un documento aislado del ancho configurado; la conexion termica directa envia ESC/POS y corte.
+- El historial permite buscar, reimprimir y marcar tickets cobrados o pendientes.
+- El codigo no contiene restaurantes, categorias ni productos preprogramados; se cargan desde Supabase.
+- Ejecutar MIGRACION-FASE1-V76-REGION-AUTORIZACIONES-IMPRESION.sql y despues VALIDACION-V76.sql.
+- Desplegar nuevamente la Edge Function delete-own-restaurant-account y luego V76 en Vercel.
+- Ver GUIA-ACTUALIZACION-V76.md y REPORTE-VALIDACION-V76-ESTABILIZACION.md.
