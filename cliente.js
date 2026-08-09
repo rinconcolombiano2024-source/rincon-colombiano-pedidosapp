@@ -54,6 +54,8 @@ const customerElements = {
   selectedRestaurantStatus: document.querySelector("#customerSelectedRestaurantStatus"),
   noActiveOrder: document.querySelector("#customerNoActiveOrder"),
   profileDetails: document.querySelector("#customerProfileDetails"),
+  profileEditActions: document.querySelector("#customerProfileEditActions"),
+editProfileButton: document.querySelector("#customerEditProfileButton"),
   categoryTabs: document.querySelector("#customerCategoryTabs"),
   menuSearchInput: document.querySelector("#customerMenuSearchInput"),
   menuSearchClearButton: document.querySelector("#customerMenuSearchClearButton"),
