@@ -2653,6 +2653,116 @@ dialog > form {
   gap: 14px;
 }
 
+.thermal-printer-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.thermal-printer-control span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.thermal-printer-control span[data-type="ok"] {
+  color: var(--green);
+}
+
+.thermal-printer-control span[data-type="error"] {
+  color: var(--red);
+}
+
+.ticket-history-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(150px, 1fr) minmax(150px, 1fr);
+  gap: 12px;
+}
+
+.ticket-history-list {
+  display: grid;
+  gap: 10px;
+  min-height: 120px;
+}
+
+.ticket-history-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.ticket-history-card-main,
+.ticket-history-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ticket-history-card-main > div,
+.ticket-history-amount {
+  display: grid;
+  gap: 4px;
+}
+
+.ticket-history-amount {
+  justify-items: end;
+}
+
+.ticket-history-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.payment-status-badge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 4px 8px;
+  border: 1px solid #a9b4c5;
+  border-radius: 999px;
+  background: #f4f6f9;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.payment-status-badge.is-paid {
+  border-color: #15965b;
+  background: #edf9f2;
+  color: #087342;
+}
+
+.payment-status-badge.is-pending {
+  border-color: #d59b00;
+  background: #fff8df;
+  color: #805800;
+}
+
+@media (max-width: 680px) {
+  .ticket-history-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .ticket-history-card-main {
+    align-items: flex-start;
+  }
+
+  .ticket-history-actions button,
+  .thermal-printer-control button {
+    flex: 1 1 140px;
+  }
+
+  .thermal-printer-control {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
 .monthly-form > .dialog-actions,
 .menu-editor-form > .dialog-actions {
   position: sticky;
