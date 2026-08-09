@@ -4135,7 +4135,7 @@ customerElements.editProfileButton?.addEventListener("click", () => {
       alert("No se pudo guardar el perfil.");
     }
   });
-
+});
 window.addEventListener("online", () => {
   customerStartDirectoryRealtime();
   customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
