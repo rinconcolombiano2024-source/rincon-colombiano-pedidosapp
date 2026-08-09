@@ -393,3 +393,15 @@ ACTUALIZACION V74 - ESTABILIZACION DE APROBACIONES, UBICACION Y ELIMINACION (09/
 - La PWA V74 conserva la pagina correcta sin conexion para Cliente, Colaborador, Estacion y Administracion.
 - Ejecutar MIGRACION-FASE1-V74-ESTABILIZACION-APROBACIONES-UBICACION-ELIMINACION.sql y redeplegar la Edge Function de eliminacion.
 - Ver GUIA-ACTUALIZACION-V74.md, VALIDACION-V74.sql y REPORTE-VALIDACION-V74-ESTABILIZACION.md.
+
+ACTUALIZACION V75 - ESTADO POR HORARIO Y AUTORIZACIONES (09/08/2026)
+- La pantalla principal del restaurante muestra si esta abierto o cerrado.
+- El propietario conserva control manual y puede activar el modo automatico segun horario.
+- Supabase calcula el horario con la zona horaria del restaurante y admite cierres despues de medianoche.
+- Directorio, menu y creacion de pedidos usan el estado efectivo, incluso cuando el panel del restaurante esta cerrado.
+- Un trigger impide insertar pedidos nuevos cuando el restaurante no esta recibiendo pedidos.
+- La lista de estaciones se ordena mediante alias explicitos y deja de depender del ORDER BY defectuoso de V73.
+- El administrador confirma por separado el perfil y el rol del colaborador despues de aprobar o rechazar.
+- La PWA y todos los enlaces internos quedaron versionados como V75.
+- Ejecutar MIGRACION-FASE1-V75-ESTADO-HORARIO-AUTORIZACIONES.sql antes de desplegar los archivos V75.
+- Ver GUIA-ACTUALIZACION-V75.md, VALIDACION-V75.sql y REPORTE-VALIDACION-V75-ESTADO-AUTORIZACIONES.md.

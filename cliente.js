@@ -1870,7 +1870,7 @@ async function customerSignOut() {
     customerUser = null;
     customerHistoryRows = [];
     customerRenderAccount();
-    window.location.replace("index.html?app=v74");
+    window.location.replace("index.html?app=v75");
   }
 }
 
@@ -2171,7 +2171,7 @@ function customerStartDirectoryRealtime() {
   }
   if (!customerClient?.channel || customerDirectoryRealtimeChannel) return;
   customerDirectoryRealtimeChannel = customerClient
-    .channel("public-restaurant-directory-v74")
+    .channel("public-restaurant-directory-v75")
     .on(
       "postgres_changes",
       { event: "*", schema: "public", table: "restaurant_profiles" },
@@ -2240,7 +2240,7 @@ function customerClearRestaurantSelection(messageKey = "") {
 
   const nextUrl = new URL(window.location.href);
   nextUrl.searchParams.delete("store");
-  nextUrl.searchParams.set("app", "v74");
+  nextUrl.searchParams.set("app", "v75");
   window.history.replaceState({}, "", nextUrl.toString());
 
   customerApplyBusinessName();
@@ -2399,7 +2399,7 @@ async function customerSelectRestaurant(storeId, options = {}) {
   if (options.updateUrl !== false) {
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("store", customerStoreId);
-    nextUrl.searchParams.set("app", "v74");
+    nextUrl.searchParams.set("app", "v75");
     window.history.replaceState({}, "", nextUrl.toString());
   }
 
@@ -3688,7 +3688,11 @@ async function customerSendOrder() {
     return;
   }
 
-  if (customerSelectedRestaurant()?.operationalOpen !== true && customerSettings.restaurantOperationalOpen !== true) {
+  const selectedRestaurant = customerSelectedRestaurant();
+  const restaurantAcceptsOrders = selectedRestaurant
+    ? selectedRestaurant.operationalOpen === true
+    : customerSettings.restaurantOperationalOpen === true;
+  if (!restaurantAcceptsOrders) {
     customerSetStatus(customerT("restaurantClosedOrder"), "error");
     return;
   }
@@ -3748,13 +3752,19 @@ async function customerSendOrder() {
   try {
     await customerSaveProfile();
     insertedOrder = await customerCreateCustomerOrder(orderPayload, total, tableLabel, customerName, orderType);
-  } catch {
+  } catch (error) {
+    if (/restaurant is closed/i.test(String(error?.message || ""))) {
+      customerSetStatus(customerT("restaurantClosedOrder"), "error");
+      customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
+    }
     insertedOrder = null;
   }
 
   if (!insertedOrder) {
     customerElements.sendButton.disabled = false;
-    customerSetStatus(customerT("sendOrderError"), "error");
+    if (customerElements.status.textContent !== customerT("restaurantClosedOrder")) {
+      customerSetStatus(customerT("sendOrderError"), "error");
+    }
     return;
   }
 

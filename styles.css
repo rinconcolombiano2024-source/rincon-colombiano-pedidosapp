@@ -1854,6 +1854,114 @@ button {
   flex-wrap: wrap;
 }
 
+.restaurant-service-bar {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) auto minmax(150px, auto);
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-left: 5px solid #64748b;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: var(--shadow);
+}
+
+.restaurant-service-bar[data-open="true"] {
+  border-left-color: var(--green);
+}
+
+.restaurant-service-bar[data-open="false"] {
+  border-left-color: var(--red);
+}
+
+.restaurant-service-summary {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+}
+
+.restaurant-service-summary strong,
+.restaurant-service-summary > div > span {
+  display: block;
+}
+
+.restaurant-service-summary strong {
+  color: var(--dark);
+  font-size: 1.05rem;
+}
+
+.restaurant-service-summary > div > span {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.restaurant-service-indicator {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  border-radius: 50%;
+  background: #64748b;
+  box-shadow: 0 0 0 5px rgba(100, 116, 139, 0.12);
+}
+
+.restaurant-service-bar[data-open="true"] .restaurant-service-indicator {
+  background: var(--green);
+  box-shadow: 0 0 0 5px rgba(31, 143, 77, 0.12);
+}
+
+.restaurant-service-bar[data-open="false"] .restaurant-service-indicator {
+  background: var(--red);
+  box-shadow: 0 0 0 5px rgba(199, 57, 47, 0.12);
+}
+
+.restaurant-schedule-toggle {
+  display: inline-flex;
+  flex-direction: row;
+  gap: 10px;
+  align-items: center;
+  min-height: 44px;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--dark);
+  font-size: 0.85rem;
+  font-weight: 900;
+}
+
+.restaurant-schedule-toggle input {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  accent-color: var(--green);
+}
+
+.restaurant-service-action {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--green);
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.restaurant-service-bar[data-open="true"] .restaurant-service-action {
+  background: var(--red);
+}
+
+.restaurant-service-bar .restaurant-service-action:disabled {
+  background: #d7dee8;
+  color: #59667a;
+  cursor: not-allowed;
+}
+
 .install-button {
   min-height: 42px;
   padding: 0 14px;
@@ -3556,9 +3664,20 @@ body.auth-checking > :not(script) {
   }
 
   .topbar,
+  .restaurant-service-bar,
   .workspace {
     display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .restaurant-service-bar {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .restaurant-schedule-toggle,
+  .restaurant-service-action {
+    width: 100%;
   }
 
   .ticket-counter {

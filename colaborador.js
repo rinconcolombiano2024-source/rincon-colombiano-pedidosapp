@@ -1303,7 +1303,7 @@ async function courierSignOut() {
     courierStopApprovalRealtime();
     courierUser = null;
     courierProfile = null;
-    window.location.replace("index.html?app=v74");
+    window.location.replace("index.html?app=v75");
   }
 }
 

@@ -154,6 +154,22 @@
         </div>
       </header>
 
+      <section class="restaurant-service-bar" aria-label="Estado de atencion al cliente" aria-live="polite">
+        <div class="restaurant-service-summary">
+          <span class="restaurant-service-indicator" id="mainRestaurantStatusIndicator" aria-hidden="true"></span>
+          <div>
+            <p class="eyebrow">Atencion al cliente</p>
+            <strong id="mainRestaurantStatusText">Comprobando estado...</strong>
+            <span id="mainRestaurantStatusDetail">El estado se confirma con Supabase.</span>
+          </div>
+        </div>
+        <label class="restaurant-schedule-toggle" for="restaurantScheduleModeInput">
+          <input id="restaurantScheduleModeInput" type="checkbox" />
+          <span>Automatico segun horario</span>
+        </label>
+        <button class="restaurant-service-action" id="mainRestaurantToggleButton" type="button">Abrir atencion</button>
+      </section>
+
       <section class="workspace" aria-label="Pedidos del restaurante">
         <aside class="panel menu-panel" aria-label="Menu">
           <div class="panel-header">
@@ -463,7 +479,7 @@
         <section class="settings-card restaurant-hours-card">
           <div>
             <h3>Horario de atencion</h3>
-            <p>Define el horario habitual. Caja controla manualmente si hoy el restaurante recibe pedidos.</p>
+            <p>Define el horario habitual. Activa el modo automatico en la pantalla principal para abrir y cerrar segun este horario.</p>
           </div>
           <div class="restaurant-hours-grid" id="restaurantHoursGrid" aria-label="Horario semanal"></div>
           <button id="saveRestaurantHoursButton" type="button">Guardar horario</button>

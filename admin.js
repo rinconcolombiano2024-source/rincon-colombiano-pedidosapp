@@ -345,12 +345,32 @@ async function adminReviewCourier(userId, status) {
     adminSetMessage(adminElements.authMessage, adminCourierRpcMessage(error, "review"), "error");
     return false;
   }
-  const rows = await adminLoadCouriers();
-  const confirmed = rows?.find((row) => row.user_id === userId);
-  if (!confirmed || confirmed.status !== status) {
+
+  const { data: verificationData, error: verificationError } = await client.rpc("get_courier_review_result", {
+    p_user_id: userId,
+  });
+  let confirmed = Array.isArray(verificationData) ? verificationData[0] : verificationData;
+  if (verificationError && (verificationError.code === "PGRST202" || /get_courier_review_result/i.test(verificationError.message || ""))) {
+    const rows = await adminLoadCouriers();
+    const fallback = rows?.find((row) => row.user_id === userId);
+    confirmed = fallback ? {
+      profile_status: fallback.status,
+      role_status: status === "approved" ? "active" : status === "rejected" ? "revoked" : status,
+    } : null;
+  } else {
+    await adminLoadCouriers();
+  }
+
+  const expectedRoleStatus = status === "approved" ? "active" : status === "rejected" ? "revoked" : status;
+  if (
+    (verificationError && !confirmed) ||
+    !confirmed ||
+    confirmed.profile_status !== status ||
+    confirmed.role_status !== expectedRoleStatus
+  ) {
     adminSetMessage(
       adminElements.authMessage,
-      "Supabase no confirmo el nuevo estado. La accion no se mostrara como completada; actualiza e intenta nuevamente.",
+      "Supabase no confirmo el perfil y el permiso del colaborador. La accion no se mostrara como completada; actualiza e intenta nuevamente.",
       "error"
     );
     return false;

@@ -30,6 +30,7 @@ const STORAGE_KEYS = {
   deliveryMinimumFee: "rincon_colombiano_delivery_minimum_fee",
   currentOrderDraft: "rincon_colombiano_current_order_draft",
   restaurantOperationalOpen: "rc_ordera_restaurant_operational_open",
+  restaurantOperationalMode: "rc_ordera_restaurant_operational_mode",
   restaurantOpeningHours: "rc_ordera_restaurant_opening_hours",
   restaurantLatitude: "rc_ordera_restaurant_latitude",
   restaurantLongitude: "rc_ordera_restaurant_longitude",
@@ -37,7 +38,7 @@ const STORAGE_KEYS = {
 
 const DEFAULT_BUSINESS_NAME = "RINCON COLOMBIANO";
 const DEFAULT_DELIVERY_MINIMUM_FEE = 20;
-const APP_VERSION = "v74";
+const APP_VERSION = "v75";
 const PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 const PLATFORM_APP_NAME = "RC ORDERA";
 const RESTAURANT_WEEK_DAYS = [
@@ -131,6 +132,12 @@ const elements = {
   cancelRecoveryButton: document.querySelector("#cancelRecoveryButton"),
   authMessage: document.querySelector("#authMessage"),
   cloudStatus: document.querySelector("#cloudStatus"),
+  restaurantServiceBar: document.querySelector(".restaurant-service-bar"),
+  mainRestaurantStatusIndicator: document.querySelector("#mainRestaurantStatusIndicator"),
+  mainRestaurantStatusText: document.querySelector("#mainRestaurantStatusText"),
+  mainRestaurantStatusDetail: document.querySelector("#mainRestaurantStatusDetail"),
+  mainRestaurantToggleButton: document.querySelector("#mainRestaurantToggleButton"),
+  restaurantScheduleModeInput: document.querySelector("#restaurantScheduleModeInput"),
   appBusinessName: document.querySelector("#appBusinessName"),
   appLogoImage: document.querySelector("#appLogoImage"),
   refreshAppButton: document.querySelector("#refreshAppButton"),
@@ -300,6 +307,7 @@ let onlinePaymentNote = readOnlinePaymentNote();
 let businessLogoUrl = readBusinessLogoUrl();
 let restaurantActive = readRestaurantActive();
 let restaurantOperationalOpen = readRestaurantOperationalOpen();
+let restaurantOperationalMode = readRestaurantOperationalMode();
 let restaurantOpeningHours = readRestaurantOpeningHours();
 let restaurantLatitude = readCoordinate(STORAGE_KEYS.restaurantLatitude);
 let restaurantLongitude = readCoordinate(STORAGE_KEYS.restaurantLongitude);
@@ -316,6 +324,8 @@ let clientOrdersChannel = null;
 let clientAlarmTimer = null;
 let clientAlarmAudioContext = null;
 let clientAlarmEnabled = readClientAlarmEnabled();
+let restaurantStatusSyncTimer = null;
+let restaurantStatusSyncing = false;
 let clientChatKnownMessageIds = new Set();
 let clientChatLoadedOnce = false;
 const cloudState = {
@@ -785,6 +795,7 @@ function currentSettingsPayload() {
     businessLogoUrl,
     restaurantActive,
     restaurantOperationalOpen,
+    restaurantOperationalMode,
     openingHours: restaurantOpeningHours,
     restaurantLatitude,
     restaurantLongitude,
@@ -994,6 +1005,9 @@ function applyPublicRestaurantProfileFallback(profile = {}, options = {}) {
   businessPhone = assignText(businessPhone, profile.phone);
   if (typeof profile.active === "boolean") restaurantActive = profile.active;
   if (typeof profile.operational_open === "boolean") restaurantOperationalOpen = profile.operational_open;
+  if (profile.operational_mode !== undefined) {
+    restaurantOperationalMode = normalizeRestaurantOperationalMode(profile.operational_mode);
+  }
   if (profile.opening_hours && typeof profile.opening_hours === "object") {
     restaurantOpeningHours = normalizeOpeningHours(profile.opening_hours);
   }
@@ -1013,6 +1027,7 @@ function applyPublicRestaurantProfileFallback(profile = {}, options = {}) {
   localStorage.setItem(STORAGE_KEYS.businessPhone, businessPhone);
   localStorage.setItem(STORAGE_KEYS.restaurantActive, restaurantActive ? "1" : "0");
   localStorage.setItem(STORAGE_KEYS.restaurantOperationalOpen, restaurantOperationalOpen ? "1" : "0");
+  localStorage.setItem(STORAGE_KEYS.restaurantOperationalMode, restaurantOperationalMode);
   localStorage.setItem(STORAGE_KEYS.restaurantOpeningHours, JSON.stringify(restaurantOpeningHours));
   storeCoordinate(STORAGE_KEYS.restaurantLatitude, restaurantLatitude);
   storeCoordinate(STORAGE_KEYS.restaurantLongitude, restaurantLongitude);
@@ -1065,6 +1080,7 @@ function localStoreCurrentSettings() {
   localStorage.setItem(STORAGE_KEYS.onlinePaymentNote, onlinePaymentNote);
   localStorage.setItem(STORAGE_KEYS.restaurantActive, restaurantActive ? "1" : "0");
   localStorage.setItem(STORAGE_KEYS.restaurantOperationalOpen, restaurantOperationalOpen ? "1" : "0");
+  localStorage.setItem(STORAGE_KEYS.restaurantOperationalMode, restaurantOperationalMode);
   localStorage.setItem(STORAGE_KEYS.restaurantOpeningHours, JSON.stringify(restaurantOpeningHours));
   storeCoordinate(STORAGE_KEYS.restaurantLatitude, restaurantLatitude);
   storeCoordinate(STORAGE_KEYS.restaurantLongitude, restaurantLongitude);
@@ -1093,6 +1109,9 @@ function applySettingsPayload(settings = {}) {
   onlinePaymentNote = preserveTextSetting(settings.onlinePaymentNote, onlinePaymentNote);
   if (typeof settings.restaurantActive === "boolean") restaurantActive = settings.restaurantActive;
   if (typeof settings.restaurantOperationalOpen === "boolean") restaurantOperationalOpen = settings.restaurantOperationalOpen;
+  if (settings.restaurantOperationalMode !== undefined) {
+    restaurantOperationalMode = normalizeRestaurantOperationalMode(settings.restaurantOperationalMode);
+  }
   if (settings.openingHours && typeof settings.openingHours === "object") {
     restaurantOpeningHours = normalizeOpeningHours(settings.openingHours);
   }
@@ -1180,6 +1199,8 @@ function renderCloudState(message = "") {
   updateClientAlarmButton();
   updateCloudStatus(canWorkOffline ? "" : message);
   if (elements.authMessage) elements.authMessage.textContent = message;
+  renderRestaurantStatus();
+  updateRestaurantStatusSync();
 }
 
 function setRestaurantAuthMode(mode = "login") {
@@ -1311,7 +1332,7 @@ async function loadCloudData() {
     const restaurantProfile = restaurantProfileFromUserMetadata();
     const { data: publicProfileRow, error: publicProfileError } = await cloudState.client
       .from("restaurant_profiles")
-      .select("business_name, logo_url, public_address, phone, active, operational_open, opening_hours, latitude, longitude, country_code, city, timezone, preferred_language, deleted_at")
+      .select("business_name, logo_url, public_address, phone, active, operational_open, operational_mode, opening_hours, latitude, longitude, country_code, city, timezone, preferred_language, deleted_at")
       .eq("user_id", cloudState.user.id)
       .maybeSingle();
     if (!publicProfileError && typeof publicProfileRow?.active === "boolean") {
@@ -1410,6 +1431,10 @@ async function loadCloudData() {
     }
     startClientOrdersPolling();
     startClientOrdersRealtime();
+    updateRestaurantStatusSync();
+    if (restaurantOperationalMode === "schedule") {
+      await syncRestaurantOperationalStatus({ silent: true });
+    }
     updateCloudStatus();
     maybeAskShiftServer();
     return { ok: true, warning: cloudState.moduleWarning };
@@ -1619,16 +1644,19 @@ async function persistRestaurantDeletionRequestInCloud() {
   return { requestRecorded: true };
 }
 
-async function verifyRestaurantOperationalOpenInCloud(expectedOpen) {
+async function verifyRestaurantOperationalOpenInCloud(expectedOpen, expectedMode = null) {
   const { data, error } = await cloudState.client
     .from("restaurant_profiles")
-    .select("user_id, operational_open, updated_at")
+    .select("user_id, operational_open, operational_mode, updated_at")
     .eq("user_id", cloudState.user.id)
     .maybeSingle();
 
   if (error) throw error;
   if (!data || data.operational_open !== Boolean(expectedOpen)) {
     throw new Error("Supabase no confirmo el estado operativo del restaurante.");
+  }
+  if (expectedMode && normalizeRestaurantOperationalMode(data.operational_mode) !== expectedMode) {
+    throw new Error("Supabase no confirmo el modo operativo del restaurante.");
   }
   return data;
 }
@@ -1639,7 +1667,133 @@ async function persistRestaurantOperationalOpenInCloud(nextOpen) {
     p_open: expectedOpen,
   });
   if (error) throw error;
-  return verifyRestaurantOperationalOpenInCloud(expectedOpen);
+  return verifyRestaurantOperationalOpenInCloud(expectedOpen, "manual");
+}
+
+function setRestaurantStatusControlsDisabled(disabled) {
+  const automatic = restaurantOperationalMode === "schedule";
+  if (elements.closeRestaurantButton) elements.closeRestaurantButton.disabled = disabled || automatic || !restaurantActive;
+  if (elements.mainRestaurantToggleButton) {
+    elements.mainRestaurantToggleButton.disabled = disabled || automatic || !restaurantActive || !cloudState.user;
+  }
+  if (elements.restaurantScheduleModeInput) {
+    elements.restaurantScheduleModeInput.disabled = disabled || !restaurantActive || !cloudState.user;
+  }
+}
+
+async function persistRestaurantOperationalModeInCloud(nextMode) {
+  const expectedMode = normalizeRestaurantOperationalMode(nextMode);
+  const { data, error } = await cloudState.client.rpc("set_current_restaurant_operational_mode", {
+    p_mode: expectedMode,
+  });
+  if (error) throw error;
+  const result = Array.isArray(data) ? data[0] : data;
+  if (!result || normalizeRestaurantOperationalMode(result.operational_mode) !== expectedMode) {
+    throw new Error("Supabase no confirmo el modo operativo del restaurante.");
+  }
+  return verifyRestaurantOperationalOpenInCloud(result.operational_open === true, expectedMode);
+}
+
+async function syncRestaurantOperationalStatus(options = {}) {
+  const { silent = false } = options;
+  if (
+    restaurantStatusSyncing ||
+    restaurantOperationalMode !== "schedule" ||
+    !cloudState.client ||
+    !cloudState.user ||
+    !navigator.onLine
+  ) return null;
+
+  restaurantStatusSyncing = true;
+  if (!silent && elements.mainRestaurantStatusDetail) {
+    elements.mainRestaurantStatusDetail.textContent = "Comprobando el horario con Supabase...";
+  }
+  try {
+    const { data, error } = await cloudState.client.rpc("sync_current_restaurant_operational_status");
+    if (error) throw error;
+    const result = Array.isArray(data) ? data[0] : data;
+    if (!result || normalizeRestaurantOperationalMode(result.operational_mode) !== "schedule") {
+      throw new Error("Supabase no devolvio el estado automatico esperado.");
+    }
+    restaurantOperationalOpen = result.operational_open === true;
+    localStoreCurrentSettings();
+    renderRestaurantStatus();
+    return result;
+  } catch (error) {
+    if (!silent) {
+      console.error(error);
+      showToast("No se pudo comprobar el horario en la nube. Se conserva el ultimo estado confirmado.");
+    }
+    return null;
+  } finally {
+    restaurantStatusSyncing = false;
+  }
+}
+
+function stopRestaurantStatusSync() {
+  if (restaurantStatusSyncTimer) window.clearInterval(restaurantStatusSyncTimer);
+  restaurantStatusSyncTimer = null;
+}
+
+function updateRestaurantStatusSync() {
+  const shouldSync = Boolean(
+    cloudState.user && restaurantActive && restaurantOperationalMode === "schedule" && navigator.onLine
+  );
+  if (!shouldSync) {
+    stopRestaurantStatusSync();
+    return;
+  }
+  if (!restaurantStatusSyncTimer) {
+    restaurantStatusSyncTimer = window.setInterval(() => {
+      if (document.visibilityState === "visible") syncRestaurantOperationalStatus({ silent: true });
+    }, 60000);
+  }
+}
+
+async function setRestaurantOperationalMode(nextMode) {
+  if (!cloudState.client || !cloudState.user) {
+    showToast("Inicia sesion para cambiar el control de atencion.");
+    renderRestaurantStatus();
+    return false;
+  }
+
+  const expectedMode = normalizeRestaurantOperationalMode(nextMode);
+  if (expectedMode === restaurantOperationalMode) return true;
+  const message = expectedMode === "schedule"
+    ? "Activar la apertura automatica segun el horario guardado?"
+    : "Volver al control manual? El restaurante conservara por ahora su ultimo estado confirmado.";
+  if (!confirm(message)) {
+    renderRestaurantStatus();
+    return false;
+  }
+
+  const previousMode = restaurantOperationalMode;
+  const previousOpen = restaurantOperationalOpen;
+  setRestaurantStatusControlsDisabled(true);
+  try {
+    const confirmed = await persistRestaurantOperationalModeInCloud(expectedMode);
+    restaurantOperationalMode = expectedMode;
+    restaurantOperationalOpen = confirmed.operational_open === true;
+    localStoreCurrentSettings();
+    renderRestaurantStatus();
+    updateRestaurantStatusSync();
+    showToast(
+      expectedMode === "schedule"
+        ? "Horario automatico activado y confirmado en Supabase."
+        : "Control manual activado y confirmado en Supabase."
+    );
+    return true;
+  } catch (error) {
+    console.error(error);
+    restaurantOperationalMode = previousMode;
+    restaurantOperationalOpen = previousOpen;
+    localStoreCurrentSettings();
+    renderRestaurantStatus();
+    alert("No se pudo confirmar el modo de atencion. Ejecuta la migracion V75 y vuelve a intentarlo.");
+    return false;
+  } finally {
+    setRestaurantStatusControlsDisabled(false);
+  }
 }
 
 async function setRestaurantOperationalOpen(nextOpen) {
@@ -1653,23 +1807,26 @@ async function setRestaurantOperationalOpen(nextOpen) {
     : "Cerrar la atencion? El menu seguira visible, pero el cliente no podra enviar pedidos nuevos.";
   if (!confirm(message)) return;
 
+  const previousMode = restaurantOperationalMode;
   const previousOpen = restaurantOperationalOpen;
-  if (elements.closeRestaurantButton) elements.closeRestaurantButton.disabled = true;
+  setRestaurantStatusControlsDisabled(true);
   if (elements.restaurantStatusText) elements.restaurantStatusText.textContent = "Actualizando estado en la nube...";
   try {
     await persistRestaurantOperationalOpenInCloud(nextOpen);
+    restaurantOperationalMode = "manual";
     restaurantOperationalOpen = Boolean(nextOpen);
     localStoreCurrentSettings();
     renderRestaurantStatus();
     showToast(restaurantOperationalOpen ? "Atencion abierta y sincronizada con clientes." : "Atencion cerrada y sincronizada con clientes.");
   } catch (error) {
     console.error(error);
+    restaurantOperationalMode = previousMode;
     restaurantOperationalOpen = previousOpen;
     localStoreCurrentSettings();
     renderRestaurantStatus();
     alert("No se pudo confirmar el cambio en Supabase. La atencion conserva su estado anterior.");
   } finally {
-    if (elements.closeRestaurantButton) elements.closeRestaurantButton.disabled = false;
+    setRestaurantStatusControlsDisabled(false);
   }
 }
 
@@ -3505,6 +3662,14 @@ function readRestaurantOperationalOpen() {
   return localStorage.getItem(STORAGE_KEYS.restaurantOperationalOpen) === "1";
 }
 
+function normalizeRestaurantOperationalMode(value) {
+  return String(value || "").trim().toLowerCase() === "schedule" ? "schedule" : "manual";
+}
+
+function readRestaurantOperationalMode() {
+  return normalizeRestaurantOperationalMode(localStorage.getItem(STORAGE_KEYS.restaurantOperationalMode));
+}
+
 function normalizeClockTime(value, fallback) {
   const text = String(value || "").trim();
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(text) ? text : fallback;
@@ -3738,6 +3903,9 @@ async function saveRestaurantHours() {
     restaurantOpeningHours = readRestaurantHoursFromForm();
     localStoreCurrentSettings();
     const result = await saveSettingsWhenPossible();
+    if (restaurantOperationalMode === "schedule" && result.synced) {
+      await syncRestaurantOperationalStatus({ silent: true });
+    }
     showToast(syncResultMessage("Horario guardado.", result));
   } catch (error) {
     alert(error.message || "Revisa el horario antes de guardar.");
@@ -3819,17 +3987,49 @@ function renderCurrencySettings() {
 }
 
 function renderRestaurantStatus() {
+  const automatic = restaurantOperationalMode === "schedule";
+  const timezone = normalizeTextSetting(restaurantRegistrationRegion.timezone) || "zona horaria del restaurante";
+  const statusLabel = !restaurantActive
+    ? "Restaurante desactivado"
+    : restaurantOperationalOpen
+      ? "Abierto y recibiendo pedidos"
+      : "Cerrado para nuevos pedidos";
+  const detail = !cloudState.user
+    ? "Inicia sesion para controlar la atencion."
+    : automatic
+      ? `Modo automatico segun horario (${timezone}).`
+      : "Modo manual. Usa el boton para abrir o cerrar.";
+
   if (elements.restaurantStatusText) {
     elements.restaurantStatusText.textContent = !restaurantActive
       ? "La cuenta del restaurante esta desactivada."
-      : restaurantOperationalOpen
-        ? "Atencion abierta: los clientes pueden enviar pedidos."
-        : "Atencion cerrada: el menu es visible, pero no recibe pedidos nuevos.";
+      : automatic
+        ? `${statusLabel}. El estado se calcula con el horario guardado.`
+        : restaurantOperationalOpen
+          ? "Atencion abierta manualmente: los clientes pueden enviar pedidos."
+          : "Atencion cerrada manualmente: el menu es visible, pero no recibe pedidos nuevos.";
   }
   if (elements.closeRestaurantButton) {
-    elements.closeRestaurantButton.textContent = restaurantOperationalOpen ? "Cerrar atencion" : "Abrir atencion";
-    elements.closeRestaurantButton.disabled = !restaurantActive;
+    elements.closeRestaurantButton.textContent = automatic
+      ? "Controlado por horario"
+      : restaurantOperationalOpen
+        ? "Cerrar atencion"
+        : "Abrir atencion";
   }
+  if (elements.restaurantServiceBar) {
+    elements.restaurantServiceBar.dataset.open = restaurantActive ? String(restaurantOperationalOpen) : "false";
+  }
+  if (elements.mainRestaurantStatusText) elements.mainRestaurantStatusText.textContent = statusLabel;
+  if (elements.mainRestaurantStatusDetail) elements.mainRestaurantStatusDetail.textContent = detail;
+  if (elements.mainRestaurantToggleButton) {
+    elements.mainRestaurantToggleButton.textContent = automatic
+      ? "Horario automatico"
+      : restaurantOperationalOpen
+        ? "Cerrar atencion"
+        : "Abrir atencion";
+  }
+  if (elements.restaurantScheduleModeInput) elements.restaurantScheduleModeInput.checked = automatic;
+  setRestaurantStatusControlsDisabled(false);
 }
 
 function formatTicket(number) {
@@ -5485,6 +5685,10 @@ if (elements.refreshAppButton) {
 elements.openSignInButton.addEventListener("click", openSignInScreen);
 elements.signOutButton.addEventListener("click", signOut);
 elements.closeRestaurantButton?.addEventListener("click", toggleRestaurantOperationalOpen);
+elements.mainRestaurantToggleButton?.addEventListener("click", toggleRestaurantOperationalOpen);
+elements.restaurantScheduleModeInput?.addEventListener("change", async (event) => {
+  await setRestaurantOperationalMode(event.target.checked ? "schedule" : "manual");
+});
 elements.requestRestaurantDeletionButton?.addEventListener("click", requestRestaurantDeletion);
 elements.confirmRestaurantDeletionButton?.addEventListener("click", confirmRestaurantDeletion);
 elements.cancelRestaurantDeletionButton?.addEventListener("click", () => elements.restaurantDeletionDialog?.close());
@@ -5708,6 +5912,7 @@ window.addEventListener("beforeunload", () => {
   syncFormToOrder();
   saveCurrentOrderDraft();
   stopClientOrdersRealtime();
+  stopRestaurantStatusSync();
 });
 
 let pullToRefreshStartY = 0;
@@ -5740,9 +5945,18 @@ window.addEventListener("online", async () => {
       await initializeCloud();
     }
     await syncPendingData();
+    updateRestaurantStatusSync();
+    await syncRestaurantOperationalStatus({ silent: true });
   } catch (error) {
     console.error(error);
     updateCloudStatus();
+  }
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    updateRestaurantStatusSync();
+    syncRestaurantOperationalStatus({ silent: true });
   }
 });
 
@@ -5756,6 +5970,7 @@ renderCategories();
 renderMenu();
 renderOrder();
 renderHistory();
+renderRestaurantStatus();
 initializeCloud().catch((error) => {
   console.error(error);
   cloudState.authChecked = true;

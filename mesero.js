@@ -697,7 +697,7 @@ async function waiterSignOut() {
   } finally {
     waiterUser = null;
     waiterMembership = null;
-    window.location.replace("index.html?app=v74");
+    window.location.replace("index.html?app=v75");
   }
 }
 
