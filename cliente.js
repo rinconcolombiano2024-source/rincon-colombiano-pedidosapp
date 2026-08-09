@@ -4082,8 +4082,13 @@ customerElements.editProfileButton?.addEventListener("click", () => {
       </button>
     </div>
   `;
-});
 
+  document
+    .querySelector("#customerProfileCancelButton")
+    ?.addEventListener("click", () => {
+      customerRenderProfileDetails();
+      });
+    });
 window.addEventListener("online", () => {
   customerStartDirectoryRealtime();
   customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
