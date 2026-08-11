@@ -230,7 +230,9 @@
   color: var(--muted);
   font-weight: 900;
 }
-
+.customer-auth-fields label[hidden] {
+  display: none !important;
+}
 .customer-auth-fields input,
 .customer-auth-fields select {
   width: 100%;
