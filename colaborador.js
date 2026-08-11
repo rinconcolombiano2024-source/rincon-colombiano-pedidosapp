@@ -1,3 +1,6 @@
+const COURIER_VAPID_PUBLIC_KEY = "BJzCszQo4HrAtXYFQBkA_HSiqTjSqPGIa-InDIqgYc1Bqcq3V2Cj4lAuN-HcV0fO1Z95EPNx-qhJU85Rl4nxJxE";
+
+
 const COURIER_PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 const COURIER_DOCUMENT_BUCKET = "courier-documents";
 const COURIER_GOOGLE_MAPS_KEY_STORAGE = "rincon_colombiano_google_maps_api_key";
@@ -1940,13 +1943,130 @@ async function courierSignOut() {
     window.location.replace("index.html?app=v79");
   }
 }
+function courierBase64UrlToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding)
+    .replace(/-/g, "+")
+    .replace(/_/g, "/");
 
-function courierToggleAvailability() {
-  if (courierProfile?.status !== "approved") return;
-  if (!courierAvailable) {
-  courierArmAlarm().catch(() => {});
+  const rawData = window.atob(base64);
+
+  return Uint8Array.from(
+    [...rawData].map((char) => char.charCodeAt(0))
+  );
 }
+
+async function courierRegisterPushNotifications() {
+  const client = courierEnsureClient();
+
+  if (!client || !courierUser) {
+    return false;
+  }
+
+  if (
+    !("serviceWorker" in navigator) ||
+    !("PushManager" in window) ||
+    !("Notification" in window)
+  ) {
+    console.warn("Este dispositivo no soporta Web Push.");
+    return false;
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.register(
+      "./service-worker.js"
+    );
+
+    await navigator.serviceWorker.ready;
+
+    let permission = Notification.permission;
+
+    if (permission === "default") {
+      permission = await Notification.requestPermission();
+    }
+
+    if (permission !== "granted") {
+      courierSetMessage(
+        courierElements.locationMessage,
+        "Estas disponible, pero las notificaciones estan desactivadas. Activalas para recibir pedidos en segundo plano.",
+        "error"
+      );
+      return false;
+    }
+
+    let subscription =
+      await registration.pushManager.getSubscription();
+
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey:
+          courierBase64UrlToUint8Array(
+            COURIER_VAPID_PUBLIC_KEY
+          ),
+      });
+    }
+
+    const subscriptionJson = subscription.toJSON();
+
+    const endpoint = subscription.endpoint;
+    const p256dh = subscriptionJson.keys?.p256dh || "";
+    const authKey = subscriptionJson.keys?.auth || "";
+
+    if (!endpoint || !p256dh || !authKey) {
+      throw new Error(
+        "La suscripcion Push no devolvio todas las claves."
+      );
+    }
+
+    const { error } = await client
+      .from("courier_push_subscriptions")
+      .upsert(
+        {
+          user_id: courierUser.id,
+          endpoint,
+          p256dh,
+          auth_key: authKey,
+          user_agent: navigator.userAgent || "",
+          active: true,
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: "user_id,endpoint",
+        }
+      );
+
+    if (error) {
+      throw error;
+    }
+
+    console.log("RC ORDERA Push registrado correctamente.");
+
+    return true;
+  } catch (error) {
+    console.error(
+      "No se pudo registrar Web Push:",
+      error
+    );
+
+    courierSetMessage(
+      courierElements.locationMessage,
+      "No se pudieron activar las notificaciones de pedidos. Revisa los permisos del dispositivo.",
+      "error"
+    );
+
+    return false;
+  }
+}
+async function courierToggleAvailability() {
+  if (courierProfile?.status !== "approved") return;
+
   const nextAvailable = !courierAvailable;
+
+  if (nextAvailable) {
+    courierArmAlarm().catch(() => {});
+    await courierRegisterPushNotifications();
+  }
   if (nextAvailable && !courierLastLocation) {
     courierSetMessage(courierElements.locationMessage, "Para estar disponible primero comparte tu ubicacion actual.");
     courierShareLocation({ makeAvailable: true });
