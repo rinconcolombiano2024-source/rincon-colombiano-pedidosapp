@@ -1729,9 +1729,14 @@ function customerEnsureClient() {
   if (customerClient) return customerClient;
   const config = customerSupabaseConfig();
   if (!config.url || !config.anonKey || !window.supabase?.createClient) return null;
-  customerClient = window.supabase.createClient(config.url, config.anonKey, {
-    auth: { persistSession: true, autoRefreshToken: true },
-  });
+ customerClient = window.supabase.createClient(config.url, config.anonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storageKey: "rc-ordera-customer-auth",
+  },
+});
   return customerClient;
 }
 
