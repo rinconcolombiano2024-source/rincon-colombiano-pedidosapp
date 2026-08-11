@@ -132,7 +132,9 @@
   background: #ffffff;
   box-shadow: var(--shadow);
 }
-
+.customer-account-panel[hidden] {
+  display: none !important;
+}
 .customer-restaurant-panel {
   display: grid;
   gap: 12px;
