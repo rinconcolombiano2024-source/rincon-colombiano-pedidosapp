@@ -505,8 +505,13 @@ function courierEnsureClient() {
   const config = courierSupabaseConfig();
   if (!config.url || !config.anonKey || !window.supabase?.createClient) return null;
   courierClient = window.supabase.createClient(config.url, config.anonKey, {
-    auth: { persistSession: true, autoRefreshToken: true },
-  });
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storageKey: "rc-ordera-courier-auth",
+  },
+});
   return courierClient;
 }
 
