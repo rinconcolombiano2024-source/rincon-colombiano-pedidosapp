@@ -853,7 +853,7 @@ function courierRenderHistory() {
   const history = courierHistory;
   
   if (!history.length) {
-    courierElements.historyList.innerHTML = `<div class="customer-empty">Todavia no hay entregas finalizadas en esta sesion.</div>`;
+    courierElements.historyList.innerHTML = `<div class="customer-empty">Todavia no hay entregas finalizadas.</div>`;
     return;
   }
   courierElements.historyList.innerHTML = history
