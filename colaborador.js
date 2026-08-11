@@ -402,6 +402,7 @@ let courierAvailable = false;
 let courierLastLocation = null;
 let courierRecoveringPassword = false;
 let courierAssignments = [];
+let courierHistory = [];
 let courierActiveAssignmentId = "";
 let courierOffersTimer = null;
 let courierCurrentView = "profile";
@@ -822,16 +823,35 @@ function courierRenderActiveDelivery() {
   `;
   courierSetStepButtons();
 }
+async function courierLoadHistory() {
+  const client = courierEnsureClient();
 
+  if (!client || !courierUser || courierProfile?.status !== "approved") {
+    courierHistory = [];
+    courierRenderHistory();
+    return;
+  }
+
+  const { data, error } = await client.rpc(
+    "get_my_courier_delivery_history"
+  );
+
+  if (error) {
+    console.error("No se pudo cargar el historial del colaborador:", error);
+    return;
+  }
+
+  courierHistory = Array.isArray(data) ? data : [];
+  courierRenderHistory();
+}
 function courierRenderHistory() {
   if (!courierElements.historyList) return;
   if (!courierUser) {
     courierElements.historyList.innerHTML = `<div class="customer-empty">Inicia sesion para consultar el historial.</div>`;
     return;
   }
-  const history = courierAssignments.filter((assignment) =>
-    ["delivered", "rejected", "cancelled"].includes(assignment.status)
-  );
+  const history = courierHistory;
+  
   if (!history.length) {
     courierElements.historyList.innerHTML = `<div class="customer-empty">Todavia no hay entregas finalizadas en esta sesion.</div>`;
     return;
