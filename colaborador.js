@@ -54,6 +54,7 @@ const courierElements = {
   authMessage: document.querySelector("#courierAuthMessage"),
   profileStatus: document.querySelector("#courierProfileStatus"),
   statusBadge: document.querySelector("#courierStatusBadge"),
+  registrationPanel: document.querySelector("#courierRegistrationPanel"),
   firstNameInput: document.querySelector("#courierFirstNameInput"),
   lastNameInput: document.querySelector("#courierLastNameInput"),
   phoneInput: document.querySelector("#courierPhoneInput"),
@@ -399,6 +400,7 @@ let courierUser = null;
 let courierAuthReady = false;
 let courierProfile = null;
 let courierAvailable = false;
+let courierRegistrationMode = false;
 let courierLastLocation = null;
 let courierRecoveringPassword = false;
 let courierAssignments = [];
@@ -1910,7 +1912,28 @@ async function courierInitialize() {
 }
 
 courierElements.signInButton.addEventListener("click", courierSignIn);
-courierElements.signUpButton.addEventListener("click", courierSignUp);
+courierElements.signUpButton.addEventListener("click", () => {
+  if (!courierRegistrationMode) {
+    courierRegistrationMode = true;
+
+    if (courierElements.registrationPanel) {
+      courierElements.registrationPanel.hidden = false;
+    }
+
+    courierElements.signUpButton.textContent = "Crear cuenta y enviar solicitud";
+
+    courierSetMessage(
+      courierElements.authMessage,
+      "Completa tus datos para crear la cuenta de colaborador.",
+      "ok"
+    );
+
+    courierElements.firstNameInput?.focus();
+    return;
+  }
+
+  courierSignUp();
+});
 courierElements.resetPasswordButton.addEventListener("click", courierSendPasswordResetEmail);
 courierElements.resendVerificationButton?.addEventListener("click", courierResendVerificationEmail);
 courierElements.updatePasswordButton.addEventListener("click", courierUpdateRecoveredPassword);
