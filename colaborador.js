@@ -1173,10 +1173,11 @@ async function courierLoadDeliveryOffers(options = {}) {
   const { silent = false } = options;
   const client = courierEnsureClient();
   if (!client || !courierUser || courierProfile?.status !== "approved") {
-    courierAssignments = [];
-    courierRenderDeliveryOffers();
-    return;
-  }
+  courierAssignments = [];
+  courierStopOfferAlarm();
+  courierRenderDeliveryOffers();
+  return;
+}
 
   if (!silent) courierSetMessage(courierElements.locationMessage, "Actualizando pedidos disponibles...");
   const { data, error } = await client.rpc("get_courier_delivery_offers");
