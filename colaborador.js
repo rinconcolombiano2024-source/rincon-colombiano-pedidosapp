@@ -407,6 +407,9 @@ let courierAssignments = [];
 let courierHistory = [];
 let courierActiveAssignmentId = "";
 let courierOffersTimer = null;
+let courierAlarmContext = null;
+let courierAlarmTimer = null;
+let courierAlarmArmed = false;
 let courierCurrentView = "profile";
 let courierApprovalChannel = null;
 let courierLocationWatchId = null;
@@ -1076,6 +1079,95 @@ function courierOpenGps() {
   }
   window.open(url, "_blank", "noopener");
 }
+async function courierArmAlarm() {
+  try {
+    const AudioContextClass =
+      window.AudioContext || window.webkitAudioContext;
+
+    if (!AudioContextClass) return false;
+
+    if (!courierAlarmContext) {
+      courierAlarmContext = new AudioContextClass();
+    }
+
+    if (courierAlarmContext.state === "suspended") {
+      await courierAlarmContext.resume();
+    }
+
+    courierAlarmArmed = true;
+    return true;
+  } catch (error) {
+    console.warn("No se pudo activar la alarma:", error);
+    return false;
+  }
+}
+
+function courierPlayAlarmPulse() {
+  if (
+    !courierAlarmArmed ||
+    !courierAlarmContext ||
+    courierAlarmContext.state !== "running"
+  ) {
+    return;
+  }
+
+  const now = courierAlarmContext.currentTime;
+
+  const oscillator = courierAlarmContext.createOscillator();
+  const gain = courierAlarmContext.createGain();
+
+  oscillator.type = "square";
+  oscillator.frequency.setValueAtTime(880, now);
+  oscillator.frequency.setValueAtTime(660, now + 0.25);
+
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.35, now + 0.03);
+  gain.gain.setValueAtTime(0.35, now + 0.45);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
+
+  oscillator.connect(gain);
+  gain.connect(courierAlarmContext.destination);
+
+  oscillator.start(now);
+  oscillator.stop(now + 0.65);
+
+  if (navigator.vibrate) {
+    navigator.vibrate([600, 250, 600]);
+  }
+}
+
+function courierStartOfferAlarm() {
+  if (courierAlarmTimer) return;
+
+  courierPlayAlarmPulse();
+
+  courierAlarmTimer = window.setInterval(() => {
+    courierPlayAlarmPulse();
+  }, 1500);
+}
+
+function courierStopOfferAlarm() {
+  if (courierAlarmTimer) {
+    window.clearInterval(courierAlarmTimer);
+    courierAlarmTimer = null;
+  }
+
+  if (navigator.vibrate) {
+    navigator.vibrate(0);
+  }
+}
+
+function courierSyncOfferAlarm() {
+  const hasPendingOffer = courierAssignments.some(
+    (assignment) => assignment.status === "offered"
+  );
+
+  if (courierAvailable && hasPendingOffer) {
+    courierStartOfferAlarm();
+  } else {
+    courierStopOfferAlarm();
+  }
+}
 
 async function courierLoadDeliveryOffers(options = {}) {
   const { silent = false } = options;
@@ -1095,9 +1187,18 @@ async function courierLoadDeliveryOffers(options = {}) {
 
   const previousOffered = new Set(courierAssignments.filter((assignment) => assignment.status === "offered").map((assignment) => assignment.assignment_id));
   courierAssignments = Array.isArray(data) ? data : [];
-  const hasNewOffer = courierAssignments.some((assignment) => assignment.status === "offered" && !previousOffered.has(assignment.assignment_id));
-  courierRenderDeliveryOffers();
-  courierRender();
+
+const hasNewOffer = courierAssignments.some(
+  (assignment) =>
+    assignment.status === "offered" &&
+    !previousOffered.has(assignment.assignment_id)
+);
+
+courierSyncOfferAlarm();
+
+courierRenderDeliveryOffers();
+courierRender();
+  
   if (hasNewOffer) {
     courierSetMessage(courierElements.locationMessage, "Nuevo pedido disponible. Revisa y acepta si puedes tomarlo.", "ok");
   } else if (!silent) {
@@ -1836,6 +1937,9 @@ async function courierSignOut() {
 
 function courierToggleAvailability() {
   if (courierProfile?.status !== "approved") return;
+  if (!courierAvailable) {
+  courierArmAlarm().catch(() => {});
+}
   const nextAvailable = !courierAvailable;
   if (nextAvailable && !courierLastLocation) {
     courierSetMessage(courierElements.locationMessage, "Para estar disponible primero comparte tu ubicacion actual.");
