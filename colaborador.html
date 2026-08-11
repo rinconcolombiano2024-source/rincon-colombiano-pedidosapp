@@ -158,22 +158,38 @@
             <input id="courierBirthDateInput" type="date" autocomplete="bday" />
           </label>
           <label>
-            Pais
-            <input id="courierCountryInput" type="text" placeholder="Pais" autocomplete="country-name" />
-          </label>
-          <label>
-            Ciudad
-            <input id="courierCityInput" type="text" placeholder="Ciudad" autocomplete="address-level2" />
-          </label>
-          <label>
-            Provincia / region
-            <input id="courierRegionInput" type="text" placeholder="Provincia, departamento o voivodato" autocomplete="address-level1" />
-          </label>
-          <label>
-            Codigo postal
-            <input id="courierPostalCodeInput" type="text" placeholder="Codigo postal" autocomplete="postal-code" />
-          </label>
-          <label class="collaborator-wide-field">
+  <span id="courierCountryLabel">País</span>
+  <select id="courierCountryInput" autocomplete="country">
+    <option value="">Selecciona un país</option>
+    <option value="PL">Polonia</option>
+    <option value="CO">Colombia</option>
+  </select>
+</label>
+
+<label>
+  <span id="courierRegionLabel">Región / Departamento</span>
+  <select id="courierRegionInput" autocomplete="address-level1" disabled>
+    <option value="">Primero selecciona un país</option>
+  </select>
+</label>
+
+<label>
+  <span id="courierCityLabel">Ciudad</span>
+  <select id="courierCityInput" autocomplete="address-level2" disabled>
+    <option value="">Primero selecciona una región</option>
+  </select>
+</label>
+
+<label>
+  <span id="courierPostalCodeLabel">Código postal</span>
+  <input
+    id="courierPostalCodeInput"
+    type="text"
+    placeholder="Código postal"
+    autocomplete="postal-code"
+  />
+</label>
+<label class="collaborator-wide-field">
             Direccion
             <input id="courierAddressInput" type="text" placeholder="Direccion completa" autocomplete="street-address" />
           </label>
