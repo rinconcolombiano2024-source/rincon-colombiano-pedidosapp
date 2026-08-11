@@ -2002,27 +2002,27 @@ async function courierInitialize() {
 
   client.auth.onAuthStateChange(async (event, session) => {
   courierUser = session?.user || null;
-courierProfile = null;
-courierAssignments = [];
-courierStopApprovalRealtime();
-courierStopLocationWatch();
+  courierProfile = null;
+  courierAssignments = [];
+  courierStopApprovalRealtime();
+  courierStopLocationWatch();
 
-if (!courierUser) {
-  courierAvailable = false;
-  courierLastLocation = null;
-} 
-    if (event === "PASSWORD_RECOVERY") {
-      courierSetView("profile", { instant: true });
-      courierShowPasswordRecoveryForm();
-      return;
-    }
-    courierSetView(courierUser ? "home" : "profile", { instant: true });
-    courierRender();
-    if (courierUser) {
-      await courierLoadProfile();
-      courierStartApprovalRealtime();
-    }
-  });
+  if (!courierUser) {
+    courierAvailable = false;
+    courierLastLocation = null;
+  } 
+  if (event === "PASSWORD_RECOVERY") {
+    courierSetView("profile", { instant: true });
+    courierShowPasswordRecoveryForm();
+    return;
+  }
+  courierSetView(courierUser ? "home" : "profile", { instant: true });
+  courierRender();
+  if (courierUser) {
+    await courierLoadProfile();
+    courierStartApprovalRealtime();
+  }
+});
 }
 
 courierElements.signInButton.addEventListener("click", courierSignIn);
