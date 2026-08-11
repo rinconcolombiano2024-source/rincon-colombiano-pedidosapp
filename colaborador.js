@@ -1454,6 +1454,51 @@ async function courierSaveProfile() {
   }
 }
 
+async function courierLoadAvailability() {
+  const client = courierEnsureClient();
+
+  if (!client || !courierUser) {
+    courierAvailable = false;
+    return;
+  }
+
+  const { data, error } = await client
+    .from("courier_live_locations")
+    .select("available, lat, lng, accuracy_m, updated_at")
+    .eq("user_id", courierUser.id)
+    .maybeSingle();
+
+  if (error) {
+    console.error("No se pudo cargar la disponibilidad del colaborador:", error);
+    return;
+  }
+
+  if (!data) {
+    courierAvailable = false;
+    return;
+  }
+
+  courierAvailable = data.available === true;
+
+  const lat = Number(data.lat);
+  const lng = Number(data.lng);
+
+  if (
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    lat >= -90 &&
+    lat <= 90 &&
+    lng >= -180 &&
+    lng <= 180
+  ) {
+    courierLastLocation = {
+      lat: String(data.lat),
+      lng: String(data.lng),
+      accuracy: Number(data.accuracy_m) || 0,
+      updatedAt: data.updated_at || "",
+    };
+  }
+}
 async function courierLoadProfile() {
   if (!courierClient || !courierUser) return;
   const { data, error } = await courierClient
