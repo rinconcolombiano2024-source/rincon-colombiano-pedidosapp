@@ -101,12 +101,12 @@
               </select>
             </label>
             <label>
-              Ciudad
-              <input id="authCityInput" type="text" placeholder="Ciudad" autocomplete="address-level2" />
+              Localidad
+              <input id="authCityInput" type="text" placeholder="Ciudad, municipio, pueblo, corregimiento o vereda" autocomplete="address-level2" />
             </label>
             <label>
               Provincia / region
-              <input id="authRegionInput" type="text" placeholder="Provincia, departamento o voivodato" autocomplete="address-level1" />
+              <input id="authRegionInput" type="text" list="restaurantRegionOptions" placeholder="Provincia, departamento o voivodato" autocomplete="address-level1" />
             </label>
             <label>
               Codigo postal
@@ -480,12 +480,12 @@
             </select>
           </label>
           <label>
-            Ciudad
-            <input id="restaurantCityInput" type="text" placeholder="Ciudad" autocomplete="address-level2" />
+            Localidad
+            <input id="restaurantCityInput" type="text" placeholder="Ciudad, municipio, pueblo, corregimiento o vereda" autocomplete="address-level2" />
           </label>
           <label>
             Provincia / region
-            <input id="restaurantRegionInput" type="text" placeholder="Provincia, departamento o voivodato" autocomplete="address-level1" />
+            <input id="restaurantRegionInput" type="text" list="restaurantRegionOptions" placeholder="Provincia, departamento o voivodato" autocomplete="address-level1" />
           </label>
           <label>
             Codigo postal
@@ -823,6 +823,7 @@
     </dialog>
 
     <div class="toast-notice" id="toastNotice" role="status" aria-live="polite" hidden></div>
+    <datalist id="restaurantRegionOptions"></datalist>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>

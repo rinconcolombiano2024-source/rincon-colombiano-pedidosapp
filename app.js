@@ -38,7 +38,7 @@ const STORAGE_KEYS = {
 
 const DEFAULT_BUSINESS_NAME = "MI RESTAURANTE";
 const DEFAULT_DELIVERY_MINIMUM_FEE = 20;
-const APP_VERSION = "v76";
+const APP_VERSION = "v79";
 const PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 const PLATFORM_APP_NAME = "RC ORDERA";
 const RESTAURANT_WEEK_DAYS = [
@@ -50,6 +50,42 @@ const RESTAURANT_WEEK_DAYS = [
   ["saturday", "Sabado"],
   ["sunday", "Domingo"],
 ];
+const RESTAURANT_REGIONS = {
+  PL: [
+    "Dolnośląskie", "Kujawsko-Pomorskie", "Lubelskie", "Lubuskie", "Łódzkie", "Małopolskie",
+    "Mazowieckie", "Opolskie", "Podkarpackie", "Podlaskie", "Pomorskie", "Śląskie",
+    "Świętokrzyskie", "Warmińsko-Mazurskie", "Wielkopolskie", "Zachodniopomorskie",
+  ],
+  CO: [
+    "Amazonas", "Antioquia", "Arauca", "Atlántico", "Bolívar", "Boyacá", "Caldas", "Caquetá",
+    "Casanare", "Cauca", "Cesar", "Chocó", "Córdoba", "Cundinamarca", "Guainía", "Guaviare",
+    "Huila", "La Guajira", "Magdalena", "Meta", "Nariño", "Norte de Santander", "Putumayo",
+    "Quindío", "Risaralda", "San Andrés y Providencia", "Santander", "Sucre", "Tolima",
+    "Valle del Cauca", "Vaupés", "Vichada", "Bogotá D.C.",
+  ],
+};
+
+function renderRestaurantRegionSuggestions(countryCode) {
+  const datalist = document.querySelector("#restaurantRegionOptions");
+  if (!datalist) return;
+  datalist.innerHTML = (RESTAURANT_REGIONS[countryCode] || [])
+    .map((region) => `<option value="${escapeHtml(region)}"></option>`)
+    .join("");
+}
+
+function normalizedRestaurantRegion(countryCode, value) {
+  const cleanValue = normalizeTextSetting(value);
+  if (!cleanValue) return "";
+  const comparable = (text) => String(text || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\b(wojewodztwo|voivodeship|departamento|department)\b/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  const match = (RESTAURANT_REGIONS[countryCode] || []).find((region) => comparable(region) === comparable(cleanValue));
+  return match || cleanValue;
+}
 
 function detectRegionalDefaults(coords = null) {
   const latitude = Number(coords?.latitude ?? coords?.lat);
@@ -123,6 +159,7 @@ const elements = {
   authCityInput: document.querySelector("#authCityInput"),
   authRegionInput: document.querySelector("#authRegionInput"),
   authPostalCodeInput: document.querySelector("#authPostalCodeInput"),
+  restaurantRegionOptions: document.querySelector("#restaurantRegionOptions"),
   authBusinessPhoneInput: document.querySelector("#authBusinessPhoneInput"),
   authOwnerNameInput: document.querySelector("#authOwnerNameInput"),
   authLegalConsentInput: document.querySelector("#authLegalConsentInput"),
@@ -343,6 +380,7 @@ let clientAlarmTimer = null;
 let clientAlarmAudioContext = null;
 let clientAlarmEnabled = readClientAlarmEnabled();
 let restaurantMapsScriptPromise = null;
+const restaurantPlaceAutocompletes = new Map();
 let restaurantStatusSyncTimer = null;
 let restaurantStatusSyncing = false;
 let clientChatKnownMessageIds = new Set();
@@ -3252,11 +3290,35 @@ async function signUpWithEmail() {
     : restaurantRegistrationRegion.countryCode === "CO"
       ? "America/Bogota"
       : detectedRegion.timezone;
-  if (registrationCoords) {
+  if (elements.authCountryCodeInput && !elements.authCountryCodeInput.value) {
+    elements.authCountryCodeInput.value = restaurantRegistrationRegion.countryCode;
+  }
+  renderRestaurantRegionSuggestions(restaurantRegistrationRegion.countryCode);
+  const detectedCountryMatchesSelection = !detectedRegion.countryCode
+    || detectedRegion.countryCode === restaurantRegistrationRegion.countryCode;
+  if (registrationCoords && detectedCountryMatchesSelection) {
     restaurantLatitude = Number(registrationCoords.latitude);
     restaurantLongitude = Number(registrationCoords.longitude);
+  } else if (!detectedCountryMatchesSelection) {
+    restaurantRegistrationRegion.latitude = null;
+    restaurantRegistrationRegion.longitude = null;
   }
   const profile = restaurantSignupProfileFromInputs(email);
+  if (!["PL", "CO"].includes(profile.countryCode)) {
+    elements.authMessage.textContent = "Selecciona Colombia o Polonia.";
+    elements.authCountryCodeInput?.focus();
+    return;
+  }
+  if (!profile.region) {
+    elements.authMessage.textContent = "Escribe o selecciona el departamento o voivodato.";
+    elements.authRegionInput?.focus();
+    return;
+  }
+  if (!profile.city) {
+    elements.authMessage.textContent = "Escribe la ciudad, municipio, pueblo, corregimiento, vereda o localidad.";
+    elements.authCityInput?.focus();
+    return;
+  }
   if (!normalizeTextSetting(elements.authRestaurantNameInput?.value || "")) {
     elements.authMessage.textContent = "Escribe el nombre comercial del restaurante para registrarlo.";
     elements.authRestaurantNameInput?.focus();
@@ -4024,7 +4086,7 @@ function setRestaurantLocationStatus(message = "", type = "") {
 }
 
 function loadRestaurantGoogleMaps() {
-  if (window.google?.maps?.Geocoder) return Promise.resolve();
+  if (window.google?.maps?.Geocoder && window.google?.maps?.places?.Autocomplete) return Promise.resolve();
   if (!googleMapsApiKey) return Promise.reject(new Error("Configura primero la clave web de Google Maps."));
   if (restaurantMapsScriptPromise) return restaurantMapsScriptPromise;
 
@@ -4035,7 +4097,7 @@ function loadRestaurantGoogleMaps() {
       delete window[callbackName];
       resolve();
     };
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(googleMapsApiKey)}&callback=${callbackName}`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(googleMapsApiKey)}&libraries=places&callback=${callbackName}`;
     script.async = true;
     script.defer = true;
     script.addEventListener("error", () => {
@@ -4053,6 +4115,81 @@ function restaurantAddressComponent(result, type, shortName = false) {
   return component ? String(shortName ? component.short_name : component.long_name).trim() : "";
 }
 
+function restaurantPlaceLocality(place) {
+  return restaurantAddressComponent(place, "locality")
+    || restaurantAddressComponent(place, "postal_town")
+    || restaurantAddressComponent(place, "sublocality_level_1")
+    || restaurantAddressComponent(place, "sublocality")
+    || restaurantAddressComponent(place, "administrative_area_level_2")
+    || restaurantAddressComponent(place, "administrative_area_level_3");
+}
+
+function applyRestaurantPlace(place, input) {
+  if (!place?.address_components?.length) return;
+  const countryCode = restaurantAddressComponent(place, "country", true).toUpperCase();
+  if (!["PL", "CO"].includes(countryCode)) return;
+  const city = restaurantPlaceLocality(place);
+  const region = normalizedRestaurantRegion(
+    countryCode,
+    restaurantAddressComponent(place, "administrative_area_level_1")
+  );
+  const postalCode = restaurantAddressComponent(place, "postal_code");
+  const latitude = place.geometry?.location?.lat?.();
+  const longitude = place.geometry?.location?.lng?.();
+  const isRegistration = input === elements.authCityInput || input === elements.authLegalAddressInput;
+  const countryInput = isRegistration ? elements.authCountryCodeInput : elements.restaurantCountryCodeInput;
+  const cityInput = isRegistration ? elements.authCityInput : elements.restaurantCityInput;
+  const regionInput = isRegistration ? elements.authRegionInput : elements.restaurantRegionInput;
+  const postalInput = isRegistration ? elements.authPostalCodeInput : elements.restaurantPostalCodeInput;
+  const addressInput = isRegistration ? elements.authLegalAddressInput : elements.restaurantAddressInput;
+
+  if (countryInput) countryInput.value = countryCode;
+  if (cityInput && city) cityInput.value = city;
+  if (regionInput && region) regionInput.value = region;
+  if (postalInput && postalCode) postalInput.value = postalCode;
+  if (addressInput && place.formatted_address && input === addressInput) addressInput.value = place.formatted_address;
+  restaurantRegistrationRegion = {
+    ...restaurantRegistrationRegion,
+    countryCode,
+    country: countryCode === "PL" ? "Polonia" : "Colombia",
+    city: city || restaurantRegistrationRegion.city,
+    region: region || restaurantRegistrationRegion.region,
+    postalCode: postalCode || restaurantRegistrationRegion.postalCode,
+    timezone: countryCode === "PL" ? "Europe/Warsaw" : "America/Bogota",
+    latitude: Number.isFinite(latitude) ? latitude : restaurantRegistrationRegion.latitude,
+    longitude: Number.isFinite(longitude) ? longitude : restaurantRegistrationRegion.longitude,
+  };
+  if (Number.isFinite(latitude)) restaurantLatitude = latitude;
+  if (Number.isFinite(longitude)) restaurantLongitude = longitude;
+  renderRestaurantRegionSuggestions(countryCode);
+}
+
+async function prepareRestaurantPlaceAutocomplete() {
+  if (!googleMapsApiKey) return;
+  await loadRestaurantGoogleMaps();
+  const pairs = [
+    [elements.authCityInput, elements.authCountryCodeInput],
+    [elements.authLegalAddressInput, elements.authCountryCodeInput],
+    [elements.restaurantCityInput, elements.restaurantCountryCodeInput],
+    [elements.restaurantAddressInput, elements.restaurantCountryCodeInput],
+  ];
+  pairs.forEach(([input, countryInput]) => {
+    if (!input) return;
+    const countryCode = normalizeTextSetting(countryInput?.value || restaurantRegistrationRegion.countryCode).toLowerCase();
+    let autocomplete = restaurantPlaceAutocompletes.get(input);
+    if (!autocomplete) {
+      autocomplete = new google.maps.places.Autocomplete(input, {
+        fields: ["address_components", "formatted_address", "geometry", "name"],
+        componentRestrictions: ["pl", "co"].includes(countryCode) ? { country: countryCode } : undefined,
+      });
+      autocomplete.addListener("place_changed", () => applyRestaurantPlace(autocomplete.getPlace(), input));
+      restaurantPlaceAutocompletes.set(input, autocomplete);
+    } else if (["pl", "co"].includes(countryCode)) {
+      autocomplete.setComponentRestrictions({ country: countryCode });
+    }
+  });
+}
+
 async function reverseGeocodeRestaurantLocation(latitude, longitude) {
   if (!googleMapsApiKey) return false;
   await loadRestaurantGoogleMaps();
@@ -4065,10 +4202,11 @@ async function reverseGeocodeRestaurantLocation(latitude, longitude) {
       }
       const result = results[0];
       const countryCode = restaurantAddressComponent(result, "country", true).toUpperCase();
-      const city = restaurantAddressComponent(result, "locality")
-        || restaurantAddressComponent(result, "postal_town")
-        || restaurantAddressComponent(result, "administrative_area_level_2");
-      const region = restaurantAddressComponent(result, "administrative_area_level_1");
+      const city = restaurantPlaceLocality(result);
+      const region = normalizedRestaurantRegion(
+        countryCode,
+        restaurantAddressComponent(result, "administrative_area_level_1")
+      );
       const postalCode = restaurantAddressComponent(result, "postal_code");
       const formattedAddress = normalizeTextSetting(result.formatted_address);
 
@@ -6111,6 +6249,32 @@ elements.lineItems.addEventListener("input", (event) => {
   });
 });
 
+elements.authCountryCodeInput?.addEventListener("change", () => {
+  const countryCode = normalizeTextSetting(elements.authCountryCodeInput.value).toUpperCase();
+  restaurantRegistrationRegion = {
+    ...restaurantRegistrationRegion,
+    countryCode,
+    country: countryCode === "PL" ? "Polonia" : countryCode === "CO" ? "Colombia" : "",
+    timezone: countryCode === "PL" ? "Europe/Warsaw" : countryCode === "CO" ? "America/Bogota" : "",
+  };
+  renderRestaurantRegionSuggestions(countryCode);
+  prepareRestaurantPlaceAutocomplete().catch(() => {});
+});
+elements.restaurantCountryCodeInput?.addEventListener("change", () => {
+  const countryCode = normalizeTextSetting(elements.restaurantCountryCodeInput.value).toUpperCase();
+  restaurantRegistrationRegion = {
+    ...restaurantRegistrationRegion,
+    countryCode,
+    country: countryCode === "PL" ? "Polonia" : countryCode === "CO" ? "Colombia" : "",
+    timezone: countryCode === "PL" ? "Europe/Warsaw" : countryCode === "CO" ? "America/Bogota" : "",
+  };
+  renderRestaurantRegionSuggestions(countryCode);
+  prepareRestaurantPlaceAutocomplete().catch(() => {});
+});
+[elements.authCityInput, elements.authLegalAddressInput, elements.restaurantCityInput, elements.restaurantAddressInput].forEach((input) => {
+  input?.addEventListener("focus", () => prepareRestaurantPlaceAutocomplete().catch(() => {}), { once: true });
+});
+
 elements.authForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   await signInWithEmail();
@@ -6442,6 +6606,7 @@ if ("serviceWorker" in navigator && window.location.protocol.startsWith("http"))
   navigator.serviceWorker.register("./service-worker.js").catch(() => {});
 }
 
+renderRestaurantRegionSuggestions(restaurantRegistrationRegion.countryCode);
 applyBusinessNameToUi();
 applyReceiptPrintStyle();
 restoreThermalPrinterPort();

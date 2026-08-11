@@ -20,6 +20,10 @@ const customerElements = {
   authPassword: document.querySelector("#customerAuthPassword"),
   registerNameInput: document.querySelector("#customerRegisterNameInput"),
   registerPhoneInput: document.querySelector("#customerRegisterPhoneInput"),
+  registerCountryInput: document.querySelector("#customerRegisterCountryInput"),
+  registerRegionInput: document.querySelector("#customerRegisterRegionInput"),
+  registerCityInput: document.querySelector("#customerRegisterCityInput"),
+  registerPostalCodeInput: document.querySelector("#customerRegisterPostalCodeInput"),
   registerAddressInput: document.querySelector("#customerRegisterAddressInput"),
   registerNeighborhoodInput: document.querySelector("#customerRegisterNeighborhoodInput"),
   registerReferenceInput: document.querySelector("#customerRegisterReferenceInput"),
@@ -92,7 +96,7 @@ editProfileButton: document.querySelector("#customerEditProfileButton"),
 const CUSTOMER_LANGUAGE_KEY = "rincon_colombiano_customer_language";
 const CUSTOMER_APP_LANGUAGE_KEY = "rincon_colombiano_app_language";
 const CUSTOMER_TRANSLATION_CACHE_KEY = "rincon_colombiano_description_translations_v1";
-const CUSTOMER_DELIVERY_MARKUP = 1.3;
+const CUSTOMER_DELIVERY_MARKUP = 1.6714285714;
 const CUSTOMER_I18N = {
   es: {
     heroEyebrow: "Pedido del cliente",
@@ -159,8 +163,18 @@ const CUSTOMER_I18N = {
     registerNameLabel: "Nombre completo para registro",
     registerNamePlaceholder: "Nombre y apellido",
     registerPhoneLabel: "Telefono de registro",
+    registerCountryLabel: "Pais",
+    countrySelectPlaceholder: "Selecciona un pais",
+    registerRegionLabel: "Departamento / voivodato",
+    regionSelectCountryFirst: "Primero selecciona un pais",
+    regionSelectPlaceholder: "Selecciona una region",
+    registerCityLabel: "Localidad",
+    cityPlaceholder: "Ciudad, municipio, pueblo, corregimiento o vereda",
     registerAddressLabel: "Direccion de registro",
-    registerNeighborhoodLabel: "Barrio / ciudad de registro",
+    registerNeighborhoodLabel: "Barrio / sector",
+    registerNeighborhoodPlaceholder: "Barrio, sector o referencia local",
+    registerPostalCodeLabel: "Codigo postal",
+    postalCodePlaceholder: "Codigo postal (opcional)",
     registerReferenceLabel: "Referencia de direccion",
     privacyConsent: "Acepto el tratamiento de mis datos para gestionar pedidos, historial, entrega, chat y cookies tecnicas necesarias.",
     signIn: "Iniciar sesion",
@@ -278,6 +292,9 @@ const CUSTOMER_I18N = {
     cancelled: "Pedido cancelado. Comunicate con el restaurante para confirmar.",
     ticketSuffix: " Ticket #{ticket}.",
     registerNameRequired: "Escribe tu nombre completo para crear la cuenta.",
+    registerCountryRequired: "Selecciona Colombia o Polonia.",
+    registerRegionRequired: "Selecciona tu departamento o voivodato.",
+    registerCityRequired: "Escribe tu ciudad, municipio, pueblo, corregimiento, vereda o localidad.",
     nameRequired: "Escribe tu nombre para enviar el pedido.",
     phoneRequired: "Escribe un telefono para el domicilio.",
     addressRequired: "Escribe la direccion completa para el domicilio.",
@@ -403,8 +420,18 @@ const CUSTOMER_I18N = {
     registerNameLabel: "Pelne imie i nazwisko do rejestracji",
     registerNamePlaceholder: "Imie i nazwisko",
     registerPhoneLabel: "Telefon do rejestracji",
+    registerCountryLabel: "Kraj",
+    countrySelectPlaceholder: "Wybierz kraj",
+    registerRegionLabel: "Wojewodztwo / departament",
+    regionSelectCountryFirst: "Najpierw wybierz kraj",
+    regionSelectPlaceholder: "Wybierz region",
+    registerCityLabel: "Miejscowosc",
+    cityPlaceholder: "Miasto, gmina, wieś lub inna miejscowosc",
     registerAddressLabel: "Adres do rejestracji",
-    registerNeighborhoodLabel: "Dzielnica / miasto do rejestracji",
+    registerNeighborhoodLabel: "Dzielnica / obszar",
+    registerNeighborhoodPlaceholder: "Dzielnica, obszar lub wskazowka lokalna",
+    registerPostalCodeLabel: "Kod pocztowy",
+    postalCodePlaceholder: "Kod pocztowy (opcjonalnie)",
     registerReferenceLabel: "Wskazowki do adresu",
     privacyConsent: "Akceptuje przetwarzanie danych do obslugi zamowien, historii, dostawy, czatu i niezbednych cookies technicznych.",
     signIn: "Zaloguj",
@@ -522,6 +549,9 @@ const CUSTOMER_I18N = {
     cancelled: "Zamowienie anulowane. Skontaktuj sie z restauracja, aby potwierdzic.",
     ticketSuffix: " Bilet #{ticket}.",
     registerNameRequired: "Wpisz pelne imie i nazwisko, aby utworzyc konto.",
+    registerCountryRequired: "Wybierz Kolumbie albo Polske.",
+    registerRegionRequired: "Wybierz departament lub wojewodztwo.",
+    registerCityRequired: "Wpisz miasto, gmine, wieś lub inna miejscowosc.",
     nameRequired: "Wpisz imie, aby wyslac zamowienie.",
     phoneRequired: "Wpisz telefon do dostawy.",
     addressRequired: "Wpisz pelny adres dostawy.",
@@ -647,8 +677,18 @@ const CUSTOMER_I18N = {
     registerNameLabel: "Full name for registration",
     registerNamePlaceholder: "First and last name",
     registerPhoneLabel: "Registration phone",
+    registerCountryLabel: "Country",
+    countrySelectPlaceholder: "Select a country",
+    registerRegionLabel: "Department / voivodeship",
+    regionSelectCountryFirst: "Select a country first",
+    regionSelectPlaceholder: "Select a region",
+    registerCityLabel: "Locality",
+    cityPlaceholder: "City, municipality, town, village, or other locality",
     registerAddressLabel: "Registration address",
-    registerNeighborhoodLabel: "Neighborhood / city for registration",
+    registerNeighborhoodLabel: "Neighborhood / area",
+    registerNeighborhoodPlaceholder: "Neighborhood, area, or local reference",
+    registerPostalCodeLabel: "Postal code",
+    postalCodePlaceholder: "Postal code (optional)",
     registerReferenceLabel: "Address reference",
     privacyConsent: "I accept data processing for orders, history, delivery, chat, and necessary technical cookies.",
     signIn: "Sign in",
@@ -766,6 +806,9 @@ const CUSTOMER_I18N = {
     cancelled: "Order cancelled. Contact the restaurant to confirm.",
     ticketSuffix: " Ticket #{ticket}.",
     registerNameRequired: "Enter your full name to create the account.",
+    registerCountryRequired: "Select Colombia or Poland.",
+    registerRegionRequired: "Select your department or voivodeship.",
+    registerCityRequired: "Enter your city, municipality, town, village, or other locality.",
     nameRequired: "Enter your name to send the order.",
     phoneRequired: "Enter a phone number for delivery.",
     addressRequired: "Enter the full delivery address.",
@@ -999,6 +1042,54 @@ function customerDetectedRegion(coords = null) {
   };
 }
 
+const CUSTOMER_REGIONS = {
+  PL: [
+    "Dolnośląskie", "Kujawsko-Pomorskie", "Lubelskie", "Lubuskie", "Łódzkie", "Małopolskie",
+    "Mazowieckie", "Opolskie", "Podkarpackie", "Podlaskie", "Pomorskie", "Śląskie",
+    "Świętokrzyskie", "Warmińsko-Mazurskie", "Wielkopolskie", "Zachodniopomorskie",
+  ],
+  CO: [
+    "Amazonas", "Antioquia", "Arauca", "Atlántico", "Bolívar", "Boyacá", "Caldas", "Caquetá",
+    "Casanare", "Cauca", "Cesar", "Chocó", "Córdoba", "Cundinamarca", "Guainía", "Guaviare",
+    "Huila", "La Guajira", "Magdalena", "Meta", "Nariño", "Norte de Santander", "Putumayo",
+    "Quindío", "Risaralda", "San Andrés y Providencia", "Santander", "Sucre", "Tolima",
+    "Valle del Cauca", "Vaupés", "Vichada", "Bogotá D.C.",
+  ],
+};
+
+function customerCountryName(countryCode) {
+  if (countryCode === "PL") return "Polonia";
+  if (countryCode === "CO") return "Colombia";
+  return "";
+}
+
+function customerRenderRegistrationRegions(countryCode, selectedRegion = "") {
+  const select = customerElements.registerRegionInput;
+  if (!select) return;
+  const regions = CUSTOMER_REGIONS[countryCode] || [];
+  const selected = customerNormalizeText(selectedRegion);
+  const options = [...regions];
+  if (selected && !options.includes(selected)) options.push(selected);
+  select.innerHTML = `
+    <option value="">${customerEscapeHtml(customerT(countryCode ? "regionSelectPlaceholder" : "regionSelectCountryFirst"))}</option>
+    ${options.map((region) => `<option value="${customerEscapeHtml(region)}" ${region === selected ? "selected" : ""}>${customerEscapeHtml(region)}</option>`).join("")}
+  `;
+  select.disabled = regions.length === 0;
+}
+
+function customerSyncRegistrationRegionFromInputs(base = customerRegistrationRegion) {
+  const countryCode = customerInputValue(customerElements.registerCountryInput).toUpperCase() || base.countryCode || "";
+  return {
+    ...base,
+    countryCode,
+    country: customerCountryName(countryCode) || base.country || "",
+    region: customerInputValue(customerElements.registerRegionInput) || base.region || "",
+    city: customerInputValue(customerElements.registerCityInput) || base.city || "",
+    postalCode: customerInputValue(customerElements.registerPostalCodeInput) || base.postalCode || "",
+    timezone: countryCode === "PL" ? "Europe/Warsaw" : countryCode === "CO" ? "America/Bogota" : base.timezone || "",
+  };
+}
+
 function customerRegistrationPosition() {
   return new Promise((resolve) => {
     if (!navigator.geolocation || (!window.isSecureContext && !["localhost", "127.0.0.1"].includes(window.location.hostname))) {
@@ -1227,6 +1318,10 @@ function customerSetLanguage(language) {
   customerRenderLocationSummary();
   customerRenderProfileDetails();
   customerRenderSelectedRestaurantDetails();
+  customerRenderRegistrationRegions(
+    customerInputValue(customerElements.registerCountryInput) || customerRegistrationRegion.countryCode,
+    customerInputValue(customerElements.registerRegionInput) || customerRegistrationRegion.region
+  );
 }
 
 function customerOrderTypeText(value) {
@@ -1272,6 +1367,7 @@ let customerSettings = {
 
 let customerMapDistance = null;
 let googleMapsScriptPromise = null;
+const customerPlaceAutocompletes = new Map();
 let customerLocationCoords = null;
 let customerTrackedOrder = null;
 let customerStatusTimer = null;
@@ -1552,6 +1648,7 @@ function customerSetInputIfEmpty(input, value) {
 }
 
 function customerRegisteredAddressPayload() {
+  customerRegistrationRegion = customerSyncRegistrationRegionFromInputs();
   return {
     table: customerInputValue(customerElements.tableInput),
     address: customerInputValue(customerElements.registerAddressInput) || customerInputValue(customerElements.addressInput),
@@ -1589,6 +1686,12 @@ function customerApplyProfileFields(profile = {}) {
     latitude: Number.isFinite(Number(address.latitude)) ? Number(address.latitude) : customerRegistrationRegion.latitude,
     longitude: Number.isFinite(Number(address.longitude)) ? Number(address.longitude) : customerRegistrationRegion.longitude,
   };
+  if (customerElements.registerCountryInput) {
+    customerElements.registerCountryInput.value = customerRegistrationRegion.countryCode || "";
+  }
+  customerRenderRegistrationRegions(customerRegistrationRegion.countryCode, customerRegistrationRegion.region);
+  customerSetInputIfEmpty(customerElements.registerCityInput, customerRegistrationRegion.city);
+  customerSetInputIfEmpty(customerElements.registerPostalCodeInput, customerRegistrationRegion.postalCode);
   customerSetInputIfEmpty(customerElements.registerNameInput, profile.full_name);
   customerSetInputIfEmpty(customerElements.registerPhoneInput, profile.phone);
   customerSetInputIfEmpty(customerElements.registerAddressInput, address.address);
@@ -1750,9 +1853,33 @@ async function customerSignUpWithEmail() {
     return;
   }
 
+  if (!customerInputValue(customerElements.registerCountryInput)) {
+    customerSetAuthMessage(customerT("registerCountryRequired"), "error");
+    customerElements.registerCountryInput?.focus();
+    return;
+  }
+  if (!customerInputValue(customerElements.registerRegionInput)) {
+    customerSetAuthMessage(customerT("registerRegionRequired"), "error");
+    customerElements.registerRegionInput?.focus();
+    return;
+  }
+  if (!customerInputValue(customerElements.registerCityInput)) {
+    customerSetAuthMessage(customerT("registerCityRequired"), "error");
+    customerElements.registerCityInput?.focus();
+    return;
+  }
+
   customerSetAuthMessage(customerT("locationRequest"));
   const registrationCoords = await customerRegistrationPosition();
-  customerRegistrationRegion = customerDetectedRegion(registrationCoords);
+  const detectedRegion = customerDetectedRegion(registrationCoords);
+  customerRegistrationRegion = customerSyncRegistrationRegionFromInputs({
+    ...customerRegistrationRegion,
+    ...detectedRegion,
+    countryCode: customerInputValue(customerElements.registerCountryInput) || detectedRegion.countryCode,
+    region: customerInputValue(customerElements.registerRegionInput),
+    city: customerInputValue(customerElements.registerCityInput),
+    postalCode: customerInputValue(customerElements.registerPostalCodeInput),
+  });
   if (registrationCoords) {
     customerLocationCoords = {
       lat: Number(registrationCoords.latitude),
@@ -1760,7 +1887,7 @@ async function customerSignUpWithEmail() {
     };
     if (customerSettings.googleMapsApiKey) {
       try {
-        await customerReverseGeocodeLocation(customerLocationCoords);
+        await customerReverseGeocodeLocation(customerLocationCoords, { preserveManual: true });
       } catch {
         // El registro continua con coordenadas y pais detectado.
       }
@@ -1889,7 +2016,7 @@ async function customerSignOut() {
     customerUser = null;
     customerHistoryRows = [];
     customerRenderAccount();
-    window.location.replace("index.html?app=v76");
+    window.location.replace("index.html?app=v79");
   }
 }
 
@@ -2204,7 +2331,7 @@ function customerStartDirectoryRealtime() {
     changeFilter.filter = `country_code=eq.${customerRegistrationRegion.countryCode}`;
   }
   customerDirectoryRealtimeChannel = customerClient
-    .channel(`public-restaurant-directory-v76-${customerRegistrationRegion.countryCode || "all"}`)
+    .channel(`public-restaurant-directory-v79-${customerRegistrationRegion.countryCode || "all"}`)
     .on(
       "postgres_changes",
       changeFilter,
@@ -2273,7 +2400,7 @@ function customerClearRestaurantSelection(messageKey = "") {
 
   const nextUrl = new URL(window.location.href);
   nextUrl.searchParams.delete("store");
-  nextUrl.searchParams.set("app", "v76");
+  nextUrl.searchParams.set("app", "v79");
   window.history.replaceState({}, "", nextUrl.toString());
 
   customerApplyBusinessName();
@@ -2446,7 +2573,7 @@ async function customerSelectRestaurant(storeId, options = {}) {
   if (options.updateUrl !== false) {
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("store", customerStoreId);
-    nextUrl.searchParams.set("app", "v76");
+    nextUrl.searchParams.set("app", "v79");
     window.history.replaceState({}, "", nextUrl.toString());
   }
 
@@ -2748,7 +2875,7 @@ function customerCanUseGoogleMaps() {
 }
 
 function customerLoadGoogleMaps() {
-  if (window.google?.maps?.DistanceMatrixService) return Promise.resolve();
+  if (window.google?.maps?.DistanceMatrixService && window.google?.maps?.places?.Autocomplete) return Promise.resolve();
   if (!customerSettings.googleMapsApiKey) return Promise.reject(new Error(customerT("mapsNeedKey")));
   if (googleMapsScriptPromise) return googleMapsScriptPromise;
 
@@ -2759,7 +2886,7 @@ function customerLoadGoogleMaps() {
       delete window[callbackName];
       resolve();
     };
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(customerSettings.googleMapsApiKey)}&callback=${callbackName}`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(customerSettings.googleMapsApiKey)}&libraries=places&callback=${callbackName}`;
     script.async = true;
     script.defer = true;
     script.addEventListener("error", () => {
@@ -2811,7 +2938,105 @@ function customerAddressComponent(result, types = [], shortName = false) {
   return (shortName ? component?.short_name : component?.long_name) || "";
 }
 
-async function customerReverseGeocodeLocation(coords) {
+function customerNormalizedRegion(countryCode, value) {
+  const cleanValue = customerNormalizeText(value);
+  if (!cleanValue) return "";
+  const comparable = (text) => String(text || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\b(wojewodztwo|voivodeship|departamento|department)\b/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  const match = (CUSTOMER_REGIONS[countryCode] || []).find((region) => comparable(region) === comparable(cleanValue));
+  return match || cleanValue;
+}
+
+function customerPlaceLocality(place) {
+  return customerAddressComponent(place, ["locality"])
+    || customerAddressComponent(place, ["postal_town"])
+    || customerAddressComponent(place, ["sublocality_level_1"])
+    || customerAddressComponent(place, ["sublocality"])
+    || customerAddressComponent(place, ["administrative_area_level_2"])
+    || customerAddressComponent(place, ["administrative_area_level_3"]);
+}
+
+function customerApplyPlace(place, input) {
+  if (!place?.address_components?.length) return;
+  const countryCode = String(customerAddressComponent(place, ["country"], true)).toUpperCase();
+  if (!["PL", "CO"].includes(countryCode)) return;
+
+  const previousCountryCode = customerRegistrationRegion.countryCode;
+  const previousRegion = customerRegistrationRegion.region;
+  const city = customerPlaceLocality(place);
+  const region = customerNormalizedRegion(
+    countryCode,
+    customerAddressComponent(place, ["administrative_area_level_1"])
+  );
+  const postalCode = customerAddressComponent(place, ["postal_code"]);
+  const latitude = place.geometry?.location?.lat?.();
+  const longitude = place.geometry?.location?.lng?.();
+  const formattedAddress = customerNormalizeText(place.formatted_address || place.name);
+
+  customerRegistrationRegion = {
+    ...customerRegistrationRegion,
+    countryCode,
+    country: customerCountryName(countryCode),
+    region: region || customerRegistrationRegion.region,
+    city: city || customerRegistrationRegion.city,
+    postalCode: postalCode || customerRegistrationRegion.postalCode,
+    timezone: countryCode === "PL" ? "Europe/Warsaw" : "America/Bogota",
+    latitude: Number.isFinite(latitude) ? latitude : customerRegistrationRegion.latitude,
+    longitude: Number.isFinite(longitude) ? longitude : customerRegistrationRegion.longitude,
+  };
+  if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+    customerLocationCoords = { lat: latitude, lng: longitude };
+  }
+
+  if (customerElements.registerCountryInput) customerElements.registerCountryInput.value = countryCode;
+  customerRenderRegistrationRegions(countryCode, customerRegistrationRegion.region);
+  if (customerElements.registerCityInput && city) customerElements.registerCityInput.value = city;
+  if (customerElements.registerPostalCodeInput && postalCode) customerElements.registerPostalCodeInput.value = postalCode;
+  if (formattedAddress && input === customerElements.registerAddressInput) {
+    customerElements.registerAddressInput.value = formattedAddress;
+  }
+  if (formattedAddress && input === customerElements.addressInput) {
+    customerElements.addressInput.value = formattedAddress;
+  }
+  customerRenderLocationSummary();
+  customerRenderProfileDetails();
+
+  if (countryCode !== previousCountryCode || customerRegistrationRegion.region !== previousRegion) {
+    customerStopDirectoryRealtime();
+    customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
+  }
+}
+
+async function customerPreparePlaceAutocomplete() {
+  if (!customerSettings.googleMapsApiKey) return;
+  await customerLoadGoogleMaps();
+  const selectedCountry = customerInputValue(customerElements.registerCountryInput).toLowerCase();
+  const inputs = [
+    customerElements.registerCityInput,
+    customerElements.registerAddressInput,
+    customerElements.addressInput,
+  ].filter(Boolean);
+
+  inputs.forEach((input) => {
+    let autocomplete = customerPlaceAutocompletes.get(input);
+    if (!autocomplete) {
+      const options = { fields: ["address_components", "formatted_address", "geometry", "name"] };
+      if (["pl", "co"].includes(selectedCountry)) options.componentRestrictions = { country: selectedCountry };
+      autocomplete = new google.maps.places.Autocomplete(input, options);
+      autocomplete.addListener("place_changed", () => customerApplyPlace(autocomplete.getPlace(), input));
+      customerPlaceAutocompletes.set(input, autocomplete);
+    } else if (["pl", "co"].includes(selectedCountry)) {
+      autocomplete.setComponentRestrictions({ country: selectedCountry });
+    }
+  });
+}
+
+async function customerReverseGeocodeLocation(coords, options = {}) {
   if (!coords || !customerSettings.googleMapsApiKey) return false;
   await customerLoadGoogleMaps();
 
@@ -2831,21 +3056,41 @@ async function customerReverseGeocodeLocation(coords) {
         customerAddressComponent(result, ["sublocality"]) ||
         customerAddressComponent(result, ["neighborhood"]) ||
         customerAddressComponent(result, ["sublocality_level_1"]);
-      const city = customerAddressComponent(result, ["locality"])
-        || customerAddressComponent(result, ["postal_town"])
-        || customerAddressComponent(result, ["administrative_area_level_2"]);
-      const region = customerAddressComponent(result, ["administrative_area_level_1"]);
-      const postalCode = customerAddressComponent(result, ["postal_code"]);
       const countryCode = String(customerAddressComponent(result, ["country"], true)).toUpperCase();
+      const city = customerPlaceLocality(result);
+      const region = customerNormalizedRegion(
+        countryCode,
+        customerAddressComponent(result, ["administrative_area_level_1"])
+      );
+      const postalCode = customerAddressComponent(result, ["postal_code"]);
       const previousCountryCode = customerRegistrationRegion.countryCode;
+      const selectedCountryCode = customerInputValue(customerElements.registerCountryInput).toUpperCase();
+      const preserveManual = options.preserveManual === true;
+      const detectedMatchesSelection = !selectedCountryCode || selectedCountryCode === countryCode;
+      const nextCountryCode = preserveManual && selectedCountryCode ? selectedCountryCode : countryCode;
+      const nextRegion = preserveManual && customerInputValue(customerElements.registerRegionInput)
+        ? customerInputValue(customerElements.registerRegionInput)
+        : detectedMatchesSelection
+          ? region
+          : customerRegistrationRegion.region;
+      const nextCity = preserveManual && customerInputValue(customerElements.registerCityInput)
+        ? customerInputValue(customerElements.registerCityInput)
+        : detectedMatchesSelection
+          ? city
+          : customerRegistrationRegion.city;
+      const nextPostalCode = preserveManual && customerInputValue(customerElements.registerPostalCodeInput)
+        ? customerInputValue(customerElements.registerPostalCodeInput)
+        : detectedMatchesSelection
+          ? postalCode
+          : customerRegistrationRegion.postalCode;
 
-      if (approximateAddress) {
+      if (approximateAddress && (!preserveManual || detectedMatchesSelection)) {
         customerElements.addressInput.value = approximateAddress;
         if (customerElements.registerAddressInput && !customerElements.registerAddressInput.value.trim()) {
           customerElements.registerAddressInput.value = approximateAddress;
         }
       }
-      if (neighborhood || city) {
+      if ((neighborhood || city) && (!preserveManual || detectedMatchesSelection)) {
         customerElements.neighborhoodInput.value = neighborhood || city;
         if (customerElements.registerNeighborhoodInput && !customerElements.registerNeighborhoodInput.value.trim()) {
           customerElements.registerNeighborhoodInput.value = neighborhood || city;
@@ -2853,18 +3098,31 @@ async function customerReverseGeocodeLocation(coords) {
       }
       customerRegistrationRegion = {
         ...customerRegistrationRegion,
-        countryCode: ["PL", "CO"].includes(countryCode) ? countryCode : customerRegistrationRegion.countryCode,
-        country: countryCode === "PL" ? "Polonia" : countryCode === "CO" ? "Colombia" : customerRegistrationRegion.country,
-        city: city || customerRegistrationRegion.city,
-        region: region || customerRegistrationRegion.region,
-        postalCode: postalCode || customerRegistrationRegion.postalCode,
-        timezone: countryCode === "PL"
+        countryCode: ["PL", "CO"].includes(nextCountryCode) ? nextCountryCode : customerRegistrationRegion.countryCode,
+        country: customerCountryName(nextCountryCode) || customerRegistrationRegion.country,
+        city: nextCity || customerRegistrationRegion.city,
+        region: nextRegion || customerRegistrationRegion.region,
+        postalCode: nextPostalCode || customerRegistrationRegion.postalCode,
+        latitude: preserveManual && !detectedMatchesSelection ? null : customerRegistrationRegion.latitude,
+        longitude: preserveManual && !detectedMatchesSelection ? null : customerRegistrationRegion.longitude,
+        timezone: nextCountryCode === "PL"
           ? "Europe/Warsaw"
-          : countryCode === "CO"
+          : nextCountryCode === "CO"
             ? "America/Bogota"
             : customerRegistrationRegion.timezone,
       };
-      if (countryCode && countryCode !== previousCountryCode) {
+      if (preserveManual && !detectedMatchesSelection) customerLocationCoords = null;
+      if (customerElements.registerCountryInput && ["PL", "CO"].includes(nextCountryCode)) {
+        customerElements.registerCountryInput.value = nextCountryCode;
+      }
+      customerRenderRegistrationRegions(customerRegistrationRegion.countryCode, customerRegistrationRegion.region);
+      if (customerRegistrationRegion.city && customerElements.registerCityInput) {
+        customerElements.registerCityInput.value = customerRegistrationRegion.city;
+      }
+      if (customerRegistrationRegion.postalCode && customerElements.registerPostalCodeInput) {
+        customerElements.registerPostalCodeInput.value = customerRegistrationRegion.postalCode;
+      }
+      if (nextCountryCode && nextCountryCode !== previousCountryCode) {
         customerStopDirectoryRealtime();
         customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
       }
@@ -3032,6 +3290,7 @@ function customerDeliveryPayload() {
   const minimumFee = customerNormalizeDeliveryMinimumFee(customerSettings.deliveryMinimumFee);
   const extraFee = customerNormalizeMoney(customerSettings.deliveryFee);
   const feeBeforeExtra = Math.max(minimumFee, calculatedFee);
+  const markupPercent = customerRoundMoney((CUSTOMER_DELIVERY_MARKUP - 1) * 100);
   const currencyLabel = customerNormalizeText(customerSettings.currencySymbol || "");
   return {
     name: customerElements.nameInput.value.trim(),
@@ -3048,14 +3307,14 @@ function customerDeliveryPayload() {
     calculatedFee,
     minimumFee,
     extraFee,
-    markupPercent: 30,
+    markupPercent,
     fee: customerRoundMoney(feeBeforeExtra + extraFee),
     mapDistanceText: customerMapDistance?.distanceText || "",
     mapDurationText: customerMapDistance?.durationText || "",
     mapOrigin: customerMapDistance?.origin || customerSettings.restaurantAddress || "",
     mapDestination: customerMapDistance?.destination || customerDeliveryDestination(),
     location: customerLocationCoords,
-    tariff: `MONEDA=${currencyLabel}; MINIMO=${minimumFee}; BASE 1.5KM=4.50; 1.5-6KM=1.50/KM; 6-8KM=2.50/KM; +8KM=3.50/KM; AJUSTE OPERATIVO=30%`,
+    tariff: `MONEDA=${currencyLabel}; MINIMO=${minimumFee}; BASE 1.5KM=4.50; 1.5-6KM=1.50/KM; 6-8KM=2.50/KM; +8KM=3.50/KM; AJUSTE OPERATIVO=${markupPercent}%`,
   };
 }
 
@@ -3998,6 +4257,33 @@ customerElements.orderType.addEventListener("change", () => {
 customerElements.paymentMethod.addEventListener("change", customerRenderCart);
 customerElements.distanceInput.addEventListener("input", customerRenderCart);
 customerElements.languageSelect.addEventListener("change", () => customerSetLanguage(customerElements.languageSelect.value));
+customerElements.registerCountryInput?.addEventListener("change", () => {
+  const countryCode = customerInputValue(customerElements.registerCountryInput).toUpperCase();
+  customerRegistrationRegion = {
+    ...customerRegistrationRegion,
+    countryCode,
+    country: customerCountryName(countryCode),
+    region: "",
+    city: "",
+    postalCode: customerInputValue(customerElements.registerPostalCodeInput),
+    timezone: countryCode === "PL" ? "Europe/Warsaw" : countryCode === "CO" ? "America/Bogota" : "",
+  };
+  if (customerElements.registerCityInput) customerElements.registerCityInput.value = "";
+  customerRenderRegistrationRegions(countryCode);
+  customerStopDirectoryRealtime();
+  customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
+});
+customerElements.registerRegionInput?.addEventListener("change", () => {
+  customerRegistrationRegion = customerSyncRegistrationRegionFromInputs();
+  customerStopDirectoryRealtime();
+  customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
+});
+[customerElements.registerCityInput, customerElements.registerPostalCodeInput].forEach((input) => {
+  input?.addEventListener("input", () => {
+    customerRegistrationRegion = customerSyncRegistrationRegionFromInputs();
+    customerRenderLocationSummary();
+  });
+});
 if (customerElements.refreshMenuButton) {
   customerElements.refreshMenuButton.addEventListener("click", customerRefreshMenu);
 }
@@ -4019,6 +4305,12 @@ customerElements.viewButtons.forEach((button) => {
   input?.addEventListener("input", () => {
     customerRenderLocationSummary();
     customerRenderProfileDetails();
+  });
+});
+
+[customerElements.registerCityInput, customerElements.registerAddressInput, customerElements.addressInput].forEach((input) => {
+  input?.addEventListener("focus", () => {
+    customerPreparePlaceAutocomplete().catch(() => {});
   });
 });
 
@@ -4181,6 +4473,10 @@ window.addEventListener(
   { passive: false }
 );
 
+if (customerElements.registerCountryInput && !customerElements.registerCountryInput.value) {
+  customerElements.registerCountryInput.value = customerRegistrationRegion.countryCode || "";
+}
+customerRenderRegistrationRegions(customerRegistrationRegion.countryCode, customerRegistrationRegion.region);
 customerMountAuthDialog();
 customerApplyBusinessName();
 customerApplyTranslations();

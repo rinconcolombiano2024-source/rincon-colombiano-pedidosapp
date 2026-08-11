@@ -3,7 +3,7 @@
   "short_name": "RC Admin",
   "id": "./admin.html",
   "description": "Panel privado de administracion de RC ORDERA.",
-  "start_url": "./admin.html?app=v76",
+  "start_url": "./admin.html?app=v79",
   "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],

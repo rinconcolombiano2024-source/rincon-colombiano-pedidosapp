@@ -239,6 +239,7 @@ function adminRenderCourierList(rows = []) {
     .map((row) => {
       const fullName = [row.first_name, row.last_name].filter(Boolean).join(" ") || "Colaborador sin nombre";
       const vehicle = [row.vehicle_type, row.vehicle_plate].filter(Boolean).join(" / ") || "Vehiculo no indicado";
+      const location = [row.country, row.region, row.city, row.postal_code].filter(Boolean).join(" / ") || "Ubicacion no indicada";
       const missingDocs = adminCourierMissingDocuments(row);
       const docs = [
         adminCourierDocumentButton("Documento", row.identity_document_url),
@@ -255,7 +256,8 @@ function adminRenderCourierList(rows = []) {
             <div>
               <strong>${adminEscapeHtml(fullName)}</strong>
               <span>${adminEscapeHtml(row.email || "Correo no disponible")}</span>
-              <span>${adminEscapeHtml(row.phone || "Telefono no indicado")} / ${adminEscapeHtml(row.city || "")}</span>
+              <span>${adminEscapeHtml(row.phone || "Telefono no indicado")}</span>
+              <span>Ubicacion: ${adminEscapeHtml(location)}</span>
               <span>Estado: ${adminEscapeHtml(adminStatusLabel(row.status))}</span>
               <span>Vehiculo: ${adminEscapeHtml(vehicle)}</span>
             </div>

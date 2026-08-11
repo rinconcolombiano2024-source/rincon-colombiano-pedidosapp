@@ -67,12 +67,34 @@
           <input id="customerRegisterPhoneInput" type="tel" placeholder="Numero de contacto" data-i18n-placeholder="phonePlaceholder" autocomplete="tel" />
         </label>
         <label>
+          <span data-i18n="registerCountryLabel">Pais</span>
+          <select id="customerRegisterCountryInput" autocomplete="country">
+            <option value="" data-i18n="countrySelectPlaceholder">Selecciona un pais</option>
+            <option value="CO">Colombia</option>
+            <option value="PL">Polonia</option>
+          </select>
+        </label>
+        <label>
+          <span data-i18n="registerRegionLabel">Departamento / voivodato</span>
+          <select id="customerRegisterRegionInput" autocomplete="address-level1" disabled>
+            <option value="" data-i18n="regionSelectCountryFirst">Primero selecciona un pais</option>
+          </select>
+        </label>
+        <label>
+          <span data-i18n="registerCityLabel">Localidad</span>
+          <input id="customerRegisterCityInput" type="text" placeholder="Ciudad, municipio, pueblo, corregimiento o vereda" data-i18n-placeholder="cityPlaceholder" autocomplete="address-level2" />
+        </label>
+        <label>
           <span data-i18n="registerAddressLabel">Direccion</span>
           <input id="customerRegisterAddressInput" type="text" placeholder="Calle, numero, apartamento" data-i18n-placeholder="addressPlaceholder" autocomplete="street-address" />
         </label>
         <label>
-          <span data-i18n="registerNeighborhoodLabel">Barrio / ciudad</span>
-          <input id="customerRegisterNeighborhoodInput" type="text" placeholder="Barrio o ciudad" data-i18n-placeholder="neighborhoodPlaceholder" autocomplete="address-level2" />
+          <span data-i18n="registerNeighborhoodLabel">Barrio / sector</span>
+          <input id="customerRegisterNeighborhoodInput" type="text" placeholder="Barrio, sector o referencia local" data-i18n-placeholder="registerNeighborhoodPlaceholder" autocomplete="address-level3" />
+        </label>
+        <label>
+          <span data-i18n="registerPostalCodeLabel">Codigo postal</span>
+          <input id="customerRegisterPostalCodeInput" type="text" placeholder="Codigo postal (opcional)" data-i18n-placeholder="postalCodePlaceholder" autocomplete="postal-code" />
         </label>
         <label>
           <span data-i18n="registerReferenceLabel">Referencia</span>
@@ -319,7 +341,7 @@
     Editar perfil
   </button>
 </div>
-          <a class="customer-map-button customer-platform-home-link" href="index.html?app=v76" data-i18n="platformHome">Volver a la pantalla principal</a>
+          <a class="customer-map-button customer-platform-home-link" href="index.html?app=v79" data-i18n="platformHome">Volver a la pantalla principal</a>
         </section>
 
         <section class="customer-profile-settings">
