@@ -1629,10 +1629,15 @@ async function courierLoadProfile() {
     data.status = approval.approved === true ? "approved" : approval.profile_status || data.status;
   }
   courierProfile = data;
-  courierApplyProfileFields(data);
-  courierRender();
-  if (data.status === "approved") {
+courierApplyProfileFields(data);
+
+if (data.status === "approved") {
   await courierLoadAvailability();
+}
+
+courierRender();
+
+if (data.status === "approved") {
   courierLoadDeliveryOffers({ silent: true }).catch(() => {});
   courierLoadHistory().catch(() => {});
 }
