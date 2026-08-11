@@ -1464,8 +1464,9 @@ async function courierLoadProfile() {
   courierApplyProfileFields(data);
   courierRender();
   if (data.status === "approved") {
-    courierLoadDeliveryOffers({ silent: true }).catch(() => {});
-  }
+  courierLoadDeliveryOffers({ silent: true }).catch(() => {});
+  courierLoadHistory().catch(() => {});
+}
 }
 
 function courierStopApprovalRealtime() {
