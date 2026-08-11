@@ -1373,7 +1373,18 @@ async function initializeCloud() {
   }
 
   const config = supabaseConfig();
-  cloudState.client = window.supabase.createClient(config.url, config.anonKey);
+  cloudState.client = window.supabase.createClient(
+  config.url,
+  config.anonKey,
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      storageKey: "rc-ordera-restaurant-auth",
+    },
+  }
+);
   const { data, error } = await cloudState.client.auth.getSession();
   if (error) throw error;
   cloudState.user = data.session?.user || null;
