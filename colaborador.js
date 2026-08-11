@@ -1523,6 +1523,7 @@ async function courierLoadProfile() {
   courierApplyProfileFields(data);
   courierRender();
   if (data.status === "approved") {
+  await courierLoadAvailability();
   courierLoadDeliveryOffers({ silent: true }).catch(() => {});
   courierLoadHistory().catch(() => {});
 }
