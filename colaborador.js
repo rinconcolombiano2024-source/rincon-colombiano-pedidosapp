@@ -114,6 +114,96 @@ const COURIER_STATUS_LABELS = {
   suspended: "Suspendido",
   inactive: "Inactivo",
 };
+const COURIER_REGIONS = {
+  PL: [
+    "Dolnośląskie",
+    "Kujawsko-Pomorskie",
+    "Lubelskie",
+    "Lubuskie",
+    "Łódzkie",
+    "Małopolskie",
+    "Mazowieckie",
+    "Opolskie",
+    "Podkarpackie",
+    "Podlaskie",
+    "Pomorskie",
+    "Śląskie",
+    "Świętokrzyskie",
+    "Warmińsko-Mazurskie",
+    "Wielkopolskie",
+    "Zachodniopomorskie",
+  ],
+
+  CO: [
+    "Amazonas",
+    "Antioquia",
+    "Arauca",
+    "Atlántico",
+    "Bolívar",
+    "Boyacá",
+    "Caldas",
+    "Caquetá",
+    "Casanare",
+    "Cauca",
+    "Cesar",
+    "Chocó",
+    "Córdoba",
+    "Cundinamarca",
+    "Guainía",
+    "Guaviare",
+    "Huila",
+    "La Guajira",
+    "Magdalena",
+    "Meta",
+    "Nariño",
+    "Norte de Santander",
+    "Putumayo",
+    "Quindío",
+    "Risaralda",
+    "San Andrés y Providencia",
+    "Santander",
+    "Sucre",
+    "Tolima",
+    "Valle del Cauca",
+    "Vaupés",
+    "Vichada",
+    "Bogotá D.C.",
+  ],
+};
+
+function courierCountryName(countryCode) {
+  if (countryCode === "PL") return "Polonia";
+  if (countryCode === "CO") return "Colombia";
+  return "";
+}
+
+function courierRenderRegionOptions(countryCode, selectedRegion = "") {
+  const regionSelect = courierElements.regionInput;
+  const citySelect = courierElements.cityInput;
+
+  if (!regionSelect || !citySelect) return;
+
+  const regions = COURIER_REGIONS[countryCode] || [];
+
+  regionSelect.innerHTML = `
+    <option value="">Selecciona una región</option>
+    ${regions
+      .map(
+        (region) =>
+          `<option value="${region}" ${
+            region === selectedRegion ? "selected" : ""
+          }>${region}</option>`
+      )
+      .join("")}
+  `;
+
+  regionSelect.disabled = regions.length === 0;
+
+  citySelect.innerHTML =
+    '<option value="">Primero selecciona una región</option>';
+
+  citySelect.disabled = true;
+}
 
 let courierClient = null;
 let courierUser = null;
@@ -1528,6 +1618,26 @@ courierElements.signOutButton.addEventListener("click", courierSignOut);
 courierElements.saveProfileButton.addEventListener("click", courierSaveProfile);
 courierElements.availabilityButton.addEventListener("click", courierToggleAvailability);
 courierElements.vehicleTypeInput.addEventListener("change", courierRenderVehicleRequirements);
+courierElements.countryInput?.addEventListener("change", () => {
+  const countryCode = courierElements.countryInput.value;
+
+  courierRegistrationRegion = {
+    ...courierRegistrationRegion,
+    countryCode,
+    country: courierCountryName(countryCode),
+    region: "",
+    city: "",
+    postalCode: courierInputValue(courierElements.postalCodeInput),
+    timezone:
+      countryCode === "PL"
+        ? "Europe/Warsaw"
+        : countryCode === "CO"
+          ? "America/Bogota"
+          : courierRegistrationRegion.timezone,
+  };
+
+  courierRenderRegionOptions(countryCode);
+});
 courierElements.shareLocationButton?.addEventListener("click", courierShareLocation);
 courierElements.openGpsButton?.addEventListener("click", courierOpenGps);
 courierElements.refreshOffersButton?.addEventListener("click", () => courierLoadDeliveryOffers());
