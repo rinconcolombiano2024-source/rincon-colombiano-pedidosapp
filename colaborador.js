@@ -1125,9 +1125,23 @@ async function courierUpdateAssignmentStatus(assignmentId, status) {
     return;
   }
   if (status === "accepted") courierAvailable = false;
-  if (status === "delivered") courierAvailable = true;
-  await courierLoadDeliveryOffers({ silent: true });
-  courierSetMessage(courierElements.locationMessage, `${courierAssignmentStatusLabel(status)}.`, "ok");
+if (status === "delivered") courierAvailable = true;
+
+await courierLoadDeliveryOffers({ silent: true });
+
+if (
+  status === "delivered" ||
+  status === "rejected" ||
+  status === "cancelled"
+) {
+  await courierLoadHistory();
+}
+
+courierSetMessage(
+  courierElements.locationMessage,
+  `${courierAssignmentStatusLabel(status)}.`,
+  "ok"
+);
   courierSetView(status === "delivered" || status === "rejected" ? "home" : "active");
 }
 
