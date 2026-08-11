@@ -61,3 +61,66 @@ self.addEventListener("fetch", (event) => {
       })
   );
 });
+self.addEventListener("push", (event) => {
+  let data = {};
+
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (error) {
+    data = {
+      title: "RC ORDERA",
+      body: event.data ? event.data.text() : "Nuevo pedido disponible.",
+    };
+  }
+
+  const title = data.title || "Nuevo domicilio - RC ORDERA";
+
+  const options = {
+    body:
+      data.body ||
+      "Hay un nuevo pedido disponible. Abre RC ORDERA para aceptarlo.",
+
+    icon: "./app-icon-192.png",
+    badge: "./app-icon-192.png",
+
+    tag: data.tag || "rc-ordera-delivery",
+
+    renotify: true,
+    requireInteraction: true,
+
+    vibrate: [500, 200, 500, 200, 800],
+
+    data: {
+      url: data.url || "./colaborador.html?view=offers",
+      assignment_id: data.assignment_id || "",
+    },
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+
+  const targetUrl =
+    event.notification.data?.url ||
+    "./colaborador.html?view=offers";
+
+  event.waitUntil(
+    clients.matchAll({
+      type: "window",
+      includeUncontrolled: true,
+    }).then((windowClients) => {
+      for (const client of windowClients) {
+        if ("focus" in client) {
+          client.navigate(targetUrl);
+          return client.focus();
+        }
+      }
+
+      return clients.openWindow(targetUrl);
+    })
+  );
+});
