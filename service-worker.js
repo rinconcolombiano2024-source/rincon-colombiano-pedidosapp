@@ -1,4 +1,4 @@
-const CACHE_NAME = "rc-ordera-v76-region-print-history";
+const CACHE_NAME = "rc-ordera-v79-location-i18n";
 const APP_FILES = [
   "./",
   "./index.html",

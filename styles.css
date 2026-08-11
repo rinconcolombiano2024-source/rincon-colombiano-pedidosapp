@@ -231,7 +231,8 @@
   font-weight: 900;
 }
 
-.customer-auth-fields input {
+.customer-auth-fields input,
+.customer-auth-fields select {
   width: 100%;
   min-height: 42px;
   border: 1px solid var(--line);
@@ -560,6 +561,13 @@
 
 .customer-map-button:disabled {
   opacity: 0.6;
+}
+
+#courierOpenGpsButton:disabled {
+  background: #d9dee7;
+  color: #667085;
+  cursor: not-allowed;
+  opacity: 1;
 }
 
 .customer-map-result {
