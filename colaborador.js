@@ -2120,28 +2120,52 @@ async function courierInitialize() {
   if (courierUser) await courierLoadProfile();
   if (courierUser) courierStartApprovalRealtime();
 
-  client.auth.onAuthStateChange(async (event, session) => {
-  courierUser = session?.user || null;
-  courierProfile = null;
-  courierAssignments = [];
-  courierStopApprovalRealtime();
-  courierStopLocationWatch();
+ client.auth.onAuthStateChange(async (event, session) => {
+  const nextUser = session?.user || null;
 
-  if (!courierUser) {
-    courierAvailable = false;
-    courierLastLocation = null;
-  } 
   if (event === "PASSWORD_RECOVERY") {
+    courierUser = nextUser;
     courierSetView("profile", { instant: true });
     courierShowPasswordRecoveryForm();
     return;
   }
-  courierSetView(courierUser ? "home" : "profile", { instant: true });
-  courierRender();
-  if (courierUser) {
-    await courierLoadProfile();
-    courierStartApprovalRealtime();
+
+  if (!nextUser) {
+    courierUser = null;
+    courierProfile = null;
+    courierAssignments = [];
+    courierAvailable = false;
+    courierLastLocation = null;
+
+    courierStopApprovalRealtime();
+    courierStopLocationWatch();
+
+    courierSetView("profile", { instant: true });
+    courierRender();
+    return;
   }
+
+  const userChanged =
+    !courierUser ||
+    courierUser.id !== nextUser.id;
+
+  courierUser = nextUser;
+
+  if (userChanged) {
+    courierProfile = null;
+    courierAssignments = [];
+    courierStopApprovalRealtime();
+  }
+
+  courierSetView("home", { instant: true });
+
+  await courierLoadProfile();
+
+  courierStartApprovalRealtime();
+  courierSyncLocationWatch();
+  courierSyncOffersPolling();
+
+  courierRender();
 });
 }
 
