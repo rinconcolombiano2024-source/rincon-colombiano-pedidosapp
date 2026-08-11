@@ -1891,12 +1891,16 @@ async function courierInitialize() {
   if (courierUser) courierStartApprovalRealtime();
 
   client.auth.onAuthStateChange(async (event, session) => {
-    courierUser = session?.user || null;
-    courierProfile = null;
-    courierAssignments = [];
-    courierAvailable = false;
-    courierStopApprovalRealtime();
-    courierStopLocationWatch();
+  courierUser = session?.user || null;
+courierProfile = null;
+courierAssignments = [];
+courierStopApprovalRealtime();
+courierStopLocationWatch();
+
+if (!courierUser) {
+  courierAvailable = false;
+  courierLastLocation = null;
+} 
     if (event === "PASSWORD_RECOVERY") {
       courierSetView("profile", { instant: true });
       courierShowPasswordRecoveryForm();
