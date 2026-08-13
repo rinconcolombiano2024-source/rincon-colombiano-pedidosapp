@@ -17,7 +17,7 @@ Deno.serve(async (request) => {
   const suppliedSecret = request.headers.get("x-rc-ordera-dispatch-secret") || "";
   const authorized =
     (Boolean(serviceRoleKey) && authorization === `Bearer ${serviceRoleKey}`) ||
-    (Boolean(dispatchSecret) && suppliedSecret === dispatchSecret);
+    (dispatchSecret.length >= 24 && suppliedSecret === dispatchSecret);
 
   if (!supabaseUrl || !serviceRoleKey || !authorized) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
