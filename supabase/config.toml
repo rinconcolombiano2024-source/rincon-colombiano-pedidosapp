@@ -1,3 +1,8 @@
 [functions.delete-own-restaurant-account]
 verify_jwt = true
 
+[functions.courier-push]
+verify_jwt = false
+
+[functions.delivery-dispatch]
+verify_jwt = false
