@@ -415,8 +415,10 @@ let courierAlarmTimer = null;
 let courierAlarmArmed = false;
 let courierCurrentView = "profile";
 let courierApprovalChannel = null;
+let courierDeliveryChannel = null;
 let courierLocationWatchId = null;
 let courierLastLocationWriteAt = 0;
+let courierResumePromise = null;
 let courierRegistrationRegion = courierDetectedRegion();
 let courierGoogleMapsScriptPromise = null;
 let courierCityAutocomplete = null;
@@ -694,7 +696,21 @@ function courierFriendlyDeliveryError(error) {
   if (/Courier profile is not approved/i.test(message)) return "Tu perfil debe estar aprobado por la administracion antes de recibir pedidos.";
   if (/Invalid location/i.test(message)) return "La ubicacion no es valida. Intenta compartirla de nuevo.";
   if (/not authenticated/i.test(message)) return "Inicia sesion como colaborador.";
+  if (/offer is no longer available|assignment transition is not allowed/i.test(message)) return "Este pedido ya cambio de estado o fue aceptado por otro colaborador. Actualiza la lista.";
+  if (/not authorized|permission denied/i.test(message)) return "No tienes permiso para realizar esta accion.";
   return message || "No se pudo actualizar la entrega.";
+}
+
+function courierLogError(operation, error, context = {}) {
+  console.error("RC_ORDERA_ERROR", {
+    operation,
+    error_code: String(error?.code || error?.status || "unknown"),
+    message: String(error?.message || "Error no identificado"),
+    user_id: courierUser?.id || null,
+    order_id: context.orderId || null,
+    assignment_id: context.assignmentId || null,
+    timestamp: new Date().toISOString(),
+  });
 }
 
 function courierEscapeHtml(value) {
@@ -1006,8 +1022,9 @@ async function courierShareLocation(options = {}) {
       accuracy: Math.round(position.coords.accuracy || 0),
       updatedAt: new Date().toISOString(),
     };
+    const nextAvailable = options.makeAvailable ? true : courierAvailable;
+    await courierPersistLiveLocation(nextAvailable);
     if (options.makeAvailable) courierAvailable = true;
-    await courierPersistLiveLocation(courierAvailable);
     if (courierAvailable) await courierLoadDeliveryOffers({ silent: true });
     if (courierElements.openGpsButton) courierElements.openGpsButton.disabled = false;
     courierSetMessage(
@@ -1015,8 +1032,11 @@ async function courierShareLocation(options = {}) {
       `Ubicacion guardada: ${courierLastLocation.lat}, ${courierLastLocation.lng}. Precision aprox: ${courierLastLocation.accuracy} m.`,
       "ok"
     );
+    return true;
   } catch (error) {
+    courierLogError("share_location", error);
     courierSetMessage(courierElements.locationMessage, courierFriendlyDeliveryError(error), "error");
+    return false;
   } finally {
     courierElements.shareLocationButton.disabled = false;
     courierRender();
@@ -1060,7 +1080,7 @@ function courierSyncLocationWatch() {
       };
       if (courierElements.openGpsButton) courierElements.openGpsButton.disabled = !courierHasValidCoordinates();
       const now = Date.now();
-      if (now - courierLastLocationWriteAt >= 10000) {
+      if (now - courierLastLocationWriteAt >= 15000) {
         courierLastLocationWriteAt = now;
         courierPersistLiveLocation(true).catch((error) => {
           courierSetMessage(courierElements.locationMessage, courierFriendlyDeliveryError(error), "error");
@@ -1224,6 +1244,34 @@ function courierSyncOffersPolling() {
   }
 }
 
+function courierStopDeliveryRealtime() {
+  const channel = courierDeliveryChannel;
+  courierDeliveryChannel = null;
+  if (channel && courierClient?.removeChannel) courierClient.removeChannel(channel).catch(() => {});
+}
+
+function courierStartDeliveryRealtime() {
+  courierStopDeliveryRealtime();
+  if (!courierClient?.channel || !courierUser || courierProfile?.status !== "approved") return;
+
+  courierDeliveryChannel = courierClient
+    .channel(`courier-deliveries-${courierUser.id}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "delivery_assignments",
+        filter: `courier_user_id=eq.${courierUser.id}`,
+      },
+      () => {
+        courierLoadDeliveryOffers({ silent: true }).catch((error) => courierLogError("realtime_delivery_reload", error));
+        courierLoadHistory().catch((error) => courierLogError("realtime_history_reload", error));
+      }
+    )
+    .subscribe();
+}
+
 async function courierUpdateAssignmentStatus(assignmentId, status) {
   const client = courierEnsureClient();
   if (!client || !courierUser) return;
@@ -1233,11 +1281,10 @@ async function courierUpdateAssignmentStatus(assignmentId, status) {
     p_status: status,
   });
   if (error) {
+    courierLogError("update_delivery_status", error, { assignmentId });
     courierSetMessage(courierElements.locationMessage, courierFriendlyDeliveryError(error), "error");
     return;
   }
-  if (status === "accepted") courierAvailable = false;
-if (status === "delivered") courierAvailable = true;
 
 await courierLoadDeliveryOffers({ silent: true });
 
@@ -1254,6 +1301,9 @@ courierSetMessage(
   `${courierAssignmentStatusLabel(status)}.`,
   "ok"
 );
+  if (status === "delivered" && courierAvailable) {
+    courierLoadDeliveryOffers({ silent: true }).catch((error) => courierLogError("load_next_offer", error));
+  }
   courierSetView(status === "delivered" || status === "rejected" ? "home" : "active");
 }
 
@@ -1636,11 +1686,15 @@ courierApplyProfileFields(data);
 
 if (data.status === "approved") {
   await courierLoadAvailability();
+} else {
+  courierAvailable = false;
+  courierStopDeliveryRealtime();
 }
 
 courierRender();
 
 if (data.status === "approved") {
+  courierStartDeliveryRealtime();
   courierLoadDeliveryOffers({ silent: true }).catch(() => {});
   courierLoadHistory().catch(() => {});
 }
@@ -1934,14 +1988,28 @@ function courierProfilePayloadForMetadata() {
 async function courierSignOut() {
   if (!courierClient) return;
   try {
-    await courierClient.auth.signOut({ scope: "local" });
-  } finally {
-    courierStopApprovalRealtime();
-    courierStopLocationWatch();
-    courierUser = null;
-    courierProfile = null;
-    window.location.replace("index.html?app=v79");
+    const { error: availabilityError } = await courierClient.rpc("set_courier_availability", {
+      p_available: false,
+    });
+    if (availabilityError) throw availabilityError;
+    const { error: signOutError } = await courierClient.auth.signOut({ scope: "local" });
+    if (signOutError) throw signOutError;
+  } catch (error) {
+    courierLogError("courier_sign_out", error);
+    courierSetMessage(
+      courierElements.locationMessage || courierElements.authMessage,
+      "No fue posible desconectarte en la nube. Revisa internet e intenta cerrar sesion nuevamente.",
+      "error"
+    );
+    return;
   }
+  courierStopApprovalRealtime();
+  courierStopDeliveryRealtime();
+  courierStopLocationWatch();
+  courierUser = null;
+  courierProfile = null;
+  courierAvailable = false;
+  window.location.replace("index.html?app=v84");
 }
 function courierBase64UrlToUint8Array(base64String) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -2062,31 +2130,77 @@ async function courierToggleAvailability() {
   if (courierProfile?.status !== "approved") return;
 
   const nextAvailable = !courierAvailable;
-
-  if (nextAvailable) {
-    courierArmAlarm().catch(() => {});
-    await courierRegisterPushNotifications();
-  }
   if (nextAvailable && !courierLastLocation) {
     courierSetMessage(courierElements.locationMessage, "Para estar disponible primero comparte tu ubicacion actual.");
-    courierShareLocation({ makeAvailable: true });
+    await courierShareLocation({ makeAvailable: true });
     return;
   }
 
-  courierAvailable = nextAvailable;
-  courierRender();
-  courierPersistLiveLocation(courierAvailable)
-    .then(() => {
-      courierSetMessage(
-        courierElements.locationMessage,
-        courierAvailable ? "Estas disponible para recibir pedidos cercanos." : "Estas desconectado para nuevas entregas.",
-        "ok"
-      );
-      if (courierAvailable) courierLoadDeliveryOffers({ silent: true }).catch(() => {});
-    })
-    .catch((error) => {
-      courierSetMessage(courierElements.locationMessage, courierFriendlyDeliveryError(error), "error");
+  courierElements.availabilityButton.disabled = true;
+  try {
+    const client = courierEnsureClient();
+    const { data, error } = await client.rpc("set_courier_availability", {
+      p_available: nextAvailable,
     });
+    if (error) throw error;
+
+    const confirmed = Array.isArray(data) ? data[0] : data;
+    courierAvailable = confirmed?.available === true;
+    if (courierAvailable) {
+      courierArmAlarm().catch(() => {});
+      courierRegisterPushNotifications().catch((pushError) => courierLogError("register_push", pushError));
+      courierLoadDeliveryOffers({ silent: true }).catch(() => {});
+    }
+    courierSetMessage(
+      courierElements.locationMessage,
+      courierAvailable ? "Estas disponible para recibir pedidos cercanos." : "Estas desconectado para nuevas entregas.",
+      "ok"
+    );
+  } catch (error) {
+    courierLogError("set_availability", error);
+    await courierLoadAvailability().catch(() => {});
+    courierSetMessage(courierElements.locationMessage, courierFriendlyDeliveryError(error), "error");
+  } finally {
+    courierElements.availabilityButton.disabled = false;
+    courierRender();
+  }
+}
+
+async function courierResumeRuntime() {
+  if (document.visibilityState === "hidden" || courierResumePromise || !courierClient) return courierResumePromise;
+  courierResumePromise = (async () => {
+    const { data, error } = await courierClient.auth.getSession();
+    if (error) throw error;
+    const sessionUser = data.session?.user || null;
+    if (!sessionUser) return;
+    courierUser = sessionUser;
+    await courierLoadProfile();
+    courierStartApprovalRealtime();
+    courierStartDeliveryRealtime();
+    courierSyncOffersPolling();
+    courierSyncLocationWatch();
+
+    if (courierProfile?.status === "approved" && courierAvailable && navigator.geolocation && navigator.onLine) {
+      try {
+        const position = await courierCurrentPosition();
+        courierLastLocation = {
+          lat: Number(position.coords.latitude).toFixed(6),
+          lng: Number(position.coords.longitude).toFixed(6),
+          accuracy: Math.round(position.coords.accuracy || 0),
+          updatedAt: new Date().toISOString(),
+        };
+        await courierPersistLiveLocation(true);
+      } catch (locationError) {
+        courierLogError("resume_location", locationError);
+      }
+    }
+  })()
+    .catch((error) => courierLogError("resume_runtime", error))
+    .finally(() => {
+      courierResumePromise = null;
+      courierRender();
+    });
+  return courierResumePromise;
 }
 
 function courierUrlLooksLikeRecovery() {
@@ -2119,6 +2233,7 @@ async function courierInitialize() {
   if (courierRecoveringPassword) courierShowPasswordRecoveryForm();
   if (courierUser) await courierLoadProfile();
   if (courierUser) courierStartApprovalRealtime();
+  if (courierUser) courierStartDeliveryRealtime();
 
  client.auth.onAuthStateChange(async (event, session) => {
   const nextUser = session?.user || null;
@@ -2138,6 +2253,7 @@ async function courierInitialize() {
     courierLastLocation = null;
 
     courierStopApprovalRealtime();
+    courierStopDeliveryRealtime();
     courierStopLocationWatch();
 
     courierSetView("profile", { instant: true });
@@ -2161,7 +2277,8 @@ async function courierInitialize() {
 
   await courierLoadProfile();
 
-  courierStartApprovalRealtime();
+    courierStartApprovalRealtime();
+    courierStartDeliveryRealtime();
   courierSyncLocationWatch();
   courierSyncOffersPolling();
 
@@ -2291,6 +2408,19 @@ courierElements.selfieFileInput?.addEventListener("change", () =>
 courierElements.workPermitFileInput?.addEventListener("change", () =>
   courierHandleFileUpload(courierElements.workPermitFileInput, courierElements.workPermitUrlInput, "permiso-trabajo", "Permiso de trabajo")
 );
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") courierResumeRuntime();
+});
+window.addEventListener("pageshow", () => courierResumeRuntime());
+window.addEventListener("online", () => courierResumeRuntime());
+window.addEventListener("offline", () => {
+  courierSetMessage(
+    courierElements.locationMessage,
+    "Sin conexion. Tu estado en linea permanece guardado y la app se sincronizara al reconectar.",
+    "error"
+  );
+});
 
 if (courierElements.countryInput && !courierElements.countryInput.value) {
   courierElements.countryInput.value = courierRegistrationRegion.countryCode || "";

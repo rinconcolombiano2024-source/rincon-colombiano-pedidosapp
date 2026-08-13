@@ -273,8 +273,10 @@ function adminRenderCourierList(rows = []) {
           }</p>
           <div class="courier-documents">${docs}</div>
           <div class="client-order-actions">
-            <button type="button" data-action="approve" ${row.status === "approved" ? "disabled" : ""}>Aprobar para trabajar</button>
+            ${row.status !== "approved" ? '<button type="button" data-action="approve">Aprobar para trabajar</button>' : ""}
             <button type="button" data-action="reject" ${row.status === "rejected" ? "disabled" : ""}>Rechazar</button>
+            ${row.status === "approved" ? '<button type="button" data-action="suspend">Suspender</button>' : ""}
+            ${["suspended", "inactive", "rejected"].includes(row.status) ? '<button type="button" data-action="reactivate">Reactivar</button>' : ""}
           </div>
         </article>
       `;
@@ -335,7 +337,13 @@ async function adminOpenCourierDocument(ref) {
 async function adminReviewCourier(userId, status) {
   const client = adminEnsureClient();
   if (!client || !adminUser) return;
-  const action = status === "approved" ? "aprobar para trabajar" : "rechazar";
+  const actionLabels = {
+    approved: "aprobar o reactivar para trabajar",
+    rejected: "rechazar",
+    suspended: "suspender",
+    inactive: "desactivar",
+  };
+  const action = actionLabels[status] || "actualizar";
   if (!confirm(`Confirmas ${action} este colaborador?`)) return;
 
   adminSetMessage(adminElements.authMessage, "Actualizando colaborador...");
@@ -381,7 +389,11 @@ async function adminReviewCourier(userId, status) {
     adminElements.authMessage,
     status === "approved"
       ? "Colaborador aprobado y confirmado en Supabase. Ya puede trabajar."
-      : "Solicitud rechazada y confirmada en Supabase.",
+      : status === "suspended"
+        ? "Colaborador suspendido y desconectado en Supabase."
+        : status === "inactive"
+          ? "Colaborador desactivado y desconectado en Supabase."
+          : "Solicitud rechazada y confirmada en Supabase.",
     "ok"
   );
   return true;
@@ -685,6 +697,8 @@ adminElements.courierList?.addEventListener("click", async (event) => {
   try {
     if (button.dataset.action === "approve") await adminReviewCourier(card.dataset.courierId, "approved");
     if (button.dataset.action === "reject") await adminReviewCourier(card.dataset.courierId, "rejected");
+    if (button.dataset.action === "suspend") await adminReviewCourier(card.dataset.courierId, "suspended");
+    if (button.dataset.action === "reactivate") await adminReviewCourier(card.dataset.courierId, "approved");
   } finally {
     if (button.isConnected) button.disabled = false;
   }

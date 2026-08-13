@@ -4,6 +4,7 @@ const customerElements = {
   languageSelect: document.querySelector("#customerLanguageSelect"),
   status: document.querySelector("#customerStatus"),
   trackingStatus: document.querySelector("#customerTrackingStatus"),
+  orderTimeline: document.querySelector("#customerOrderTimeline"),
   businessLogo: document.querySelector("#customerBusinessLogo"),
   businessName: document.querySelector("#customerBusinessName"),
   accountSummary: document.querySelector("#customerAccountSummary"),
@@ -47,6 +48,7 @@ const customerElements = {
   historyList: document.querySelector("#customerHistoryList"),
   refreshHistoryButton: document.querySelector("#customerRefreshHistoryButton"),
   refreshMenuButton: document.querySelector("#customerRefreshMenuButton"),
+  favoriteRestaurantButton: document.querySelector("#customerFavoriteRestaurantButton"),
   tableLabel: document.querySelector("#customerTableLabel"),
   topLocation: document.querySelector("#customerTopLocation"),
   views: Array.from(document.querySelectorAll("[data-customer-view]")),
@@ -96,6 +98,7 @@ editProfileButton: document.querySelector("#customerEditProfileButton"),
 const CUSTOMER_LANGUAGE_KEY = "rincon_colombiano_customer_language";
 const CUSTOMER_APP_LANGUAGE_KEY = "rincon_colombiano_app_language";
 const CUSTOMER_TRANSLATION_CACHE_KEY = "rincon_colombiano_description_translations_v1";
+const CUSTOMER_PENDING_ORDER_KEY_PREFIX = "rc_ordera_pending_customer_order";
 const CUSTOMER_DELIVERY_MARKUP = 1.6714285714;
 const CUSTOMER_I18N = {
   es: {
@@ -215,6 +218,27 @@ const CUSTOMER_I18N = {
     historyEmpty: "Todavia no tienes pedidos guardados.",
     historyLoadError: "No se pudo cargar el historial. Revisa internet e intenta de nuevo.",
     historyOpenOrder: "Ver estado y chat",
+    historyRepeatOrder: "Pedir nuevamente",
+    historyRepeatReady: "Carrito actualizado con los productos y precios disponibles ahora.",
+    historyRepeatPartial: "Algunos productos ya no estan disponibles. Agregue los que siguen activos con sus precios actuales.",
+    historyRepeatUnavailable: "Ningun producto de ese pedido esta disponible actualmente.",
+    favoriteRestaurant: "Guardar restaurante favorito",
+    unfavoriteRestaurant: "Quitar restaurante de favoritos",
+    favoriteSignIn: "Inicia sesion como cliente para guardar favoritos.",
+    favoriteSaveError: "No fue posible actualizar el favorito.",
+    orderTimelineLabel: "Progreso del pedido",
+    timelineCreated: "Pedido creado",
+    timelineSubmitted: "Pedido enviado",
+    timelineAccepted: "Restaurante acepto",
+    timelinePreparing: "En preparacion",
+    timelineReady: "Pedido listo",
+    timelineCourierOffered: "Buscando colaborador",
+    timelineCourierAccepted: "Colaborador asignado",
+    timelineCourierArrivedRestaurant: "Colaborador llego al restaurante",
+    timelineOnTheWay: "Pedido en camino",
+    timelineCourierArrivedCustomer: "Colaborador llego",
+    timelineDelivered: "Pedido entregado",
+    timelineCancelled: "Pedido cancelado",
     historyTicket: "Ticket",
     historyNoTicket: "Sin ticket",
     historyItems: "{count} producto(s)",
@@ -283,6 +307,7 @@ const CUSTOMER_I18N = {
     addProductFirst: "Agrega al menos un producto.",
     sendingOrder: "Enviando pedido...",
     sendOrderError: "No se pudo enviar. Revisa internet o avisa al restaurante.",
+    menuChangedBeforeOrder: "El menu cambio antes de confirmar el pedido. Ya cargamos los precios y productos actuales; revisa el carrito.",
     orderSent: "Pedido enviado. Espera confirmacion del restaurante.",
     orderSentWaiting: "Pedido enviado. Esperando que el restaurante lo acepte.",
     orderSentCashier: "Pedido enviado. El restaurante confirmara el estado en caja.",
@@ -472,6 +497,27 @@ const CUSTOMER_I18N = {
     historyEmpty: "Nie masz jeszcze zapisanych zamowien.",
     historyLoadError: "Nie udalo sie zaladowac historii. Sprawdz internet i sprobuj ponownie.",
     historyOpenOrder: "Zobacz status i czat",
+    historyRepeatOrder: "Zamow ponownie",
+    historyRepeatReady: "Koszyk zostal zaktualizowany o produkty i ceny dostepne teraz.",
+    historyRepeatPartial: "Niektore produkty nie sa juz dostepne. Dodano aktywne produkty z aktualnymi cenami.",
+    historyRepeatUnavailable: "Zaden produkt z tego zamowienia nie jest obecnie dostepny.",
+    favoriteRestaurant: "Dodaj restauracje do ulubionych",
+    unfavoriteRestaurant: "Usun restauracje z ulubionych",
+    favoriteSignIn: "Zaloguj sie jako klient, aby zapisywac ulubione.",
+    favoriteSaveError: "Nie udalo sie zaktualizowac ulubionych.",
+    orderTimelineLabel: "Postep zamowienia",
+    timelineCreated: "Zamowienie utworzone",
+    timelineSubmitted: "Zamowienie wyslane",
+    timelineAccepted: "Restauracja zaakceptowala",
+    timelinePreparing: "W przygotowaniu",
+    timelineReady: "Zamowienie gotowe",
+    timelineCourierOffered: "Szukamy kuriera",
+    timelineCourierAccepted: "Kurier przydzielony",
+    timelineCourierArrivedRestaurant: "Kurier dotarl do restauracji",
+    timelineOnTheWay: "Zamowienie w drodze",
+    timelineCourierArrivedCustomer: "Kurier dotarl",
+    timelineDelivered: "Zamowienie dostarczone",
+    timelineCancelled: "Zamowienie anulowane",
     historyTicket: "Bilet",
     historyNoTicket: "Bez biletu",
     historyItems: "{count} produkt(y)",
@@ -540,6 +586,7 @@ const CUSTOMER_I18N = {
     addProductFirst: "Dodaj przynajmniej jeden produkt.",
     sendingOrder: "Wysylanie zamowienia...",
     sendOrderError: "Nie udalo sie wyslac. Sprawdz internet albo powiadom restauracje.",
+    menuChangedBeforeOrder: "Menu zmienilo sie przed potwierdzeniem zamowienia. Zaladowalismy aktualne produkty i ceny; sprawdz koszyk.",
     orderSent: "Zamowienie wyslane. Poczekaj na potwierdzenie restauracji.",
     orderSentWaiting: "Zamowienie wyslane. Oczekiwanie na akceptacje restauracji.",
     orderSentCashier: "Zamowienie wyslane. Restauracja potwierdzi status w kasie.",
@@ -729,6 +776,27 @@ const CUSTOMER_I18N = {
     historyEmpty: "You do not have saved orders yet.",
     historyLoadError: "Could not load history. Check internet and try again.",
     historyOpenOrder: "View status and chat",
+    historyRepeatOrder: "Order again",
+    historyRepeatReady: "The cart now uses the products and prices currently available.",
+    historyRepeatPartial: "Some products are no longer available. Active items were added with current prices.",
+    historyRepeatUnavailable: "None of the products in that order are currently available.",
+    favoriteRestaurant: "Save favorite restaurant",
+    unfavoriteRestaurant: "Remove restaurant from favorites",
+    favoriteSignIn: "Sign in as a customer to save favorites.",
+    favoriteSaveError: "The favorite could not be updated.",
+    orderTimelineLabel: "Order progress",
+    timelineCreated: "Order created",
+    timelineSubmitted: "Order submitted",
+    timelineAccepted: "Restaurant accepted",
+    timelinePreparing: "Preparing",
+    timelineReady: "Order ready",
+    timelineCourierOffered: "Finding a courier",
+    timelineCourierAccepted: "Courier assigned",
+    timelineCourierArrivedRestaurant: "Courier arrived at restaurant",
+    timelineOnTheWay: "Order on the way",
+    timelineCourierArrivedCustomer: "Courier arrived",
+    timelineDelivered: "Order delivered",
+    timelineCancelled: "Order cancelled",
     historyTicket: "Ticket",
     historyNoTicket: "No ticket",
     historyItems: "{count} item(s)",
@@ -797,6 +865,7 @@ const CUSTOMER_I18N = {
     addProductFirst: "Add at least one product.",
     sendingOrder: "Sending order...",
     sendOrderError: "Could not send. Check internet or tell the restaurant.",
+    menuChangedBeforeOrder: "The menu changed before the order was confirmed. Current products and prices are loaded; review your cart.",
     orderSent: "Order sent. Wait for restaurant confirmation.",
     orderSentWaiting: "Order sent. Waiting for the restaurant to accept it.",
     orderSentCashier: "Order sent. The restaurant will confirm the status at the register.",
@@ -1380,6 +1449,7 @@ let customerMenuRealtimeTimer = null;
 let customerDirectoryRealtimeChannel = null;
 let customerDirectoryRealtimeTimer = null;
 let customerDirectoryPollTimer = null;
+let customerRestaurantFavorite = false;
 let customerCurrentView = customerStoreId ? "store" : "home";
 
 const CUSTOMER_DELIVERY_RATES = {
@@ -1479,6 +1549,62 @@ function customerRenderSelectedRestaurantDetails() {
       ? `${customerElements.distanceInput.value} km / ${customerFormatMoney(customerDeliveryFee())}`
       : customerT("deliveryCalculatedAtCheckout");
   }
+  customerRenderFavoriteRestaurantButton();
+}
+
+function customerRenderFavoriteRestaurantButton() {
+  const button = customerElements.favoriteRestaurantButton;
+  if (!button) return;
+  const active = Boolean(customerUser && customerStoreId && customerRestaurantFavorite);
+  const label = customerT(active ? "unfavoriteRestaurant" : "favoriteRestaurant");
+  button.disabled = !customerStoreId;
+  button.classList.toggle("is-active", active);
+  button.setAttribute("aria-pressed", String(active));
+  button.setAttribute("aria-label", label);
+  button.setAttribute("title", label);
+  const icon = button.querySelector("span");
+  if (icon) icon.textContent = active ? "\u2665" : "\u2661";
+}
+
+async function customerLoadFavoriteRestaurant() {
+  customerRestaurantFavorite = false;
+  if (!customerClient || !customerUser || !customerStoreId) {
+    customerRenderFavoriteRestaurantButton();
+    return;
+  }
+  const { data, error } = await customerClient
+    .from("customer_favorites")
+    .select("id")
+    .eq("customer_user_id", customerUser.id)
+    .eq("restaurant_user_id", customerStoreId)
+    .eq("favorite_type", "restaurant")
+    .eq("product_id", "")
+    .limit(1);
+  if (!error) customerRestaurantFavorite = Array.isArray(data) && data.length > 0;
+  customerRenderFavoriteRestaurantButton();
+}
+
+async function customerToggleFavoriteRestaurant() {
+  if (!customerUser) {
+    customerSetStatus(customerT("favoriteSignIn"), "error");
+    customerOpenAuthDialog("login");
+    return;
+  }
+  if (!customerClient || !customerStoreId) return;
+  const button = customerElements.favoriteRestaurantButton;
+  if (button) button.disabled = true;
+  const { data, error } = await customerClient.rpc("toggle_customer_favorite", {
+    p_restaurant_user_id: customerStoreId,
+    p_favorite_type: "restaurant",
+    p_product_id: "",
+  });
+  if (error) {
+    customerSetStatus(customerT("favoriteSaveError"), "error");
+  } else {
+    customerRestaurantFavorite = data === true;
+    customerSetStatus(customerT(customerRestaurantFavorite ? "favoriteRestaurant" : "unfavoriteRestaurant"), "ok");
+  }
+  customerRenderFavoriteRestaurantButton();
 }
 
 function customerRenderActiveOrderState() {
@@ -1763,6 +1889,7 @@ function customerRenderAccount() {
   }
   customerRenderLocationSummary();
   customerRenderProfileDetails();
+  customerRenderFavoriteRestaurantButton();
 }
 
 function customerUrlLooksLikeRecovery() {
@@ -1783,6 +1910,7 @@ async function customerInitializeAuth() {
     await customerLoadProfile();
     await customerEnsureIdentity();
     await customerLoadHistory();
+    await customerLoadFavoriteRestaurant();
   } else {
     customerRenderHistory();
   }
@@ -1797,9 +1925,12 @@ async function customerInitializeAuth() {
       await customerLoadProfile();
       await customerEnsureIdentity();
       await customerLoadHistory();
+      await customerLoadFavoriteRestaurant();
     } else {
       customerHistoryRows = [];
+      customerRestaurantFavorite = false;
       customerRenderHistory();
+      customerRenderFavoriteRestaurantButton();
     }
   });
 }
@@ -2021,7 +2152,7 @@ async function customerSignOut() {
     customerUser = null;
     customerHistoryRows = [];
     customerRenderAccount();
-    window.location.replace("index.html?app=v79");
+    window.location.replace("index.html?app=v84");
   }
 }
 
@@ -2194,6 +2325,9 @@ function customerRenderHistory() {
             <button class="customer-map-button" type="button" data-action="open-history-order">
               ${customerEscapeHtml(customerT("historyOpenOrder"))}
             </button>
+            <button class="customer-map-button" type="button" data-action="repeat-history-order">
+              ${customerEscapeHtml(customerT("historyRepeatOrder"))}
+            </button>
           </div>
         </article>
       `;
@@ -2224,6 +2358,63 @@ function customerOpenHistoryOrder(orderId) {
   customerRenderPaymentBox(row.id, Number(row.total) || 0, row.order_json || {});
   customerSetView("orders");
   customerElements.chatPanel?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function customerRepeatHistoryOrder(orderId) {
+  const row = customerHistoryRows.find((item) => item.id === orderId);
+  if (!row?.restaurant_user_id) return;
+
+  await customerSelectRestaurant(row.restaurant_user_id);
+  const repeatedItems = [];
+  let unavailableCount = 0;
+
+  customerHistoryItems(row).forEach((historicalItem) => {
+    const lookup = {
+      productId:
+        historicalItem?.product_id ||
+        historicalItem?.productId ||
+        historicalItem?.id ||
+        "",
+      name: customerLineName(historicalItem),
+    };
+    const currentProduct = customerFindCurrentMenuProduct(lookup);
+    if (!currentProduct || !customerProductAvailable(currentProduct)) {
+      unavailableCount += 1;
+      return;
+    }
+    const quantity = Math.min(99, Math.max(1, Math.trunc(customerLineQuantity(historicalItem))));
+    repeatedItems.push({
+      id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+      productId:
+        customerNormalizeProductId(currentProduct.id || currentProduct.productId) ||
+        lookup.productId,
+      name: currentProduct.name,
+      description: currentProduct.description || "",
+      price: Number.parseFloat(currentProduct.price) || 0,
+      qty: quantity,
+      note: customerNormalizeNoteDraft(
+        historicalItem?.note || historicalItem?.options_snapshot?.note || ""
+      ),
+    });
+  });
+
+  if (!repeatedItems.length) {
+    customerSetStatus(customerT("historyRepeatUnavailable"), "error");
+    return;
+  }
+
+  customerCart = repeatedItems;
+  if (["Comer en el punto", "Recoger en el punto", "Domicilio"].includes(row.order_type)) {
+    customerElements.orderType.value = row.order_type;
+  }
+  customerRenderDeliveryFields();
+  customerRenderCart();
+  customerSetView("store");
+  customerSetStatus(
+    customerT(unavailableCount ? "historyRepeatPartial" : "historyRepeatReady"),
+    unavailableCount ? "error" : "ok"
+  );
+  customerElements.cartItems?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function customerSetStatus(message, type = "") {
@@ -2336,7 +2527,7 @@ function customerStartDirectoryRealtime() {
     changeFilter.filter = `country_code=eq.${customerRegistrationRegion.countryCode}`;
   }
   customerDirectoryRealtimeChannel = customerClient
-    .channel(`public-restaurant-directory-v79-${customerRegistrationRegion.countryCode || "all"}`)
+    .channel(`public-restaurant-directory-v84-${customerRegistrationRegion.countryCode || "all"}`)
     .on(
       "postgres_changes",
       changeFilter,
@@ -2405,7 +2596,7 @@ function customerClearRestaurantSelection(messageKey = "") {
 
   const nextUrl = new URL(window.location.href);
   nextUrl.searchParams.delete("store");
-  nextUrl.searchParams.set("app", "v79");
+  nextUrl.searchParams.set("app", "v84");
   window.history.replaceState({}, "", nextUrl.toString());
 
   customerApplyBusinessName();
@@ -2578,13 +2769,14 @@ async function customerSelectRestaurant(storeId, options = {}) {
   if (options.updateUrl !== false) {
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("store", customerStoreId);
-    nextUrl.searchParams.set("app", "v79");
+    nextUrl.searchParams.set("app", "v84");
     window.history.replaceState({}, "", nextUrl.toString());
   }
 
   customerApplyMenuSearch("");
   customerRenderRestaurantDirectory();
   await customerLoadMenu({ skipDirectory: true });
+  await customerLoadFavoriteRestaurant();
   customerRenderSelectedRestaurantDetails();
   customerSetView("store");
   if (customerSelectedRestaurant()?.operationalOpen !== true) {
@@ -3586,10 +3778,42 @@ function customerNormalizeRpcRow(data) {
   return data || null;
 }
 
+function customerPendingOrderStorageKey() {
+  return `${CUSTOMER_PENDING_ORDER_KEY_PREFIX}_${customerStoreId || "unknown"}`;
+}
+
+function customerOrderFingerprint(orderPayload) {
+  const fingerprintPayload = { ...orderPayload };
+  delete fingerprintPayload.createdAt;
+  delete fingerprintPayload.publicToken;
+  return JSON.stringify(fingerprintPayload);
+}
+
+function customerReadPendingOrder(fingerprint) {
+  try {
+    const pending = JSON.parse(localStorage.getItem(customerPendingOrderStorageKey()) || "null");
+    const createdAt = Number(pending?.createdAt) || 0;
+    const isRecent = Date.now() - createdAt < 30 * 60 * 1000;
+    if (isRecent && pending?.fingerprint === fingerprint && pending?.orderId && pending?.publicToken) {
+      return pending;
+    }
+  } catch {
+    // A damaged local retry marker must never block a new order.
+  }
+  return null;
+}
+
 async function customerCreateCustomerOrder(orderPayload, total, tableLabel, customerName, orderType) {
-  const orderId = customerGenerateId();
-  const publicToken = customerGenerateId();
+  const fingerprint = customerOrderFingerprint(orderPayload);
+  const pendingOrder = customerReadPendingOrder(fingerprint);
+  const orderId = pendingOrder?.orderId || customerGenerateId();
+  const publicToken = pendingOrder?.publicToken || customerGenerateId();
   const payloadWithToken = { ...orderPayload, publicToken };
+
+  localStorage.setItem(
+    customerPendingOrderStorageKey(),
+    JSON.stringify({ fingerprint, orderId, publicToken, createdAt: pendingOrder?.createdAt || Date.now() })
+  );
 
   const { data: rpcData, error: rpcError } = await customerClient.rpc("create_customer_order", {
     p_id: orderId,
@@ -3602,51 +3826,15 @@ async function customerCreateCustomerOrder(orderPayload, total, tableLabel, cust
     p_total: total,
   });
 
-  if (!rpcError) {
-    const row = customerNormalizeRpcRow(rpcData);
-    return {
-      id: row?.id || orderId,
-      publicToken: row?.public_token || publicToken,
-      payload: payloadWithToken,
-      trackingAvailable: true,
-    };
-  }
+  if (rpcError) throw rpcError;
 
-  const insertPayload = {
-    id: orderId,
-    user_id: customerStoreId,
-    customer_user_id: customerUser?.id || null,
-    public_token: publicToken,
-    status: "pending",
-    table_label: tableLabel,
-    customer_name: customerName,
-    order_type: orderType,
-    order_json: payloadWithToken,
-    total,
-  };
-
-  let { error: insertError } = await customerClient.from("customer_orders").insert(insertPayload);
-  if (!insertError) {
-    return {
-      id: orderId,
-      publicToken,
-      payload: payloadWithToken,
-      trackingAvailable: true,
-    };
-  }
-
-  const legacyPayload = { ...insertPayload };
-  delete legacyPayload.public_token;
-  delete legacyPayload.customer_user_id;
-  legacyPayload.order_json = orderPayload;
-  ({ error: insertError } = await customerClient.from("customer_orders").insert(legacyPayload));
-  if (insertError) throw insertError;
-
+  const row = customerNormalizeRpcRow(rpcData);
+  localStorage.removeItem(customerPendingOrderStorageKey());
   return {
-    id: orderId,
-    publicToken: "",
-    payload: orderPayload,
-    trackingAvailable: false,
+    id: row?.id || orderId,
+    publicToken: row?.public_token || publicToken,
+    payload: payloadWithToken,
+    trackingAvailable: true,
   };
 }
 
@@ -3663,6 +3851,55 @@ function customerStatusType(status) {
   if (status === "accepted" || status === "sent" || status === "delivered") return "ok";
   if (status === "cancelled") return "error";
   return "";
+}
+
+function customerTimelineLabel(status) {
+  const labels = {
+    created: "timelineCreated",
+    submitted: "timelineSubmitted",
+    restaurant_review: "timelineSubmitted",
+    accepted: "timelineAccepted",
+    preparing: "timelinePreparing",
+    ready_for_pickup: "timelineReady",
+    courier_searching: "timelineCourierOffered",
+    courier_offered: "timelineCourierOffered",
+    courier_accepted: "timelineCourierAccepted",
+    courier_arrived_restaurant: "timelineCourierArrivedRestaurant",
+    picked_up: "timelineOnTheWay",
+    on_the_way: "timelineOnTheWay",
+    courier_arrived_customer: "timelineCourierArrivedCustomer",
+    delivered: "timelineDelivered",
+    cancelled: "timelineCancelled",
+    rejected: "timelineCancelled",
+  };
+  return customerT(labels[status] || "timelineSubmitted");
+}
+
+function customerRenderOrderTimeline(events = []) {
+  if (!customerElements.orderTimeline) return;
+  customerElements.orderTimeline.hidden = !events.length;
+  customerElements.orderTimeline.innerHTML = events
+    .map((event) => {
+      const created = new Date(event.created_at);
+      const time = Number.isNaN(created.getTime())
+        ? ""
+        : created.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      return `<li><span>${customerEscapeHtml(customerTimelineLabel(event.new_status))}</span><time>${customerEscapeHtml(time)}</time></li>`;
+    })
+    .join("");
+}
+
+async function customerLoadOrderTimeline() {
+  if (!customerTrackedOrder?.id || !customerTrackedOrder.publicToken || !customerClient) {
+    customerRenderOrderTimeline([]);
+    return;
+  }
+  const { data, error } = await customerClient.rpc("get_customer_order_timeline", {
+    p_order_id: customerTrackedOrder.id,
+    p_public_token: customerTrackedOrder.publicToken,
+  });
+  if (error) return;
+  customerRenderOrderTimeline(Array.isArray(data) ? data : []);
 }
 
 async function customerPollOrderStatus() {
@@ -3687,6 +3924,7 @@ async function customerPollOrderStatus() {
   const message = customerStatusText(row);
   const type = customerStatusType(row.status);
   customerSetTrackingStatus(message, type);
+  customerLoadOrderTimeline().catch(() => {});
 
   if (previousStatus && previousStatus !== row.status) {
     customerShowNotification(customerT("notificationStatusTitle"), message);
@@ -3708,6 +3946,7 @@ function customerStartStatusTracking(orderId, publicToken, paymentMethod, paymen
     status: "pending",
   };
   customerSetTrackingStatus(customerT("orderSentWaiting"), "");
+  customerRenderOrderTimeline([]);
   customerPollOrderStatus().catch(() => {});
   customerStatusTimer = window.setInterval(() => {
     customerPollOrderStatus().catch(() => {});
@@ -4114,13 +4353,16 @@ async function customerSendOrder() {
     } else if (/restaurant (country|region) does not match/i.test(String(error?.message || ""))) {
       customerSetStatus(customerT("restaurantRegionMismatch"), "error");
       customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
+    } else if (/product .*unavailable|product not found|invalid product|menu changed/i.test(String(error?.message || ""))) {
+      customerSetStatus(customerT("menuChangedBeforeOrder"), "error");
+      customerLoadMenu({ silent: true }).catch(() => {});
     }
     insertedOrder = null;
   }
 
   if (!insertedOrder) {
     customerElements.sendButton.disabled = false;
-    if (![customerT("restaurantClosedOrder"), customerT("restaurantRegionMismatch")].includes(customerElements.status.textContent)) {
+    if (![customerT("restaurantClosedOrder"), customerT("restaurantRegionMismatch"), customerT("menuChangedBeforeOrder")].includes(customerElements.status.textContent)) {
       customerSetStatus(customerT("sendOrderError"), "error");
     }
     return;
@@ -4245,10 +4487,16 @@ customerElements.restaurantList?.addEventListener("keydown", (event) => {
 });
 customerElements.refreshHistoryButton.addEventListener("click", () => customerLoadHistory());
 customerElements.historyList.addEventListener("click", (event) => {
-  const button = event.target.closest('button[data-action="open-history-order"]');
+  const button = event.target.closest("button[data-action]");
   const row = event.target.closest(".customer-history-item");
   if (!button || !row) return;
-  customerOpenHistoryOrder(row.dataset.orderId);
+  if (button.dataset.action === "open-history-order") customerOpenHistoryOrder(row.dataset.orderId);
+  if (button.dataset.action === "repeat-history-order") {
+    customerRepeatHistoryOrder(row.dataset.orderId).catch((error) => {
+      console.error(error);
+      customerSetStatus(customerT("historyRepeatUnavailable"), "error");
+    });
+  }
 });
 
 customerElements.notesInput.addEventListener("input", () => {
@@ -4292,6 +4540,13 @@ customerElements.registerRegionInput?.addEventListener("change", () => {
 if (customerElements.refreshMenuButton) {
   customerElements.refreshMenuButton.addEventListener("click", customerRefreshMenu);
 }
+customerElements.favoriteRestaurantButton?.addEventListener("click", () => {
+  customerToggleFavoriteRestaurant().catch((error) => {
+    console.error(error);
+    customerSetStatus(customerT("favoriteSaveError"), "error");
+    customerRenderFavoriteRestaurantButton();
+  });
+});
 customerElements.notifyButton.addEventListener("click", () => {
   customerRequestNotificationPermission().catch(() => {
     customerSetTrackingStatus(customerT("notificationEnableError"), "error");

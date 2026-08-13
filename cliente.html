@@ -166,6 +166,9 @@
           <button class="customer-icon-action customer-store-refresh" id="customerRefreshMenuButton" type="button" title="Actualizar menu" aria-label="Actualizar menu" data-i18n-aria-label="refreshMenu">
             <span aria-hidden="true">&#8635;</span>
           </button>
+          <button class="customer-icon-action customer-store-favorite" id="customerFavoriteRestaurantButton" type="button" title="Guardar restaurante favorito" aria-label="Guardar restaurante favorito" aria-pressed="false" data-i18n-aria-label="favoriteRestaurant">
+            <span aria-hidden="true">&#9825;</span>
+          </button>
         </section>
 
         <section class="customer-status" id="customerStatus" role="status" data-i18n="loadingMenu">Cargando menu...</section>
@@ -276,6 +279,7 @@
         <section class="customer-active-order-panel">
           <h3 data-i18n="activeOrderTitle">Pedido activo</h3>
           <section class="customer-status customer-tracking-status" id="customerTrackingStatus" role="status" hidden></section>
+          <ol class="customer-order-timeline" id="customerOrderTimeline" aria-label="Progreso del pedido" data-i18n-aria-label="orderTimelineLabel" hidden></ol>
           <div class="customer-payment-box" id="customerPaymentBox" hidden></div>
           <section class="customer-chat-panel" id="customerChatPanel" hidden>
             <h3 data-i18n="chatTitle">Chat con el restaurante</h3>
@@ -341,7 +345,7 @@
     Editar perfil
   </button>
 </div>
-          <a class="customer-map-button customer-platform-home-link" href="index.html?app=v79" data-i18n="platformHome">Volver a la pantalla principal</a>
+          <a class="customer-map-button customer-platform-home-link" href="index.html?app=v84" data-i18n="platformHome">Volver a la pantalla principal</a>
         </section>
 
         <section class="customer-profile-settings">
