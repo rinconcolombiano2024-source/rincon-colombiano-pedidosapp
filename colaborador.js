@@ -2286,7 +2286,7 @@ async function courierInitialize() {
   if (courierUser) await courierLoadProfile();
   if (courierUser) courierStartApprovalRealtime();
 
- client.auth.onAuthStateChange(async (event, session) => {
+client.auth.onAuthStateChange(async (event, session) => {
   const nextUser = session?.user || null;
 
   if (event === "PASSWORD_RECOVERY") {
@@ -2296,19 +2296,30 @@ async function courierInitialize() {
     return;
   }
 
-  if (!nextUser) {
+  // SOLO un cierre de sesión real debe limpiar el estado.
+  if (event === "SIGNED_OUT") {
     courierUser = null;
     courierProfile = null;
     courierAssignments = [];
+    courierHistory = [];
     courierAvailable = false;
     courierLastLocation = null;
 
     courierStopApprovalRealtime();
-    courierStopDeliveryRealtime();
     courierStopLocationWatch();
+    courierStopOfferAlarm();
 
     courierSetView("profile", { instant: true });
     courierRender();
+    return;
+  }
+
+  // Si por un evento temporal Supabase todavía no devuelve usuario,
+  // NO interpretar eso como logout.
+  if (!nextUser) {
+    console.warn(
+      "Auth temporalmente sin usuario. Se conserva el estado del colaborador."
+    );
     return;
   }
 
@@ -2322,23 +2333,25 @@ async function courierInitialize() {
     courierProfile = null;
     courierAssignments = [];
     courierStopApprovalRealtime();
-    courierStopDeliveryRealtime();
-    courierStopLocationWatch();
-    courierStopOfferAlarm();
   }
 
-  courierSetView("home", { instant: true });
+  // Eventos normales como:
+  // INITIAL_SESSION
+  // SIGNED_IN
+  // TOKEN_REFRESHED
+  // USER_UPDATED
+  // no deben poner al colaborador offline.
 
   await courierLoadProfile();
 
-    courierStartApprovalRealtime();
+  courierSetView("home", { instant: true });
+
+  courierStartApprovalRealtime();
   courierSyncLocationWatch();
   courierSyncOffersPolling();
 
   courierRender();
 });
-}
-
 courierElements.signInButton.addEventListener("click", courierSignIn);
 courierElements.signUpButton.addEventListener("click", () => {
   if (!courierRegistrationMode) {
