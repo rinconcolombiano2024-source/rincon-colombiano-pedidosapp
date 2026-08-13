@@ -1642,31 +1642,48 @@ async function courierSaveProfile() {
     courierSetMessage(courierElements.profileMessage, error.message || "No se pudo guardar la solicitud.", "error");
   }
 }
-
 async function courierLoadAvailability() {
   const client = courierEnsureClient();
 
+  // IMPORTANTE:
+  // La ausencia temporal de cliente o sesión NO significa offline.
+  // Conservamos el último estado conocido hasta obtener respuesta real
+  // de Supabase.
   if (!client || !courierUser) {
-    courierAvailable = false;
     return;
   }
+
+  const currentUserId = courierUser.id;
 
   const { data, error } = await client
     .from("courier_live_locations")
     .select("available, lat, lng, accuracy_m, updated_at")
-    .eq("user_id", courierUser.id)
+    .eq("user_id", currentUserId)
     .maybeSingle();
 
   if (error) {
-    console.error("No se pudo cargar la disponibilidad del colaborador:", error);
+    console.error(
+      "No se pudo cargar la disponibilidad del colaborador:",
+      error
+    );
+
+    // Un error de red o Supabase NO significa offline.
     return;
   }
 
+  // Si durante la consulta cambió el usuario, ignoramos la respuesta.
+  if (!courierUser || courierUser.id !== currentUserId) {
+    return;
+  }
+
+  // No encontrar temporalmente el registro tampoco debe convertir
+  // automáticamente un estado conocido en false.
   if (!data) {
-    courierAvailable = false;
     return;
   }
 
+  // ÚNICAMENTE una respuesta real de Supabase determina
+  // el estado de disponibilidad.
   courierAvailable = data.available === true;
 
   const lat = Number(data.lat);
