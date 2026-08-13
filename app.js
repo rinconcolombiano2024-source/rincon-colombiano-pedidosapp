@@ -38,7 +38,7 @@ const STORAGE_KEYS = {
 
 const DEFAULT_BUSINESS_NAME = "MI RESTAURANTE";
 const DEFAULT_DELIVERY_MINIMUM_FEE = 20;
-const APP_VERSION = "v84";
+const APP_VERSION = "v84.1";
 const PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 const PLATFORM_APP_NAME = "RC ORDERA";
 const RESTAURANT_WEEK_DAYS = [
@@ -374,6 +374,7 @@ let legalAddress = readLegalAddress();
 let editingNoteItemId = null;
 let toastTimer = null;
 let pendingClientOrders = [];
+let clientDeliveryTrackingByOrderId = new Map();
 let clientOrdersTimer = null;
 let clientOrdersChannel = null;
 let clientAlarmTimer = null;
@@ -2269,7 +2270,28 @@ function startClientOrdersRealtime() {
       },
       () => refreshClientOrders({ silent: true }).catch(() => {})
     )
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "courier_live_locations",
+      },
+      () => refreshClientOrders({ silent: true }).catch(() => {})
+    )
     .subscribe();
+}
+
+async function loadCurrentRestaurantDeliveryTracking() {
+  if (!cloudState.client || !cloudState.user || !navigator.onLine) return new Map();
+  const { data, error } = await cloudState.client.rpc("get_current_restaurant_delivery_tracking");
+  if (error) {
+    if (!/PGRST202|could not find the function|42883/i.test(`${error.code || ""} ${error.message || ""}`)) {
+      console.error("No se pudo actualizar el seguimiento de domicilios:", error.code || error.message);
+    }
+    return new Map();
+  }
+  return new Map((Array.isArray(data) ? data : []).map((row) => [String(row.customer_order_id), row]));
 }
 
 async function refreshClientOrders(options = {}) {
@@ -2322,9 +2344,11 @@ async function refreshClientOrders(options = {}) {
   }
 
   const orders = data || [];
+  clientDeliveryTrackingByOrderId = await loadCurrentRestaurantDeliveryTracking();
   pendingClientOrders = await Promise.all(
     orders.map(async (order) => ({
       ...order,
+      deliveryTracking: clientDeliveryTrackingByOrderId.get(String(order.id)) || null,
       messages: await loadRestaurantChatMessages(order.id),
     }))
   );
@@ -2396,7 +2420,32 @@ function clientOrderCanRequestCourier(order) {
 function clientOrderCourierHtml(order) {
   if (!clientOrderNeedsCourier(order)) return "";
   const status = order?.courier_assignment_status || "unassigned";
-  return `<p class="client-order-note">COLABORADOR: ${escapeHtml(clientOrderCourierStatusLabel(status))}</p>`;
+  const tracking = order?.deliveryTracking || null;
+  const lat = Number(tracking?.courier_lat);
+  const lng = Number(tracking?.courier_lng);
+  const hasLocation = Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+  const locationDate = new Date(tracking?.courier_location_updated_at || 0);
+  const locationTime = Number.isNaN(locationDate.getTime())
+    ? ""
+    : locationDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const etaDate = new Date(tracking?.estimated_delivery_at || tracking?.estimated_pickup_at || 0);
+  const eta = Number.isNaN(etaDate.getTime())
+    ? ""
+    : etaDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const mapUrl = hasLocation
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lng}`)}`
+    : "";
+  return `
+    <p class="client-order-note">COLABORADOR: ${escapeHtml(clientOrderCourierStatusLabel(status))}</p>
+    ${tracking ? `
+      <div class="client-order-tracking">
+        ${tracking.courier_name ? `<strong>${escapeHtml(tracking.courier_name)}</strong>` : ""}
+        ${locationTime ? `<span>Ubicacion actualizada: ${escapeHtml(locationTime)}</span>` : ""}
+        ${eta ? `<span>Entrega estimada: ${escapeHtml(eta)}</span>` : ""}
+        ${mapUrl ? `<a href="${mapUrl}" target="_blank" rel="noopener noreferrer">Abrir ubicacion</a>` : ""}
+      </div>
+    ` : ""}
+  `;
 }
 
 function clientOrderActionsHtml(orderOrStatus) {
@@ -3197,16 +3246,16 @@ async function syncPendingData(options = {}) {
   const { silent = false, allowWhileLoading = false } = options;
   if (!cloudState.client || !cloudState.user || cloudState.syncing || !navigator.onLine) {
     updateCloudStatus();
-    return;
+    return false;
   }
-  if (cloudState.loading && !allowWhileLoading) return;
+  if (cloudState.loading && !allowWhileLoading) return false;
 
   const pendingDeletedOrderIds = readDeletedOrderIds();
   const pendingOrders = savedOrders.filter((order) => needsCloudSync(order) && !pendingDeletedOrderIds.includes(order.id));
   const shouldSyncSettings = hasPendingSettings();
   if (!pendingOrders.length && !pendingDeletedOrderIds.length && !shouldSyncSettings) {
     updateCloudStatus();
-    return;
+    return true;
   }
 
   cloudState.syncing = true;
@@ -3240,10 +3289,12 @@ async function syncPendingData(options = {}) {
     renderOrder();
     renderHistory();
     updateCloudStatus();
+    return true;
   } catch (error) {
     console.error(error);
     saveOrders();
     updateCloudStatus();
+    return false;
   } finally {
     cloudState.syncing = false;
   }
@@ -3579,18 +3630,35 @@ function friendlyAuthError(error) {
 
 async function signOut() {
   if (!cloudState.client) return;
+  const hasPendingChanges = pendingOrdersCount() > 0 || pendingDeletedOrdersCount() > 0 || hasPendingSettings();
+  if (hasPendingChanges && !navigator.onLine) {
+    alert("Hay cambios pendientes de sincronizar. Recupera la conexion antes de cerrar sesion para no perderlos.");
+    return;
+  }
+  if (hasPendingChanges) {
+    const synchronized = await syncPendingData({ silent: true, allowWhileLoading: true });
+    if (!synchronized || pendingOrdersCount() > 0 || pendingDeletedOrdersCount() > 0 || hasPendingSettings()) {
+      alert("No fue posible confirmar todos los cambios en la nube. La sesion sigue abierta para que puedas reintentar.");
+      return;
+    }
+  }
   try {
     await cloudState.client.auth.signOut({ scope: "local" });
-  } finally {
-    cloudState.user = null;
-    cloudState.ready = false;
-    pendingClientOrders = [];
-    stopClientOrdersPolling();
-    stopClientAlarm();
-    clearRememberedCloudSession();
-    updateClientOrdersBadge();
-    window.location.replace(`index.html?app=${APP_VERSION}`);
+  } catch (error) {
+    console.error(error);
+    alert("No fue posible cerrar la sesion. Revisa la conexion e intenta nuevamente.");
+    return;
   }
+  cloudState.user = null;
+  cloudState.ready = false;
+  pendingClientOrders = [];
+  stopClientOrdersPolling();
+  stopClientOrdersRealtime();
+  stopClientAlarm();
+  clearRememberedCloudSession();
+  clearRestaurantLocalData();
+  updateClientOrdersBadge();
+  window.location.replace(`index.html?app=${APP_VERSION}`);
 }
 
 function readMenuCatalog() {

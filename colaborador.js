@@ -1,6 +1,6 @@
 const COURIER_VAPID_PUBLIC_KEY = "BJzCszQo4HrAtXYFQBkA_HSiqTjSqPGIa-InDIqgYc1Bqcq3V2Cj4lAuN-HcV0fO1Z95EPNx-qhJU85Rl4nxJxE";
-
-
+const COURIER_APP_VERSION = "v84.1";
+const courierParams = new URLSearchParams(window.location.search);
 const COURIER_PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 const COURIER_DOCUMENT_BUCKET = "courier-documents";
 const COURIER_GOOGLE_MAPS_KEY_STORAGE = "rincon_colombiano_google_maps_api_key";
@@ -419,6 +419,7 @@ let courierDeliveryChannel = null;
 let courierLocationWatchId = null;
 let courierLastLocationWriteAt = 0;
 let courierResumePromise = null;
+let courierTargetAssignmentId = String(courierParams.get("assignment") || "").trim();
 let courierRegistrationRegion = courierDetectedRegion();
 let courierGoogleMapsScriptPromise = null;
 let courierCityAutocomplete = null;
@@ -453,6 +454,17 @@ function courierSetView(view, options = {}) {
 
 function courierNormalizeText(value) {
   return String(value || "").trim().replace(/\s+/g, " ");
+}
+
+function courierLocationAgeLabel(value) {
+  const timestamp = new Date(value || "").getTime();
+  if (!Number.isFinite(timestamp)) return "sin ubicacion guardada";
+  const seconds = Math.max(Math.floor((Date.now() - timestamp) / 1000), 0);
+  if (seconds < 60) return "hace menos de un minuto";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `hace ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  return `hace ${hours} h`;
 }
 
 function courierInputValue(input) {
@@ -822,7 +834,7 @@ function courierRenderActiveDelivery() {
   const deliveryUrl = courierDeliveryGpsUrl(active);
   const items = courierOrderItems(active);
   courierElements.activeDeliveryCard.innerHTML = `
-    <article class="courier-offer-card courier-active-card" data-assignment-id="${courierEscapeHtml(active.assignment_id)}">
+    <article class="courier-offer-card courier-active-card ${active.assignment_id === courierTargetAssignmentId ? "is-targeted" : ""}" data-assignment-id="${courierEscapeHtml(active.assignment_id)}">
       <div class="client-order-head">
         <div>
           <strong>${courierEscapeHtml(active.restaurant_name || "Restaurante")}</strong>
@@ -936,7 +948,7 @@ function courierRenderDeliveryOffers() {
       const status = assignment.status;
       const distance = Number.parseFloat(assignment.distance_km);
       return `
-        <article class="courier-offer-card" data-assignment-id="${courierEscapeHtml(assignment.assignment_id)}">
+        <article class="courier-offer-card ${assignment.assignment_id === courierTargetAssignmentId ? "is-targeted" : ""}" data-assignment-id="${courierEscapeHtml(assignment.assignment_id)}">
           <div class="client-order-head">
             <div>
               <strong>${courierEscapeHtml(assignment.restaurant_name || "Restaurante")}</strong>
@@ -1212,6 +1224,16 @@ async function courierLoadDeliveryOffers(options = {}) {
   const previousOffered = new Set(courierAssignments.filter((assignment) => assignment.status === "offered").map((assignment) => assignment.assignment_id));
   courierAssignments = Array.isArray(data) ? data : [];
 
+  if (courierTargetAssignmentId) {
+    const targetedAssignment = courierAssignments.find((assignment) => assignment.assignment_id === courierTargetAssignmentId);
+    if (targetedAssignment) {
+      courierSetView(["accepted", "arrived_restaurant", "picked_up", "arrived_customer"].includes(targetedAssignment.status) ? "active" : "home", { keepScroll: true });
+    } else {
+      courierSetMessage(courierElements.locationMessage, "Esta oferta ya no esta disponible.", "error");
+      courierTargetAssignmentId = "";
+    }
+  }
+
 const hasNewOffer = courierAssignments.some(
   (assignment) =>
     assignment.status === "offered" &&
@@ -1251,8 +1273,8 @@ function courierStopDeliveryRealtime() {
 }
 
 function courierStartDeliveryRealtime() {
-  courierStopDeliveryRealtime();
   if (!courierClient?.channel || !courierUser || courierProfile?.status !== "approved") return;
+  if (courierDeliveryChannel) return;
 
   courierDeliveryChannel = courierClient
     .channel(`courier-deliveries-${courierUser.id}`)
@@ -1303,6 +1325,9 @@ courierSetMessage(
 );
   if (status === "delivered" && courierAvailable) {
     courierLoadDeliveryOffers({ silent: true }).catch((error) => courierLogError("load_next_offer", error));
+  }
+  if (["delivered", "rejected", "cancelled"].includes(status) && courierTargetAssignmentId === assignmentId) {
+    courierTargetAssignmentId = "";
   }
   courierSetView(status === "delivered" || status === "rejected" ? "home" : "active");
 }
@@ -1501,7 +1526,9 @@ function courierRender() {
   if (courierElements.refreshOffersButton) courierElements.refreshOffersButton.disabled = status !== "approved";
   if (courierElements.openGpsButton) courierElements.openGpsButton.disabled = !courierHasValidCoordinates();
   courierElements.dashboardText.textContent = status === "approved"
-    ? "Perfil aprobado. Activa disponibilidad, comparte ubicacion y recibiras pedidos cercanos."
+    ? courierAvailable
+      ? `EN LINEA. Ultima ubicacion ${courierLocationAgeLabel(courierLastLocation?.updatedAt)}. Recibiras pedidos aunque cambies de aplicacion; el GPS se actualiza al volver.`
+      : "Perfil aprobado. Pulsa Desconectado para quedar EN LINEA y recibir pedidos."
     : "Tu perfil debe ser aprobado antes de recibir pedidos.";
   courierElements.availabilityButton.textContent = courierAvailable ? "Disponible" : "Desconectado";
   courierRenderVehicleRequirements();
@@ -1707,8 +1734,8 @@ function courierStopApprovalRealtime() {
 }
 
 function courierStartApprovalRealtime() {
-  courierStopApprovalRealtime();
   if (!courierClient?.channel || !courierUser) return;
+  if (courierApprovalChannel) return;
   courierApprovalChannel = courierClient
     .channel(`courier-approval-${courierUser.id}`)
     .on(
@@ -1987,6 +2014,10 @@ function courierProfilePayloadForMetadata() {
 
 async function courierSignOut() {
   if (!courierClient) return;
+  const previousAvailability = courierAvailable;
+  courierStopLocationWatch();
+  courierAvailable = false;
+  courierRender();
   try {
     const { error: availabilityError } = await courierClient.rpc("set_courier_availability", {
       p_available: false,
@@ -1995,6 +2026,9 @@ async function courierSignOut() {
     const { error: signOutError } = await courierClient.auth.signOut({ scope: "local" });
     if (signOutError) throw signOutError;
   } catch (error) {
+    courierAvailable = previousAvailability;
+    courierSyncLocationWatch();
+    courierRender();
     courierLogError("courier_sign_out", error);
     courierSetMessage(
       courierElements.locationMessage || courierElements.authMessage,
@@ -2009,7 +2043,7 @@ async function courierSignOut() {
   courierUser = null;
   courierProfile = null;
   courierAvailable = false;
-  window.location.replace("index.html?app=v84");
+  window.location.replace(`index.html?app=${COURIER_APP_VERSION}`);
 }
 function courierBase64UrlToUint8Array(base64String) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -2108,8 +2142,6 @@ async function courierRegisterPushNotifications() {
       throw error;
     }
 
-    console.log("RC ORDERA Push registrado correctamente.");
-
     return true;
   } catch (error) {
     console.error(
@@ -2176,9 +2208,11 @@ async function courierResumeRuntime() {
     courierUser = sessionUser;
     await courierLoadProfile();
     courierStartApprovalRealtime();
-    courierStartDeliveryRealtime();
     courierSyncOffersPolling();
     courierSyncLocationWatch();
+    if (courierProfile?.status === "approved" && courierAvailable) {
+      courierRegisterPushNotifications().catch((pushError) => courierLogError("resume_push", pushError));
+    }
 
     if (courierProfile?.status === "approved" && courierAvailable && navigator.geolocation && navigator.onLine) {
       try {
@@ -2228,12 +2262,12 @@ async function courierInitialize() {
   const { data } = await client.auth.getSession();
   courierUser = data.session?.user || null;
   if (courierUrlLooksLikeRecovery()) courierRecoveringPassword = true;
-  courierSetView(courierUser ? "home" : "profile", { instant: true });
+  const requestedView = courierParams.get("view");
+  courierSetView(courierUser && requestedView === "active" ? "active" : courierUser ? "home" : "profile", { instant: true });
   courierRender();
   if (courierRecoveringPassword) courierShowPasswordRecoveryForm();
   if (courierUser) await courierLoadProfile();
   if (courierUser) courierStartApprovalRealtime();
-  if (courierUser) courierStartDeliveryRealtime();
 
  client.auth.onAuthStateChange(async (event, session) => {
   const nextUser = session?.user || null;
@@ -2271,6 +2305,9 @@ async function courierInitialize() {
     courierProfile = null;
     courierAssignments = [];
     courierStopApprovalRealtime();
+    courierStopDeliveryRealtime();
+    courierStopLocationWatch();
+    courierStopOfferAlarm();
   }
 
   courierSetView("home", { instant: true });
@@ -2278,7 +2315,6 @@ async function courierInitialize() {
   await courierLoadProfile();
 
     courierStartApprovalRealtime();
-    courierStartDeliveryRealtime();
   courierSyncLocationWatch();
   courierSyncOffersPolling();
 

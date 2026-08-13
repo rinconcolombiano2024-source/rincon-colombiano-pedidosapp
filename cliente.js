@@ -4,6 +4,7 @@ const customerElements = {
   languageSelect: document.querySelector("#customerLanguageSelect"),
   status: document.querySelector("#customerStatus"),
   trackingStatus: document.querySelector("#customerTrackingStatus"),
+  courierTracking: document.querySelector("#customerCourierTracking"),
   orderTimeline: document.querySelector("#customerOrderTimeline"),
   businessLogo: document.querySelector("#customerBusinessLogo"),
   businessName: document.querySelector("#customerBusinessName"),
@@ -239,6 +240,13 @@ const CUSTOMER_I18N = {
     timelineCourierArrivedCustomer: "Colaborador llego",
     timelineDelivered: "Pedido entregado",
     timelineCancelled: "Pedido cancelado",
+    courierTrackingTitle: "Seguimiento del colaborador",
+    courierTrackingWaiting: "La ubicacion aparecera cuando un colaborador acepte el domicilio.",
+    courierTrackingName: "Colaborador: {name}",
+    courierTrackingLocation: "Ubicacion actualizada {time}",
+    courierTrackingEta: "Llegada estimada: {time}",
+    courierTrackingMap: "Abrir ubicacion en el mapa",
+    courierTrackingNow: "ahora",
     historyTicket: "Ticket",
     historyNoTicket: "Sin ticket",
     historyItems: "{count} producto(s)",
@@ -518,6 +526,13 @@ const CUSTOMER_I18N = {
     timelineCourierArrivedCustomer: "Kurier dotarl",
     timelineDelivered: "Zamowienie dostarczone",
     timelineCancelled: "Zamowienie anulowane",
+    courierTrackingTitle: "Sledzenie kuriera",
+    courierTrackingWaiting: "Lokalizacja pojawi sie, gdy kurier zaakceptuje dostawe.",
+    courierTrackingName: "Kurier: {name}",
+    courierTrackingLocation: "Lokalizacja zaktualizowana {time}",
+    courierTrackingEta: "Szacowany czas przyjazdu: {time}",
+    courierTrackingMap: "Otworz lokalizacje na mapie",
+    courierTrackingNow: "teraz",
     historyTicket: "Bilet",
     historyNoTicket: "Bez biletu",
     historyItems: "{count} produkt(y)",
@@ -797,6 +812,13 @@ const CUSTOMER_I18N = {
     timelineCourierArrivedCustomer: "Courier arrived",
     timelineDelivered: "Order delivered",
     timelineCancelled: "Order cancelled",
+    courierTrackingTitle: "Courier tracking",
+    courierTrackingWaiting: "The location will appear after a courier accepts the delivery.",
+    courierTrackingName: "Courier: {name}",
+    courierTrackingLocation: "Location updated {time}",
+    courierTrackingEta: "Estimated arrival: {time}",
+    courierTrackingMap: "Open location in map",
+    courierTrackingNow: "now",
     historyTicket: "Ticket",
     historyNoTicket: "No ticket",
     historyItems: "{count} item(s)",
@@ -1440,6 +1462,10 @@ const customerPlaceAutocompletes = new Map();
 let customerLocationCoords = null;
 let customerTrackedOrder = null;
 let customerStatusTimer = null;
+let customerTrackingRealtimeChannel = null;
+let customerTrackingRealtimeSignature = "";
+let customerTrackingRefreshTimer = null;
+let customerTrackingRpcAvailable = null;
 let customerChatTimer = null;
 let customerKnownChatMessageIds = new Set();
 let customerChatLoadedOnce = false;
@@ -2149,10 +2175,16 @@ async function customerSignOut() {
   try {
     await customerClient.auth.signOut({ scope: "local" });
   } finally {
+    if (customerStatusTimer) window.clearInterval(customerStatusTimer);
+    if (customerChatTimer) window.clearInterval(customerChatTimer);
+    customerStatusTimer = null;
+    customerChatTimer = null;
+    customerStopOrderTrackingRealtime();
+    customerTrackedOrder = null;
     customerUser = null;
     customerHistoryRows = [];
     customerRenderAccount();
-    window.location.replace("index.html?app=v84");
+    window.location.replace("index.html?app=v84.1");
   }
 }
 
@@ -2527,7 +2559,7 @@ function customerStartDirectoryRealtime() {
     changeFilter.filter = `country_code=eq.${customerRegistrationRegion.countryCode}`;
   }
   customerDirectoryRealtimeChannel = customerClient
-    .channel(`public-restaurant-directory-v84-${customerRegistrationRegion.countryCode || "all"}`)
+    .channel(`public-restaurant-directory-v84-1-${customerRegistrationRegion.countryCode || "all"}`)
     .on(
       "postgres_changes",
       changeFilter,
@@ -2596,7 +2628,7 @@ function customerClearRestaurantSelection(messageKey = "") {
 
   const nextUrl = new URL(window.location.href);
   nextUrl.searchParams.delete("store");
-  nextUrl.searchParams.set("app", "v84");
+  nextUrl.searchParams.set("app", "v84.1");
   window.history.replaceState({}, "", nextUrl.toString());
 
   customerApplyBusinessName();
@@ -2769,7 +2801,7 @@ async function customerSelectRestaurant(storeId, options = {}) {
   if (options.updateUrl !== false) {
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("store", customerStoreId);
-    nextUrl.searchParams.set("app", "v84");
+    nextUrl.searchParams.set("app", "v84.1");
     window.history.replaceState({}, "", nextUrl.toString());
   }
 
@@ -3840,10 +3872,15 @@ async function customerCreateCustomerOrder(orderPayload, total, tableLabel, cust
 
 function customerStatusText(row) {
   const ticket = row?.ticket_number ? customerT("ticketSuffix", { ticket: String(row.ticket_number).padStart(4, "0") }) : "";
-  if (row?.status === "accepted") return customerT("accepted", { ticket });
-  if (row?.status === "sent") return customerT("sent", { ticket });
-  if (row?.status === "delivered") return customerT("delivered", { ticket });
-  if (row?.status === "cancelled") return customerT("cancelled");
+  const status = row?.canonical_status || row?.status || "";
+  if (status === "accepted") return customerT("accepted", { ticket });
+  if (status === "sent") return customerT("sent", { ticket });
+  if (status === "delivered") return customerT("delivered", { ticket });
+  if (status === "cancelled" || status === "rejected") return customerT("cancelled");
+  if (!["", "created", "submitted", "restaurant_review"].includes(status)) {
+    const label = customerTimelineLabel(status);
+    return ticket ? `${label} - ${ticket}` : label;
+  }
   return customerT("orderSentWaiting");
 }
 
@@ -3902,42 +3939,162 @@ async function customerLoadOrderTimeline() {
   customerRenderOrderTimeline(Array.isArray(data) ? data : []);
 }
 
-async function customerPollOrderStatus() {
-  if (!customerTrackedOrder?.id || !customerTrackedOrder.publicToken || !customerClient) return;
+function customerTrackingRelativeTime(value) {
+  const date = new Date(value || 0);
+  if (Number.isNaN(date.getTime())) return "";
+  const elapsedSeconds = Math.max(0, Math.round((Date.now() - date.getTime()) / 1000));
+  if (elapsedSeconds < 30) return customerT("courierTrackingNow");
+  const formatter = new Intl.RelativeTimeFormat(customerLanguage, { numeric: "auto" });
+  if (elapsedSeconds < 3600) return formatter.format(-Math.max(1, Math.round(elapsedSeconds / 60)), "minute");
+  if (elapsedSeconds < 86400) return formatter.format(-Math.max(1, Math.round(elapsedSeconds / 3600)), "hour");
+  return formatter.format(-Math.max(1, Math.round(elapsedSeconds / 86400)), "day");
+}
 
-  const { data, error } = await customerClient.rpc("get_customer_order_status", {
-    p_order_id: customerTrackedOrder.id,
-    p_public_token: customerTrackedOrder.publicToken,
+function customerRenderCourierTracking(row = null) {
+  const panel = customerElements.courierTracking;
+  if (!panel) return;
+  const assignmentStatus = String(row?.courier_assignment_status || "");
+  const canonicalStatus = String(row?.canonical_status || "");
+  const hasAssignment = Boolean(row?.assignment_id || row?.courier_user_id);
+  const isSearching = ["courier_searching", "courier_offered"].includes(canonicalStatus)
+    || ["offered", "no_courier"].includes(assignmentStatus);
+  if (!hasAssignment && !isSearching) {
+    panel.hidden = true;
+    panel.innerHTML = "";
+    return;
+  }
+
+  const name = String(row?.courier_name || "").trim();
+  const lat = Number(row?.courier_lat);
+  const lng = Number(row?.courier_lng);
+  const hasLocation = Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+  const lastLocation = customerTrackingRelativeTime(row?.courier_location_updated_at);
+  const etaDate = new Date(row?.estimated_delivery_at || row?.estimated_pickup_at || 0);
+  const eta = Number.isNaN(etaDate.getTime())
+    ? ""
+    : etaDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const mapUrl = hasLocation
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lng}`)}`
+    : "";
+
+  panel.hidden = false;
+  panel.innerHTML = `
+    <strong>${customerEscapeHtml(customerT("courierTrackingTitle"))}</strong>
+    ${name ? `<span>${customerEscapeHtml(customerT("courierTrackingName", { name }))}</span>` : ""}
+    <div class="customer-courier-tracking-meta">
+      ${lastLocation ? `<span>${customerEscapeHtml(customerT("courierTrackingLocation", { time: lastLocation }))}</span>` : ""}
+      ${eta ? `<span>${customerEscapeHtml(customerT("courierTrackingEta", { time: eta }))}</span>` : ""}
+    </div>
+    ${!hasLocation ? `<span>${customerEscapeHtml(customerT("courierTrackingWaiting"))}</span>` : ""}
+    ${mapUrl ? `<a class="customer-map-button" href="${mapUrl}" target="_blank" rel="noopener noreferrer">${customerEscapeHtml(customerT("courierTrackingMap"))}</a>` : ""}
+  `;
+}
+
+function customerStopOrderTrackingRealtime() {
+  if (customerTrackingRefreshTimer) {
+    window.clearTimeout(customerTrackingRefreshTimer);
+    customerTrackingRefreshTimer = null;
+  }
+  const channel = customerTrackingRealtimeChannel;
+  customerTrackingRealtimeChannel = null;
+  customerTrackingRealtimeSignature = "";
+  if (channel && customerClient?.removeChannel) customerClient.removeChannel(channel).catch(() => {});
+}
+
+function customerScheduleTrackingRefresh() {
+  if (customerTrackingRefreshTimer) window.clearTimeout(customerTrackingRefreshTimer);
+  customerTrackingRefreshTimer = window.setTimeout(() => {
+    customerTrackingRefreshTimer = null;
+    customerPollOrderStatus().catch(() => {});
+  }, 250);
+}
+
+function customerStartOrderTrackingRealtime(row = {}) {
+  if (!customerClient?.channel || !customerUser || !customerTrackedOrder?.id) return;
+  const courierId = String(row.courier_user_id || "");
+  const signature = `${customerTrackedOrder.id}:${courierId}`;
+  if (customerTrackingRealtimeChannel && customerTrackingRealtimeSignature === signature) return;
+  customerStopOrderTrackingRealtime();
+  customerTrackingRealtimeSignature = signature;
+  let channel = customerClient
+    .channel(`customer-order-tracking-${customerUser.id}-${customerTrackedOrder.id}`)
+    .on(
+      "postgres_changes",
+      { event: "UPDATE", schema: "public", table: "customer_orders", filter: `id=eq.${customerTrackedOrder.id}` },
+      customerScheduleTrackingRefresh
+    );
+  if (courierId) {
+    channel = channel.on(
+      "postgres_changes",
+      { event: "UPDATE", schema: "public", table: "courier_live_locations", filter: `user_id=eq.${courierId}` },
+      customerScheduleTrackingRefresh
+    );
+  }
+  customerTrackingRealtimeChannel = channel.subscribe((status) => {
+    if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+      customerStopOrderTrackingRealtime();
+    }
   });
+}
+
+async function customerPollOrderStatus() {
+  if (!customerTrackedOrder?.id || !customerTrackedOrder.publicToken || !customerClient || !navigator.onLine) return;
+
+  let data = null;
+  let error = null;
+  if (customerTrackingRpcAvailable !== false) {
+    ({ data, error } = await customerClient.rpc("get_customer_order_tracking", {
+      p_order_id: customerTrackedOrder.id,
+      p_public_token: customerTrackedOrder.publicToken,
+    }));
+    if (error && customerIsMissingRpc(error)) {
+      customerTrackingRpcAvailable = false;
+      data = null;
+      error = null;
+    } else if (!error) {
+      customerTrackingRpcAvailable = true;
+    }
+  }
+
+  if (customerTrackingRpcAvailable === false) {
+    ({ data, error } = await customerClient.rpc("get_customer_order_status", {
+      p_order_id: customerTrackedOrder.id,
+      p_public_token: customerTrackedOrder.publicToken,
+    }));
+  }
 
   if (error) {
     customerSetTrackingStatus(customerT("orderSentCashier"), "");
-    if (customerStatusTimer) window.clearInterval(customerStatusTimer);
-    customerStatusTimer = null;
     return;
   }
 
   const row = customerNormalizeRpcRow(data);
   if (!row) return;
+  const nextStatus = row.canonical_status || row.status || "pending";
   const previousStatus = customerTrackedOrder.status;
-  customerTrackedOrder.status = row.status;
-  const message = customerStatusText(row);
-  const type = customerStatusType(row.status);
+  customerTrackedOrder.status = nextStatus;
+  const statusRow = { ...row, status: nextStatus };
+  const message = customerStatusText(statusRow);
+  const type = customerStatusType(nextStatus);
   customerSetTrackingStatus(message, type);
+  customerRenderCourierTracking(row);
+  customerStartOrderTrackingRealtime(row);
   customerLoadOrderTimeline().catch(() => {});
 
-  if (previousStatus && previousStatus !== row.status) {
+  if (previousStatus && previousStatus !== nextStatus) {
     customerShowNotification(customerT("notificationStatusTitle"), message);
   }
 
-  if (row.status === "delivered" || row.status === "cancelled") {
+  if (["delivered", "cancelled", "rejected", "failed", "refunded"].includes(nextStatus)) {
     if (customerStatusTimer) window.clearInterval(customerStatusTimer);
     customerStatusTimer = null;
+    customerStopOrderTrackingRealtime();
   }
 }
 
 function customerStartStatusTracking(orderId, publicToken, paymentMethod, paymentUrl) {
   if (customerStatusTimer) window.clearInterval(customerStatusTimer);
+  customerStopOrderTrackingRealtime();
   customerTrackedOrder = {
     id: orderId,
     publicToken,
@@ -3946,6 +4103,7 @@ function customerStartStatusTracking(orderId, publicToken, paymentMethod, paymen
     status: "pending",
   };
   customerSetTrackingStatus(customerT("orderSentWaiting"), "");
+  customerRenderCourierTracking(null);
   customerRenderOrderTimeline([]);
   customerPollOrderStatus().catch(() => {});
   customerStatusTimer = window.setInterval(() => {
@@ -4691,6 +4849,7 @@ customerElements.editProfileButton?.addEventListener("click", () => {
 window.addEventListener("online", () => {
   customerStartDirectoryRealtime();
   customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
+  if (customerTrackedOrder) customerPollOrderStatus().catch(() => {});
   if (customerStoreId) {
     customerStartMenuRealtime();
     customerRefreshMenu().catch(() => {
@@ -4702,6 +4861,7 @@ window.addEventListener("online", () => {
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState !== "visible" || !window.navigator.onLine) return;
   customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
+  if (customerTrackedOrder) customerPollOrderStatus().catch(() => {});
   if (customerStoreId) customerRefreshMenu().catch(() => {});
 });
 
@@ -4712,6 +4872,7 @@ window.addEventListener("offline", () => {
 window.addEventListener("beforeunload", () => {
   customerStopDirectoryRealtime();
   customerStopMenuRealtime();
+  customerStopOrderTrackingRealtime();
 });
 
 let customerPullToRefreshStartY = 0;
