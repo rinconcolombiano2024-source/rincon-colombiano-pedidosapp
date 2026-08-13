@@ -1,4 +1,4 @@
-const CACHE_NAME = "rc-ordera-v79-location-i18n";
+const CACHE_NAME = "rc-ordera-v84-platform-core";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -44,6 +44,10 @@ self.addEventListener("fetch", (event) => {
 
   const requestUrl = new URL(event.request.url);
   if (requestUrl.origin !== self.location.origin) return;
+
+  const isDocument = event.request.mode === "navigate" || event.request.destination === "document";
+  const isCriticalCode = ["script", "style", "worker", "manifest"].includes(event.request.destination);
+  if (!isDocument && !isCriticalCode) return;
 
   event.respondWith(
     fetch(event.request)

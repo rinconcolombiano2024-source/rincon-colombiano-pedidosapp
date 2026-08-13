@@ -4383,6 +4383,18 @@ body.auth-checking > :not(script) {
   right: 16px;
 }
 
+.customer-store-favorite {
+  position: absolute;
+  top: 68px;
+  right: 16px;
+}
+
+.customer-store-favorite.is-active {
+  border-color: #d4473a;
+  background: #fff2f0;
+  color: #c7352b;
+}
+
 .customer-cart-heading h2 {
   font-size: 1.2rem;
 }
@@ -4412,6 +4424,45 @@ body.auth-checking > :not(script) {
 .customer-active-order-panel > h3,
 .customer-history-page h3 {
   margin: 0;
+}
+
+.customer-order-timeline {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.customer-order-timeline[hidden] {
+  display: none;
+}
+
+.customer-order-timeline li {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 38px;
+  padding: 7px 0 7px 28px;
+  border-bottom: 1px solid var(--line);
+  font-weight: 800;
+}
+
+.customer-order-timeline li::before {
+  position: absolute;
+  top: 12px;
+  left: 6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--green);
+  content: "";
+}
+
+.customer-order-timeline time {
+  color: var(--muted);
+  white-space: nowrap;
 }
 
 .customer-history-page .customer-history-list {
