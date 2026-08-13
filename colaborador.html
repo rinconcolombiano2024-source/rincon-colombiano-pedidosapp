@@ -39,14 +39,56 @@
           <p class="eyebrow">Panel de trabajo</p>
           <h2>Inicio</h2>
         </div>
-        <section class="customer-account-panel courier-dashboard" id="courierDashboard" aria-label="Panel del colaborador" hidden>
-          <div class="customer-account-head">
-            <div>
-              <h3>Disponibilidad</h3>
-              <p id="courierDashboardText">Cuando tu perfil sea aprobado, podras recibir pedidos.</p>
-            </div>
-            <button class="customer-map-button courier-availability-button" id="courierAvailabilityButton" type="button" disabled>Disponible</button>
-          </div>
+       <section class="customer-account-panel courier-dashboard" id="courierDashboard" aria-label="Panel del colaborador" hidden>
+
+  <div class="courier-status-card">
+
+    <div class="courier-status-top">
+      <div class="courier-status-indicator">
+
+        <span class="courier-status-dot" id="courierStatusDot"></span>
+
+        <div>
+          <strong class="courier-status-title" id="courierHeaderStatus">
+            FUERA DE LINEA
+          </strong>
+
+          <span class="courier-status-subtitle">
+            Estado de disponibilidad
+          </span>
+        </div>
+
+      </div>
+    </div>
+
+    <p class="courier-status-description" id="courierDashboardText">
+      Cuando tu perfil sea aprobado, podras recibir pedidos.
+    </p>
+
+    <div class="courier-status-details">
+
+      <div class="courier-status-detail">
+        <span>Ubicacion</span>
+        <strong id="courierLocationStatus">Sin ubicacion</strong>
+      </div>
+
+      <div class="courier-status-detail">
+        <span>Pedidos</span>
+        <strong id="courierOrdersStatus">Esperando</strong>
+      </div>
+
+    </div>
+
+    <button
+      class="customer-map-button courier-availability-button courier-main-online-button"
+      id="courierAvailabilityButton"
+      type="button"
+      disabled
+    >
+      PONERME EN LINEA
+    </button>
+
+  </div>
           <div class="collaborator-actions collaborator-location-actions">
             <button class="customer-map-button" id="courierShareLocationButton" type="button">Compartir ubicacion</button>
             <button class="customer-map-button" id="courierOpenGpsButton" type="button" disabled>Abrir GPS</button>
