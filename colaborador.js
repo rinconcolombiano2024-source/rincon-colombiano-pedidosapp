@@ -2175,7 +2175,9 @@ async function courierRegisterPushNotifications() {
 async function courierToggleAvailability() {
   if (courierProfile?.status !== "approved") return;
 
-  const nextAvailable = !courierAvailable;
+  await courierLoadAvailability();
+
+const nextAvailable = !courierAvailable;
   if (nextAvailable && !courierLastLocation) {
     courierSetMessage(courierElements.locationMessage, "Para estar disponible primero comparte tu ubicacion actual.");
     await courierShareLocation({ makeAvailable: true });
@@ -2187,6 +2189,14 @@ async function courierToggleAvailability() {
     const client = courierEnsureClient();
     const { data, error } = await client.rpc("set_courier_availability", {
       p_available: nextAvailable,
+   
+    
+    
+    
+    
+    
+    
+    
     });
     if (error) throw error;
 
