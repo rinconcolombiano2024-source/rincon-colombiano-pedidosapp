@@ -54,6 +54,30 @@ Deno.serve(async (request) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
+  if (!record.reference_id) {
+    return new Response(JSON.stringify({ skipped: true, reason: "missing_assignment" }), { status: 200, headers: jsonHeaders });
+  }
+
+  const { data: assignment, error: assignmentError } = await supabase
+    .from("delivery_assignments")
+    .select("id, courier_user_id, status, offer_expires_at")
+    .eq("id", record.reference_id)
+    .maybeSingle();
+
+  if (assignmentError) {
+    return new Response(JSON.stringify({ error: "Could not validate assignment", code: assignmentError.code }), { status: 500, headers: jsonHeaders });
+  }
+
+  const offerExpiresAt = new Date(assignment?.offer_expires_at || 0).getTime();
+  const validOffer = assignment
+    && assignment.courier_user_id === record.recipient_user_id
+    && assignment.status === "offered"
+    && Number.isFinite(offerExpiresAt)
+    && offerExpiresAt > Date.now();
+  if (!validOffer) {
+    return new Response(JSON.stringify({ skipped: true, reason: "inactive_assignment" }), { status: 200, headers: jsonHeaders });
+  }
+
   const { data: subscriptions, error } = await supabase
     .from("courier_push_subscriptions")
     .select("id, endpoint, p256dh, auth_key")
@@ -69,7 +93,10 @@ Deno.serve(async (request) => {
     body: record.body || "Hay un nuevo pedido disponible.",
     tag: record.reference_id ? `rc-ordera-${record.reference_id}` : "rc-ordera-delivery",
     assignment_id: record.reference_id || "",
-    url: String(record.payload?.url || "./colaborador.html?view=offers"),
+    url: String(
+      record.payload?.url
+      || `./colaborador.html?view=offers&assignment=${encodeURIComponent(record.reference_id || "")}&app=v84.1`
+    ),
   });
 
   let sent = 0;
