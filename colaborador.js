@@ -2308,9 +2308,7 @@ async function courierInitialize() {
 
   const { data } = await client.auth.getSession();
   courierUser = data.session?.user || null;
-  if (courierUser) {
-  courierRestoreAvailabilityHint(courierUser.id);
-}
+  
   if (courierUrlLooksLikeRecovery()) courierRecoveringPassword = true;
   const requestedView = courierParams.get("view");
   courierSetView(courierUser && requestedView === "active" ? "active" : courierUser ? "home" : "profile", { instant: true });
