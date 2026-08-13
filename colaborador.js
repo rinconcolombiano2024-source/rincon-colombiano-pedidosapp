@@ -2383,6 +2383,7 @@ client.auth.onAuthStateChange(async (event, session) => {
 
   courierRender();
 });
+}
 courierElements.signInButton.addEventListener("click", courierSignIn);
 courierElements.signUpButton.addEventListener("click", () => {
   if (!courierRegistrationMode) {
