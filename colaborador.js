@@ -10,7 +10,7 @@ function courierDetectedRegion(coords = null) {
   const longitude = Number(coords?.longitude ?? coords?.lng);
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
   const browserLanguage = String(navigator.language || "es").toLowerCase();
-  let countryCode = "";
+  let countryCode = "";courierAvailable = false;
   if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
     if (latitude >= 49 && latitude <= 55.2 && longitude >= 14 && longitude <= 24.3) countryCode = "PL";
     if (latitude >= -5 && latitude <= 14.5 && longitude >= -82 && longitude <= -66) countryCode = "CO";
@@ -2032,8 +2032,6 @@ async function courierSignOut() {
   if (!courierClient) return;
   const previousAvailability = courierAvailable;
   courierStopLocationWatch();
-  courierAvailable = false;
-  courierRender();
   try {
     const { error: availabilityError } = await courierClient.rpc("set_courier_availability", {
       p_available: false,
