@@ -1513,8 +1513,15 @@ function courierRender() {
   courierElements.statusBadge.textContent = courierUser ? statusLabel : "Sin enviar";
   courierElements.statusBadge.dataset.status = status;
   if (courierElements.headerStatus) {
-    courierElements.headerStatus.textContent = courierUser ? statusLabel : "Sin iniciar sesion";
+  if (!courierUser) {
+    courierElements.headerStatus.textContent = "Sin iniciar sesion";
+  } else if (status === "approved") {
+    courierElements.headerStatus.textContent =
+      courierAvailable ? "🟢 EN LINEA" : "⚫ FUERA DE LINEA";
+  } else {
+    courierElements.headerStatus.textContent = statusLabel;
   }
+}
   courierElements.profileStatus.textContent = courierUser
     ? `Estado actual: ${statusLabel}.`
     : "Puedes llenar los datos, pero debes iniciar sesion para guardar la solicitud.";
@@ -1530,7 +1537,17 @@ function courierRender() {
       ? `EN LINEA. Ultima ubicacion ${courierLocationAgeLabel(courierLastLocation?.updatedAt)}. Recibiras pedidos aunque cambies de aplicacion; el GPS se actualiza al volver.`
       : "Perfil aprobado. Pulsa Desconectado para quedar EN LINEA y recibir pedidos."
     : "Tu perfil debe ser aprobado antes de recibir pedidos.";
-  courierElements.availabilityButton.textContent = courierAvailable ? "Disponible" : "Desconectado";
+  courierElements.dashboardText.textContent =
+  status === "approved"
+    ? courierAvailable
+      ? `EN LINEA. Ultima ubicacion ${courierLocationAgeLabel(
+          courierLastLocation?.updatedAt
+        )}. Estas disponible para recibir pedidos.`
+      : "FUERA DE LINEA. Pulsa PONERME EN LINEA para empezar a recibir pedidos."
+    : "Tu perfil debe ser aprobado antes de recibir pedidos.";
+
+courierElements.availabilityButton.textContent =
+  courierAvailable ? "DESCONECTARME" : "PONERME EN LINEA";
   courierRenderVehicleRequirements();
   courierRenderDeliveryOffers();
   courierSyncOffersPolling();
@@ -2236,7 +2253,6 @@ if (!sessionUser) {
   return;
 }
     courierUser = sessionUser;
-    courierRestoreAvailabilityHint(courierUser.id);
     await courierLoadProfile();
     courierStartApprovalRealtime();
     courierSyncOffersPolling();
