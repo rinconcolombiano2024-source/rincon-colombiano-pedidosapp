@@ -1731,7 +1731,6 @@ courierApplyProfileFields(data);
 if (data.status === "approved") {
   await courierLoadAvailability();
 } else {
-  courierAvailable = false;
   courierStopDeliveryRealtime();
 }
 
