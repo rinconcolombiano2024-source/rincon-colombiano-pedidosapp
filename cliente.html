@@ -736,12 +736,69 @@
       </section>
     </main>
 
-    <nav class="customer-bottom-nav" aria-label="Navegacion del cliente" data-i18n-aria-label="customerNavigationAria">
-      <button type="button" data-customer-view-target="home" aria-current="page" data-i18n="navHome">Inicio</button>
-      <button type="button" data-customer-view-target="orders" data-i18n="navOrders">Pedidos</button>
-      <button type="button" data-customer-view-target="reservations" data-i18n="navReservations">Reservas</button>
-      <button type="button" data-customer-view-target="profile" data-i18n="navProfile">Perfil</button>
-    </nav>
+    <nav
+  class="customer-bottom-nav"
+  aria-label="Navegacion del cliente"
+  data-i18n-aria-label="customerNavigationAria"
+>
+
+  <button
+    class="customer-bottom-nav-item active"
+    type="button"
+    data-customer-view-target="home"
+    aria-current="page"
+  >
+    <span class="customer-bottom-nav-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24">
+        <path d="M3 10.5 12 3l9 7.5v9a1.5 1.5 0 0 1-1.5 1.5H15v-6H9v6H4.5A1.5 1.5 0 0 1 3 19.5z"/>
+      </svg>
+    </span>
+    <span data-i18n="navHome">Inicio</span>
+  </button>
+
+  <button
+    class="customer-bottom-nav-item"
+    type="button"
+    data-customer-view-target="orders"
+  >
+    <span class="customer-bottom-nav-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24">
+        <path d="M6 3h12a2 2 0 0 1 2 2v16l-3-2-3 2-2-2-2 2-3-2-3 2V5a2 2 0 0 1 2-2z"/>
+        <path d="M8 8h8M8 12h8"/>
+      </svg>
+    </span>
+    <span data-i18n="navOrders">Pedidos</span>
+  </button>
+
+  <button
+    class="customer-bottom-nav-item"
+    type="button"
+    data-customer-view-target="reservations"
+  >
+    <span class="customer-bottom-nav-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24">
+        <rect x="3" y="5" width="18" height="16" rx="2"/>
+        <path d="M8 3v4M16 3v4M3 10h18"/>
+      </svg>
+    </span>
+    <span data-i18n="navReservations">Reservas</span>
+  </button>
+
+  <button
+    class="customer-bottom-nav-item"
+    type="button"
+    data-customer-view-target="profile"
+  >
+    <span class="customer-bottom-nav-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24">
+        <circle cx="12" cy="8" r="4"/>
+        <path d="M4 21a8 8 0 0 1 16 0"/>
+      </svg>
+    </span>
+    <span data-i18n="navProfile">Cuenta</span>
+  </button>
+
+</nav>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
