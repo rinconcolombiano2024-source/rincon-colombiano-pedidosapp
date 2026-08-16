@@ -17,20 +17,55 @@
   </head>
   <body class="customer-page customer-app-page">
     <main class="customer-shell customer-app-shell">
-      <header class="customer-app-header">
-        <div class="customer-app-brand">
-          <img src="app-icon-192.png" alt="" aria-hidden="true" />
-          <div>
-            <p class="eyebrow" data-i18n="heroEyebrow">Pedido del cliente</p>
-            <h1>RC ORDERA</h1>
-          </div>
-        </div>
-        <button class="customer-profile-shortcut" type="button" data-customer-view-target="profile" data-i18n="navProfile">Perfil</button>
-        <div class="customer-location-summary">
-          <span data-i18n="deliveryLocation">Direccion de entrega</span>
-          <strong id="customerTopLocation" data-i18n="locationNotSet">Agrega una direccion al hacer tu pedido</strong>
-        </div>
-      </header>
+    <header class="customer-app-header customer-client-header">
+
+  <div class="customer-client-topbar">
+    <div class="customer-client-logo">
+      <span class="customer-client-logo-rc">RC</span>
+      <span class="customer-client-logo-ordera">ORDERA</span>
+    </div>
+
+    <div class="customer-client-header-actions">
+      <button
+        class="customer-notification-button"
+        type="button"
+        aria-label="Notificaciones"
+      >
+        <span class="customer-notification-icon">♧</span>
+        <span class="customer-notification-badge">2</span>
+      </button>
+
+      <button
+        class="customer-profile-avatar"
+        type="button"
+        data-customer-view-target="profile"
+        aria-label="Perfil"
+      >
+        <span>RC</span>
+      </button>
+    </div>
+  </div>
+
+  <button class="customer-delivery-location" type="button">
+    <span class="customer-delivery-location-label">
+      Entregar en
+    </span>
+
+    <span class="customer-delivery-location-row">
+      <span class="customer-location-pin">●</span>
+
+      <strong
+        id="customerTopLocation"
+        data-i18n="locationNotSet"
+      >
+        Agrega una dirección al hacer tu pedido
+      </strong>
+
+      <span class="customer-location-chevron">⌄</span>
+    </span>
+  </button>
+
+</header>
 
       <div class="customer-test-badge" data-i18n="testEnvironment">Entorno de prueba</div>
 
