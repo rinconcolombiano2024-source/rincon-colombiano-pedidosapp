@@ -5215,4 +5215,6 @@ body {
   }
 
 }
-
+.customer-restaurant-search {
+  display: none;
+}
