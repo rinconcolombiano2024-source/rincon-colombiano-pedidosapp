@@ -6908,3 +6908,326 @@ body.customer-page
   }
 
 }
+/* =========================================================
+   RC ORDERA CLIENTE
+   CATEGORIAS DEFINITIVAS
+   ========================================================= */
+
+body.customer-page .customer-categories-section {
+  width: 100%;
+  max-width: 1280px;
+
+  margin: 0 auto;
+
+  padding:
+    20px
+    18px
+    10px;
+
+  background: #ffffff;
+}
+
+
+/* Titulo + ver todas */
+
+body.customer-page .customer-section-title-row {
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+
+  margin-bottom: 16px;
+}
+
+body.customer-page .customer-section-title-row h2 {
+  margin: 0;
+
+  color: #171b24;
+
+  font-size: 20px;
+  line-height: 1.2;
+  font-weight: 800;
+
+  letter-spacing: -0.3px;
+}
+
+body.customer-page .customer-see-all-button {
+  appearance: none;
+  -webkit-appearance: none;
+
+  display: inline-flex;
+  align-items: center;
+
+  gap: 5px;
+
+  flex: 0 0 auto;
+
+  margin: 0;
+  padding: 4px 0;
+
+  border: 0;
+
+  background: transparent;
+
+  color: #f4511e;
+
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 750;
+
+  box-shadow: none;
+
+  cursor: pointer;
+}
+
+
+/* Franja horizontal */
+
+body.customer-page .customer-category-scroll {
+  width: 100%;
+  max-width: 100%;
+
+  display: flex;
+  align-items: flex-start;
+
+  gap: 12px;
+
+  margin: 0;
+
+  padding:
+    2px
+    1px
+    8px;
+
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  scroll-snap-type: x proximity;
+
+  scrollbar-width: none;
+
+  overscroll-behavior-x: contain;
+
+  -webkit-overflow-scrolling: touch;
+}
+
+body.customer-page .customer-category-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+
+/* Boton individual */
+
+body.customer-page .customer-category-card {
+  appearance: none;
+  -webkit-appearance: none;
+
+  flex: 0 0 78px;
+
+  width: 78px;
+  min-width: 78px;
+  max-width: 78px;
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: flex-start;
+
+  gap: 7px;
+
+  margin: 0;
+  padding: 0;
+
+  border: 0;
+  border-radius: 0;
+
+  background: transparent;
+
+  color: #333943;
+
+  box-shadow: none;
+
+  cursor: pointer;
+
+  scroll-snap-align: start;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+
+/* Icono */
+
+body.customer-page .customer-category-icon {
+  width: 62px;
+  height: 62px;
+
+  min-width: 62px;
+  min-height: 62px;
+
+  display: grid;
+  place-items: center;
+
+  margin: 0;
+  padding: 0;
+
+  border: 1px solid #eff0f2;
+  border-radius: 18px;
+
+  background: #f6f7f8;
+
+  font-size: 27px;
+  line-height: 1;
+
+  box-shadow: none;
+
+  transition:
+    transform 0.16s ease,
+    background 0.16s ease,
+    border-color 0.16s ease;
+}
+
+
+/* Texto */
+
+body.customer-page .customer-category-name {
+  display: block;
+
+  width: 100%;
+
+  margin: 0;
+  padding: 0;
+
+  overflow: hidden;
+
+  color: inherit;
+
+  font-size: 11px;
+  line-height: 1.25;
+  font-weight: 650;
+
+  text-align: center;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+
+/* Seleccionada */
+
+body.customer-page .customer-category-card.active {
+  background: transparent;
+  color: #f4511e;
+}
+
+body.customer-page .customer-category-card.active .customer-category-icon {
+  background: #fff1ea;
+
+  border-color:
+    rgba(244, 81, 30, 0.18);
+}
+
+
+/* Hover solo donde exista raton */
+
+@media (hover: hover) {
+
+  body.customer-page
+  .customer-category-card:hover
+  .customer-category-icon {
+
+    transform: translateY(-2px);
+
+    background: #f1f2f4;
+  }
+
+}
+
+
+/* =========================================================
+   MOVIL PEQUENO
+   ========================================================= */
+
+@media (max-width: 380px) {
+
+  body.customer-page .customer-categories-section {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  body.customer-page .customer-category-scroll {
+    gap: 8px;
+  }
+
+  body.customer-page .customer-category-card {
+    flex-basis: 70px;
+
+    width: 70px;
+    min-width: 70px;
+    max-width: 70px;
+  }
+
+  body.customer-page .customer-category-icon {
+    width: 56px;
+    height: 56px;
+
+    min-width: 56px;
+    min-height: 56px;
+
+    border-radius: 16px;
+
+    font-size: 24px;
+  }
+
+  body.customer-page .customer-category-name {
+    font-size: 10px;
+  }
+
+}
+
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (min-width: 768px) {
+
+  body.customer-page .customer-categories-section {
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+
+  body.customer-page .customer-category-card {
+    flex-basis: 86px;
+
+    width: 86px;
+    min-width: 86px;
+    max-width: 86px;
+  }
+
+  body.customer-page .customer-category-icon {
+    width: 68px;
+    height: 68px;
+
+    min-width: 68px;
+    min-height: 68px;
+  }
+
+}
+
+
+/* =========================================================
+   ESCRITORIO
+   ========================================================= */
+
+@media (min-width: 1100px) {
+
+  body.customer-page .customer-categories-section {
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+
+}
