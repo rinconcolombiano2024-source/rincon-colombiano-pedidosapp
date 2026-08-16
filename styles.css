@@ -7405,3 +7405,598 @@ body.customer-page main.customer-app-shell::after {
 
   pointer-events: none;
 }
+
+/* =========================================================
+   RC ORDERA CLIENTE
+   TARJETAS DE RESTAURANTES - VERSION DEFINITIVA
+   ========================================================= */
+
+
+/* =========================================================
+   CONTENEDOR DE RESTAURANTES
+   ========================================================= */
+
+body.customer-page .customer-restaurant-panel {
+  width: 100%;
+  max-width: 1280px;
+
+  margin: 0 auto;
+
+  padding:
+    18px
+    18px
+    calc(115px + env(safe-area-inset-bottom, 0px));
+
+  border: 0;
+  border-radius: 0;
+
+  background: #ffffff;
+
+  box-shadow: none;
+}
+
+
+/* =========================================================
+   TITULO
+   ========================================================= */
+
+body.customer-page .customer-restaurants-heading {
+  width: 100%;
+
+  margin: 0 0 16px;
+}
+
+body.customer-page .customer-restaurants-heading h2 {
+  margin: 0;
+
+  color: #171b24;
+
+  font-size: 21px;
+  line-height: 1.2;
+  font-weight: 800;
+
+  letter-spacing: -0.3px;
+}
+
+body.customer-page .customer-restaurants-heading p {
+  margin: 5px 0 0;
+
+  color: #7d838c;
+
+  font-size: 13px;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+
+/* =========================================================
+   LISTA
+   ========================================================= */
+
+body.customer-page .customer-restaurant-list {
+  width: 100%;
+  max-width: 100%;
+
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1fr);
+
+  gap: 18px;
+
+  margin: 0;
+  padding: 0;
+
+  overflow: visible;
+}
+
+
+/* =========================================================
+   TARJETA
+   ========================================================= */
+
+body.customer-page .customer-restaurant-card {
+  position: relative;
+
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+
+  display: block;
+
+  margin: 0;
+  padding: 0;
+
+  overflow: hidden;
+
+  border: 1px solid #eceef1;
+  border-radius: 20px;
+
+  background: #ffffff;
+
+  color: #171b24;
+
+  box-shadow:
+    0 4px 16px rgba(17, 24, 39, 0.06);
+
+  cursor: pointer;
+
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+
+/* El restaurante seleccionado no cambia
+   radicalmente de diseño */
+
+body.customer-page
+.customer-restaurant-card.is-selected {
+
+  border-color:
+    rgba(244, 81, 30, 0.28);
+
+  background: #ffffff;
+}
+
+
+/* =========================================================
+   PORTADA
+   ========================================================= */
+
+body.customer-page .customer-restaurant-cover {
+  position: relative;
+
+  width: 100%;
+
+  aspect-ratio: 16 / 8.5;
+
+  margin: 0;
+  padding: 0;
+
+  overflow: hidden;
+
+  background: #f3f4f6;
+}
+
+
+/* Imagen real */
+
+body.customer-page
+.customer-restaurant-cover-image {
+
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  margin: 0;
+
+  object-fit: cover;
+  object-position: center;
+
+  border: 0;
+  border-radius: 0;
+
+  background: #f3f4f6;
+}
+
+
+/* Si no hay foto */
+
+body.customer-page
+.customer-restaurant-cover-placeholder {
+
+  width: 100%;
+  height: 100%;
+
+  display: grid;
+
+  place-items: center;
+
+  margin: 0;
+
+  background:
+    linear-gradient(
+      135deg,
+      #fff1e9 0%,
+      #fff7f3 45%,
+      #f4f5f7 100%
+    );
+}
+
+body.customer-page
+.customer-restaurant-cover-placeholder span {
+
+  color: #f4511e;
+
+  font-size: 38px;
+  line-height: 1;
+  font-weight: 850;
+
+  letter-spacing: -1px;
+}
+
+
+/* =========================================================
+   CORAZON
+   ========================================================= */
+
+body.customer-page
+.customer-restaurant-heart {
+
+  position: absolute;
+
+  top: 12px;
+  right: 12px;
+
+  z-index: 3;
+
+  width: 39px;
+  height: 39px;
+
+  min-width: 39px;
+  min-height: 39px;
+
+  display: grid;
+  place-items: center;
+
+  margin: 0;
+  padding: 0;
+
+  border: 0;
+  border-radius: 50%;
+
+  background:
+    rgba(255, 255, 255, 0.96);
+
+  color: #20252d;
+
+  font-family: Arial, sans-serif;
+  font-size: 25px;
+  line-height: 1;
+
+  box-shadow:
+    0 3px 12px rgba(0, 0, 0, 0.13);
+
+  cursor: pointer;
+}
+
+
+/* =========================================================
+   ABIERTO / CERRADO
+   ========================================================= */
+
+body.customer-page
+.customer-restaurant-open-label {
+
+  position: absolute;
+
+  left: 12px;
+  bottom: 12px;
+
+  z-index: 2;
+
+  display: inline-flex;
+
+  align-items: center;
+  justify-content: center;
+
+  min-height: 27px;
+
+  padding: 5px 10px;
+
+  border-radius: 999px;
+
+  background:
+    rgba(255, 255, 255, 0.96);
+
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 800;
+
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.10);
+}
+
+
+/* Abierto */
+
+body.customer-page
+.customer-restaurant-open-label.is-open {
+
+  color: #168447;
+}
+
+
+/* Cerrado */
+
+body.customer-page
+.customer-restaurant-open-label.is-closed {
+
+  color: #cf3838;
+}
+
+
+/* =========================================================
+   INFORMACION
+   ========================================================= */
+
+body.customer-page
+.customer-restaurant-content {
+
+  width: 100%;
+
+  display: block;
+
+  margin: 0;
+
+  padding: 14px 15px 16px;
+
+  background: #ffffff;
+}
+
+
+/* =========================================================
+   NOMBRE
+   ========================================================= */
+
+body.customer-page
+.customer-restaurant-name-row {
+
+  width: 100%;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 10px;
+}
+
+body.customer-page
+.customer-restaurant-name {
+
+  display: block;
+
+  min-width: 0;
+
+  margin: 0;
+
+  overflow: hidden;
+
+  color: #171b24;
+
+  font-size: 17px;
+  line-height: 1.25;
+  font-weight: 800;
+
+  letter-spacing: -0.15px;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+
+/* =========================================================
+   DIRECCION
+   ========================================================= */
+
+body.customer-page
+.customer-restaurant-address {
+
+  display: block;
+
+  width: 100%;
+
+  margin: 5px 0 0;
+
+  overflow: hidden;
+
+  color: #7a818b;
+
+  font-size: 13px;
+  line-height: 1.35;
+  font-weight: 500;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+
+/* =========================================================
+   DATOS INFERIORES
+   ========================================================= */
+
+body.customer-page
+.customer-restaurant-meta {
+
+  width: 100%;
+
+  display: flex;
+
+  align-items: center;
+  flex-wrap: wrap;
+
+  gap: 5px;
+
+  margin: 9px 0 0;
+
+  color: #727984;
+
+  font-size: 12px;
+  line-height: 1.35;
+  font-weight: 550;
+}
+
+body.customer-page
+.customer-restaurant-meta span {
+
+  margin: 0;
+  padding: 0;
+
+  color: inherit;
+
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+
+/* =========================================================
+   INTERACCION
+   ========================================================= */
+
+@media (hover: hover) {
+
+  body.customer-page
+  .customer-restaurant-card:hover {
+
+    transform: translateY(-2px);
+
+    border-color: #e0e3e7;
+
+    box-shadow:
+      0 8px 22px rgba(17, 24, 39, 0.10);
+  }
+
+}
+
+
+/* =========================================================
+   MOVIL
+   ========================================================= */
+
+@media (max-width: 699px) {
+
+  body.customer-page
+  .customer-restaurant-panel {
+
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+
+  body.customer-page
+  .customer-restaurant-list {
+
+    grid-template-columns:
+      minmax(0, 1fr);
+
+    gap: 16px;
+  }
+
+
+  body.customer-page
+  .customer-restaurant-card {
+
+    border-radius: 18px;
+  }
+
+
+  body.customer-page
+  .customer-restaurant-cover {
+
+    aspect-ratio: 16 / 9;
+  }
+
+}
+
+
+/* =========================================================
+   TELEFONOS MUY PEQUENOS
+   ========================================================= */
+
+@media (max-width: 360px) {
+
+  body.customer-page
+  .customer-restaurant-panel {
+
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+
+  body.customer-page
+  .customer-restaurant-content {
+
+    padding:
+      12px
+      13px
+      14px;
+  }
+
+
+  body.customer-page
+  .customer-restaurant-name {
+
+    font-size: 16px;
+  }
+
+}
+
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (min-width: 700px)
+and (max-width: 1099px) {
+
+  body.customer-page
+  .customer-restaurant-panel {
+
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+
+
+  body.customer-page
+  .customer-restaurant-list {
+
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(0, 1fr)
+      );
+  }
+
+}
+
+
+/* =========================================================
+   ESCRITORIO
+   ========================================================= */
+
+@media (min-width: 1100px) {
+
+  body.customer-page
+  .customer-restaurant-panel {
+
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+
+
+  body.customer-page
+  .customer-restaurant-list {
+
+    grid-template-columns:
+      repeat(
+        3,
+        minmax(0, 1fr)
+      );
+
+    gap: 20px;
+  }
+
+
+  body.customer-page
+  .customer-restaurant-cover {
+
+    aspect-ratio: 16 / 9;
+  }
+
+}
