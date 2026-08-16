@@ -5218,3 +5218,301 @@ body {
 .customer-restaurant-search {
   display: none;
 }
+/* =========================================================
+   RC ORDERA - CLIENTE
+   Restaurantes cerca de ti
+   ========================================================= */
+
+.customer-restaurant-panel {
+  width: 100%;
+  padding: 24px 22px 110px;
+  background: #ffffff;
+  border: 0;
+  box-shadow: none;
+}
+
+.customer-restaurants-heading {
+  margin-bottom: 18px;
+}
+
+.customer-restaurants-heading > div {
+  min-width: 0;
+}
+
+.customer-restaurants-heading h2 {
+  margin: 0;
+  color: #171b24;
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+}
+
+.customer-restaurants-heading p {
+  margin: 5px 0 0;
+  color: #848a94;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* Lista */
+
+.customer-restaurant-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 22px;
+  width: 100%;
+}
+
+/* Tarjeta */
+
+.customer-restaurant-card {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+
+  display: block;
+
+  padding: 0;
+
+  background: #ffffff;
+
+  border: 1px solid #eceef1;
+  border-radius: 20px;
+
+  box-shadow:
+    0 4px 16px rgba(20, 25, 35, 0.06);
+
+  cursor: pointer;
+
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.customer-restaurant-card:hover {
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 8px 24px rgba(20, 25, 35, 0.09);
+}
+
+.customer-restaurant-card.is-selected {
+  border-color: rgba(244, 81, 30, 0.35);
+}
+
+/* Imagen */
+
+.customer-restaurant-cover {
+  position: relative;
+
+  width: 100%;
+  aspect-ratio: 16 / 9;
+
+  overflow: hidden;
+
+  background: #f2f3f5;
+}
+
+.customer-restaurant-cover-image {
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+
+  display: block;
+}
+
+.customer-restaurant-cover-placeholder {
+  width: 100%;
+  height: 100%;
+
+  display: grid;
+  place-items: center;
+
+  background:
+    linear-gradient(
+      135deg,
+      #fff2eb,
+      #f8f8f8
+    );
+}
+
+.customer-restaurant-cover-placeholder span {
+  color: #f4511e;
+  font-size: 38px;
+  font-weight: 850;
+}
+
+/* Favorito */
+
+.customer-restaurant-heart {
+  position: absolute;
+
+  top: 13px;
+  right: 13px;
+
+  width: 38px;
+  height: 38px;
+
+  display: grid;
+  place-items: center;
+
+  padding: 0;
+
+  border: 0;
+  border-radius: 50%;
+
+  background: rgba(255, 255, 255, 0.94);
+
+  color: #20242c;
+
+  font-size: 23px;
+  line-height: 1;
+
+  box-shadow:
+    0 3px 12px rgba(0, 0, 0, 0.12);
+}
+
+/* Abierto / cerrado */
+
+.customer-restaurant-open-label {
+  position: absolute;
+
+  left: 13px;
+  bottom: 13px;
+
+  padding: 6px 10px;
+
+  border-radius: 999px;
+
+  font-size: 11px;
+  font-weight: 800;
+
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.customer-restaurant-open-label.is-open {
+  background: #ffffff;
+  color: #239a55;
+}
+
+.customer-restaurant-open-label.is-closed {
+  background: #ffffff;
+  color: #d74343;
+}
+
+/* Información */
+
+.customer-restaurant-content {
+  padding: 15px 16px 17px;
+}
+
+.customer-restaurant-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+}
+
+.customer-restaurant-name {
+  min-width: 0;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  color: #171b24;
+
+  font-size: 17px;
+  line-height: 1.25;
+  font-weight: 800;
+}
+
+.customer-restaurant-rating {
+  flex: 0 0 auto;
+
+  color: #171b24;
+
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.customer-restaurant-address {
+  display: block;
+
+  margin-top: 5px;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  color: #7f858f;
+
+  font-size: 13px;
+}
+
+.customer-restaurant-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+
+  gap: 6px;
+
+  margin-top: 11px;
+
+  color: #747b85;
+
+  font-size: 12px;
+  font-weight: 550;
+}
+
+
+/* ==============================
+   RESPONSIVE
+   ============================== */
+
+/* Tablet */
+
+@media (min-width: 700px) {
+
+  .customer-restaurant-list {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+
+    gap: 22px;
+  }
+
+}
+
+/* Escritorio */
+
+@media (min-width: 1100px) {
+
+  .customer-restaurant-list {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+  }
+
+}
+
+/* Móvil pequeño */
+
+@media (max-width: 380px) {
+
+  .customer-restaurant-panel {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .customer-restaurant-card {
+    border-radius: 18px;
+  }
+
+  .customer-restaurant-content {
+    padding:
+      13px 14px 15px;
+  }
+
+}
