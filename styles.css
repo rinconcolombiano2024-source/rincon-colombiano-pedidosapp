@@ -6455,357 +6455,456 @@ body.customer-page {
 }
 /* =========================================================
    RC ORDERA CLIENTE
-   CORRECCION FINAL BARRA INFERIOR + SCROLL MOVIL
+   NAVEGACION INFERIOR DEFINITIVA + SCROLL SEGURO
    ========================================================= */
 
 
-/* ---------------------------------------------------------
-   PERMITIR SCROLL VERTICAL NORMAL
-   --------------------------------------------------------- */
+/* =========================================================
+   BASE SEGURA SOLO PARA CLIENTE
+   ========================================================= */
 
 html {
   width: 100%;
   min-height: 100%;
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
+  overflow-x: hidden;
 }
 
-body,
 body.customer-page {
   width: 100%;
-  min-height: 100%;
-  height: auto !important;
+  min-height: 100vh;
+  margin: 0;
 
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
+  overflow-x: hidden;
+  overflow-y: auto;
 
-  position: relative;
+  background: #ffffff;
 }
 
-.customer-app-shell {
-  width: 100% !important;
-  max-width: 100% !important;
+
+/* =========================================================
+   CONTENEDOR PRINCIPAL
+   ========================================================= */
+
+body.customer-page .customer-app-shell {
+  width: 100%;
+  max-width: 100%;
 
   min-height: 100vh;
-  height: auto !important;
+  height: auto;
 
-  overflow: visible !important;
+  margin: 0;
 
   padding-bottom:
-    calc(90px + env(safe-area-inset-bottom, 0px)) !important;
-}
+    calc(90px + env(safe-area-inset-bottom, 0px));
 
-.customer-view {
-  height: auto !important;
-  min-height: auto !important;
-
-  overflow-x: hidden !important;
-  overflow-y: visible !important;
+  overflow: visible;
 }
 
 
-/* ---------------------------------------------------------
+/* Evita que una vista bloquee el scroll vertical */
+
+body.customer-page .customer-view {
+  width: 100%;
+  max-width: 100%;
+
+  height: auto;
+  min-height: 0;
+
+  overflow-x: hidden;
+  overflow-y: visible;
+}
+
+
+/* Protección general contra elementos que se salgan */
+
+body.customer-page *,
+body.customer-page *::before,
+body.customer-page *::after {
+  box-sizing: border-box;
+}
+
+body.customer-page img,
+body.customer-page video,
+body.customer-page canvas {
+  max-width: 100%;
+}
+
+
+/* =========================================================
    BARRA INFERIOR
-   --------------------------------------------------------- */
+   ========================================================= */
 
-.customer-bottom-nav {
-  position: fixed !important;
+body.customer-page .customer-bottom-nav {
+  position: fixed;
 
-  left: 50% !important;
-  right: auto !important;
+  left: 0;
+  right: 0;
+  bottom: 0;
 
-  bottom: 0 !important;
+  z-index: 2000;
 
-  transform: translateX(-50%) !important;
+  width: 100%;
+  max-width: 100%;
 
-  z-index: 2000 !important;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 
-  width: 100% !important;
-  max-width: 720px !important;
+  gap: 0;
 
-  height: auto !important;
-  min-height: 68px !important;
-
-  display: grid !important;
-  grid-template-columns: repeat(4, 1fr) !important;
-
-  gap: 0 !important;
-
-  margin: 0 !important;
+  margin: 0;
 
   padding:
     6px
-    8px
+    max(6px, env(safe-area-inset-right, 0px))
     calc(6px + env(safe-area-inset-bottom, 0px))
-    8px !important;
+    max(6px, env(safe-area-inset-left, 0px));
 
-  background: rgba(255, 255, 255, 0.98) !important;
+  background: rgba(255, 255, 255, 0.98);
 
-  border: 0 !important;
-  border-top: 1px solid #eceef2 !important;
+  border: 0;
+  border-top: 1px solid #e8eaee;
 
-  border-radius: 0 !important;
+  border-radius: 0;
 
   box-shadow:
-    0 -4px 18px rgba(20, 25, 35, 0.08) !important;
+    0 -4px 18px rgba(17, 24, 39, 0.08);
 
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
 }
 
 
-/* ---------------------------------------------------------
-   BOTONES
-   --------------------------------------------------------- */
+/* =========================================================
+   BOTONES DE NAVEGACION
+   ========================================================= */
 
-.customer-bottom-nav > button.customer-bottom-nav-item {
-  appearance: none !important;
-  -webkit-appearance: none !important;
+body.customer-page
+.customer-bottom-nav
+.customer-bottom-nav-item {
 
-  width: 100% !important;
-  min-width: 0 !important;
+  appearance: none;
+  -webkit-appearance: none;
 
-  height: 56px !important;
-  min-height: 56px !important;
-  max-height: 56px !important;
+  width: 100%;
+  min-width: 0;
 
-  display: flex !important;
-  flex-direction: column !important;
+  height: 58px;
+  min-height: 58px;
+  max-height: 58px;
 
-  align-items: center !important;
-  justify-content: center !important;
+  display: flex;
+  flex-direction: column;
 
-  gap: 3px !important;
+  align-items: center;
+  justify-content: center;
 
-  margin: 0 !important;
-  padding: 4px 2px !important;
+  gap: 4px;
 
-  border: 0 !important;
-  border-radius: 12px !important;
+  margin: 0;
+  padding: 4px 2px;
 
-  background: transparent !important;
+  border: 0;
+  border-radius: 12px;
 
-  box-shadow: none !important;
+  background: transparent;
 
-  color: #737b89 !important;
+  box-shadow: none;
 
-  font-family: inherit !important;
-  font-size: 11px !important;
-  font-weight: 600 !important;
-  line-height: 1 !important;
+  color: #7b828d;
+
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
 
   cursor: pointer;
 
-  overflow: hidden !important;
+  overflow: hidden;
+
+  -webkit-tap-highlight-color: transparent;
 }
 
 
-/* ---------------------------------------------------------
-   CONTENEDOR DEL ICONO
-   --------------------------------------------------------- */
+/* Evita fondos negros heredados */
 
+body.customer-page
 .customer-bottom-nav
-.customer-bottom-nav-item
+.customer-bottom-nav-item:hover,
+
+body.customer-page
+.customer-bottom-nav
+.customer-bottom-nav-item:focus,
+
+body.customer-page
+.customer-bottom-nav
+.customer-bottom-nav-item:active {
+
+  background: transparent;
+  box-shadow: none;
+}
+
+
+/* =========================================================
+   ICONOS
+   ========================================================= */
+
+body.customer-page
+.customer-bottom-nav
 .customer-bottom-nav-icon {
 
-  width: 24px !important;
-  height: 24px !important;
+  flex: 0 0 23px;
 
-  min-width: 24px !important;
-  min-height: 24px !important;
+  width: 23px;
+  height: 23px;
 
-  max-width: 24px !important;
-  max-height: 24px !important;
+  min-width: 23px;
+  min-height: 23px;
 
-  display: flex !important;
+  max-width: 23px;
+  max-height: 23px;
 
-  align-items: center !important;
-  justify-content: center !important;
+  display: flex;
 
-  margin: 0 !important;
-  padding: 0 !important;
+  align-items: center;
+  justify-content: center;
 
-  background: transparent !important;
+  margin: 0;
+  padding: 0;
+
+  background: transparent;
+
+  overflow: visible;
 }
 
 
-/* ---------------------------------------------------------
-   SVG - MUY IMPORTANTE
-   --------------------------------------------------------- */
-
+body.customer-page
 .customer-bottom-nav
-.customer-bottom-nav-item
-.customer-bottom-nav-icon
-svg {
+.customer-bottom-nav-icon svg {
 
-  display: block !important;
+  display: block;
 
-  width: 22px !important;
-  height: 22px !important;
+  width: 22px;
+  height: 22px;
 
-  min-width: 22px !important;
-  min-height: 22px !important;
+  min-width: 22px;
+  min-height: 22px;
 
-  max-width: 22px !important;
-  max-height: 22px !important;
+  max-width: 22px;
+  max-height: 22px;
 
-  margin: 0 !important;
-  padding: 0 !important;
+  margin: 0;
+  padding: 0;
 
-  overflow: visible !important;
+  fill: none;
 
-  fill: none !important;
+  stroke: currentColor;
+  stroke-width: 1.8;
 
-  stroke: currentColor !important;
-  stroke-width: 1.8 !important;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 
-  stroke-linecap: round !important;
-  stroke-linejoin: round !important;
+  overflow: visible;
 }
 
 
-/* Evitar que los paths se vuelvan negros sólidos */
+/* Fuerza todos los elementos SVG a ser líneas, no masas negras */
 
+body.customer-page
 .customer-bottom-nav
-.customer-bottom-nav-item
-svg path,
+.customer-bottom-nav-icon svg path,
 
+body.customer-page
 .customer-bottom-nav
-.customer-bottom-nav-item
-svg circle,
+.customer-bottom-nav-icon svg rect,
 
+body.customer-page
 .customer-bottom-nav
-.customer-bottom-nav-item
-svg rect {
+.customer-bottom-nav-icon svg circle,
 
-  fill: none !important;
+body.customer-page
+.customer-bottom-nav
+.customer-bottom-nav-icon svg line,
 
-  stroke: currentColor !important;
-  stroke-width: 1.8 !important;
+body.customer-page
+.customer-bottom-nav
+.customer-bottom-nav-icon svg polyline {
 
-  stroke-linecap: round !important;
-  stroke-linejoin: round !important;
+  fill: none;
+
+  stroke: currentColor;
+  stroke-width: 1.8;
+
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 
-/* ---------------------------------------------------------
+/* =========================================================
    TEXTO
-   --------------------------------------------------------- */
+   ========================================================= */
 
+body.customer-page
 .customer-bottom-nav
 .customer-bottom-nav-item > span:last-child {
 
-  display: block !important;
+  display: block;
 
-  width: 100% !important;
+  width: 100%;
+  min-width: 0;
 
-  margin: 0 !important;
-  padding: 0 !important;
+  margin: 0;
+  padding: 0;
 
-  color: inherit !important;
+  overflow: hidden;
 
-  font-size: 11px !important;
-  font-weight: 650 !important;
-  line-height: 14px !important;
+  color: inherit;
 
-  text-align: center !important;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 14px;
 
-  white-space: nowrap !important;
+  text-align: center;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 
-/* ---------------------------------------------------------
-   ACTIVO
-   --------------------------------------------------------- */
+/* =========================================================
+   BOTON ACTIVO
+   ========================================================= */
 
+body.customer-page
 .customer-bottom-nav
 .customer-bottom-nav-item.active,
 
+body.customer-page
 .customer-bottom-nav
 .customer-bottom-nav-item[aria-current="page"] {
 
-  background: transparent !important;
+  background: transparent;
 
-  color: #f4511e !important;
+  color: #f4511e;
 }
 
 
-/* ---------------------------------------------------------
+body.customer-page
+.customer-bottom-nav
+.customer-bottom-nav-item.active
+.customer-bottom-nav-icon svg,
+
+body.customer-page
+.customer-bottom-nav
+.customer-bottom-nav-item[aria-current="page"]
+.customer-bottom-nav-icon svg {
+
+  stroke-width: 2;
+}
+
+
+/* =========================================================
    MOVIL
-   --------------------------------------------------------- */
+   ========================================================= */
 
 @media (max-width: 720px) {
 
-  .customer-bottom-nav {
-    width: 100% !important;
-    max-width: 100% !important;
+  body.customer-page .customer-bottom-nav {
+    left: 0;
+    right: 0;
 
-    left: 0 !important;
+    bottom: 0;
 
-    transform: none !important;
+    width: 100%;
+    max-width: 100%;
 
-    bottom: 0 !important;
+    transform: none;
 
-    border-radius: 0 !important;
-  }
-
-  .customer-bottom-nav > button.customer-bottom-nav-item {
-    height: 58px !important;
-    min-height: 58px !important;
+    border-radius: 0;
   }
 
 }
 
 
-/* ---------------------------------------------------------
-   PC / TABLET
-   --------------------------------------------------------- */
-
-@media (min-width: 721px) {
-
-  .customer-bottom-nav {
-
-    width: min(680px, calc(100% - 32px)) !important;
-
-    bottom: 12px !important;
-
-    border: 1px solid #e7e9ed !important;
-    border-radius: 20px !important;
-
-    box-shadow:
-      0 8px 28px rgba(17, 24, 39, 0.12) !important;
-  }
-
-}
-
-
-/* ---------------------------------------------------------
-   TELEFONOS MUY PEQUEÑOS
-   --------------------------------------------------------- */
+/* =========================================================
+   TELEFONOS PEQUENOS
+   ========================================================= */
 
 @media (max-width: 360px) {
 
+  body.customer-page
   .customer-bottom-nav
-  .customer-bottom-nav-item > span:last-child {
-    font-size: 10px !important;
+  .customer-bottom-nav-item {
+
+    padding-left: 1px;
+    padding-right: 1px;
   }
 
-  .customer-bottom-nav
-  .customer-bottom-nav-item
-  .customer-bottom-nav-icon,
 
+  body.customer-page
   .customer-bottom-nav
-  .customer-bottom-nav-item
+  .customer-bottom-nav-item > span:last-child {
+
+    font-size: 10px;
+  }
+
+
+  body.customer-page
+  .customer-bottom-nav
+  .customer-bottom-nav-icon {
+
+    flex-basis: 21px;
+
+    width: 21px;
+    height: 21px;
+
+    min-width: 21px;
+    min-height: 21px;
+
+    max-width: 21px;
+    max-height: 21px;
+  }
+
+
+  body.customer-page
+  .customer-bottom-nav
   .customer-bottom-nav-icon svg {
 
-    width: 21px !important;
-    height: 21px !important;
+    width: 20px;
+    height: 20px;
 
-    min-width: 21px !important;
-    min-height: 21px !important;
+    min-width: 20px;
+    min-height: 20px;
 
-    max-width: 21px !important;
-    max-height: 21px !important;
+    max-width: 20px;
+    max-height: 20px;
+  }
+
+}
+
+
+/* =========================================================
+   TABLET Y ESCRITORIO
+   ========================================================= */
+
+@media (min-width: 721px) {
+
+  body.customer-page .customer-bottom-nav {
+
+    left: 50%;
+    right: auto;
+
+    bottom: 12px;
+
+    transform: translateX(-50%);
+
+    width: min(680px, calc(100% - 32px));
+    max-width: 680px;
+
+    border: 1px solid #e7e9ed;
+    border-radius: 20px;
+
+    box-shadow:
+      0 8px 28px rgba(17, 24, 39, 0.12);
   }
 
 }
