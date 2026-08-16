@@ -6453,3 +6453,359 @@ body.customer-page {
     border-radius: 16px;
   }
 }
+/* =========================================================
+   RC ORDERA CLIENTE
+   CORRECCION FINAL BARRA INFERIOR + SCROLL MOVIL
+   ========================================================= */
+
+
+/* ---------------------------------------------------------
+   PERMITIR SCROLL VERTICAL NORMAL
+   --------------------------------------------------------- */
+
+html {
+  width: 100%;
+  min-height: 100%;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+body,
+body.customer-page {
+  width: 100%;
+  min-height: 100%;
+  height: auto !important;
+
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+
+  position: relative;
+}
+
+.customer-app-shell {
+  width: 100% !important;
+  max-width: 100% !important;
+
+  min-height: 100vh;
+  height: auto !important;
+
+  overflow: visible !important;
+
+  padding-bottom:
+    calc(90px + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+.customer-view {
+  height: auto !important;
+  min-height: auto !important;
+
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
+}
+
+
+/* ---------------------------------------------------------
+   BARRA INFERIOR
+   --------------------------------------------------------- */
+
+.customer-bottom-nav {
+  position: fixed !important;
+
+  left: 50% !important;
+  right: auto !important;
+
+  bottom: 0 !important;
+
+  transform: translateX(-50%) !important;
+
+  z-index: 2000 !important;
+
+  width: 100% !important;
+  max-width: 720px !important;
+
+  height: auto !important;
+  min-height: 68px !important;
+
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+
+  gap: 0 !important;
+
+  margin: 0 !important;
+
+  padding:
+    6px
+    8px
+    calc(6px + env(safe-area-inset-bottom, 0px))
+    8px !important;
+
+  background: rgba(255, 255, 255, 0.98) !important;
+
+  border: 0 !important;
+  border-top: 1px solid #eceef2 !important;
+
+  border-radius: 0 !important;
+
+  box-shadow:
+    0 -4px 18px rgba(20, 25, 35, 0.08) !important;
+
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+
+/* ---------------------------------------------------------
+   BOTONES
+   --------------------------------------------------------- */
+
+.customer-bottom-nav > button.customer-bottom-nav-item {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+
+  width: 100% !important;
+  min-width: 0 !important;
+
+  height: 56px !important;
+  min-height: 56px !important;
+  max-height: 56px !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+
+  align-items: center !important;
+  justify-content: center !important;
+
+  gap: 3px !important;
+
+  margin: 0 !important;
+  padding: 4px 2px !important;
+
+  border: 0 !important;
+  border-radius: 12px !important;
+
+  background: transparent !important;
+
+  box-shadow: none !important;
+
+  color: #737b89 !important;
+
+  font-family: inherit !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  line-height: 1 !important;
+
+  cursor: pointer;
+
+  overflow: hidden !important;
+}
+
+
+/* ---------------------------------------------------------
+   CONTENEDOR DEL ICONO
+   --------------------------------------------------------- */
+
+.customer-bottom-nav
+.customer-bottom-nav-item
+.customer-bottom-nav-icon {
+
+  width: 24px !important;
+  height: 24px !important;
+
+  min-width: 24px !important;
+  min-height: 24px !important;
+
+  max-width: 24px !important;
+  max-height: 24px !important;
+
+  display: flex !important;
+
+  align-items: center !important;
+  justify-content: center !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  background: transparent !important;
+}
+
+
+/* ---------------------------------------------------------
+   SVG - MUY IMPORTANTE
+   --------------------------------------------------------- */
+
+.customer-bottom-nav
+.customer-bottom-nav-item
+.customer-bottom-nav-icon
+svg {
+
+  display: block !important;
+
+  width: 22px !important;
+  height: 22px !important;
+
+  min-width: 22px !important;
+  min-height: 22px !important;
+
+  max-width: 22px !important;
+  max-height: 22px !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  overflow: visible !important;
+
+  fill: none !important;
+
+  stroke: currentColor !important;
+  stroke-width: 1.8 !important;
+
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+}
+
+
+/* Evitar que los paths se vuelvan negros sólidos */
+
+.customer-bottom-nav
+.customer-bottom-nav-item
+svg path,
+
+.customer-bottom-nav
+.customer-bottom-nav-item
+svg circle,
+
+.customer-bottom-nav
+.customer-bottom-nav-item
+svg rect {
+
+  fill: none !important;
+
+  stroke: currentColor !important;
+  stroke-width: 1.8 !important;
+
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+}
+
+
+/* ---------------------------------------------------------
+   TEXTO
+   --------------------------------------------------------- */
+
+.customer-bottom-nav
+.customer-bottom-nav-item > span:last-child {
+
+  display: block !important;
+
+  width: 100% !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  color: inherit !important;
+
+  font-size: 11px !important;
+  font-weight: 650 !important;
+  line-height: 14px !important;
+
+  text-align: center !important;
+
+  white-space: nowrap !important;
+}
+
+
+/* ---------------------------------------------------------
+   ACTIVO
+   --------------------------------------------------------- */
+
+.customer-bottom-nav
+.customer-bottom-nav-item.active,
+
+.customer-bottom-nav
+.customer-bottom-nav-item[aria-current="page"] {
+
+  background: transparent !important;
+
+  color: #f4511e !important;
+}
+
+
+/* ---------------------------------------------------------
+   MOVIL
+   --------------------------------------------------------- */
+
+@media (max-width: 720px) {
+
+  .customer-bottom-nav {
+    width: 100% !important;
+    max-width: 100% !important;
+
+    left: 0 !important;
+
+    transform: none !important;
+
+    bottom: 0 !important;
+
+    border-radius: 0 !important;
+  }
+
+  .customer-bottom-nav > button.customer-bottom-nav-item {
+    height: 58px !important;
+    min-height: 58px !important;
+  }
+
+}
+
+
+/* ---------------------------------------------------------
+   PC / TABLET
+   --------------------------------------------------------- */
+
+@media (min-width: 721px) {
+
+  .customer-bottom-nav {
+
+    width: min(680px, calc(100% - 32px)) !important;
+
+    bottom: 12px !important;
+
+    border: 1px solid #e7e9ed !important;
+    border-radius: 20px !important;
+
+    box-shadow:
+      0 8px 28px rgba(17, 24, 39, 0.12) !important;
+  }
+
+}
+
+
+/* ---------------------------------------------------------
+   TELEFONOS MUY PEQUEÑOS
+   --------------------------------------------------------- */
+
+@media (max-width: 360px) {
+
+  .customer-bottom-nav
+  .customer-bottom-nav-item > span:last-child {
+    font-size: 10px !important;
+  }
+
+  .customer-bottom-nav
+  .customer-bottom-nav-item
+  .customer-bottom-nav-icon,
+
+  .customer-bottom-nav
+  .customer-bottom-nav-item
+  .customer-bottom-nav-icon svg {
+
+    width: 21px !important;
+    height: 21px !important;
+
+    min-width: 21px !important;
+    min-height: 21px !important;
+
+    max-width: 21px !important;
+    max-height: 21px !important;
+  }
+
+}
