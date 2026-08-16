@@ -5516,3 +5516,300 @@ body {
   }
 
 }
+/* =========================================================
+   RC ORDERA CLIENTE
+   CORRECCIÓN ESTRUCTURAL RESPONSIVE
+   ========================================================= */
+
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+.customer-page {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  background: #ffffff;
+}
+
+.customer-app-shell {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0 0 90px;
+}
+
+/* Anula la estructura GRID del header antiguo */
+.customer-app-header.customer-client-header {
+  position: relative;
+
+  top: auto;
+
+  display: block;
+
+  width: 100%;
+  max-width: 100%;
+
+  margin: 0;
+
+  padding:
+    calc(18px + env(safe-area-inset-top, 0px))
+    max(18px, env(safe-area-inset-right, 0px))
+    14px
+    max(18px, env(safe-area-inset-left, 0px));
+
+  border: 0;
+
+  background: #ffffff;
+  color: #172033;
+
+  box-shadow: none;
+
+  backdrop-filter: none;
+}
+
+/* Logo y botones siempre en una sola fila */
+.customer-client-topbar {
+  width: 100%;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+
+  margin: 0 0 16px;
+}
+
+.customer-client-logo {
+  min-width: 0;
+
+  display: flex;
+  align-items: center;
+
+  gap: 6px;
+
+  white-space: nowrap;
+}
+
+/* Botones del lado derecho */
+.customer-client-header-actions {
+  flex: 0 0 auto;
+
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+}
+
+/* Dirección siempre debajo del logo */
+.customer-delivery-location {
+  display: block;
+
+  width: 100%;
+  max-width: 100%;
+
+  margin: 0;
+
+  padding: 12px 14px;
+
+  overflow: hidden;
+}
+
+.customer-delivery-location-row {
+  display: flex;
+
+  width: 100%;
+  min-width: 0;
+
+  align-items: center;
+
+  gap: 9px;
+}
+
+.customer-delivery-location-row strong {
+  flex: 1 1 auto;
+
+  min-width: 0;
+
+  overflow: hidden;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Contenido principal */
+.customer-view[data-customer-view="home"] {
+  width: 100%;
+  max-width: 100%;
+
+  margin: 0;
+  padding: 0;
+
+  overflow: hidden;
+}
+
+.customer-home-intro,
+.customer-categories-section,
+.customer-restaurant-panel {
+  width: 100%;
+  max-width: 100%;
+
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Buscador nunca puede salirse */
+.customer-home-search {
+  width: 100%;
+  max-width: 100%;
+}
+
+.customer-home-search input {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Categorías pueden deslizarse sin ampliar toda la página */
+.customer-category-scroll {
+  width: 100%;
+  max-width: 100%;
+
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  overscroll-behavior-x: contain;
+
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ningún elemento puede provocar scroll horizontal */
+.customer-page *,
+.customer-page *::before,
+.customer-page *::after {
+  box-sizing: border-box;
+}
+
+/* =========================================================
+   CELULAR
+   ========================================================= */
+
+@media (max-width: 767px) {
+
+  .customer-app-header.customer-client-header {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .customer-client-logo {
+    font-size: clamp(22px, 7vw, 27px);
+  }
+
+  .customer-notification-button {
+    width: 40px;
+    height: 40px;
+  }
+
+  .customer-profile-avatar {
+    width: 42px;
+    height: 42px;
+
+    flex-basis: 42px;
+  }
+
+  .customer-delivery-location {
+    border-radius: 16px;
+  }
+
+  .customer-home-intro,
+  .customer-categories-section,
+  .customer-restaurant-panel {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+}
+
+
+/* =========================================================
+   CELULAR MUY PEQUEÑO
+   ========================================================= */
+
+@media (max-width: 360px) {
+
+  .customer-app-header.customer-client-header {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .customer-client-header-actions {
+    gap: 4px;
+  }
+
+  .customer-notification-button {
+    width: 36px;
+    height: 36px;
+  }
+
+  .customer-profile-avatar {
+    width: 38px;
+    height: 38px;
+
+    flex-basis: 38px;
+  }
+
+  .customer-delivery-location-row strong {
+    font-size: 14px;
+  }
+
+  .customer-home-intro,
+  .customer-categories-section,
+  .customer-restaurant-panel {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+}
+
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (min-width: 768px) and (max-width: 1099px) {
+
+  .customer-app-header.customer-client-header,
+  .customer-home-intro,
+  .customer-categories-section,
+  .customer-restaurant-panel {
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+
+}
+
+
+/* =========================================================
+   ESCRITORIO
+   ========================================================= */
+
+@media (min-width: 1100px) {
+
+  .customer-app-header.customer-client-header,
+  .customer-home-intro,
+  .customer-categories-section,
+  .customer-restaurant-panel {
+    padding-left:
+      max(40px, calc((100vw - 1280px) / 2));
+
+    padding-right:
+      max(40px, calc((100vw - 1280px) / 2));
+  }
+
+}
