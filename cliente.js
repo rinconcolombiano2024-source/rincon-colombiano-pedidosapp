@@ -52,6 +52,7 @@ const customerElements = {
   favoriteRestaurantButton: document.querySelector("#customerFavoriteRestaurantButton"),
   tableLabel: document.querySelector("#customerTableLabel"),
   topLocation: document.querySelector("#customerTopLocation"),
+  greetingName: document.querySelector("#customerGreetingName"),
   views: Array.from(document.querySelectorAll("[data-customer-view]")),
   viewButtons: Array.from(document.querySelectorAll("[data-customer-view-target]")),
   backToRestaurantsButton: document.querySelector("#customerBackToRestaurantsButton"),
