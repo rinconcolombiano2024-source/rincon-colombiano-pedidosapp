@@ -2705,16 +2705,113 @@ function customerRenderRestaurantDirectory() {
     return;
   }
 
-  customerElements.restaurantList.innerHTML = visibleRestaurants
-    .map((restaurant) => {
-      const isSelected = restaurant.userId === customerStoreId;
-      const isOpen = restaurant.operationalOpen === true;
-      const initials = restaurant.name
-        .split(/\s+/)
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((part) => part[0]?.toUpperCase() || "")
-        .join("");
+ customerElements.restaurantList.innerHTML = visibleRestaurants
+  .map((restaurant) => {
+    const isSelected = restaurant.userId === customerStoreId;
+    const isOpen = restaurant.operationalOpen === true;
+
+    const initials = restaurant.name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() || "")
+      .join("");
+
+    const restaurantImage = restaurant.logoUrl
+      ? `
+        <img
+          class="customer-restaurant-cover-image"
+          src="${customerEscapeHtml(restaurant.logoUrl)}"
+          alt="${customerEscapeHtml(restaurant.name)}"
+          loading="lazy"
+        />
+      `
+      : `
+        <div class="customer-restaurant-cover-placeholder">
+          <span>${customerEscapeHtml(initials || "RC")}</span>
+        </div>
+      `;
+
+    return `
+      <article
+        class="customer-restaurant-card ${isSelected ? "is-selected" : ""}"
+        data-store-id="${customerEscapeHtml(restaurant.userId)}"
+        role="button"
+        tabindex="0"
+        aria-label="${customerEscapeHtml(
+          `${restaurant.name}, ${
+            restaurant.address || customerT("restaurantNoAddress")
+          }`
+        )}"
+      >
+
+        <div class="customer-restaurant-cover">
+
+          ${restaurantImage}
+
+          <button
+            class="customer-restaurant-heart"
+            type="button"
+            tabindex="-1"
+            aria-label="Agregar a favoritos"
+          >
+            &#9825;
+          </button>
+
+          <span class="customer-restaurant-open-label ${
+            isOpen ? "is-open" : "is-closed"
+          }">
+            ${customerEscapeHtml(
+              customerT(isOpen ? "restaurantOpen" : "restaurantClosed")
+            )}
+          </span>
+
+        </div>
+
+        <div class="customer-restaurant-content">
+
+          <div class="customer-restaurant-name-row">
+
+            <strong class="customer-restaurant-name">
+              ${customerEscapeHtml(restaurant.name)}
+            </strong>
+
+            <span class="customer-restaurant-rating">
+              ★ 4.8
+            </span>
+
+          </div>
+
+          <span class="customer-restaurant-address">
+            ${customerEscapeHtml(
+              restaurant.address || customerT("restaurantNoAddress")
+            )}
+          </span>
+
+          <div class="customer-restaurant-meta">
+
+            <span>
+              🕒 25–35 min
+            </span>
+
+            <span>
+              •
+            </span>
+
+            <span>
+              ${customerEscapeHtml(
+                customerT("deliveryCalculatedAtCheckout")
+              )}
+            </span>
+
+          </div>
+
+        </div>
+
+      </article>
+    `;
+  })
+  .join("");
       return `
         <article class="customer-restaurant-card ${isSelected ? "is-selected" : ""}" data-store-id="${customerEscapeHtml(
          restaurant.userId
