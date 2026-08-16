@@ -4709,6 +4709,17 @@ customerElements.restaurantSearchInput?.addEventListener("input", () => {
   customerRestaurantSearchQuery = customerElements.restaurantSearchInput.value.trim();
   customerRenderRestaurantDirectory();
 });
+if (customerElements.homeSearchInput) {
+  customerElements.homeSearchInput.addEventListener("input", (event) => {
+    const value = event.target.value || "";
+
+    if (customerElements.restaurantSearchInput) {
+      customerElements.restaurantSearchInput.value = value;
+    }
+
+    customerRenderRestaurantDirectory();
+  });
+}
 customerElements.refreshRestaurantsButton?.addEventListener("click", () => customerLoadRestaurantDirectory());
 customerElements.restaurantList?.addEventListener("click", (event) => {
   const card = event.target.closest(".customer-restaurant-card");
