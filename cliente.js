@@ -1829,6 +1829,12 @@ function customerApplyRegisterFieldsToOrder() {
 
 function customerApplyProfileFields(profile = {}) {
   const address = profile.default_address || {};
+  const fullName = String(profile.full_name || "").trim();
+
+if (customerElements.greetingName) {
+  customerElements.greetingName.textContent =
+    fullName.split(/\s+/)[0] || "Cliente";
+}
   customerRegistrationRegion = {
     ...customerRegistrationRegion,
     country: address.country || customerRegistrationRegion.country,
