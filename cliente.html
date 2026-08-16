@@ -235,17 +235,26 @@
 
 </section>
         <section class="customer-restaurant-panel" id="customerRestaurantPanel" aria-label="Elegir restaurante" data-i18n-aria-label="restaurantPanelAria">
-          <div class="customer-section-heading">
-            <div>
-              <p class="eyebrow" data-i18n="homeEyebrow">Cerca de ti</p>
-              <h2 id="customerRestaurantTitle" data-i18n="restaurantTitle">Elegir restaurante</h2>
-              <p id="customerSelectedRestaurantText" data-i18n="restaurantHelp">Busca el restaurante donde quieres hacer tu pedido.</p>
-            </div>
-            <button class="customer-icon-action" id="customerRefreshRestaurantsButton" type="button" title="Actualizar restaurantes" aria-label="Actualizar restaurantes" data-i18n-aria-label="restaurantRefresh">
-              <span aria-hidden="true">&#8635;</span>
-            </button>
-          </div>
-          <div class="customer-restaurant-search">
+         <div class="customer-section-title-row customer-restaurants-heading">
+  <div>
+    <h2 id="customerRestaurantTitle">Restaurantes cerca de ti</h2>
+    <p id="customerSelectedRestaurantText">
+      Descubre lugares disponibles para pedir ahora.
+    </p>
+  </div>
+
+  <button
+    class="customer-icon-action"
+    id="customerRefreshRestaurantsButton"
+    type="button"
+    title="Actualizar restaurantes"
+    aria-label="Actualizar restaurantes"
+  >
+    <span aria-hidden="true">&#8635;</span>
+  </button>
+</div>
+          
+  <div class="customer-restaurant-search">
             <label>
               <span data-i18n="restaurantSearchLabel">Buscar restaurante</span>
               <input id="customerRestaurantSearchInput" type="search" placeholder="Nombre, ciudad o direccion" data-i18n-placeholder="restaurantSearchPlaceholder" autocomplete="off" />
