@@ -2812,26 +2812,6 @@ function customerRenderRestaurantDirectory() {
     `;
   })
   .join("");
-      return `
-        <article class="customer-restaurant-card ${isSelected ? "is-selected" : ""}" data-store-id="${customerEscapeHtml(
-         restaurant.userId
-      )}" role="button" tabindex="0" aria-label="${customerEscapeHtml(`${restaurant.name}, ${restaurant.address || customerT("restaurantNoAddress")}`)}">
-          ${
-            restaurant.logoUrl
-              ? `<img src="${customerEscapeHtml(restaurant.logoUrl)}" alt="${customerEscapeHtml(restaurant.name)}" loading="lazy" />`
-              : `<div class="customer-restaurant-initials">${customerEscapeHtml(initials || "R")}</div>`
-          }
-           <div class="customer-restaurant-info">
-             <strong>${customerEscapeHtml(restaurant.name)}</strong>
-             <small class="customer-restaurant-state ${isOpen ? "is-open" : "is-closed"}">${customerEscapeHtml(customerT(isOpen ? "restaurantOpen" : "restaurantClosed"))}</small>
-             <span>${customerEscapeHtml(restaurant.address || customerT("restaurantNoAddress"))}</span>
-             <small>${customerEscapeHtml(customerT("deliveryCalculatedAtCheckout"))}</small>
-           </div>
-           <span class="customer-restaurant-chevron" aria-hidden="true">&gt;</span>
-         </article>
-       `;
-    })
-    .join("");
   customerRenderSelectedRestaurantDetails();
 }
 
