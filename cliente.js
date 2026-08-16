@@ -2732,86 +2732,73 @@ function customerRenderRestaurantDirectory() {
           <span>${customerEscapeHtml(initials || "RC")}</span>
         </div>
       `;
+return `
+  <article
+    class="customer-restaurant-card ${isSelected ? "is-selected" : ""}"
+    data-store-id="${customerEscapeHtml(restaurant.userId)}"
+    role="button"
+    tabindex="0"
+    aria-label="${customerEscapeHtml(
+      `${restaurant.name}, ${
+        restaurant.address || customerT("restaurantNoAddress")
+      }`
+    )}"
+  >
 
-    return `
-      <article
-        class="customer-restaurant-card ${isSelected ? "is-selected" : ""}"
-        data-store-id="${customerEscapeHtml(restaurant.userId)}"
-        role="button"
-        tabindex="0"
-        aria-label="${customerEscapeHtml(
-          `${restaurant.name}, ${
-            restaurant.address || customerT("restaurantNoAddress")
-          }`
-        )}"
+    <div class="customer-restaurant-cover">
+
+      ${restaurantImage}
+
+      <button
+        class="customer-restaurant-heart"
+        type="button"
+        tabindex="-1"
+        aria-label="Agregar a favoritos"
       >
+        &#9825;
+      </button>
 
-        <div class="customer-restaurant-cover">
+      <span class="customer-restaurant-open-label ${
+        isOpen ? "is-open" : "is-closed"
+      }">
+        ${customerEscapeHtml(
+          customerT(isOpen ? "restaurantOpen" : "restaurantClosed")
+        )}
+      </span>
 
-          ${restaurantImage}
+    </div>
 
-          <button
-            class="customer-restaurant-heart"
-            type="button"
-            tabindex="-1"
-            aria-label="Agregar a favoritos"
-          >
-            &#9825;
-          </button>
+    <div class="customer-restaurant-content">
 
-          <span class="customer-restaurant-open-label ${
-            isOpen ? "is-open" : "is-closed"
-          }">
-            ${customerEscapeHtml(
-              customerT(isOpen ? "restaurantOpen" : "restaurantClosed")
-            )}
-          </span>
+      <div class="customer-restaurant-name-row">
 
-        </div>
+        <strong class="customer-restaurant-name">
+          ${customerEscapeHtml(restaurant.name)}
+        </strong>
 
-        <div class="customer-restaurant-content">
+      </div>
 
-          <div class="customer-restaurant-name-row">
+      <span class="customer-restaurant-address">
+        ${customerEscapeHtml(
+          restaurant.address || customerT("restaurantNoAddress")
+        )}
+      </span>
 
-            <strong class="customer-restaurant-name">
-              ${customerEscapeHtml(restaurant.name)}
-            </strong>
+      <div class="customer-restaurant-meta">
 
-            <span class="customer-restaurant-rating">
-              ★ 4.8
-            </span>
+        <span>
+          ${customerEscapeHtml(
+            customerT("deliveryCalculatedAtCheckout")
+          )}
+        </span>
 
-          </div>
+      </div>
 
-          <span class="customer-restaurant-address">
-            ${customerEscapeHtml(
-              restaurant.address || customerT("restaurantNoAddress")
-            )}
-          </span>
+    </div>
 
-          <div class="customer-restaurant-meta">
-
-            <span>
-              🕒 25–35 min
-            </span>
-
-            <span>
-              •
-            </span>
-
-            <span>
-              ${customerEscapeHtml(
-                customerT("deliveryCalculatedAtCheckout")
-              )}
-            </span>
-
-          </div>
-
-        </div>
-
-      </article>
-    `;
-  })
+  </article>
+`;
+    })
   .join("");
   customerRenderSelectedRestaurantDetails();
 }
