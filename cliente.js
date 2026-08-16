@@ -4971,25 +4971,6 @@ window.addEventListener("beforeunload", () => {
   customerStopOrderTrackingRealtime();
 });
 
-let customerPullToRefreshStartY = 0;
-window.addEventListener(
-  "touchstart",
-  (event) => {
-    customerPullToRefreshStartY = event.touches?.[0]?.clientY || 0;
-  },
-  { passive: true }
-);
-window.addEventListener(
-  "touchmove",
-  (event) => {
-    const currentY = event.touches?.[0]?.clientY || 0;
-    if (window.scrollY <= 0 && currentY > customerPullToRefreshStartY + 8) {
-      event.preventDefault();
-    }
-  },
-  { passive: false }
-);
-
 if (customerElements.registerCountryInput && !customerElements.registerCountryInput.value) {
   customerElements.registerCountryInput.value = customerRegistrationRegion.countryCode || "";
 }
