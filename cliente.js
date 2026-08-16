@@ -44,6 +44,7 @@ const customerElements = {
   restaurantTitle: document.querySelector("#customerRestaurantTitle"),
   selectedRestaurantText: document.querySelector("#customerSelectedRestaurantText"),
   restaurantSearchInput: document.querySelector("#customerRestaurantSearchInput"),
+  homeSearchInput: document.querySelector("#customerHomeSearchInput"),
   restaurantList: document.querySelector("#customerRestaurantList"),
   refreshRestaurantsButton: document.querySelector("#customerRefreshRestaurantsButton"),
   historyList: document.querySelector("#customerHistoryList"),
