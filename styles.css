@@ -6351,3 +6351,105 @@ body.customer-page {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+/* =========================================================
+   RC ORDERA - CLIENTE
+   CATEGORÍAS VISUALES
+   ========================================================= */
+
+.customer-categories-section {
+  padding-top: 18px;
+  padding-bottom: 10px;
+  background: #ffffff;
+}
+
+.customer-section-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.customer-section-title-row h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: #171b24;
+}
+
+.customer-see-all-button {
+  border: 0;
+  background: transparent;
+  color: #f4511e;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.customer-category-scroll {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 0 8px;
+  scroll-snap-type: x proximity;
+}
+
+.customer-category-card {
+  flex: 0 0 auto;
+  width: 82px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  scroll-snap-align: start;
+}
+
+.customer-category-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  background: #f4f5f7;
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.customer-category-name {
+  width: 100%;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 650;
+  color: #343943;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.customer-category-card.active .customer-category-icon {
+  background: #fff0e9;
+  box-shadow: inset 0 0 0 1px rgba(244,81,30,.15);
+}
+
+.customer-category-card.active .customer-category-name {
+  color: #f4511e;
+}
+
+@media (max-width: 380px) {
+  .customer-category-card {
+    width: 74px;
+  }
+
+  .customer-category-icon {
+    width: 58px;
+    height: 58px;
+    font-size: 25px;
+    border-radius: 16px;
+  }
+}
