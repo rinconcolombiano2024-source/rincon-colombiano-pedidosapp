@@ -5107,3 +5107,111 @@ body.auth-checking > :not(script) {
   }
 }
 
+/* =========================================================
+   RC ORDERA - BASE RESPONSIVE CLIENTE
+   ========================================================= */
+
+html {
+  box-sizing: border-box;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}
+
+body {
+  margin: 0;
+  width: 100%;
+  min-width: 320px;
+  overflow-x: hidden;
+}
+
+.customer-app {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.customer-view {
+  width: 100%;
+  max-width: 100%;
+}
+
+.customer-client-header,
+.customer-home-intro {
+  width: 100%;
+}
+
+/* Evita que imágenes rompan el ancho */
+.customer-app img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Inputs y botones siempre dentro de la pantalla */
+.customer-app input,
+.customer-app select,
+.customer-app textarea,
+.customer-app button {
+  max-width: 100%;
+}
+
+/* Tablet */
+@media (min-width: 768px) {
+
+  .customer-client-header,
+  .customer-home-intro {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+
+  .customer-home-greeting h2 {
+    font-size: 30px;
+  }
+
+  .customer-home-search {
+    max-width: 720px;
+  }
+
+}
+
+/* Escritorio */
+@media (min-width: 1024px) {
+
+  .customer-app {
+    max-width: 1280px;
+  }
+
+  .customer-client-header,
+  .customer-home-intro {
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+
+}
+
+/* Pantallas pequeñas */
+@media (max-width: 380px) {
+
+  .customer-client-header,
+  .customer-home-intro {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .customer-client-logo {
+    font-size: 23px;
+  }
+
+  .customer-home-greeting h2 {
+    font-size: 23px;
+  }
+
+  .customer-delivery-location-row strong {
+    font-size: 15px;
+  }
+
+}
