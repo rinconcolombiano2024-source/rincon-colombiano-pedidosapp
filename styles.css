@@ -7231,3 +7231,177 @@ body.customer-page .customer-category-card.active .customer-category-icon {
   }
 
 }
+/* =========================================================
+   RC ORDERA CLIENTE
+   SCROLL NATIVO DEFINITIVO
+   Un solo scroll vertical: el documento
+   ========================================================= */
+
+/* El documento es el único encargado del scroll vertical */
+html {
+  width: 100%;
+  min-width: 320px;
+  min-height: 100%;
+
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+
+  overscroll-behavior-x: none;
+  overscroll-behavior-y: auto !important;
+
+  scroll-behavior: auto;
+}
+
+
+/* BODY NO debe convertirse en un segundo contenedor de scroll */
+body.customer-page {
+  width: 100%;
+  max-width: 100%;
+
+  min-height: 100vh;
+  height: auto !important;
+
+  margin: 0;
+
+  overflow-x: clip !important;
+  overflow-y: visible !important;
+
+  position: static !important;
+
+  overscroll-behavior-y: auto !important;
+
+  touch-action: auto;
+}
+
+
+/* Contenedor general */
+body.customer-page .customer-app-shell {
+  width: 100%;
+  max-width: 100%;
+
+  min-height: 100vh;
+  height: auto !important;
+
+  margin: 0;
+
+  overflow: visible !important;
+
+  padding-bottom:
+    calc(100px + env(safe-area-inset-bottom, 0px));
+}
+
+
+/* Cada pantalla debe crecer según su contenido */
+body.customer-page .customer-view {
+  width: 100%;
+  max-width: 100%;
+
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+
+  overflow: visible !important;
+
+  position: relative;
+}
+
+
+/* HOME */
+body.customer-page
+.customer-view[data-customer-view="home"] {
+  height: auto !important;
+  min-height: 0 !important;
+
+  overflow: visible !important;
+}
+
+
+/* RESTAURANTE */
+body.customer-page
+.customer-view[data-customer-view="store"] {
+  height: auto !important;
+  min-height: 0 !important;
+
+  overflow: visible !important;
+}
+
+
+/* PEDIDOS */
+body.customer-page
+.customer-view[data-customer-view="orders"] {
+  height: auto !important;
+  min-height: 0 !important;
+
+  overflow: visible !important;
+}
+
+
+/* RESERVAS */
+body.customer-page
+.customer-view[data-customer-view="reservations"] {
+  height: auto !important;
+  min-height: 0 !important;
+
+  overflow: visible !important;
+}
+
+
+/* CUENTA */
+body.customer-page
+.customer-view[data-customer-view="profile"] {
+  height: auto !important;
+  min-height: 0 !important;
+
+  overflow: visible !important;
+}
+
+
+/* Elementos internos que NO deben secuestrar el scroll */
+body.customer-page .customer-restaurant-panel,
+body.customer-page .customer-menu-layout,
+body.customer-page .customer-menu-panel,
+body.customer-page .customer-cart-panel {
+  max-height: none !important;
+}
+
+
+/* En móvil el carrito tampoco debe ser sticky */
+@media (max-width: 860px) {
+
+  body.customer-page .customer-cart-panel {
+    position: static !important;
+
+    top: auto !important;
+
+    height: auto !important;
+    max-height: none !important;
+
+    overflow: visible !important;
+  }
+
+}
+
+
+/* La barra de categorías conserva SOLO su scroll horizontal */
+body.customer-page .customer-category-scroll {
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+
+  touch-action: auto;
+
+  -webkit-overflow-scrolling: touch;
+}
+
+
+/* Deja espacio después del último contenido para que
+   la navegación inferior jamás lo tape */
+body.customer-page main.customer-app-shell::after {
+  content: "";
+
+  display: block;
+
+  width: 100%;
+  height: calc(24px + env(safe-area-inset-bottom, 0px));
+
+  pointer-events: none;
+}
