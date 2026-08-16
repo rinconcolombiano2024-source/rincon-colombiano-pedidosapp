@@ -4934,3 +4934,175 @@ body.auth-checking > :not(script) {
   color: #176b3b;
   font-weight: 700;
 }
+/* =========================================================
+   RC ORDERA - CLIENTE
+   Cabecera principal
+   ========================================================= */
+
+.customer-client-header {
+  background: #ffffff;
+  padding: 20px 22px 16px;
+  border-bottom: 0;
+  box-shadow: none;
+}
+
+/* Fila superior: logo + acciones */
+.customer-client-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+/* RC ORDERA */
+.customer-client-logo {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.8px;
+}
+
+.customer-client-logo-rc {
+  color: #f4511e;
+}
+
+.customer-client-logo-ordera {
+  color: #172033;
+}
+
+/* Acciones de la derecha */
+.customer-client-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Notificaciones */
+.customer-notification-button {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #172033;
+  cursor: pointer;
+}
+
+.customer-notification-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.customer-notification-badge {
+  position: absolute;
+  top: 1px;
+  right: 0;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #f4511e;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  border: 2px solid #ffffff;
+}
+
+/* Avatar */
+.customer-profile-avatar {
+  width: 45px;
+  height: 45px;
+  flex: 0 0 45px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  padding: 0;
+  background: #fff0e8;
+  color: #f4511e;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+/* Tarjeta de dirección */
+.customer-delivery-location {
+  width: 100%;
+  display: block;
+  text-align: left;
+  padding: 13px 17px 14px;
+  background: #ffffff;
+  border: 1px solid #e7e7e7;
+  border-radius: 18px;
+  box-shadow: 0 2px 8px rgba(17, 24, 39, 0.04);
+  cursor: pointer;
+}
+
+.customer-delivery-location-label {
+  display: block;
+  margin: 0 0 5px 22px;
+  color: #777d87;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.customer-delivery-location-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.customer-location-pin {
+  flex: 0 0 auto;
+  color: #f4511e;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.customer-delivery-location-row strong {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #161b26;
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.customer-location-chevron {
+  flex: 0 0 auto;
+  color: #161b26;
+  font-size: 21px;
+  font-weight: 700;
+}
+
+/* Ajuste para móvil */
+@media (max-width: 600px) {
+  .customer-client-header {
+    padding: 18px 18px 14px;
+  }
+
+  .customer-client-logo {
+    font-size: 26px;
+  }
+
+  .customer-client-topbar {
+    margin-bottom: 16px;
+  }
+
+  .customer-delivery-location {
+    border-radius: 17px;
+  }
+}
