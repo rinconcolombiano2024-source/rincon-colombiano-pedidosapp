@@ -5813,3 +5813,379 @@ body {
   }
 
 }
+/* =========================================================
+   RC ORDERA - CLIENTE
+   LAYOUT RESPONSIVE DEFINITIVO
+   ========================================================= */
+
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+body.customer-page {
+  background: #f7f8fa;
+}
+
+.customer-app-shell {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0 0 88px;
+}
+
+/* ---------------------------------------------------------
+   HEADER
+   --------------------------------------------------------- */
+
+.customer-app-header.customer-client-header {
+  position: relative;
+  top: auto;
+
+  display: block;
+
+  width: 100%;
+  max-width: 100%;
+
+  margin: 0;
+
+  padding:
+    calc(18px + env(safe-area-inset-top, 0px))
+    18px
+    16px;
+
+  background: #ffffff;
+  border: 0;
+  box-shadow: none;
+
+  color: #172033;
+}
+
+.customer-client-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  width: 100%;
+
+  gap: 12px;
+
+  margin: 0 0 16px;
+}
+
+.customer-client-logo {
+  flex: 1 1 auto;
+  min-width: 0;
+
+  display: flex;
+  align-items: center;
+
+  gap: 6px;
+
+  font-size: clamp(23px, 5vw, 28px);
+  font-weight: 850;
+
+  white-space: nowrap;
+}
+
+.customer-client-header-actions {
+  flex: 0 0 auto;
+
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+}
+
+.customer-notification-button {
+  flex: 0 0 42px;
+
+  width: 42px;
+  height: 42px;
+}
+
+.customer-profile-avatar {
+  flex: 0 0 42px;
+
+  width: 42px;
+  height: 42px;
+}
+
+/* ---------------------------------------------------------
+   DIRECCIÓN
+   --------------------------------------------------------- */
+
+.customer-delivery-location {
+  display: block;
+
+  width: 100%;
+  max-width: 100%;
+
+  margin: 0;
+
+  padding: 13px 15px;
+
+  background: #ffffff;
+
+  border: 1px solid #e7e9ed;
+  border-radius: 17px;
+
+  overflow: hidden;
+}
+
+.customer-delivery-location-label {
+  display: block;
+
+  margin: 0 0 5px 24px;
+
+  color: #7d838c;
+
+  font-size: 13px;
+}
+
+.customer-delivery-location-row {
+  display: flex;
+  align-items: center;
+
+  width: 100%;
+  min-width: 0;
+
+  gap: 9px;
+}
+
+.customer-location-pin {
+  flex: 0 0 auto;
+}
+
+.customer-delivery-location-row strong {
+  flex: 1 1 auto;
+  min-width: 0;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  font-size: clamp(14px, 4vw, 17px);
+}
+
+.customer-location-chevron {
+  flex: 0 0 auto;
+}
+
+/* ---------------------------------------------------------
+   VISTA HOME
+   --------------------------------------------------------- */
+
+.customer-view[data-customer-view="home"] {
+  width: 100%;
+  max-width: 100%;
+
+  margin: 0;
+  padding: 0;
+
+  overflow: hidden;
+}
+
+.customer-home-intro,
+.customer-categories-section,
+.customer-restaurant-panel {
+  width: min(100%, 1280px);
+  max-width: 100%;
+
+  margin-left: auto;
+  margin-right: auto;
+
+  padding-left: 18px;
+  padding-right: 18px;
+}
+
+.customer-home-intro {
+  padding-top: 22px;
+}
+
+.customer-home-search {
+  width: 100%;
+  max-width: 100%;
+}
+
+.customer-home-search input {
+  width: 100%;
+  min-width: 0;
+}
+
+/* ---------------------------------------------------------
+   PROTECCIÓN CONTRA DESBORDAMIENTO
+   --------------------------------------------------------- */
+
+.customer-page *,
+.customer-page *::before,
+.customer-page *::after {
+  box-sizing: border-box;
+}
+
+.customer-page img,
+.customer-page video,
+.customer-page canvas,
+.customer-page svg {
+  max-width: 100%;
+}
+
+.customer-page input,
+.customer-page select,
+.customer-page textarea,
+.customer-page button {
+  max-width: 100%;
+}
+
+/* ---------------------------------------------------------
+   CATEGORÍAS
+   --------------------------------------------------------- */
+
+.customer-category-scroll {
+  display: flex;
+  align-items: flex-start;
+
+  width: 100%;
+  max-width: 100%;
+
+  gap: 12px;
+
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  padding-bottom: 8px;
+
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.customer-category-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* ---------------------------------------------------------
+   RESTAURANTES
+   --------------------------------------------------------- */
+
+.customer-restaurant-list {
+  width: 100%;
+  max-width: 100%;
+
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+
+  gap: 18px;
+}
+
+.customer-restaurant-card {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* ---------------------------------------------------------
+   BARRA INFERIOR
+   --------------------------------------------------------- */
+
+.customer-bottom-nav {
+  width: min(calc(100% - 24px), 720px);
+  max-width: calc(100% - 24px);
+
+  left: 50%;
+  right: auto;
+
+  transform: translateX(-50%);
+}
+
+/* =========================================================
+   MÓVILES PEQUEÑOS
+   ========================================================= */
+
+@media (max-width: 380px) {
+
+  .customer-app-header.customer-client-header {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .customer-home-intro,
+  .customer-categories-section,
+  .customer-restaurant-panel {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .customer-client-logo {
+    font-size: 22px;
+  }
+
+  .customer-notification-button {
+    flex-basis: 38px;
+    width: 38px;
+    height: 38px;
+  }
+
+  .customer-profile-avatar {
+    flex-basis: 38px;
+    width: 38px;
+    height: 38px;
+  }
+
+}
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (min-width: 768px) {
+
+  .customer-app-header.customer-client-header {
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+
+  .customer-home-intro,
+  .customer-categories-section,
+  .customer-restaurant-panel {
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+
+  .customer-restaurant-list {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+}
+
+/* =========================================================
+   ESCRITORIO
+   ========================================================= */
+
+@media (min-width: 1100px) {
+
+  .customer-app-header.customer-client-header {
+    padding-left:
+      max(40px, calc((100vw - 1280px) / 2));
+
+    padding-right:
+      max(40px, calc((100vw - 1280px) / 2));
+  }
+
+  .customer-home-intro,
+  .customer-categories-section,
+  .customer-restaurant-panel {
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+
+  .customer-restaurant-list {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+  }
+
+}
