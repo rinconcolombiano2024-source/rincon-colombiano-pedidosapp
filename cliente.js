@@ -2749,14 +2749,15 @@ return `
 
       ${restaurantImage}
 
-      <button
-        class="customer-restaurant-heart"
-        type="button"
-        tabindex="-1"
-        aria-label="Agregar a favoritos"
-      >
-        &#9825;
-      </button>
+     <button
+  class="customer-restaurant-heart"
+  type="button"
+  data-favorite-store-id="${customerEscapeHtml(restaurant.userId)}"
+  aria-label="${customerEscapeHtml(customerT("favoriteRestaurant"))}"
+  title="${customerEscapeHtml(customerT("favoriteRestaurant"))}"
+>
+  &#9825;
+</button>
 
       <span class="customer-restaurant-open-label ${
         isOpen ? "is-open" : "is-closed"
@@ -4708,13 +4709,116 @@ if (customerElements.homeSearchInput) {
   });
 }
 customerElements.refreshRestaurantsButton?.addEventListener("click", () => customerLoadRestaurantDirectory());
-customerElements.restaurantList?.addEventListener("click", (event) => {
-  const card = event.target.closest(".customer-restaurant-card");
+customerElements.restaurantList?.addEventListener("click", async (event) => {
+
+  const favoriteButton = event.target.closest("[data-favorite-store-id]");
+
+  if (favoriteButton) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const restaurantUserId =
+      String(favoriteButton.dataset.favoriteStoreId || "").trim();
+
+    if (!restaurantUserId) return;
+
+    if (!customerUser) {
+      customerSetStatus(customerT("favoriteSignIn"), "error");
+      customerOpenAuthDialog("login");
+      return;
+    }
+
+    const client = customerEnsureClient();
+
+    if (!client) return;
+
+    favoriteButton.disabled = true;
+
+    try {
+
+      const { data, error } = await client.rpc(
+        "toggle_customer_favorite",
+        {
+          p_restaurant_user_id: restaurantUserId,
+          p_favorite_type: "restaurant",
+          p_product_id: "",
+        }
+      );
+
+      if (error) throw error;
+
+      const isFavorite = data === true;
+
+      favoriteButton.classList.toggle(
+        "is-active",
+        isFavorite
+      );
+
+      favoriteButton.innerHTML =
+        isFavorite ? "&#9829;" : "&#9825;";
+
+      const label = customerT(
+        isFavorite
+          ? "unfavoriteRestaurant"
+          : "favoriteRestaurant"
+      );
+
+      favoriteButton.setAttribute(
+        "aria-label",
+        label
+      );
+
+      favoriteButton.setAttribute(
+        "title",
+        label
+      );
+
+      favoriteButton.setAttribute(
+        "aria-pressed",
+        String(isFavorite)
+      );
+
+    } catch (error) {
+
+      console.error(
+        "Favorite restaurant error:",
+        error
+      );
+
+      customerSetStatus(
+        customerT("favoriteSaveError"),
+        "error"
+      );
+
+    } finally {
+
+      favoriteButton.disabled = false;
+
+    }
+
+    return;
+  }
+
+
+  const card = event.target.closest(
+    ".customer-restaurant-card"
+  );
+
   if (!card) return;
-  customerSelectRestaurant(card.dataset.storeId).catch((error) => {
+
+  customerSelectRestaurant(
+    card.dataset.storeId
+  ).catch((error) => {
+
     console.error(error);
-    customerSetStatus(customerT("menuLoadError"), "error");
+
+    customerSetStatus(
+      customerT("menuLoadError"),
+      "error"
+    );
+
   });
+
 });
 customerElements.restaurantList?.addEventListener("keydown", (event) => {
   if (event.key !== "Enter" && event.key !== " ") return;
