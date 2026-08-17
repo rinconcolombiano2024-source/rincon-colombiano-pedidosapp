@@ -8100,3 +8100,149 @@ body.customer-page
   }
 
 }
+/* =========================================================
+   RC ORDERA CLIENTE
+   RESTAURANTES HORIZONTALES EN MOVIL
+   ========================================================= */
+
+
+/* MOVIL Y TABLET */
+
+@media (max-width: 1099px) {
+
+  body.customer-page
+  .customer-restaurant-list {
+
+    display: flex !important;
+
+    width: 100%;
+    max-width: 100%;
+
+    gap: 14px;
+
+    margin: 0;
+
+    padding:
+      2px
+      2px
+      12px;
+
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+
+    scroll-snap-type: x mandatory;
+
+    scrollbar-width: none;
+
+    overscroll-behavior-x: contain;
+
+    -webkit-overflow-scrolling: touch;
+  }
+
+
+  body.customer-page
+  .customer-restaurant-list::-webkit-scrollbar {
+
+    display: none;
+
+  }
+
+
+  body.customer-page
+  .customer-restaurant-card {
+
+    flex:
+      0
+      0
+      min(84vw, 360px);
+
+    width:
+      min(84vw, 360px);
+
+    min-width:
+      min(84vw, 360px);
+
+    max-width:
+      min(84vw, 360px);
+
+    scroll-snap-align: start;
+
+    scroll-snap-stop: normal;
+  }
+
+}
+
+
+/* =========================================================
+   TELEFONOS MUY PEQUENOS
+   ========================================================= */
+
+@media (max-width: 360px) {
+
+  body.customer-page
+  .customer-restaurant-card {
+
+    flex-basis: 86vw;
+
+    width: 86vw;
+    min-width: 86vw;
+    max-width: 86vw;
+  }
+
+}
+
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (min-width: 700px)
+and (max-width: 1099px) {
+
+  body.customer-page
+  .customer-restaurant-card {
+
+    flex-basis: 390px;
+
+    width: 390px;
+    min-width: 390px;
+    max-width: 390px;
+  }
+
+}
+
+
+/* =========================================================
+   PC
+   ========================================================= */
+
+@media (min-width: 1100px) {
+
+  body.customer-page
+  .customer-restaurant-list {
+
+    display: grid !important;
+
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+
+    gap: 20px;
+
+    overflow: visible !important;
+
+    padding-bottom: 0;
+  }
+
+
+  body.customer-page
+  .customer-restaurant-card {
+
+    width: 100%;
+
+    min-width: 0;
+    max-width: 100%;
+
+    flex: none;
+  }
+
+}
