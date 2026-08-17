@@ -281,25 +281,117 @@ function waiterRenderCart() {
 }
 
 function waiterAddProduct(productId, category) {
-  const product = (waiterMenu[category] || []).find((entry) => entry.id === productId);
-  if (!product || !product.available) return;
-  const existing = waiterCart.find((item) => item.productId === product.id && !item.note);
-  if (existing) existing.qty += 1;
-  else {
-    waiterCart.push({
-      cartId: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
-      productId: product.id,
-      name: product.name,
-      price: product.price,
-      qty: 1,
-      note: "",
-    });
-  }
-  waiterRenderCart();
-  waiterSaveDraft();
-  waiterShowToast(`${product.name} agregado.`);
-}
 
+  const cleanProductId =
+    String(productId || "").trim();
+
+  const cleanCategory =
+    String(category || "").trim();
+
+  if (!cleanProductId) {
+    waiterShowToast(
+      "No fue posible identificar este producto."
+    );
+    return;
+  }
+
+
+  let product = null;
+
+
+  /* Primero buscar dentro de la categoría indicada */
+
+  if (cleanCategory && waiterMenu[cleanCategory]) {
+    product =
+      waiterMenu[cleanCategory].find(
+        (entry) =>
+          String(entry.id) === cleanProductId
+      ) || null;
+  }
+
+
+  /* Respaldo:
+     buscar en TODO el menú si la categoría no coincide */
+
+  if (!product) {
+
+    for (const products of Object.values(waiterMenu)) {
+
+      product =
+        products.find(
+          (entry) =>
+            String(entry.id) === cleanProductId
+        ) || null;
+
+      if (product) break;
+    }
+
+  }
+
+
+  if (!product) {
+    waiterShowToast(
+      "No encontré este producto en el menú."
+    );
+    return;
+  }
+
+
+  if (!product.available) {
+    waiterShowToast(
+      `${product.name} está agotado.`
+    );
+    return;
+  }
+
+
+  const existing =
+    waiterCart.find(
+      (item) =>
+        String(item.productId) ===
+          String(product.id) &&
+        !String(item.note || "").trim()
+    );
+
+
+  if (existing) {
+
+    existing.qty =
+      Math.max(1, Number(existing.qty) || 1) + 1;
+
+  } else {
+
+    waiterCart.push({
+
+      cartId:
+        crypto.randomUUID
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random()}`,
+
+      productId: String(product.id),
+
+      name: product.name,
+
+      price: Number(product.price) || 0,
+
+      qty: 1,
+
+      note: "",
+
+    });
+
+  }
+
+
+  waiterRenderCart();
+
+  waiterSaveDraft();
+
+  waiterShowToast(
+    `${product.name} agregado al pedido.`
+  );
+
+}
 async function waiterLoadMenu() {
   if (!waiterClient || !waiterStoreId) return;
   waiterSetStatus(navigator.onLine ? "Actualizando menu..." : "Sin internet", navigator.onLine ? "" : "offline");
