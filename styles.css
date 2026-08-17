@@ -8563,3 +8563,14 @@ body.platform-admin-page {
   padding-bottom:
     env(safe-area-inset-bottom, 0px);
 }
+/* =========================================================
+   RC ORDERA CLIENTE
+   AJUSTE FINAL ESPACIO SUPERIOR HOME
+   ========================================================= */
+
+body.customer-page
+.customer-view[data-customer-view="home"]
+.customer-home-intro {
+  padding-top: 8px !important;
+  margin-top: 0 !important;
+}
