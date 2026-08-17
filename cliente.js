@@ -54,6 +54,8 @@ const customerElements = {
   tableLabel: document.querySelector("#customerTableLabel"),
   topLocation: document.querySelector("#customerTopLocation"),
   greetingName: document.querySelector("#customerGreetingName"),
+  profileAvatarInitials:
+  document.querySelector("#customerProfileAvatarInitials"),
   views: Array.from(document.querySelectorAll("[data-customer-view]")),
   viewButtons: Array.from(document.querySelectorAll("[data-customer-view-target]")),
   backToRestaurantsButton: document.querySelector("#customerBackToRestaurantsButton"),
@@ -1860,6 +1862,33 @@ function customerApplyProfileFields(
 if (customerElements.greetingName) {
   customerElements.greetingName.textContent =
     fullName.split(/\s+/)[0] || "Cliente";
+}
+  if (customerElements.profileAvatarInitials) {
+
+  const nameParts =
+    fullName
+      .split(/\s+/)
+      .filter(Boolean);
+
+  let initials = "C";
+
+  if (nameParts.length === 1) {
+    initials =
+      nameParts[0]
+        .slice(0, 2)
+        .toUpperCase();
+  }
+
+  if (nameParts.length >= 2) {
+    initials =
+      (
+        nameParts[0][0] +
+        nameParts[nameParts.length - 1][0]
+      ).toUpperCase();
+  }
+
+  customerElements.profileAvatarInitials.textContent =
+    initials;
 }
   customerRegistrationRegion = {
     ...customerRegistrationRegion,
