@@ -1829,9 +1829,33 @@ function customerApplyRegisterFieldsToOrder() {
   customerSetInputIfEmpty(customerElements.referenceInput, customerInputValue(customerElements.registerReferenceInput));
 }
 
-function customerApplyProfileFields(profile = {}) {
+function customerApplyProfileFields(
+  profile = {},
+  options = {}
+) {
+
+  const overwrite =
+    options.overwrite === true;
   const address = profile.default_address || {};
   const fullName = String(profile.full_name || "").trim();
+  const customerAssignProfileValue =
+  (element, value) => {
+
+    if (!element) return;
+
+    const cleanValue =
+      String(value ?? "").trim();
+
+    if (!cleanValue) return;
+
+    if (
+      overwrite ||
+      !String(element.value || "").trim()
+    ) {
+      element.value = cleanValue;
+    }
+
+  };
 
 if (customerElements.greetingName) {
   customerElements.greetingName.textContent =
@@ -1851,20 +1875,75 @@ if (customerElements.greetingName) {
     customerElements.registerCountryInput.value = customerRegistrationRegion.countryCode || "";
   }
   customerRenderRegistrationRegions(customerRegistrationRegion.countryCode, customerRegistrationRegion.region);
-  customerSetInputIfEmpty(customerElements.registerCityInput, customerRegistrationRegion.city);
-  customerSetInputIfEmpty(customerElements.registerPostalCodeInput, customerRegistrationRegion.postalCode);
-  customerSetInputIfEmpty(customerElements.registerNameInput, profile.full_name);
-  customerSetInputIfEmpty(customerElements.registerPhoneInput, profile.phone);
-  customerSetInputIfEmpty(customerElements.registerAddressInput, address.address);
-  customerSetInputIfEmpty(customerElements.registerNeighborhoodInput, address.neighborhood);
-  customerSetInputIfEmpty(customerElements.registerReferenceInput, address.reference);
-  customerSetInputIfEmpty(customerElements.nameInput, profile.full_name);
-  customerSetInputIfEmpty(customerElements.phoneInput, profile.phone);
-  customerSetInputIfEmpty(customerElements.tableInput, address.table);
-  customerSetInputIfEmpty(customerElements.addressInput, address.address);
-  customerSetInputIfEmpty(customerElements.neighborhoodInput, address.neighborhood);
-  customerSetInputIfEmpty(customerElements.referenceInput, address.reference);
-  customerSetInputIfEmpty(customerElements.distanceInput, address.distanceKm);
+ customerAssignProfileValue(
+  customerElements.registerCityInput,
+  customerRegistrationRegion.city
+);
+
+customerAssignProfileValue(
+  customerElements.registerPostalCodeInput,
+  customerRegistrationRegion.postalCode
+);
+
+customerAssignProfileValue(
+  customerElements.registerNameInput,
+  profile.full_name
+);
+
+customerAssignProfileValue(
+  customerElements.registerPhoneInput,
+  profile.phone
+);
+
+customerAssignProfileValue(
+  customerElements.registerAddressInput,
+  address.address
+);
+
+customerAssignProfileValue(
+  customerElements.registerNeighborhoodInput,
+  address.neighborhood
+);
+
+customerAssignProfileValue(
+  customerElements.registerReferenceInput,
+  address.reference
+);
+
+customerAssignProfileValue(
+  customerElements.nameInput,
+  profile.full_name
+);
+
+customerAssignProfileValue(
+  customerElements.phoneInput,
+  profile.phone
+);
+
+customerAssignProfileValue(
+  customerElements.tableInput,
+  address.table
+);
+
+customerAssignProfileValue(
+  customerElements.addressInput,
+  address.address
+);
+
+customerAssignProfileValue(
+  customerElements.neighborhoodInput,
+  address.neighborhood
+);
+
+customerAssignProfileValue(
+  customerElements.referenceInput,
+  address.reference
+);
+
+customerAssignProfileValue(
+  customerElements.distanceInput,
+  address.distanceKm
+);
   customerRenderLocationSummary();
   customerRenderProfileDetails();
 }
@@ -2297,13 +2376,115 @@ async function customerLoadProfile() {
     return;
   }
   if (data.language && CUSTOMER_I18N[data.language]) customerSetLanguage(data.language);
-  customerApplyProfileFields(data);
+  customerApplyProfileFields(
+  data,
+  {
+    overwrite: true
+  }
+);
   customerRenderDeliveryFields();
 }
 
 async function customerSaveProfile() {
-  if (!customerClient || !customerUser) return;
-  await customerClient.from("customer_profiles").upsert(customerProfilePayload());
+
+  if (!customerClient || !customerUser) {
+    throw new Error(
+      "No hay una sesión de cliente activa."
+    );
+  }
+
+  const profile =
+    customerProfilePayload();
+
+
+  /* Guardar perfil específico del cliente */
+
+  const { error: profileError } =
+    await customerClient
+      .from("customer_profiles")
+      .upsert(
+        profile,
+        {
+          onConflict: "user_id"
+        }
+      );
+
+  if (profileError) {
+    throw profileError;
+  }
+
+
+  /* Mantener también actualizado el perfil general */
+
+  const { error: generalProfileError } =
+    await customerClient
+      .from("user_profiles")
+      .upsert(
+        customerGeneralProfilePayload(),
+        {
+          onConflict: "user_id"
+        }
+      );
+
+  if (generalProfileError) {
+    throw generalProfileError;
+  }
+
+
+  /* Actualizar también los datos de Supabase Auth.
+     Así al volver a iniciar sesión no aparece
+     nuevamente el nombre antiguo. */
+
+  const currentMetadata =
+    customerUser.user_metadata || {};
+
+  const { data: authData, error: authError } =
+    await customerClient.auth.updateUser({
+      data: {
+        ...currentMetadata,
+
+        full_name:
+          profile.full_name,
+
+        phone:
+          profile.phone,
+
+        default_address:
+          profile.default_address,
+
+        country:
+          profile.default_address?.country || "",
+
+        country_code:
+          profile.default_address?.countryCode || "",
+
+        city:
+          profile.default_address?.city || "",
+
+        region:
+          profile.default_address?.region || "",
+
+        postal_code:
+          profile.default_address?.postalCode || "",
+
+        preferred_language:
+          customerLanguage
+      }
+    });
+
+  if (authError) {
+    throw authError;
+  }
+
+
+  /* Actualizar también el usuario que tenemos en memoria */
+
+  if (authData?.user) {
+    customerUser = authData.user;
+  }
+
+
+  return profile;
 }
 
 function customerHistoryItems(row) {
@@ -5211,13 +5392,49 @@ customerElements.editProfileButton?.addEventListener("click", () => {
     if (customerElements.neighborhoodInput) {
       customerElements.neighborhoodInput.value = newNeighborhood;
     }
+    if (customerElements.registerNameInput) {
+  customerElements.registerNameInput.value =
+    newName;
+}
 
-    try {
-      await customerSaveProfile();
+if (customerElements.registerPhoneInput) {
+  customerElements.registerPhoneInput.value =
+    newPhone;
+}
 
-      customerRenderLocationSummary();
-      customerRenderProfileDetails();
-    } catch (error) {
+if (customerElements.registerAddressInput) {
+  customerElements.registerAddressInput.value =
+    newAddress;
+}
+
+if (customerElements.registerNeighborhoodInput) {
+  customerElements.registerNeighborhoodInput.value =
+    newNeighborhood;
+}
+
+   try {
+
+  await customerSaveProfile();
+
+
+  if (customerElements.greetingName) {
+
+    customerElements.greetingName.textContent =
+      newName.split(/\s+/)[0] || "Cliente";
+
+  }
+
+
+  customerRenderLocationSummary();
+
+  customerRenderProfileDetails();
+
+
+  alert(
+    "Tus datos fueron guardados correctamente."
+  );
+ }
+   catch (error) {
       console.error("Error guardando perfil del cliente:", error);
       alert("No se pudo guardar el perfil.");
     }
