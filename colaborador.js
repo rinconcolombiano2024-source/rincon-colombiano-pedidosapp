@@ -105,6 +105,10 @@ const courierElements = {
   headerStatus: document.querySelector("#courierHeaderStatus"),
   homeSignedOut: document.querySelector("#courierHomeSignedOut"),
   activeDeliveryCard: document.querySelector("#courierActiveDeliveryCard"),
+  deliveryMap: document.querySelector("#courierDeliveryMap"),
+mapTitle: document.querySelector("#courierMapTitle"),
+mapStatus: document.querySelector("#courierMapStatus"),
+mapCenterButton: document.querySelector("#courierMapCenterButton"),
   historyList: document.querySelector("#courierHistoryList"),
   steps: document.querySelector("#courierSteps"),
   views: Array.from(document.querySelectorAll("[data-courier-view]")),
@@ -423,6 +427,13 @@ let courierTargetAssignmentId = String(courierParams.get("assignment") || "").tr
 let courierRegistrationRegion = courierDetectedRegion();
 let courierGoogleMapsScriptPromise = null;
 let courierCityAutocomplete = null;
+let courierDeliveryMap = null;
+
+let courierMapCourierMarker = null;
+let courierMapRestaurantMarker = null;
+let courierMapCustomerMarker = null;
+
+let courierMapBounds = null;
 
 const COURIER_VERIFICATION_EMAIL = "pedidosapprinconcolombiano@gmail.com";
 const COURIER_FILE_FIELDS = [
@@ -699,7 +710,346 @@ function courierHasValidCoordinates(location = courierLastLocation) {
     && longitude >= -180
     && longitude <= 180;
 }
+function courierAssignmentCustomerLocation(assignment) {
 
+  const location =
+    assignment?.order_json?.delivery?.location || {};
+
+  const lat =
+    Number.parseFloat(location.lat);
+
+  const lng =
+    Number.parseFloat(location.lng);
+
+  if (
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lng)
+  ) {
+    return null;
+  }
+
+  return { lat, lng };
+}
+
+
+function courierAssignmentRestaurantLocation(assignment) {
+
+  const lat =
+    Number.parseFloat(assignment?.pickup_lat);
+
+  const lng =
+    Number.parseFloat(assignment?.pickup_lng);
+
+  if (
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lng)
+  ) {
+    return null;
+  }
+
+  return { lat, lng };
+}
+
+
+function courierCurrentMapLocation() {
+
+  if (!courierHasValidCoordinates()) {
+    return null;
+  }
+
+  return {
+    lat: Number(courierLastLocation.lat),
+    lng: Number(courierLastLocation.lng)
+  };
+}
+
+
+async function courierEnsureDeliveryMap() {
+
+  if (!courierElements.deliveryMap) {
+    return false;
+  }
+
+
+  const mapsReady =
+    await courierLoadGoogleMaps();
+
+
+  if (
+    !mapsReady ||
+    !window.google?.maps
+  ) {
+
+    if (courierElements.mapStatus) {
+      courierElements.mapStatus.textContent =
+        "No fue posible cargar Google Maps.";
+    }
+
+    return false;
+  }
+
+
+  if (!courierDeliveryMap) {
+
+    courierDeliveryMap =
+      new google.maps.Map(
+        courierElements.deliveryMap,
+        {
+          center: {
+            lat: 52.2297,
+            lng: 21.0122
+          },
+
+          zoom: 13,
+
+          mapTypeControl: false,
+
+          streetViewControl: false,
+
+          fullscreenControl: false,
+
+          clickableIcons: false,
+
+          gestureHandling: "greedy"
+        }
+      );
+
+  }
+
+
+  return true;
+}
+
+
+function courierCreateOrMoveMarker(
+  currentMarker,
+  position,
+  options = {}
+) {
+
+  if (!position || !courierDeliveryMap) {
+    return currentMarker;
+  }
+
+
+  if (!currentMarker) {
+
+    return new google.maps.Marker({
+      position,
+      map: courierDeliveryMap,
+      title: options.title || ""
+    });
+
+  }
+
+
+  currentMarker.setPosition(position);
+
+  if (options.title) {
+    currentMarker.setTitle(options.title);
+  }
+
+  currentMarker.setMap(courierDeliveryMap);
+
+  return currentMarker;
+}
+
+
+function courierHideMarker(marker) {
+
+  if (marker) {
+    marker.setMap(null);
+  }
+
+}
+
+
+async function courierRenderDeliveryMap(
+  options = {}
+) {
+
+  if (!(await courierEnsureDeliveryMap())) {
+    return;
+  }
+
+
+  const active =
+    courierActiveAssignment();
+
+  const courierLocation =
+    courierCurrentMapLocation();
+
+  const restaurantLocation =
+    active
+      ? courierAssignmentRestaurantLocation(active)
+      : null;
+
+  const customerLocation =
+    active
+      ? courierAssignmentCustomerLocation(active)
+      : null;
+
+
+  /* Domiciliario */
+
+  if (courierLocation) {
+
+    courierMapCourierMarker =
+      courierCreateOrMoveMarker(
+        courierMapCourierMarker,
+        courierLocation,
+        {
+          title: "Tu ubicación"
+        }
+      );
+
+  } else {
+
+    courierHideMarker(
+      courierMapCourierMarker
+    );
+
+  }
+
+
+  /* Restaurante */
+
+  if (restaurantLocation) {
+
+    courierMapRestaurantMarker =
+      courierCreateOrMoveMarker(
+        courierMapRestaurantMarker,
+        restaurantLocation,
+        {
+          title:
+            active?.restaurant_name ||
+            "Restaurante"
+        }
+      );
+
+  } else {
+
+    courierHideMarker(
+      courierMapRestaurantMarker
+    );
+
+  }
+
+
+  /* Cliente */
+
+  if (customerLocation) {
+
+    courierMapCustomerMarker =
+      courierCreateOrMoveMarker(
+        courierMapCustomerMarker,
+        customerLocation,
+        {
+          title:
+            active?.customer_name ||
+            "Cliente"
+        }
+      );
+
+  } else {
+
+    courierHideMarker(
+      courierMapCustomerMarker
+    );
+
+  }
+
+
+  if (courierElements.mapTitle) {
+
+    courierElements.mapTitle.textContent =
+      active
+        ? active.restaurant_name ||
+          "Entrega activa"
+        : "Tu ubicación";
+
+  }
+
+
+  if (courierElements.mapStatus) {
+
+    if (!courierLocation) {
+
+      courierElements.mapStatus.textContent =
+        "Comparte tu ubicación para mostrar tu posición.";
+
+    } else if (active) {
+
+      courierElements.mapStatus.textContent =
+        "Tu ubicación y los puntos de la entrega se actualizan en el mapa.";
+
+    } else {
+
+      courierElements.mapStatus.textContent =
+        "Ubicación actual del domiciliario.";
+
+    }
+
+  }
+
+
+  const positions =
+    [
+      courierLocation,
+      restaurantLocation,
+      customerLocation
+    ].filter(Boolean);
+
+
+  if (!positions.length) {
+    return;
+  }
+
+
+  /* Si solo existe un punto,
+     centramos directamente */
+
+  if (positions.length === 1) {
+
+    courierDeliveryMap.setCenter(
+      positions[0]
+    );
+
+    courierDeliveryMap.setZoom(15);
+
+    return;
+  }
+
+
+  /* Mostrar todos los puntos */
+
+  const bounds =
+    new google.maps.LatLngBounds();
+
+
+  positions.forEach(
+    (position) =>
+      bounds.extend(position)
+  );
+
+
+  courierMapBounds =
+    bounds;
+
+
+  if (
+    options.forceFit !== false ||
+    !courierDeliveryMap.getBounds()
+  ) {
+
+    courierDeliveryMap.fitBounds(
+      bounds,
+      55
+    );
+
+  }
+
+}
 function courierFriendlyDeliveryError(error) {
   const message = String(error?.message || "");
   if (/upsert_courier_live_location|delivery_assignment|assign_nearest|function .* does not exist|schema cache/i.test(message)) {
@@ -821,13 +1171,24 @@ function courierRenderActiveDelivery() {
   const active = courierActiveAssignment();
   if (!courierUser) {
     courierElements.activeDeliveryCard.innerHTML = `<div class="customer-empty">Inicia sesion para ver tu entrega activa.</div>`;
-    courierSetStepButtons();
-    return;
-  }
+   courierSetStepButtons();
+
+courierRenderDeliveryMap({
+  forceFit: true
+}).catch(() => {});
+
+return;
+  
+}
   if (!active) {
     courierElements.activeDeliveryCard.innerHTML = `<div class="customer-empty">No tienes una entrega activa.</div>`;
     courierSetStepButtons();
-    return;
+
+courierRenderDeliveryMap({
+  forceFit: true
+}).catch(() => {});
+
+return;
   }
 
   const pickupUrl = courierCoordinatesUrl(active.pickup_lat, active.pickup_lng);
@@ -862,7 +1223,13 @@ function courierRenderActiveDelivery() {
       </div>
     </article>
   `;
-  courierSetStepButtons();
+ courierSetStepButtons();
+
+courierRenderDeliveryMap({
+  forceFit: true
+}).catch(() => {});
+
+
 }
 async function courierLoadHistory() {
   const client = courierEnsureClient();
@@ -1034,6 +1401,10 @@ async function courierShareLocation(options = {}) {
       accuracy: Math.round(position.coords.accuracy || 0),
       updatedAt: new Date().toISOString(),
     };
+    courierRenderDeliveryMap({
+  forceFit: true
+}).catch(() => {});
+    
     const nextAvailable = options.makeAvailable ? true : courierAvailable;
     await courierPersistLiveLocation(nextAvailable);
     if (options.makeAvailable) courierAvailable = true;
@@ -1083,6 +1454,10 @@ function courierSyncLocationWatch() {
         accuracy: Math.round(position.coords.accuracy || 0),
         updatedAt: new Date().toISOString(),
       };
+      courierRenderDeliveryMap({
+  forceFit: false
+}).catch(() => {});
+      
       courierRegistrationRegion = {
         ...courierRegistrationRegion,
         ...courierDetectedRegion(position.coords),
@@ -2464,6 +2839,14 @@ courierElements.cityInput?.addEventListener("focus", () => {
   courierPreparePlaceAutocomplete().catch(() => {});
 });
 courierElements.shareLocationButton?.addEventListener("click", courierShareLocation);
+courierElements.mapCenterButton?.addEventListener(
+  "click",
+  () => {
+    courierRenderDeliveryMap({
+      forceFit: true
+    }).catch(() => {});
+  }
+);
 courierElements.openGpsButton?.addEventListener("click", courierOpenGps);
 courierElements.refreshOffersButton?.addEventListener("click", () => courierLoadDeliveryOffers());
 courierElements.offersList?.addEventListener("click", (event) => {
