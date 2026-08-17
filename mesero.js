@@ -1093,15 +1093,77 @@ waiterElements.cart.addEventListener("click", (event) => {
   waiterRenderCart();
   waiterSaveDraft();
 });
-waiterElements.cart.addEventListener("input", (event) => {
-  if (event.target.dataset.action !== "note") return;
-  const card = event.target.closest("[data-cart-id]");
-  const item = waiterCart.find((entry) => entry.cartId === card?.dataset.cartId);
-  if (!item) return;
-  item.note = event.target.value.toUpperCase();
-  event.target.value = item.note;
-  waiterSaveDraft();
-});
+waiterElements.cart.addEventListener(
+  "input",
+  (event) => {
+
+    const target = event.target;
+
+    if (
+      !target ||
+      target.dataset.action !== "note"
+    ) {
+      return;
+    }
+
+
+    const card =
+      target.closest("[data-cart-id]");
+
+    if (!card) return;
+
+
+    const item =
+      waiterCart.find(
+        (entry) =>
+          String(entry.cartId) ===
+          String(card.dataset.cartId)
+      );
+
+    if (!item) return;
+
+
+    const cursorStart =
+      target.selectionStart;
+
+    const cursorEnd =
+      target.selectionEnd;
+
+
+    item.note =
+      String(target.value || "")
+        .toUpperCase();
+
+
+    if (target.value !== item.note) {
+      target.value = item.note;
+    }
+
+
+    try {
+
+      if (
+        Number.isInteger(cursorStart) &&
+        Number.isInteger(cursorEnd)
+      ) {
+
+        target.setSelectionRange(
+          cursorStart,
+          cursorEnd
+        );
+
+      }
+
+    } catch {
+      // Algunos navegadores móviles no permiten
+      // restaurar la posición del cursor.
+    }
+
+
+    waiterSaveDraft();
+
+  }
+);
 waiterElements.notes.addEventListener("input", () => {
   const start = waiterElements.notes.selectionStart;
   waiterElements.notes.value = waiterElements.notes.value.toUpperCase();
