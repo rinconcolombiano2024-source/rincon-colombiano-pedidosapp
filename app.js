@@ -5201,11 +5201,29 @@ async function upsertCurrentOrder() {
 function structuredCloneOrder(order) {
   return JSON.parse(JSON.stringify(order));
 }
-
 async function printCurrentOrder() {
   if (!(await upsertCurrentOrder())) return;
-  renderPrintTicket(currentOrder);
-  await printRenderedTicket();
+
+  const orderToPrint = structuredCloneOrder(currentOrder);
+  const printedTicketNumber = currentOrder.ticketNumber;
+
+  renderPrintTicket(orderToPrint);
+
+  try {
+    await printRenderedTicket();
+
+    startNewOrder();
+
+    showToast(
+      `Ticket ${formatTicket(printedTicketNumber)} guardado e impreso. Nuevo ticket listo.`
+    );
+  } catch (error) {
+    console.error("Error al imprimir ticket:", error);
+
+    showToast(
+      `El ticket ${formatTicket(printedTicketNumber)} quedó guardado, pero la impresión no terminó.`
+    );
+  }
 }
 
 function applyReceiptPrintStyle() {
@@ -6449,10 +6467,19 @@ elements.clientOrdersList.addEventListener("click", (event) => {
 });
 
 elements.saveOrderButton.addEventListener("click", async () => {
-  if (await upsertCurrentOrder()) {
-    const syncMessage = needsCloudSync(currentOrder) ? " Guardado localmente; se subira cuando vuelva internet." : "";
-    alert(`Pedido ${formatTicket(currentOrder.ticketNumber)} guardado.${syncMessage}`);
-  }
+  if (!(await upsertCurrentOrder())) return;
+
+  const savedTicketNumber = currentOrder.ticketNumber;
+
+  const syncMessage = needsCloudSync(currentOrder)
+    ? " Guardado localmente; se subira cuando vuelva internet."
+    : "";
+
+  startNewOrder();
+
+  showToast(
+    `Pedido ${formatTicket(savedTicketNumber)} guardado.${syncMessage} Nuevo ticket listo.`
+  );
 });
 
 elements.printOrderButton.addEventListener("click", printCurrentOrder);
