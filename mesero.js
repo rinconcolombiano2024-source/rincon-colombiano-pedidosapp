@@ -153,19 +153,53 @@ function waiterClearDraft() {
 
 function waiterNormalizeMenu(rawMenu) {
   const normalized = {};
+
   Object.entries(rawMenu || {}).forEach(([category, products]) => {
     const cleanCategory = String(category || "").trim();
+
     if (!cleanCategory || !Array.isArray(products)) return;
+
     normalized[cleanCategory] = products
-      .map((product) => ({
-        id: String(product?.id || product?.productId || "").trim(),
-        name: String(product?.name || "").trim(),
-        price: Math.max(0, Number.parseFloat(product?.price) || 0),
-        available: product?.available !== false,
-        imageUrl: String(product?.imageUrl || product?.image || "").trim(),
-      }))
-      .filter((product) => product.name);
+      .map((product, index) => {
+        const name = String(product?.name || "").trim();
+
+        if (!name) return null;
+
+        const productId = String(
+          product?.id ||
+          product?.productId ||
+          product?.product_id ||
+          `${cleanCategory}-${name}-${index}`
+        ).trim();
+
+        return {
+          id: productId,
+
+          name,
+
+          description: String(
+            product?.description || ""
+          ).trim(),
+
+          price: Math.max(
+            0,
+            Number.parseFloat(product?.price) || 0
+          ),
+
+          available:
+            product?.available !== false,
+
+          imageUrl: String(
+            product?.imageUrl ||
+            product?.image_url ||
+            product?.image ||
+            ""
+          ).trim(),
+        };
+      })
+      .filter(Boolean);
   });
+
   return normalized;
 }
 
