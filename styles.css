@@ -8571,6 +8571,6 @@ body.platform-admin-page {
 body.customer-page
 .customer-view[data-customer-view="home"]
 .customer-home-intro {
-  padding-top: 8px !important;
+ padding-top: 0 !important;
   margin-top: 0 !important;
 }
