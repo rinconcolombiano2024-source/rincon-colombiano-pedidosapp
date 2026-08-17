@@ -8000,3 +8000,103 @@ and (max-width: 1099px) {
   }
 
 }
+
+/* =========================================================
+   RC ORDERA CLIENTE
+   VER TODAS LAS CATEGORIAS
+   ========================================================= */
+
+body.customer-page
+.customer-category-scroll.is-expanded {
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(auto-fill, minmax(72px, 1fr));
+
+  gap: 18px 10px;
+
+  width: 100%;
+
+  overflow: visible;
+
+  padding-bottom: 12px;
+
+  scroll-snap-type: none;
+}
+
+
+body.customer-page
+.customer-category-scroll.is-expanded
+.customer-category-card {
+
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+
+  flex: none;
+
+  justify-self: center;
+
+  scroll-snap-align: unset;
+}
+
+
+body.customer-page
+.customer-see-all-button {
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+
+body.customer-page
+.customer-see-all-button:active {
+
+  opacity: 0.65;
+}
+
+
+/* Móvil */
+
+@media (max-width: 480px) {
+
+  body.customer-page
+  .customer-category-scroll.is-expanded {
+
+    grid-template-columns:
+      repeat(4, minmax(0, 1fr));
+
+    gap: 16px 6px;
+  }
+
+}
+
+
+/* Teléfonos pequeños */
+
+@media (max-width: 360px) {
+
+  body.customer-page
+  .customer-category-scroll.is-expanded {
+
+    grid-template-columns:
+      repeat(4, minmax(0, 1fr));
+
+    gap: 14px 4px;
+  }
+
+}
+
+
+/* Tablet */
+
+@media (min-width: 700px) {
+
+  body.customer-page
+  .customer-category-scroll.is-expanded {
+
+    grid-template-columns:
+      repeat(auto-fill, minmax(84px, 1fr));
+  }
+
+}
