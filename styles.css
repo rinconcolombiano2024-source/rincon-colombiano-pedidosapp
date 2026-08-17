@@ -8246,3 +8246,320 @@ and (max-width: 1099px) {
   }
 
 }
+/* =========================================================
+   RC ORDERA
+   SISTEMA DE SCROLL GLOBAL DEFINITIVO
+   Restaurante + Cliente + Colaborador + Admin + Mesero
+   ========================================================= */
+
+
+/* =========================================================
+   DOCUMENTO
+   Un único scroll vertical principal
+   ========================================================= */
+
+html {
+  width: 100% !important;
+  max-width: 100% !important;
+
+  min-height: 100% !important;
+  height: auto !important;
+
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+
+  overscroll-behavior-x: none !important;
+  overscroll-behavior-y: auto !important;
+
+  scroll-behavior: auto;
+
+  -webkit-text-size-adjust: 100%;
+}
+
+
+/* =========================================================
+   BODY GENERAL
+   El BODY crece; no crea un segundo scroll
+   ========================================================= */
+
+body {
+  width: 100% !important;
+  max-width: 100% !important;
+
+  min-height: 100vh !important;
+  height: auto !important;
+
+  margin: 0;
+
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
+
+  overscroll-behavior-y: auto !important;
+
+  touch-action: auto;
+}
+
+
+/* =========================================================
+   RESTAURANTE
+   ========================================================= */
+
+body:not(.customer-page):not(.waiter-page)
+.app-shell {
+
+  width: min(1500px, calc(100% - 32px));
+
+  min-height: 100vh;
+  height: auto !important;
+  max-height: none !important;
+
+  overflow: visible !important;
+}
+
+
+/* Ningún contenedor principal del restaurante
+   debe bloquear el documento */
+
+body:not(.customer-page):not(.waiter-page)
+main,
+
+body:not(.customer-page):not(.waiter-page)
+.app-shell {
+
+  height: auto !important;
+  max-height: none !important;
+}
+
+
+/* =========================================================
+   CLIENTE
+   ========================================================= */
+
+body.customer-page.customer-app-page {
+
+  min-height: 100vh !important;
+  height: auto !important;
+
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
+
+  overscroll-behavior-y: auto !important;
+}
+
+
+body.customer-page.customer-app-page
+.customer-app-shell {
+
+  min-height: 100vh !important;
+  height: auto !important;
+
+  max-height: none !important;
+
+  overflow: visible !important;
+}
+
+
+body.customer-page.customer-app-page
+.customer-view {
+
+  height: auto !important;
+
+  min-height: 0 !important;
+  max-height: none !important;
+
+  overflow: visible !important;
+}
+
+
+/* =========================================================
+   COLABORADOR
+   ========================================================= */
+
+body.collaborator-page {
+
+  min-height: 100vh !important;
+  height: auto !important;
+
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
+
+  overscroll-behavior-y: auto !important;
+}
+
+
+body.collaborator-page
+.collaborator-app-shell {
+
+  min-height: 100vh !important;
+  height: auto !important;
+
+  max-height: none !important;
+
+  overflow: visible !important;
+}
+
+
+/* =========================================================
+   ADMIN
+   ========================================================= */
+
+body.platform-admin-page {
+
+  min-height: 100vh !important;
+  height: auto !important;
+
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
+
+  overscroll-behavior-y: auto !important;
+}
+
+
+/* =========================================================
+   MESERO
+   ========================================================= */
+
+body.waiter-page {
+
+  min-height: 100vh !important;
+  height: auto !important;
+
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
+
+  overscroll-behavior-y: auto !important;
+}
+
+
+body.waiter-page
+.waiter-shell,
+
+body.waiter-page
+.waiter-app {
+
+  height: auto !important;
+
+  max-height: none !important;
+
+  overflow: visible !important;
+}
+
+
+/* =========================================================
+   CONTENEDORES INTERNOS CON SCROLL
+   Sí pueden desplazarse, pero NO deben encerrar
+   el scroll de toda la aplicación
+   ========================================================= */
+
+.auth-screen,
+.auth-card,
+.auth-dialog,
+.history-list,
+.customer-chat-messages {
+
+  overscroll-behavior-y: auto !important;
+
+  -webkit-overflow-scrolling: touch;
+}
+
+
+/* =========================================================
+   CARRITO CLIENTE
+   En móvil jamás captura el scroll
+   ========================================================= */
+
+@media (max-width: 860px) {
+
+  body.customer-page
+  .customer-cart-panel {
+
+    position: static !important;
+
+    top: auto !important;
+
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    overflow: visible !important;
+  }
+
+}
+
+
+/* =========================================================
+   SCROLL HORIZONTAL INTENCIONAL
+   Estas zonas SÍ pueden desplazarse lateralmente
+   sin bloquear el movimiento vertical de la página
+   ========================================================= */
+
+body.customer-page
+.customer-category-scroll,
+
+body.customer-page
+.customer-restaurant-list {
+
+  overscroll-behavior-x: contain;
+
+  -webkit-overflow-scrolling: touch;
+
+  touch-action: pan-x pan-y;
+}
+
+
+/* =========================================================
+   MODALES Y DIALOGOS
+   Deben poder desplazarse internamente si son altos
+   ========================================================= */
+
+dialog[open],
+.auth-screen:not([hidden]) {
+
+  overscroll-behavior: contain;
+}
+
+
+/* =========================================================
+   PROTECCION CONTRA DESBORDAMIENTO
+   ========================================================= */
+
+body *,
+body *::before,
+body *::after {
+
+  box-sizing: border-box;
+}
+
+
+img,
+video,
+canvas {
+
+  max-width: 100%;
+}
+
+
+/* =========================================================
+   SOPORTE MOVIL MODERNO
+   ========================================================= */
+
+@supports (min-height: 100dvh) {
+
+  body {
+    min-height: 100dvh !important;
+  }
+
+}
+
+
+/* =========================================================
+   ESPACIO INFERIOR PARA NAVEGACIONES FIJAS
+   ========================================================= */
+
+body.customer-app-page,
+body.collaborator-app-page,
+body.platform-admin-page {
+
+  padding-bottom:
+    env(safe-area-inset-bottom, 0px);
+}
