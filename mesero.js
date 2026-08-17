@@ -1077,10 +1077,25 @@ waiterElements.categoryTabs.addEventListener("click", (event) => {
   waiterRenderCategories();
   waiterRenderMenu();
 });
-waiterElements.menuGrid.addEventListener("click", (event) => {
-  const button = event.target.closest("button[data-product-id]");
-  if (button) waiterAddProduct(button.dataset.productId, button.dataset.category);
-});
+waiterElements.menuGrid.addEventListener(
+  "click",
+  (event) => {
+
+    const button =
+      event.target.closest("[data-product-id]");
+
+    if (!button) return;
+    if (button.disabled) return;
+
+    event.preventDefault();
+
+    waiterAddProduct(
+      button.dataset.productId,
+      button.dataset.category
+    );
+
+  }
+);
 waiterElements.cart.addEventListener("click", (event) => {
   const card = event.target.closest("[data-cart-id]");
   const action = event.target.dataset.action;
