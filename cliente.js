@@ -4838,6 +4838,10 @@ if (customerElements.homeSearchInput) {
     }
   );
 }
+const customerSeeAllCategoriesButton =
+  document.querySelector("#customerSeeAllCategoriesButton");
+
+let customerCategoriesExpanded = false;
 const customerCategoryScroll =
   document.querySelector(".customer-category-scroll");
 
@@ -4874,6 +4878,26 @@ customerCategoryScroll?.addEventListener("click", (event) => {
 
   customerRenderRestaurantDirectory();
 });
+customerSeeAllCategoriesButton?.addEventListener("click", () => {
+
+  if (!customerCategoryScroll) return;
+
+  customerCategoriesExpanded =
+    !customerCategoriesExpanded;
+
+  customerCategoryScroll.classList.toggle(
+    "is-expanded",
+    customerCategoriesExpanded
+  );
+
+  customerSeeAllCategoriesButton.innerHTML =
+    customerCategoriesExpanded
+      ? `Ver menos <span aria-hidden="true">↑</span>`
+      : `Ver todas <span aria-hidden="true">→</span>`;
+
+});
+
+
 customerElements.refreshRestaurantsButton?.addEventListener("click", () => customerLoadRestaurantDirectory());
 customerElements.restaurantList?.addEventListener("click", async (event) => {
 
