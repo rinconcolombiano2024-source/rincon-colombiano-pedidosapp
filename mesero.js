@@ -234,22 +234,103 @@ function waiterAllProducts() {
 }
 
 function waiterRenderMenu() {
+
   const products = waiterAllProducts();
+
+
   if (!products.length) {
-    waiterElements.menuGrid.innerHTML = `<div class="waiter-empty">No hay productos disponibles en esta seleccion.</div>`;
+
+    waiterElements.menuGrid.innerHTML = `
+      <div class="waiter-empty">
+        No hay productos disponibles en esta selección.
+      </div>
+    `;
+
     return;
   }
-  waiterElements.menuGrid.innerHTML = products
-    .map(
-      (product) => `
-        <button type="button" class="waiter-product ${product.available ? "" : "is-unavailable"}" data-product-id="${waiterEscape(product.id)}" data-category="${waiterEscape(product.category)}" ${product.available ? "" : "disabled"}>
-          ${product.imageUrl ? `<img src="${waiterEscape(product.imageUrl)}" alt="" loading="lazy" />` : ""}
-          <span><strong>${waiterEscape(product.name)}</strong><small>${product.available ? waiterMoney(product.price) : "Agotado"}</small></span>
-        </button>`
-    )
-    .join("");
-}
 
+
+  waiterElements.menuGrid.innerHTML =
+    products
+      .map((product) => {
+
+        const image = product.imageUrl
+          ? `
+            <img
+              src="${waiterEscape(product.imageUrl)}"
+              alt="${waiterEscape(product.name)}"
+              loading="lazy"
+            />
+          `
+          : `
+            <div
+              class="waiter-product-placeholder"
+              aria-hidden="true"
+            >
+              🍽️
+            </div>
+          `;
+
+
+        return `
+          <article
+            class="waiter-product-card
+              ${product.available ? "" : "is-unavailable"}"
+          >
+
+            <div class="waiter-product-image">
+              ${image}
+            </div>
+
+
+            <div class="waiter-product-info">
+
+              <strong class="waiter-product-name">
+                ${waiterEscape(product.name)}
+              </strong>
+
+              ${
+                product.description
+                  ? `
+                    <span class="waiter-product-description">
+                      ${waiterEscape(product.description)}
+                    </span>
+                  `
+                  : ""
+              }
+
+              <div class="waiter-product-bottom">
+
+                <strong class="waiter-product-price">
+                  ${
+                    product.available
+                      ? waiterMoney(product.price)
+                      : "Agotado"
+                  }
+                </strong>
+
+                <button
+                  class="waiter-add-product-button"
+                  type="button"
+                  data-product-id="${waiterEscape(product.id)}"
+                  data-category="${waiterEscape(product.category)}"
+                  ${product.available ? "" : "disabled"}
+                  aria-label="Agregar ${waiterEscape(product.name)}"
+                >
+                  +
+                </button>
+
+              </div>
+
+            </div>
+
+          </article>
+        `;
+
+      })
+      .join("");
+
+}
 function waiterCartTotal() {
   return waiterCart.reduce((sum, item) => sum + item.price * item.qty, 0);
 }
