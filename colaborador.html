@@ -112,6 +112,41 @@
         </div>
         <section class="customer-account-panel courier-active-panel">
           <div id="courierActiveDeliveryCard" class="courier-active-delivery"></div>
+          <div class="courier-map-panel">
+
+  <div class="courier-map-head">
+    <div>
+      <span>Ruta de entrega</span>
+      <strong id="courierMapTitle">
+        Tu ubicación
+      </strong>
+    </div>
+
+    <button
+      class="customer-icon-action"
+      id="courierMapCenterButton"
+      type="button"
+      title="Centrar mapa"
+      aria-label="Centrar mapa"
+    >
+      ◎
+    </button>
+  </div>
+
+  <div
+    id="courierDeliveryMap"
+    class="courier-delivery-map"
+    aria-label="Mapa de la entrega"
+  ></div>
+
+  <p
+    class="courier-map-status"
+    id="courierMapStatus"
+  >
+    Comparte tu ubicación para mostrar el mapa.
+  </p>
+
+</div>
           <div class="courier-steps" id="courierSteps">
             <button id="courierArrivedRestaurantButton" type="button" disabled>Llegue al restaurante</button>
             <button id="courierPickedUpButton" type="button" disabled>Pedido recogido</button>
