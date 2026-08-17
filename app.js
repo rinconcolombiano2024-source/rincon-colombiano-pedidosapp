@@ -6636,24 +6636,6 @@ window.addEventListener("beforeunload", () => {
   stopRestaurantStatusSync();
 });
 
-let pullToRefreshStartY = 0;
-window.addEventListener(
-  "touchstart",
-  (event) => {
-    pullToRefreshStartY = event.touches?.[0]?.clientY || 0;
-  },
-  { passive: true }
-);
-window.addEventListener(
-  "touchmove",
-  (event) => {
-    const currentY = event.touches?.[0]?.clientY || 0;
-    if (window.scrollY <= 0 && currentY > pullToRefreshStartY + 8) {
-      event.preventDefault();
-    }
-  },
-  { passive: false }
-);
 
 window.addEventListener("offline", () => {
   renderCloudState();
