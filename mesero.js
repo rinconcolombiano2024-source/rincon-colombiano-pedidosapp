@@ -336,29 +336,123 @@ function waiterCartTotal() {
 }
 
 function waiterRenderCart() {
-  const count = waiterCart.reduce((sum, item) => sum + item.qty, 0);
-  waiterElements.cartBadge.textContent = count;
-  waiterElements.total.textContent = waiterMoney(waiterCartTotal());
-  waiterElements.sendButton.disabled = waiterCart.length === 0;
+
+  const count =
+    waiterCart.reduce(
+      (sum, item) =>
+        sum + Math.max(1, Number(item.qty) || 1),
+      0
+    );
+
+
+  waiterElements.cartBadge.textContent =
+    count;
+
+
+  waiterElements.total.textContent =
+    waiterMoney(waiterCartTotal());
+
+
+  waiterElements.sendButton.disabled =
+    waiterCart.length === 0;
+
+
   if (!waiterCart.length) {
-    waiterElements.cart.innerHTML = `<div class="waiter-empty">Selecciona productos del menu.</div>`;
+
+    waiterElements.cart.innerHTML = `
+      <div class="waiter-empty">
+        Selecciona productos del menú.
+      </div>
+    `;
+
     return;
   }
-  waiterElements.cart.innerHTML = waiterCart
-    .map(
-      (item) => `
-        <article class="waiter-cart-item" data-cart-id="${waiterEscape(item.cartId)}">
-          <div><strong>${waiterEscape(item.name)}</strong><span>${waiterMoney(item.price * item.qty)}</span></div>
-          <div class="waiter-quantity">
-            <button type="button" data-action="minus" aria-label="Quitar uno">-</button>
-            <strong>${item.qty}</strong>
-            <button type="button" data-action="plus" aria-label="Agregar uno">+</button>
-            <button type="button" data-action="remove">Eliminar</button>
+
+
+  waiterElements.cart.innerHTML =
+    waiterCart
+      .map((item) => `
+
+        <article
+          class="waiter-cart-item"
+          data-cart-id="${waiterEscape(item.cartId)}"
+        >
+
+          <div class="waiter-cart-item-head">
+
+            <div>
+              <strong>
+                ${waiterEscape(item.name)}
+              </strong>
+
+              <small>
+                ${waiterMoney(item.price)}
+                por unidad
+              </small>
+            </div>
+
+            <strong class="waiter-cart-subtotal">
+              ${waiterMoney(
+                item.price *
+                Math.max(1, Number(item.qty) || 1)
+              )}
+            </strong>
+
           </div>
-          <input data-action="note" type="text" value="${waiterEscape(item.note || "")}" placeholder="NOTA PARA ESTE PLATO" />
-        </article>`
-    )
-    .join("");
+
+
+          <div class="waiter-quantity">
+
+            <button
+              type="button"
+              data-action="minus"
+              aria-label="Restar uno"
+            >
+              −
+            </button>
+
+            <strong>
+              ${Math.max(1, Number(item.qty) || 1)}
+            </strong>
+
+            <button
+              type="button"
+              data-action="plus"
+              aria-label="Agregar uno"
+            >
+              +
+            </button>
+
+            <button
+              class="waiter-remove-product"
+              type="button"
+              data-action="remove"
+            >
+              Quitar
+            </button>
+
+          </div>
+
+
+          <label class="waiter-item-note-label">
+
+            <span>
+              Nota para este plato
+            </span>
+
+            <textarea
+              data-action="note"
+              rows="2"
+              placeholder="Ej: SIN CEBOLLA, SALSA APARTE..."
+            >${waiterEscape(item.note || "")}</textarea>
+
+          </label>
+
+        </article>
+
+      `)
+      .join("");
+
 }
 
 function waiterAddProduct(productId, category) {
