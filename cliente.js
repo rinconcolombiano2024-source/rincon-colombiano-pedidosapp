@@ -1436,6 +1436,7 @@ let customerRecoveringPassword = false;
 let customerHistoryRows = [];
 let customerRestaurants = [];
 let customerRestaurantSearchQuery = "";
+let customerRestaurantCategoryFilter = "all";
 let customerMenu = CUSTOMER_DEFAULT_MENU;
 let customerActiveCategory = "";
 let customerSearchQuery = "";
@@ -2491,7 +2492,102 @@ function customerCategoryKey(value) {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
 }
+const CUSTOMER_RESTAURANT_CATEGORY_KEYWORDS = {
+  colombiana: ["colombiana", "colombiano", "colombia"],
+  polaca: ["polaca", "polaco", "polska", "polish"],
+  mexicana: ["mexicana", "mexicano", "mexico", "taco", "tacos"],
+  italiana: ["italiana", "italiano", "italia", "pasta"],
+  pizza: ["pizza", "pizzeria"],
+  hamburguesas: ["hamburguesa", "hamburguesas", "burger", "burgers"],
+  americana: ["americana", "americano", "american"],
+  pollo: ["pollo", "chicken"],
+  parrilla: ["parrilla", "parrillada", "grill", "steak"],
+  bbq: ["bbq", "barbecue", "barbacoa"],
+  mariscos: ["marisco", "mariscos", "seafood"],
+  pescados: ["pescado", "pescados", "fish"],
+  sushi: ["sushi"],
+  japonesa: ["japonesa", "japones", "japanese", "japon"],
+  china: ["china", "chino", "chinese"],
+  coreana: ["coreana", "coreano", "korean", "korea"],
+  tailandesa: ["tailandesa", "tailandes", "thai"],
+  vietnamita: ["vietnamita", "vietnamese", "vietnam"],
+  india: ["india", "indio", "indian"],
+  arabe: ["arabe", "arabic", "arabian"],
+  turca: ["turca", "turco", "turkish", "turquia"],
+  griega: ["griega", "griego", "greek"],
+  mediterranea: ["mediterranea", "mediterraneo", "mediterranean"],
+  espanola: ["espanola", "espanol", "spanish", "espana"],
+  francesa: ["francesa", "frances", "french", "francia"],
+  peruana: ["peruana", "peruano", "peru"],
+  venezolana: ["venezolana", "venezolano", "venezuela"],
+  brasilena: ["brasilena", "brasileno", "brasil", "brazil"],
+  argentina: ["argentina", "argentino"],
+  latina: ["latina", "latino", "latinoamericana"],
+  africana: ["africana", "africano", "african"],
+  caribena: ["caribena", "caribeno", "caribbean", "caribe"],
 
+  vegetariana: ["vegetariana", "vegetariano", "vegetarian"],
+  vegana: ["vegana", "vegano", "vegan"],
+  saludable: ["saludable", "healthy", "fit"],
+  ensaladas: ["ensalada", "ensaladas", "salad"],
+  sopas: ["sopa", "sopas", "soup"],
+  desayunos: ["desayuno", "desayunos", "breakfast"],
+  brunch: ["brunch"],
+  sandwiches: ["sandwich", "sandwiches", "kanapka"],
+  hotdogs: ["hot dog", "hotdog", "hot dogs"],
+  empanadas: ["empanada", "empanadas"],
+  "comida-rapida": ["comida rapida", "fast food"],
+  "street-food": ["street food", "comida callejera"],
+  panaderia: ["panaderia", "bakery", "piekarnia"],
+  cafeteria: ["cafeteria", "cafe", "coffee"],
+  postres: ["postre", "postres", "dessert"],
+  helados: ["helado", "helados", "ice cream"],
+  dulces: ["dulce", "dulces", "sweet"],
+  bebidas: ["bebida", "bebidas", "drinks"],
+  jugos: ["jugo", "jugos", "juice"],
+  "comida-casera": ["comida casera", "casera", "homemade"],
+  familiar: ["familiar", "family"]
+};
+function customerRestaurantMatchesCategory(restaurant, category) {
+  if (!category || category === "all") return true;
+
+  const searchable = customerNormalizeSearchText(
+    [
+      restaurant.name,
+      restaurant.description,
+      restaurant.address,
+      restaurant.city,
+      restaurant.region
+    ]
+      .filter(Boolean)
+      .join(" ")
+  );
+
+  const knownCategoryKeys =
+    Object.keys(CUSTOMER_RESTAURANT_CATEGORY_KEYWORDS);
+
+  if (category === "other") {
+    return !knownCategoryKeys.some((categoryKey) => {
+      const keywords =
+        CUSTOMER_RESTAURANT_CATEGORY_KEYWORDS[categoryKey] || [];
+
+      return keywords.some((keyword) =>
+        searchable.includes(
+          customerNormalizeSearchText(keyword)
+        )
+      );
+    });
+  }
+
+  const keywords =
+    CUSTOMER_RESTAURANT_CATEGORY_KEYWORDS[category] || [category];
+
+  return keywords.some((keyword) =>
+    searchable.includes(
+      customerNormalizeSearchText(keyword)
+    )
+  );
+}
 function customerNormalizeSearchText(value) {
   return String(value || "")
     .normalize("NFD")
@@ -2684,12 +2780,36 @@ function customerRenderRestaurantDirectory() {
     return;
   }
 
-  const query = customerNormalizeSearchText(customerRestaurantSearchQuery);
-  const visibleRestaurants = customerRestaurants.filter((restaurant) => {
-    if (!query) return true;
-    return customerNormalizeSearchText(
-      `${restaurant.name} ${restaurant.address} ${restaurant.phone} ${restaurant.description}`
-    ).includes(query);
+const query =
+  customerNormalizeSearchText(
+    customerRestaurantSearchQuery
+  );
+
+const visibleRestaurants =
+  customerRestaurants.filter((restaurant) => {
+
+    const matchesSearch =
+      !query ||
+      customerNormalizeSearchText(
+        [
+          restaurant.name,
+          restaurant.address,
+          restaurant.phone,
+          restaurant.description,
+          restaurant.city,
+          restaurant.region
+        ]
+          .filter(Boolean)
+          .join(" ")
+      ).includes(query);
+
+    const matchesCategory =
+      customerRestaurantMatchesCategory(
+        restaurant,
+        customerRestaurantCategoryFilter
+      );
+
+    return matchesSearch && matchesCategory;
   });
 
   if (!customerRestaurants.length) {
@@ -4698,16 +4818,62 @@ customerElements.restaurantSearchInput?.addEventListener("input", () => {
   customerRenderRestaurantDirectory();
 });
 if (customerElements.homeSearchInput) {
-  customerElements.homeSearchInput.addEventListener("input", (event) => {
-    const value = event.target.value || "";
 
-    if (customerElements.restaurantSearchInput) {
-      customerElements.restaurantSearchInput.value = value;
+  customerElements.homeSearchInput.addEventListener(
+    "input",
+    (event) => {
+
+      const value =
+        String(event.target.value || "").trim();
+
+      customerRestaurantSearchQuery = value;
+
+      if (customerElements.restaurantSearchInput) {
+        customerElements.restaurantSearchInput.value =
+          value;
+      }
+
+      customerRenderRestaurantDirectory();
+
     }
-
-    customerRenderRestaurantDirectory();
-  });
+  );
 }
+const customerCategoryScroll =
+  document.querySelector(".customer-category-scroll");
+
+customerCategoryScroll?.addEventListener("click", (event) => {
+  const button =
+    event.target.closest(".customer-category-card");
+
+  if (!button) return;
+
+  const category =
+    String(button.dataset.category || "all").trim();
+
+  customerRestaurantCategoryFilter =
+    category || "all";
+
+  customerCategoryScroll
+    .querySelectorAll(".customer-category-card")
+    .forEach((categoryButton) => {
+
+      const active =
+        categoryButton === button;
+
+      categoryButton.classList.toggle(
+        "active",
+        active
+      );
+
+      categoryButton.setAttribute(
+        "aria-pressed",
+        String(active)
+      );
+
+    });
+
+  customerRenderRestaurantDirectory();
+});
 customerElements.refreshRestaurantsButton?.addEventListener("click", () => customerLoadRestaurantDirectory());
 customerElements.restaurantList?.addEventListener("click", async (event) => {
 
