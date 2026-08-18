@@ -220,7 +220,9 @@ function courierGoogleMapsApiKey() {
 }
 
 function courierLoadGoogleMaps() {
-  if (window.google?.maps?.places?.Autocomplete) return Promise.resolve(true);
+  if (window.google?.maps) {
+  return Promise.resolve(true);
+}
   const apiKey = courierGoogleMapsApiKey();
   if (!apiKey || !navigator.onLine) return Promise.resolve(false);
   if (courierGoogleMapsScriptPromise) return courierGoogleMapsScriptPromise;
@@ -238,7 +240,8 @@ function courierLoadGoogleMaps() {
       resolve(available);
     };
     const timeoutId = window.setTimeout(() => finish(false), 12000);
-    window[callbackName] = () => finish(Boolean(window.google?.maps?.places?.Autocomplete));
+    window[callbackName] = () =>
+  finish(Boolean(window.google?.maps));
     script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places&callback=${callbackName}`;
     script.async = true;
     script.defer = true;
@@ -461,6 +464,26 @@ function courierSetView(view, options = {}) {
   });
   document.body.dataset.courierView = nextView;
   if (!options.keepScroll) window.scrollTo({ top: 0, behavior: options.instant ? "auto" : "smooth" });
+  if (nextView === "active") {
+
+  window.requestAnimationFrame(() => {
+
+    window.requestAnimationFrame(() => {
+
+      courierRenderDeliveryMap({
+        forceFit: true
+      }).catch((error) => {
+        console.error(
+          "No se pudo renderizar el mapa:",
+          error
+        );
+      });
+
+    });
+
+  });
+
+}
 }
 
 function courierNormalizeText(value) {
