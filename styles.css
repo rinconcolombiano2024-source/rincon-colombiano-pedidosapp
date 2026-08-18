@@ -8719,3 +8719,509 @@ body.collaborator-page
   }
 
 }
+/* =========================================================
+   RC ORDERA
+   MESERO - TARJETAS DE PRODUCTOS
+   BLOQUE FINAL AISLADO
+   ========================================================= */
+
+body.waiter-page
+.waiter-product-card {
+  display: grid !important;
+
+  grid-template-columns:
+    82px minmax(0, 1fr) !important;
+
+  gap: 12px !important;
+
+  width: 100% !important;
+
+  margin: 0 !important;
+  padding: 10px !important;
+
+  border: 1px solid #e4e7ec !important;
+  border-radius: 16px !important;
+
+  background: #ffffff !important;
+
+  color: #18212f !important;
+
+  cursor: pointer !important;
+
+  overflow: hidden !important;
+
+  box-shadow:
+    0 2px 8px rgba(17, 24, 39, 0.04) !important;
+
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    border-color 120ms ease !important;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+
+body.waiter-page
+.waiter-product-card:hover {
+  border-color: #cfd5dd !important;
+
+  box-shadow:
+    0 5px 16px rgba(17, 24, 39, 0.08) !important;
+}
+
+
+body.waiter-page
+.waiter-product-card:active {
+  transform: scale(0.985) !important;
+}
+
+
+body.waiter-page
+.waiter-product-card:focus-visible {
+  outline: 3px solid rgba(31, 143, 77, 0.22) !important;
+  outline-offset: 2px !important;
+}
+
+
+body.waiter-page
+.waiter-product-card.is-unavailable {
+  opacity: 0.55 !important;
+
+  cursor: not-allowed !important;
+}
+
+
+/* =========================================================
+   IMAGEN
+   ========================================================= */
+
+body.waiter-page
+.waiter-product-image {
+  width: 82px !important;
+  height: 82px !important;
+
+  min-width: 82px !important;
+  min-height: 82px !important;
+
+  overflow: hidden !important;
+
+  border-radius: 13px !important;
+
+  background: #f2f4f7 !important;
+}
+
+
+body.waiter-page
+.waiter-product-image img {
+  display: block !important;
+
+  width: 100% !important;
+  height: 100% !important;
+
+  object-fit: cover !important;
+}
+
+
+body.waiter-page
+.waiter-product-placeholder {
+  width: 100% !important;
+  height: 100% !important;
+
+  display: grid !important;
+  place-items: center !important;
+
+  font-size: 28px !important;
+}
+
+
+/* =========================================================
+   INFORMACION
+   ========================================================= */
+
+body.waiter-page
+.waiter-product-info {
+  min-width: 0 !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+
+  gap: 5px !important;
+}
+
+
+body.waiter-page
+.waiter-product-name {
+  display: block !important;
+
+  margin: 0 !important;
+
+  color: #18212f !important;
+
+  font-size: 15px !important;
+  line-height: 1.25 !important;
+  font-weight: 800 !important;
+
+  overflow-wrap: anywhere !important;
+}
+
+
+body.waiter-page
+.waiter-product-description {
+  display: -webkit-box !important;
+
+  margin: 0 !important;
+
+  color: #7a8290 !important;
+
+  font-size: 12px !important;
+  line-height: 1.35 !important;
+
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+
+  overflow: hidden !important;
+}
+
+
+/* =========================================================
+   PRECIO + BOTON
+   ========================================================= */
+
+body.waiter-page
+.waiter-product-bottom {
+  display: flex !important;
+
+  align-items: center !important;
+  justify-content: space-between !important;
+
+  gap: 10px !important;
+
+  margin-top: auto !important;
+}
+
+
+body.waiter-page
+.waiter-product-price {
+  color: #1f8f4d !important;
+
+  font-size: 14px !important;
+  line-height: 1.2 !important;
+  font-weight: 900 !important;
+}
+
+
+body.waiter-page
+.waiter-add-product-button {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+
+  flex: 0 0 38px !important;
+
+  width: 38px !important;
+  height: 38px !important;
+
+  min-width: 38px !important;
+  min-height: 38px !important;
+
+  max-width: 38px !important;
+  max-height: 38px !important;
+
+  display: grid !important;
+  place-items: center !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  border: 0 !important;
+  border-radius: 50% !important;
+
+  background: #1f8f4d !important;
+
+  color: #ffffff !important;
+
+  font-size: 25px !important;
+  line-height: 1 !important;
+  font-weight: 700 !important;
+
+  cursor: pointer !important;
+
+  box-shadow:
+    0 3px 9px rgba(31, 143, 77, 0.2) !important;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+
+body.waiter-page
+.waiter-add-product-button:hover {
+  filter: brightness(0.96);
+}
+
+
+body.waiter-page
+.waiter-add-product-button:active {
+  transform: scale(0.92) !important;
+}
+
+
+body.waiter-page
+.waiter-add-product-button:disabled {
+  background: #d0d5dd !important;
+
+  color: #ffffff !important;
+
+  cursor: not-allowed !important;
+
+  box-shadow: none !important;
+}
+
+
+/* =========================================================
+   CARRITO / PEDIDO
+   ========================================================= */
+
+body.waiter-page
+.waiter-cart-item {
+  display: grid !important;
+
+  gap: 12px !important;
+
+  width: 100% !important;
+
+  padding: 14px !important;
+
+  border: 1px solid #e4e7ec !important;
+  border-radius: 16px !important;
+
+  background: #ffffff !important;
+
+  box-shadow:
+    0 3px 12px rgba(17, 24, 39, 0.05) !important;
+}
+
+
+body.waiter-page
+.waiter-cart-item-head {
+  display: flex !important;
+
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+
+  gap: 12px !important;
+}
+
+
+body.waiter-page
+.waiter-cart-item-head > div {
+  min-width: 0 !important;
+
+  display: grid !important;
+
+  gap: 3px !important;
+}
+
+
+body.waiter-page
+.waiter-cart-item-head strong {
+  color: #18212f !important;
+
+  font-weight: 800 !important;
+}
+
+
+body.waiter-page
+.waiter-cart-item-head small {
+  color: #7a8290 !important;
+
+  font-size: 12px !important;
+}
+
+
+body.waiter-page
+.waiter-cart-subtotal {
+  flex: 0 0 auto !important;
+
+  color: #1f8f4d !important;
+
+  font-weight: 900 !important;
+}
+
+
+/* =========================================================
+   CANTIDAD
+   ========================================================= */
+
+body.waiter-page
+.waiter-quantity {
+  display: flex !important;
+
+  align-items: center !important;
+
+  gap: 8px !important;
+
+  flex-wrap: wrap !important;
+}
+
+
+body.waiter-page
+.waiter-quantity button {
+  min-width: 38px !important;
+  min-height: 38px !important;
+
+  padding: 0 10px !important;
+
+  border: 1px solid #dfe3e8 !important;
+  border-radius: 10px !important;
+
+  background: #f8fafc !important;
+
+  color: #18212f !important;
+
+  font-weight: 800 !important;
+}
+
+
+body.waiter-page
+.waiter-quantity > strong {
+  min-width: 34px !important;
+
+  text-align: center !important;
+
+  color: #18212f !important;
+}
+
+
+body.waiter-page
+.waiter-remove-product {
+  margin-left: auto !important;
+
+  border-color: rgba(199, 57, 47, 0.25) !important;
+
+  background: #fff7f7 !important;
+
+  color: #c7392f !important;
+}
+
+
+/* =========================================================
+   NOTA POR PLATO
+   ========================================================= */
+
+body.waiter-page
+.waiter-item-note-label {
+  display: grid !important;
+
+  gap: 6px !important;
+
+  width: 100% !important;
+
+  color: #667085 !important;
+
+  font-size: 12px !important;
+  font-weight: 800 !important;
+}
+
+
+body.waiter-page
+.waiter-item-note-label textarea {
+  display: block !important;
+
+  width: 100% !important;
+
+  min-height: 72px !important;
+
+  resize: vertical !important;
+
+  padding: 10px 12px !important;
+
+  border: 1px solid #d7dde8 !important;
+  border-radius: 12px !important;
+
+  background: #ffffff !important;
+
+  color: #18212f !important;
+
+  font: inherit !important;
+  font-size: 13px !important;
+  line-height: 1.35 !important;
+
+  text-transform: uppercase !important;
+
+  outline: none !important;
+}
+
+
+body.waiter-page
+.waiter-item-note-label textarea:focus {
+  border-color: #1f8f4d !important;
+
+  box-shadow:
+    0 0 0 3px rgba(31, 143, 77, 0.12) !important;
+}
+
+
+/* =========================================================
+   MOVIL
+   ========================================================= */
+
+@media (max-width: 560px) {
+
+  body.waiter-page
+  .waiter-product-card {
+    grid-template-columns:
+      72px minmax(0, 1fr) !important;
+
+    gap: 10px !important;
+
+    padding: 9px !important;
+
+    border-radius: 14px !important;
+  }
+
+
+  body.waiter-page
+  .waiter-product-image {
+    width: 72px !important;
+    height: 72px !important;
+
+    min-width: 72px !important;
+    min-height: 72px !important;
+  }
+
+
+  body.waiter-page
+  .waiter-product-name {
+    font-size: 14px !important;
+  }
+
+
+  body.waiter-page
+  .waiter-add-product-button {
+    flex-basis: 36px !important;
+
+    width: 36px !important;
+    height: 36px !important;
+
+    min-width: 36px !important;
+    min-height: 36px !important;
+
+    max-width: 36px !important;
+    max-height: 36px !important;
+  }
+
+
+  body.waiter-page
+  .waiter-cart-item {
+    padding: 12px !important;
+
+    border-radius: 14px !important;
+  }
+
+
+  body.waiter-page
+  .waiter-remove-product {
+    margin-left: 0 !important;
+  }
+
+}
