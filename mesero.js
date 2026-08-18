@@ -273,10 +273,16 @@ function waiterRenderMenu() {
 
 
         return `
-          <article
-            class="waiter-product-card
-              ${product.available ? "" : "is-unavailable"}"
-          >
+       <article
+  class="waiter-product-card
+    ${product.available ? "" : "is-unavailable"}"
+  data-product-id="${waiterEscape(product.id)}"
+  data-category="${waiterEscape(product.category)}"
+  data-product-available="${product.available ? "true" : "false"}"
+  role="button"
+  tabindex="${product.available ? "0" : "-1"}"
+  aria-disabled="${product.available ? "false" : "true"}"
+>
 
             <div class="waiter-product-image">
               ${image}
@@ -1081,17 +1087,74 @@ waiterElements.menuGrid.addEventListener(
   "click",
   (event) => {
 
-    const button =
+    const productElement =
       event.target.closest("[data-product-id]");
 
-    if (!button) return;
-    if (button.disabled) return;
+    if (!productElement) return;
+
+
+    const card =
+      productElement.closest(
+        ".waiter-product-card"
+      ) || productElement;
+
+
+    if (
+      card.dataset.productAvailable === "false"
+    ) {
+      waiterShowToast(
+        "Este producto está agotado."
+      );
+
+      return;
+    }
+
 
     event.preventDefault();
 
+
     waiterAddProduct(
-      button.dataset.productId,
-      button.dataset.category
+      productElement.dataset.productId ||
+        card.dataset.productId,
+
+      productElement.dataset.category ||
+        card.dataset.category
+    );
+
+  }
+);
+waiterElements.menuGrid.addEventListener(
+  "keydown",
+  (event) => {
+
+    if (
+      event.key !== "Enter" &&
+      event.key !== " "
+    ) {
+      return;
+    }
+
+
+    const card =
+      event.target.closest(
+        ".waiter-product-card[data-product-id]"
+      );
+
+    if (!card) return;
+
+    if (
+      card.dataset.productAvailable === "false"
+    ) {
+      return;
+    }
+
+
+    event.preventDefault();
+
+
+    waiterAddProduct(
+      card.dataset.productId,
+      card.dataset.category
     );
 
   }
