@@ -409,6 +409,10 @@ function createBlankOrder() {
     customer: "",
     server: shiftServerName,
     notes: "",
+    customer: "",
+server: shiftServerName,
+cashier: shiftServerName,
+notes: "",
     delivery: null,
     items: [],
     createdAt: null,
@@ -4016,7 +4020,21 @@ function readOnlinePaymentNote() {
 function readClientAlarmEnabled() {
   return localStorage.getItem(STORAGE_KEYS.clientAlarmEnabled) === "1";
 }
+function currentCashierName() {
+  const metadata =
+    cloudState.user?.user_metadata || {};
 
+  const restaurantProfile =
+    metadata.restaurant_profile || {};
+
+  return String(
+    shiftServerName ||
+    metadata.full_name ||
+    metadata.owner_name ||
+    restaurantProfile.ownerName ||
+    ""
+  ).trim();
+}
 function readShiftServerName() {
   return localStorage.getItem(STORAGE_KEYS.shiftServerName) || "";
 }
