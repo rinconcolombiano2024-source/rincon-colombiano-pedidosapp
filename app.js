@@ -6546,10 +6546,73 @@ elements.shiftServerInput.addEventListener("keydown", (event) => {
 elements.customerButton.addEventListener("click", openCustomerDialog);
 elements.saveCustomerButton.addEventListener("click", saveCustomerFromDialog);
 
-elements.dailyCloseButton.addEventListener("click", () => {
-  renderDailyClose(todayKey);
-  elements.dailyCloseDialog.showModal();
-});
+elements.dailyCloseButton.addEventListener(
+  "click",
+  async () => {
+
+    elements.dailyCloseButton.disabled = true;
+
+    try {
+
+      /*
+       * Antes de calcular el cierre:
+       * sincronizamos los cambios locales pendientes
+       * y después descargamos la información
+       * actualizada de Supabase.
+       */
+
+      if (
+        cloudState.client &&
+        cloudState.user &&
+        navigator.onLine
+      ) {
+
+        await syncPendingData({
+          silent: true,
+          allowWhileLoading: true,
+        });
+
+        await loadCloudData();
+
+      }
+
+      todayKey = currentBusinessDate();
+
+      renderDailyClose(todayKey);
+
+      elements.dailyCloseDialog.showModal();
+
+    } catch (error) {
+
+      console.error(
+        "No fue posible verificar la nube antes del cierre:",
+        error
+      );
+
+      /*
+       * Nunca eliminamos los datos locales.
+       * Permitimos ver el cierre, pero advertimos
+       * que no ha sido verificado con Supabase.
+       */
+
+      todayKey = currentBusinessDate();
+
+      renderDailyClose(todayKey);
+
+      elements.dailyCloseDialog.showModal();
+
+      showToast(
+        "Cierre mostrado con datos locales. No fue posible verificar Supabase."
+      );
+
+    } finally {
+
+      elements.dailyCloseButton.disabled = false;
+
+    }
+
+  }
+);
 
 elements.closeDayInput.addEventListener("change", () => {
   renderDailyClose(elements.closeDayInput.value || todayKey);
@@ -6557,10 +6620,60 @@ elements.closeDayInput.addEventListener("change", () => {
 
 elements.printDailyCloseButton.addEventListener("click", printDailyClose);
 
-elements.monthlyCloseButton.addEventListener("click", () => {
-  renderMonthlyClose(currentMonthKey());
-  elements.monthlyCloseDialog.showModal();
-});
+elements.monthlyCloseButton.addEventListener(
+  "click",
+  async () => {
+
+    elements.monthlyCloseButton.disabled = true;
+
+    try {
+
+      if (
+        cloudState.client &&
+        cloudState.user &&
+        navigator.onLine
+      ) {
+
+        await syncPendingData({
+          silent: true,
+          allowWhileLoading: true,
+        });
+
+        await loadCloudData();
+
+      }
+
+      renderMonthlyClose(
+        currentMonthKey()
+      );
+
+      elements.monthlyCloseDialog.showModal();
+
+    } catch (error) {
+
+      console.error(
+        "No fue posible verificar la nube antes del cierre mensual:",
+        error
+      );
+
+      renderMonthlyClose(
+        currentMonthKey()
+      );
+
+      elements.monthlyCloseDialog.showModal();
+
+      showToast(
+        "Cierre mensual mostrado con datos locales. No fue posible verificar Supabase."
+      );
+
+    } finally {
+
+      elements.monthlyCloseButton.disabled = false;
+
+    }
+
+  }
+);
 
 elements.closeMonthInput.addEventListener("change", () => {
   renderMonthlyClose(elements.closeMonthInput.value || currentMonthKey());
