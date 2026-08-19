@@ -3,6 +3,7 @@ const STORAGE_KEYS = {
   ticketDate: "rincon_colombiano_ticket_date",
   orders: "rincon_colombiano_orders",
   menu: "rincon_colombiano_menu",
+  appLanguage: "rincon_colombiano_app_language",
   currencySymbol: "rincon_colombiano_currency_symbol",
   currencyPosition: "rincon_colombiano_currency_position",
   moneyFormat: "rincon_colombiano_money_format",
@@ -3900,9 +3901,9 @@ function normalizeProductTranslations(
 function currentAppLanguage() {
   const savedLanguage =
     String(
-      localStorage.getItem(
-        "rincon_colombiano_app_language"
-      ) || ""
+     localStorage.getItem(
+  STORAGE_KEYS.appLanguage
+) || ""
     ).trim();
 
   if (savedLanguage) {
@@ -3940,7 +3941,59 @@ function currentAppLanguage() {
     navigator.language || "es"
   );
 }
+function languageDirection(
+  language = currentAppLanguage()
+) {
+  const baseLanguage =
+    normalizeLanguageCode(language)
+      .split("-")[0];
 
+  const rtlLanguages = [
+    "ar",
+    "he",
+    "fa",
+    "ur",
+  ];
+
+  return rtlLanguages.includes(
+    baseLanguage
+  )
+    ? "rtl"
+    : "ltr";
+}
+
+function applyDocumentLanguage(
+  language = currentAppLanguage()
+) {
+  const normalizedLanguage =
+    normalizeLanguageCode(language);
+
+  document.documentElement.lang =
+    normalizedLanguage;
+
+  document.documentElement.dir =
+    languageDirection(
+      normalizedLanguage
+    );
+
+  return normalizedLanguage;
+}
+
+function setAppLanguage(language) {
+  const normalizedLanguage =
+    normalizeLanguageCode(language);
+
+  localStorage.setItem(
+    STORAGE_KEYS.appLanguage,
+    normalizedLanguage
+  );
+
+  applyDocumentLanguage(
+    normalizedLanguage
+  );
+
+  return normalizedLanguage;
+}
 function currentMenuLanguage() {
   return currentAppLanguage();
 }
