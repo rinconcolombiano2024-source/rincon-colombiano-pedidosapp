@@ -7545,6 +7545,57 @@ elements.newProductButton.addEventListener("click", startNewProduct);
 elements.saveProductButton.addEventListener("click", saveProduct);
 elements.cancelEditProductButton.addEventListener("click", clearProductForm);
 elements.resetMenuButton.addEventListener("click", resetMenu);
+// ============================================================
+// SEGURIDAD - VACIAR MENU
+// PASO 1: cancelar y validar frase de confirmacion
+// ============================================================
+
+if (elements.cancelMenuClearButton) {
+  elements.cancelMenuClearButton.addEventListener("click", () => {
+    if (elements.menuClearConfirmationInput) {
+      elements.menuClearConfirmationInput.value = "";
+    }
+
+    if (elements.menuClearPasswordInput) {
+      elements.menuClearPasswordInput.value = "";
+    }
+
+    if (elements.menuClearSecurityMessage) {
+      elements.menuClearSecurityMessage.textContent = "";
+      elements.menuClearSecurityMessage.hidden = true;
+    }
+
+    if (elements.menuClearSecurityDialog?.open) {
+      elements.menuClearSecurityDialog.close();
+    }
+  });
+}
+
+if (elements.confirmMenuClearButton) {
+  elements.confirmMenuClearButton.addEventListener("click", () => {
+    const confirmation =
+      elements.menuClearConfirmationInput?.value?.trim() || "";
+
+    if (confirmation !== "VACIAR MENU") {
+      if (elements.menuClearSecurityMessage) {
+        elements.menuClearSecurityMessage.textContent =
+          'Debes escribir exactamente "VACIAR MENU" para continuar.';
+        elements.menuClearSecurityMessage.hidden = false;
+      }
+
+      elements.menuClearConfirmationInput?.focus();
+      return;
+    }
+
+    if (elements.menuClearSecurityMessage) {
+      elements.menuClearSecurityMessage.textContent =
+        "Frase correcta. Ahora confirma la contraseña de la cuenta.";
+      elements.menuClearSecurityMessage.hidden = false;
+    }
+
+    elements.menuClearPasswordInput?.focus();
+  });
+}
 elements.saveCurrencyButton.addEventListener("click", saveCurrencySymbol);
 elements.saveCustomerSettingsButton.addEventListener("click", saveCurrencySymbol);
 if (elements.useRestaurantLocationButton) {
