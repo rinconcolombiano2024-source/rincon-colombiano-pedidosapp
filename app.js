@@ -2209,23 +2209,52 @@ async function enableClientAlarm() {
 }
 
 function disableClientAlarm() {
-  clientAlarmEnabled = false;
-  localStorage.removeItem(STORAGE_KEYS.clientAlarmEnabled);
-  stopClientAlarm();
+  /*
+   * La alarma de pedidos del restaurante
+   * es obligatoria y no puede apagarse.
+   *
+   * Esta función se conserva para evitar
+   * errores si alguna parte antigua del
+   * código intenta llamarla.
+   */
+  clientAlarmEnabled = true;
+
+  localStorage.setItem(
+    STORAGE_KEYS.clientAlarmEnabled,
+    "1"
+  );
+
   updateClientAlarmButton();
-  showToast("Alarma de pedidos apagada.");
+  syncClientAlarm();
+
+  showToast(
+    "La alarma de pedidos permanece siempre activa."
+  );
 }
 
 function toggleClientAlarm() {
-  if (clientAlarmEnabled) {
-    disableClientAlarm();
-    return;
-  }
+  /*
+   * El botón no apaga la alarma.
+   *
+   * Sirve para comprobar/reactivar
+   * el permiso de audio del navegador.
+   */
   enableClientAlarm().catch(() => {
-    showToast("No se pudo activar sonido en este navegador.");
+    clientAlarmEnabled = true;
+
+    localStorage.setItem(
+      STORAGE_KEYS.clientAlarmEnabled,
+      "1"
+    );
+
+    updateClientAlarmButton();
+    syncClientAlarm();
+
+    showToast(
+      "La alarma sigue activa, pero el navegador no permitió reproducir el sonido."
+    );
   });
 }
-
 function ringClientAlarm() {
   if (!clientAlarmEnabled || pendingClientOrdersCount() === 0) return;
   const context = getClientAlarmAudioContext();
@@ -4581,7 +4610,12 @@ function readOnlinePaymentNote() {
 }
 
 function readClientAlarmEnabled() {
-  return localStorage.getItem(STORAGE_KEYS.clientAlarmEnabled) === "1";
+  localStorage.setItem(
+    STORAGE_KEYS.clientAlarmEnabled,
+    "1"
+  );
+
+  return true;
 }
 function currentCashierName() {
   const metadata =
