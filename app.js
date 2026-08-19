@@ -3746,42 +3746,250 @@ function createProductId() {
 function productIsAvailable(product) {
   return product?.available !== false;
 }
+const MENU_TRANSLATION_LANGUAGES = ["es", "pl", "en"];
 
+function normalizeMenuLanguage(value) {
+  const language =
+    String(value || "")
+      .trim()
+      .toLowerCase();
+
+  return MENU_TRANSLATION_LANGUAGES.includes(language)
+    ? language
+    : "es";
+}
+
+function normalizeProductTranslations(
+  product = {},
+  fallbackName = "",
+  fallbackDescription = ""
+) {
+  const source =
+    product?.translations &&
+    typeof product.translations === "object" &&
+    !Array.isArray(product.translations)
+      ? product.translations
+      : {};
+
+  const translations = {};
+
+  MENU_TRANSLATION_LANGUAGES.forEach(
+    (language) => {
+      const existing =
+        source[language] &&
+        typeof source[language] === "object" &&
+        !Array.isArray(source[language])
+          ? source[language]
+          : {};
+
+      translations[language] = {
+        name: String(
+          existing.name ||
+          (language === "es"
+            ? fallbackName
+            : "")
+        ).trim(),
+
+        description:
+          normalizeProductDescription(
+            existing.description ||
+            (language === "es"
+              ? fallbackDescription
+              : "")
+          ),
+      };
+    }
+  );
+
+  /*
+   * Compatibilidad con productos antiguos.
+   * El nombre/descripción que ya existen
+   * se consideran inicialmente español.
+   */
+  if (!translations.es.name) {
+    translations.es.name =
+      String(fallbackName || "").trim();
+  }
+
+  if (!translations.es.description) {
+    translations.es.description =
+      normalizeProductDescription(
+        fallbackDescription
+      );
+  }
+
+  return translations;
+}
+
+function currentMenuLanguage() {
+  const selected =
+    String(
+      localStorage.getItem(
+        "rincon_colombiano_app_language"
+      ) || ""
+    )
+      .trim()
+      .toLowerCase();
+
+  if (
+    MENU_TRANSLATION_LANGUAGES.includes(
+      selected
+    )
+  ) {
+    return selected;
+  }
+
+  return normalizeMenuLanguage(
+    restaurantRegistrationRegion
+      .preferredLanguage
+  );
+}
+
+function productTextForLanguage(
+  product,
+  field,
+  language = currentMenuLanguage()
+) {
+  const translations =
+    normalizeProductTranslations(
+      product,
+      product?.name || "",
+      product?.description || ""
+    );
+
+  const cleaner =
+    field === "description"
+      ? normalizeProductDescription
+      : (value) =>
+          String(value || "").trim();
+
+  return (
+    cleaner(
+      translations[language]?.[field]
+    ) ||
+    cleaner(
+      translations.es?.[field]
+    ) ||
+    cleaner(product?.[field])
+  );
+}
 function normalizeMenuCatalog(menu) {
   const normalized = {};
   const categoriesByKey = new Map();
 
-  Object.entries(menu || {}).forEach(([category, dishes]) => {
-    const cleanCategory = cleanCategoryName(category);
-    if (!cleanCategory) return;
-    const categoryKey = categoryIdentityKey(cleanCategory);
-    const finalCategory = categoriesByKey.get(categoryKey) || cleanCategory;
-    categoriesByKey.set(categoryKey, finalCategory);
-    if (!normalized[finalCategory]) normalized[finalCategory] = [];
+  Object.entries(menu || {}).forEach(
+    ([category, dishes]) => {
+      const cleanCategory =
+        cleanCategoryName(category);
 
-    if (Array.isArray(dishes)) {
+      if (!cleanCategory) return;
+
+      const categoryKey =
+        categoryIdentityKey(
+          cleanCategory
+        );
+
+      const finalCategory =
+        categoriesByKey.get(
+          categoryKey
+        ) || cleanCategory;
+
+      categoriesByKey.set(
+        categoryKey,
+        finalCategory
+      );
+
+      if (!normalized[finalCategory]) {
+        normalized[finalCategory] = [];
+      }
+
+      if (!Array.isArray(dishes)) {
+        return;
+      }
+
       dishes.forEach((dish) => {
-        const name = String(dish?.name || "").trim();
-        const price = Number.parseFloat(dish?.price) || 0;
-        const imageUrl = normalizeProductImageUrl(dish?.imageUrl || dish?.image || dish?.photo || "");
-        const description = normalizeProductDescription(dish?.description || dish?.descripcion || dish?.details || "");
-        if (name) {
-          normalized[finalCategory].push({
-            id: normalizeProductId(dish?.id || dish?.productId) || stableProductId(finalCategory, name, description),
-            name,
-            price,
-            available: dish?.available === false ? false : true,
-            imageUrl,
-            description,
-          });
-        }
+        const originalName =
+          String(
+            dish?.name || ""
+          ).trim();
+
+        const price =
+          Number.parseFloat(
+            dish?.price
+          ) || 0;
+
+        const imageUrl =
+          normalizeProductImageUrl(
+            dish?.imageUrl ||
+            dish?.image ||
+            dish?.photo ||
+            ""
+          );
+
+        const originalDescription =
+          normalizeProductDescription(
+            dish?.description ||
+            dish?.descripcion ||
+            dish?.details ||
+            ""
+          );
+
+        const translations =
+          normalizeProductTranslations(
+            dish,
+            originalName,
+            originalDescription
+          );
+
+        const name =
+          translations.es.name ||
+          originalName;
+
+        const description =
+          translations.es.description ||
+          originalDescription;
+
+        if (!name) return;
+
+        normalized[
+          finalCategory
+        ].push({
+          id:
+            normalizeProductId(
+              dish?.id ||
+              dish?.productId
+            ) ||
+            stableProductId(
+              finalCategory,
+              name,
+              description
+            ),
+
+          name,
+
+          price,
+
+          available:
+            dish?.available === false
+              ? false
+              : true,
+
+          imageUrl,
+
+          description,
+
+          /*
+           * Traducciones permanentes
+           * del producto.
+           */
+          translations,
+        });
       });
     }
-  });
+  );
 
   return normalized;
 }
-
 function saveMenuCatalog() {
   menuCatalog = normalizeMenuCatalog(menuCatalog);
   localStorage.setItem(STORAGE_KEYS.menu, JSON.stringify(menuCatalog));
@@ -5002,14 +5210,39 @@ async function saveProduct() {
   }
 
   const previousProduct = editingProduct ? (menuCatalog[editingProduct.category] || [])[editingProduct.index] : null;
-  const product = {
-    id: normalizeProductId(previousProduct?.id || previousProduct?.productId) || createProductId(),
+  const translations =
+  normalizeProductTranslations(
+    previousProduct || {},
     name,
-    description,
-    price,
-    available,
-    imageUrl,
-  };
+    description
+  );
+
+/*
+ * Los campos principales actuales
+ * corresponden al español.
+ */
+translations.es = {
+  name,
+  description,
+};
+
+const product = {
+  id:
+    normalizeProductId(
+      previousProduct?.id ||
+      previousProduct?.productId
+    ) ||
+    createProductId(),
+
+  name,
+  description,
+
+  translations,
+
+  price,
+  available,
+  imageUrl,
+};
   const wasEditing = Boolean(editingProduct);
 
   if (editingProduct) {
