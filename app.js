@@ -298,6 +298,12 @@ productDescriptionEnInput: document.querySelector("#productDescriptionEnInput"),
   cancelEditProductButton: document.querySelector("#cancelEditProductButton"),
   productList: document.querySelector("#productList"),
   resetMenuButton: document.querySelector("#resetMenuButton"),
+  menuClearSecurityDialog: document.querySelector("#menuClearSecurityDialog"),
+menuClearConfirmationInput: document.querySelector("#menuClearConfirmationInput"),
+menuClearPasswordInput: document.querySelector("#menuClearPasswordInput"),
+menuClearSecurityMessage: document.querySelector("#menuClearSecurityMessage"),
+cancelMenuClearButton: document.querySelector("#cancelMenuClearButton"),
+confirmMenuClearButton: document.querySelector("#confirmMenuClearButton"),
   businessNameInput: document.querySelector("#businessNameInput"),
   businessLogoUrlInput: document.querySelector("#businessLogoUrlInput"),
   businessLogoFileInput: document.querySelector("#businessLogoFileInput"),
@@ -5830,16 +5836,26 @@ async function deleteProduct(index) {
   showToast(syncResultMessage(`Producto "${product.name}" eliminado.`, result));
 }
 
-async function resetMenu() {
-  const shouldReset = confirm("Vaciar el menu? Esto elimina categorias y productos actuales. Usa esta opcion solo si vas a crear el menu desde cero.");
-  if (!shouldReset) return;
+function resetMenu() {
+  if (!elements.menuClearSecurityDialog) {
+    showToast("No se pudo abrir la ventana de seguridad del menú.");
+    return;
+  }
 
-  menuCatalog = normalizeMenuCatalog(EMPTY_MENU_CATALOG);
-  activeCategory = Object.keys(menuCatalog)[0];
-  const result = await saveMenuCatalog();
-  clearProductForm();
-  renderMenuEditor();
-  showToast(syncResultMessage("Menu vaciado. Ahora puedes crear categorias y productos.", result));
+  if (elements.menuClearConfirmationInput) {
+    elements.menuClearConfirmationInput.value = "";
+  }
+
+  if (elements.menuClearPasswordInput) {
+    elements.menuClearPasswordInput.value = "";
+  }
+
+  if (elements.menuClearSecurityMessage) {
+    elements.menuClearSecurityMessage.textContent = "";
+    elements.menuClearSecurityMessage.hidden = true;
+  }
+
+  elements.menuClearSecurityDialog.showModal();
 }
 
 function addItem(name, price) {
