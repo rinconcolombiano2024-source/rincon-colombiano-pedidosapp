@@ -852,7 +852,93 @@
         </div>
       </form>
     </dialog>
+<!-- =========================================================
+     SEGURIDAD PARA VACIAR MENU
+     ========================================================= -->
+<dialog id="menuClearSecurityDialog" class="monthly-dialog">
+  <form method="dialog" class="monthly-form">
 
+    <div class="monthly-dialog-header">
+      <div>
+        <p class="eyebrow">Seguridad del menú</p>
+        <h2>Vaciar menú completo</h2>
+      </div>
+
+      <button
+        id="closeMenuClearSecurityButton"
+        class="icon-button"
+        value="cancel"
+        type="submit"
+        title="Cerrar"
+        aria-label="Cerrar"
+      >
+        <span aria-hidden="true">x</span>
+      </button>
+    </div>
+
+    <p>
+      Esta acción eliminará todas las categorías y todos los productos
+      del menú actual.
+    </p>
+
+    <p>
+      <strong>
+        Antes de borrar el menú se creará automáticamente un respaldo
+        de seguridad en Supabase.
+      </strong>
+    </p>
+
+    <p>
+      El menú no será eliminado si la contraseña es incorrecta
+      o si la frase de confirmación no coincide.
+    </p>
+
+    <label>
+      Escribe exactamente:
+      <strong>VACIAR MENU</strong>
+
+      <input
+        id="menuClearConfirmationInput"
+        type="text"
+        autocomplete="off"
+        placeholder="VACIAR MENU"
+      />
+    </label>
+
+    <label>
+      Contraseña actual de la cuenta
+      <input
+        id="menuClearPasswordInput"
+        type="password"
+        autocomplete="current-password"
+        placeholder="Confirma tu contraseña"
+      />
+    </label>
+
+    <p
+      class="customer-map-result"
+      id="menuClearSecurityMessage"
+      hidden
+    ></p>
+
+    <div class="dialog-actions">
+      <button
+        id="cancelMenuClearButton"
+        type="button"
+      >
+        Cancelar
+      </button>
+
+      <button
+        id="confirmMenuClearButton"
+        type="button"
+      >
+        Continuar con el vaciado
+      </button>
+    </div>
+
+  </form>
+</dialog>
     <dialog id="restaurantDeletionDialog" class="monthly-dialog restaurant-deletion-dialog">
       <form method="dialog">
         <h2>Eliminar cuenta del restaurante</h2>
