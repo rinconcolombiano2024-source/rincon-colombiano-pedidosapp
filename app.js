@@ -282,7 +282,13 @@ const elements = {
   newProductButton: document.querySelector("#newProductButton"),
   productCategorySelect: document.querySelector("#productCategorySelect"),
   productNameInput: document.querySelector("#productNameInput"),
-  productDescriptionInput: document.querySelector("#productDescriptionInput"),
+productDescriptionInput: document.querySelector("#productDescriptionInput"),
+
+productNamePlInput: document.querySelector("#productNamePlInput"),
+productDescriptionPlInput: document.querySelector("#productDescriptionPlInput"),
+
+productNameEnInput: document.querySelector("#productNameEnInput"),
+productDescriptionEnInput: document.querySelector("#productDescriptionEnInput"),
   productPriceInput: document.querySelector("#productPriceInput"),
   productImageUrlInput: document.querySelector("#productImageUrlInput"),
   productImageFileInput: document.querySelector("#productImageFileInput"),
@@ -5042,18 +5048,48 @@ function selectEditorCategory(category) {
 function clearProductForm() {
   elements.productNameInput.value = "";
   elements.productDescriptionInput.value = "";
+
+  if (elements.productNamePlInput) {
+    elements.productNamePlInput.value = "";
+  }
+
+  if (elements.productDescriptionPlInput) {
+    elements.productDescriptionPlInput.value = "";
+  }
+
+  if (elements.productNameEnInput) {
+    elements.productNameEnInput.value = "";
+  }
+
+  if (elements.productDescriptionEnInput) {
+    elements.productDescriptionEnInput.value = "";
+  }
+
   elements.productPriceInput.value = "";
   elements.productImageUrlInput.value = "";
   elements.productAvailableInput.checked = true;
-  if (elements.productImageFileInput) elements.productImageFileInput.value = "";
-  elements.productCategorySelect.value = activeCategory;
-  elements.saveProductButton.textContent = "Agregar producto";
-  elements.saveProductButton.disabled = !activeCategory;
-  elements.newProductButton.disabled = !activeCategory;
-  elements.cancelEditProductButton.hidden = true;
+
+  if (elements.productImageFileInput) {
+    elements.productImageFileInput.value = "";
+  }
+
+  elements.productCategorySelect.value =
+    activeCategory;
+
+  elements.saveProductButton.textContent =
+    "Agregar producto";
+
+  elements.saveProductButton.disabled =
+    !activeCategory;
+
+  elements.newProductButton.disabled =
+    !activeCategory;
+
+  elements.cancelEditProductButton.hidden =
+    true;
+
   editingProduct = null;
 }
-
 function startNewProduct() {
   if (!activeCategory) {
     alert("Primero crea una categoria.");
@@ -5192,10 +5228,54 @@ async function deleteCategory() {
 }
 
 async function saveProduct() {
-  const category = elements.productCategorySelect.value;
-  const name = elements.productNameInput.value.trim();
-  const description = normalizeProductDescription(elements.productDescriptionInput.value);
-  const price = Number.parseFloat(elements.productPriceInput.value) || 0;
+  const category =
+  elements.productCategorySelect.value;
+
+/*
+ * ESPAÑOL
+ */
+const name =
+  elements.productNameInput.value.trim();
+
+const description =
+  normalizeProductDescription(
+    elements.productDescriptionInput.value
+  );
+
+/*
+ * POLACO
+ */
+const namePl =
+  elements.productNamePlInput
+    ? elements.productNamePlInput.value.trim()
+    : "";
+
+const descriptionPl =
+  elements.productDescriptionPlInput
+    ? normalizeProductDescription(
+        elements.productDescriptionPlInput.value
+      )
+    : "";
+
+/*
+ * INGLÉS
+ */
+const nameEn =
+  elements.productNameEnInput
+    ? elements.productNameEnInput.value.trim()
+    : "";
+
+const descriptionEn =
+  elements.productDescriptionEnInput
+    ? normalizeProductDescription(
+        elements.productDescriptionEnInput.value
+      )
+    : "";
+
+const price =
+  Number.parseFloat(
+    elements.productPriceInput.value
+  ) || 0;
   const imageUrl = normalizeProductImageUrl(elements.productImageUrlInput.value);
   const available = elements.productAvailableInput.checked;
 
@@ -5224,6 +5304,16 @@ async function saveProduct() {
 translations.es = {
   name,
   description,
+};
+
+translations.pl = {
+  name: namePl,
+  description: descriptionPl,
+};
+
+translations.en = {
+  name: nameEn,
+  description: descriptionEn,
 };
 
 const product = {
@@ -5259,23 +5349,86 @@ const product = {
 }
 
 function editProduct(index) {
-  const product = (menuCatalog[activeCategory] || [])[index];
+  const product =
+    (menuCatalog[activeCategory] || [])[index];
+
   if (!product) return;
 
-  editingProduct = { category: activeCategory, index };
-  elements.productCategorySelect.value = activeCategory;
-  elements.productNameInput.value = product.name;
-  elements.productDescriptionInput.value = product.description || "";
-  elements.productPriceInput.value = product.price;
-  elements.productImageUrlInput.value = product.imageUrl || "";
-  elements.productAvailableInput.checked = productIsAvailable(product);
-  if (elements.productImageFileInput) elements.productImageFileInput.value = "";
-  elements.saveProductButton.textContent = "Guardar cambios";
-  elements.cancelEditProductButton.hidden = false;
-  elements.productNameInput.focus();
-  showToast(`Editando "${product.name}". Cambia los datos y presiona Guardar cambios.`);
-}
+  editingProduct = {
+    category: activeCategory,
+    index,
+  };
 
+  const translations =
+    normalizeProductTranslations(
+      product,
+      product.name || "",
+      product.description || ""
+    );
+
+  elements.productCategorySelect.value =
+    activeCategory;
+
+  /*
+   * ESPAÑOL
+   */
+  elements.productNameInput.value =
+    translations.es.name || "";
+
+  elements.productDescriptionInput.value =
+    translations.es.description || "";
+
+  /*
+   * POLACO
+   */
+  if (elements.productNamePlInput) {
+    elements.productNamePlInput.value =
+      translations.pl.name || "";
+  }
+
+  if (elements.productDescriptionPlInput) {
+    elements.productDescriptionPlInput.value =
+      translations.pl.description || "";
+  }
+
+  /*
+   * INGLÉS
+   */
+  if (elements.productNameEnInput) {
+    elements.productNameEnInput.value =
+      translations.en.name || "";
+  }
+
+  if (elements.productDescriptionEnInput) {
+    elements.productDescriptionEnInput.value =
+      translations.en.description || "";
+  }
+
+  elements.productPriceInput.value =
+    product.price;
+
+  elements.productImageUrlInput.value =
+    product.imageUrl || "";
+
+  elements.productAvailableInput.checked =
+    productIsAvailable(product);
+
+  if (elements.productImageFileInput) {
+    elements.productImageFileInput.value = "";
+  }
+
+  elements.saveProductButton.textContent =
+    "Guardar cambios";
+
+  elements.cancelEditProductButton.hidden =
+    false;
+
+  elements.productNameInput.focus();
+
+  showToast(
+    `Editando "${translations.es.name || product.name}". Cambia los datos y presiona Guardar cambios.`
+  );
+}
 async function deleteProduct(index) {
   const product = (menuCatalog[activeCategory] || [])[index];
   if (!product) return;
