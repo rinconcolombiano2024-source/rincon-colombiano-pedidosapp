@@ -1159,18 +1159,83 @@ waiterElements.menuGrid.addEventListener(
 
   }
 );
-waiterElements.cart.addEventListener("click", (event) => {
-  const card = event.target.closest("[data-cart-id]");
-  const action = event.target.dataset.action;
-  if (!card || !action) return;
-  const item = waiterCart.find((entry) => entry.cartId === card.dataset.cartId);
-  if (!item) return;
-  if (action === "plus") item.qty += 1;
-  if (action === "minus") item.qty = Math.max(1, item.qty - 1);
-  if (action === "remove") waiterCart = waiterCart.filter((entry) => entry.cartId !== item.cartId);
-  waiterRenderCart();
-  waiterSaveDraft();
-});
+waiterElements.cart.addEventListener(
+  "click",
+  (event) => {
+
+    const actionButton =
+      event.target.closest(
+        'button[data-action="plus"], ' +
+        'button[data-action="minus"], ' +
+        'button[data-action="remove"]'
+      );
+
+    /*
+     * Si el clic fue en el textarea de notas,
+     * en el nombre del producto o en cualquier
+     * otro elemento, no hacemos nada.
+     */
+    if (!actionButton) {
+      return;
+    }
+
+    const card =
+      actionButton.closest("[data-cart-id]");
+
+    if (!card) {
+      return;
+    }
+
+    const item =
+      waiterCart.find(
+        (entry) =>
+          String(entry.cartId) ===
+          String(card.dataset.cartId)
+      );
+
+    if (!item) {
+      return;
+    }
+
+    const action =
+      actionButton.dataset.action;
+
+    if (action === "plus") {
+
+      item.qty =
+        Math.max(
+          1,
+          Number(item.qty) || 1
+        ) + 1;
+
+    }
+
+    if (action === "minus") {
+
+      item.qty =
+        Math.max(
+          1,
+          (Number(item.qty) || 1) - 1
+        );
+
+    }
+
+    if (action === "remove") {
+
+      waiterCart =
+        waiterCart.filter(
+          (entry) =>
+            String(entry.cartId) !==
+            String(item.cartId)
+        );
+
+    }
+
+    waiterRenderCart();
+    waiterSaveDraft();
+
+  }
+);
 waiterElements.cart.addEventListener(
   "input",
   (event) => {
