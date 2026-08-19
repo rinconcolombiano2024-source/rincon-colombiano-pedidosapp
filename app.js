@@ -5167,6 +5167,10 @@ function renderOrder() {
 async function upsertCurrentOrder() {
   rollOverDayIfNeeded();
   syncFormToOrder();
+  if (!String(currentOrder.cashier || "").trim()) {
+  currentOrder.cashier =
+    currentCashierName() || "Caja";
+}
 
   if (!currentOrder.items.length) {
     alert("Agrega al menos un producto antes de guardar.");
@@ -5456,6 +5460,12 @@ function renderPrintTicket(order) {
   const timeText = created.toLocaleTimeString("es-US", { hour: "2-digit", minute: "2-digit" });
   const place = order.customer || "Sin mesa/cliente";
   const server = order.server || "No indicado";
+  const cashier =
+  String(
+    order.cashier ||
+    currentCashierName() ||
+    ""
+  ).trim() || "No indicado";
   const orderType = normalizeOrderType(order.type);
   const orderTypeText = orderTypeLabel(orderType);
   const paymentMethod = paymentMethodLabel(order.paymentMethod);
@@ -5470,6 +5480,7 @@ function renderPrintTicket(order) {
     <div class="receipt-row"><strong>Pago:</strong><span>${escapeHtml(paymentMethod)}</span></div>
     <div class="receipt-row"><strong>Mesa/Cliente:</strong><span>${escapeHtml(place)}</span></div>
     <div class="receipt-row"><strong>Tomo pedido:</strong><span>${escapeHtml(server)}</span></div>
+    <div class="receipt-row"><strong>Cajero:</strong><span>${escapeHtml(cashier)}</span></div>
     <div class="receipt-row"><strong>Fecha:</strong><span>${escapeHtml(dateText)}</span></div>
     <div class="receipt-row"><strong>Hora:</strong><span>${escapeHtml(timeText)}</span></div>
     ${
@@ -5547,7 +5558,14 @@ function buildTicketPdfLines(order, maxLineLength) {
     `Cliente: ${order.customer || "Sin mesa/cliente"}`,
     `Pago: ${paymentMethodLabel(order.paymentMethod)}`,
     `Tomo pedido: ${order.server || "No indicado"}`,
-    `Fecha: ${dateText}`,
+`Cajero: ${
+  String(
+    order.cashier ||
+    currentCashierName() ||
+    ""
+  ).trim() || "No indicado"
+}`,
+`Fecha: ${dateText}`,
     `Hora: ${timeText}`,
     divider,
   ];
