@@ -4015,6 +4015,182 @@ function languageFallbacks(
     ])
   );
 }
+const UI_TRANSLATIONS = {
+  es: {
+    "common.loading": "Cargando...",
+    "common.save": "Guardar",
+    "common.cancel": "Cancelar",
+    "common.close": "Cerrar",
+    "common.edit": "Editar",
+    "common.delete": "Eliminar",
+    "common.yes": "Sí",
+    "common.no": "No",
+
+    "order.new": "Nuevo pedido",
+    "order.save": "Guardar pedido",
+    "order.cancel": "Cancelar pedido",
+
+    "restaurant.open": "Abrir restaurante",
+    "restaurant.close": "Cerrar restaurante",
+  },
+};
+
+/*
+ * Permite agregar traducciones para
+ * CUALQUIER idioma sin modificar
+ * el funcionamiento del motor.
+ *
+ * Ejemplos:
+ * pl
+ * en
+ * de
+ * fr
+ * it
+ * uk
+ * ar
+ * ja
+ * etc.
+ */
+function registerUiTranslations(
+  language,
+  messages = {}
+) {
+  const normalizedLanguage =
+    normalizeLanguageCode(language);
+
+  const existing =
+    UI_TRANSLATIONS[
+      normalizedLanguage
+    ] &&
+    typeof UI_TRANSLATIONS[
+      normalizedLanguage
+    ] === "object"
+      ? UI_TRANSLATIONS[
+          normalizedLanguage
+        ]
+      : {};
+
+  UI_TRANSLATIONS[
+    normalizedLanguage
+  ] = {
+    ...existing,
+    ...messages,
+  };
+
+  return UI_TRANSLATIONS[
+    normalizedLanguage
+  ];
+}
+
+/*
+ * Sustituye variables dentro
+ * de una traducción.
+ *
+ * Ejemplo:
+ *
+ * "Tienes {{count}} pedidos"
+ */
+function interpolateTranslation(
+  text,
+  variables = {}
+) {
+  return String(text ?? "").replace(
+    /\{\{(\w+)\}\}/g,
+    (match, key) => {
+      if (
+        Object.prototype.hasOwnProperty.call(
+          variables,
+          key
+        )
+      ) {
+        return String(
+          variables[key] ?? ""
+        );
+      }
+
+      return match;
+    }
+  );
+}
+
+/*
+ * Motor global de traducción.
+ *
+ * Ejemplo:
+ *
+ * t("order.new")
+ *
+ * También acepta variables:
+ *
+ * t(
+ *   "orders.pending",
+ *   { count: 5 }
+ * )
+ */
+function t(
+  key,
+  variables = {},
+  options = {}
+) {
+  const cleanKey =
+    String(key || "").trim();
+
+  if (!cleanKey) {
+    return "";
+  }
+
+  const language =
+    normalizeLanguageCode(
+      options.language ||
+      currentAppLanguage()
+    );
+
+  const fallbacks =
+    languageFallbacks(language);
+
+  for (
+    const candidateLanguage
+    of fallbacks
+  ) {
+    const dictionary =
+      UI_TRANSLATIONS[
+        candidateLanguage
+      ];
+
+    if (
+      !dictionary ||
+      typeof dictionary !==
+        "object"
+    ) {
+      continue;
+    }
+
+    const translatedText =
+      dictionary[cleanKey];
+
+    if (
+      typeof translatedText ===
+        "string" &&
+      translatedText.trim()
+    ) {
+      return interpolateTranslation(
+        translatedText,
+        variables
+      );
+    }
+  }
+
+  const fallbackText =
+    options.fallback !==
+    undefined
+      ? options.fallback
+      : cleanKey;
+
+  return interpolateTranslation(
+    fallbackText,
+    variables
+  );
+}
 function productTextForLanguage(
   product,
   field,
