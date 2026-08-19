@@ -2346,7 +2346,7 @@ async function refreshClientOrders(options = {}) {
     .eq("user_id", cloudState.user.id)
     .in("status", ["pending", "accepted", "sent"])
     .gte("created_at", startOfDay.toISOString())
-    .order("created_at", { ascending: true })
+   .order("created_at", { ascending: false })
     .limit(100);
 
   if (error && /source|created_by_user_id|server_name|column/i.test(String(error.message || ""))) {
@@ -2356,7 +2356,7 @@ async function refreshClientOrders(options = {}) {
       .eq("user_id", cloudState.user.id)
       .in("status", ["pending", "accepted", "sent"])
       .gte("created_at", startOfDay.toISOString())
-      .order("created_at", { ascending: true })
+      .order("created_at", { ascending: false })
       .limit(100));
   }
 
