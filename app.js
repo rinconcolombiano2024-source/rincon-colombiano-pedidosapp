@@ -398,7 +398,6 @@ const cloudState = {
   lastError: "",
   moduleWarning: "",
 };
-
 function createBlankOrder() {
   return {
     id: null,
@@ -408,11 +407,8 @@ function createBlankOrder() {
     paymentStatus: "pending",
     customer: "",
     server: shiftServerName,
+    cashier: shiftServerName,
     notes: "",
-    customer: "",
-server: shiftServerName,
-cashier: shiftServerName,
-notes: "",
     delivery: null,
     items: [],
     createdAt: null,
