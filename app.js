@@ -3752,17 +3752,45 @@ function createProductId() {
 function productIsAvailable(product) {
   return product?.available !== false;
 }
-const MENU_TRANSLATION_LANGUAGES = ["es", "pl", "en"];
+const CORE_MENU_LANGUAGES = [
+  "es",
+  "pl",
+  "en",
+];
 
-function normalizeMenuLanguage(value) {
-  const language =
+function normalizeLanguageCode(value) {
+  const raw =
     String(value || "")
       .trim()
-      .toLowerCase();
+      .replace(/_/g, "-");
 
-  return MENU_TRANSLATION_LANGUAGES.includes(language)
-    ? language
-    : "es";
+  if (!raw) {
+    return "es";
+  }
+
+  try {
+    const [canonical] =
+      Intl.getCanonicalLocales(raw);
+
+    return String(
+      canonical || "es"
+    ).toLowerCase();
+  } catch {
+    const basicLanguage =
+      raw
+        .split("-")[0]
+        .toLowerCase();
+
+    return /^[a-z]{2,3}$/.test(
+      basicLanguage
+    )
+      ? basicLanguage
+      : "es";
+  }
+}
+
+function normalizeMenuLanguage(value) {
+  return normalizeLanguageCode(value);
 }
 
 function normalizeProductTranslations(
@@ -3779,78 +3807,161 @@ function normalizeProductTranslations(
 
   const translations = {};
 
-  MENU_TRANSLATION_LANGUAGES.forEach(
-    (language) => {
-      const existing =
-        source[language] &&
-        typeof source[language] === "object" &&
-        !Array.isArray(source[language])
-          ? source[language]
-          : {};
+  /*
+   * Conservamos TODOS los idiomas
+   * que ya existan en el producto.
+   *
+   * Ejemplos:
+   * es
+   * pl
+   * en
+   * de
+   * fr
+   * it
+   * pt-BR
+   * uk
+   * ar
+   * etc.
+   */
+  Object.entries(source).forEach(
+    ([language, translation]) => {
+      if (
+        !translation ||
+        typeof translation !== "object" ||
+        Array.isArray(translation)
+      ) {
+        return;
+      }
 
-      translations[language] = {
-        name: String(
-          existing.name ||
-          (language === "es"
-            ? fallbackName
-            : "")
-        ).trim(),
+      const normalizedLanguage =
+        normalizeLanguageCode(language);
+
+      translations[
+        normalizedLanguage
+      ] = {
+        name:
+          String(
+            translation.name || ""
+          ).trim(),
 
         description:
           normalizeProductDescription(
-            existing.description ||
-            (language === "es"
-              ? fallbackDescription
-              : "")
+            translation.description || ""
           ),
       };
     }
   );
 
   /*
-   * Compatibilidad con productos antiguos.
-   * El nombre/descripción que ya existen
-   * se consideran inicialmente español.
+   * Español es nuestro idioma base
+   * para productos antiguos.
    */
-  if (!translations.es.name) {
-    translations.es.name =
-      String(fallbackName || "").trim();
+  if (!translations.es) {
+    translations.es = {
+      name: "",
+      description: "",
+    };
   }
 
-  if (!translations.es.description) {
+  if (!translations.es.name) {
+    translations.es.name =
+      String(
+        fallbackName || ""
+      ).trim();
+  }
+
+  if (
+    !translations.es.description
+  ) {
     translations.es.description =
       normalizeProductDescription(
         fallbackDescription
       );
   }
 
+  /*
+   * Mantenemos preparados también
+   * nuestros idiomas principales.
+   */
+  CORE_MENU_LANGUAGES.forEach(
+    (language) => {
+      if (!translations[language]) {
+        translations[language] = {
+          name: "",
+          description: "",
+        };
+      }
+    }
+  );
+
   return translations;
 }
 
-function currentMenuLanguage() {
-  const selected =
+function currentAppLanguage() {
+  const savedLanguage =
     String(
       localStorage.getItem(
         "rincon_colombiano_app_language"
       ) || ""
-    )
-      .trim()
-      .toLowerCase();
+    ).trim();
 
-  if (
-    MENU_TRANSLATION_LANGUAGES.includes(
-      selected
-    )
-  ) {
-    return selected;
+  if (savedLanguage) {
+    return normalizeLanguageCode(
+      savedLanguage
+    );
   }
 
-  return normalizeMenuLanguage(
+  const metadata =
+    cloudState.user?.user_metadata ||
+    {};
+
+  const userLanguage =
+    metadata.preferred_language ||
+    metadata.preferredLanguage ||
+    "";
+
+  if (userLanguage) {
+    return normalizeLanguageCode(
+      userLanguage
+    );
+  }
+
+  if (
     restaurantRegistrationRegion
-      .preferredLanguage
+      ?.preferredLanguage
+  ) {
+    return normalizeLanguageCode(
+      restaurantRegistrationRegion
+        .preferredLanguage
+    );
+  }
+
+  return normalizeLanguageCode(
+    navigator.language || "es"
   );
 }
 
+function currentMenuLanguage() {
+  return currentAppLanguage();
+}
+
+function languageFallbacks(
+  language = currentAppLanguage()
+) {
+  const normalized =
+    normalizeLanguageCode(language);
+
+  const baseLanguage =
+    normalized.split("-")[0];
+
+  return Array.from(
+    new Set([
+      normalized,
+      baseLanguage,
+      "es",
+    ])
+  );
+}
 function productTextForLanguage(
   product,
   field,
@@ -3869,14 +3980,27 @@ function productTextForLanguage(
       : (value) =>
           String(value || "").trim();
 
-  return (
-    cleaner(
-      translations[language]?.[field]
-    ) ||
-    cleaner(
-      translations.es?.[field]
-    ) ||
-    cleaner(product?.[field])
+  const fallbacks =
+    languageFallbacks(language);
+
+  for (
+    const candidateLanguage
+    of fallbacks
+  ) {
+    const value =
+      cleaner(
+        translations[
+          candidateLanguage
+        ]?.[field]
+      );
+
+    if (value) {
+      return value;
+    }
+  }
+
+  return cleaner(
+    product?.[field]
   );
 }
 function normalizeMenuCatalog(menu) {
