@@ -2127,12 +2127,36 @@ function updateClientOrdersBadge() {
 
 function updateClientAlarmButton() {
   if (!elements.clientAlarmButton) return;
-  const hasPending = pendingClientOrdersCount() > 0;
-  elements.clientAlarmButton.textContent = clientAlarmEnabled ? "Alarma activa" : "Activar alarma";
-  elements.clientAlarmButton.classList.toggle("alarm-active", clientAlarmEnabled);
-  elements.clientAlarmButton.classList.toggle("alarm-pending", hasPending);
-}
 
+  const hasPending =
+    pendingClientOrdersCount() > 0;
+
+  /*
+   * La alarma del restaurante permanece
+   * obligatoriamente activa.
+   */
+  elements.clientAlarmButton.textContent =
+    hasPending
+      ? "🔔 Alarma activa · pedido pendiente"
+      : "🔔 Alarma activa";
+
+  elements.clientAlarmButton.classList.add(
+    "alarm-active"
+  );
+
+  elements.clientAlarmButton.classList.toggle(
+    "alarm-pending",
+    hasPending
+  );
+
+  elements.clientAlarmButton.setAttribute(
+    "aria-pressed",
+    "true"
+  );
+
+  elements.clientAlarmButton.title =
+    "La alarma de pedidos permanece siempre activa. Pulsa aquí para comprobar o reactivar el sonido.";
+}
 function getClientAlarmAudioContext() {
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   if (!AudioContextClass) return null;
