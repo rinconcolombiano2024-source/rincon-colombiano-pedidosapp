@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>RC ORDERA - Colaborador</title>
+    <meta name="theme-color" content="#1f8f4d" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="RC ORDERA" />
+    <meta name="format-detection" content="telephone=no" />
+    <link rel="manifest" href="colaborador-manifest.webmanifest" />
+    <link rel="icon" href="app-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="app-icon-192.png" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="customer-page collaborator-page collaborator-app-page">
+    <main class="customer-shell collaborator-shell collaborator-app-shell">
+      <header class="collaborator-app-header">
+        <div class="customer-app-brand">
+          <img src="app-icon-192.png" alt="" aria-hidden="true" />
+          <div>
+            <p class="eyebrow">Colaborador</p>
+            <h1>RC ORDERA</h1>
+          </div>
+        </div>
+        <button class="customer-profile-shortcut" type="button" data-courier-view-target="profile">Perfil</button>
+        <div class="collaborator-header-status">
+          <span>Estado</span>
+          <strong id="courierHeaderStatus">Sin iniciar sesion</strong>
+        </div>
+      </header>
+
+      <div class="customer-test-badge">Entorno de prueba</div>
+
+      <section class="courier-view" data-courier-view="home" hidden>
+        <div class="customer-view-heading">
+          <p class="eyebrow">Panel de trabajo</p>
+          <h2>Inicio</h2>
+        </div>
+       <section class="customer-account-panel courier-dashboard" id="courierDashboard" aria-label="Panel del colaborador" hidden>
+
+  <div class="courier-status-card">
+
+    <div class="courier-status-top">
+      <div class="courier-status-indicator">
+
+        <span class="courier-status-dot" id="courierStatusDot"></span>
+
+        <div>
+          <strong class="courier-status-title" id="courierDashboardStatus">
+            FUERA DE LINEA
+          </strong>
+
+          <span class="courier-status-subtitle">
+            Estado de disponibilidad
+          </span>
+        </div>
+
+      </div>
+    </div>
+
+    <p class="courier-status-description" id="courierDashboardText">
+      Cuando tu perfil sea aprobado, podras recibir pedidos.
+    </p>
+
+    <div class="courier-status-details">
+
+      <div class="courier-status-detail">
+        <span>Ubicacion</span>
+        <strong id="courierLocationStatus">Sin ubicacion</strong>
+      </div>
+
+      <div class="courier-status-detail">
+        <span>Pedidos</span>
+        <strong id="courierOrdersStatus">Esperando</strong>
+      </div>
+
+    </div>
+
+    <button
+      class="customer-map-button courier-availability-button courier-main-online-button"
+      id="courierAvailabilityButton"
+      type="button"
+      disabled
+    >
+      PONERME EN LINEA
+    </button>
+
+  </div>
+          <div class="collaborator-actions collaborator-location-actions">
+            <button class="customer-map-button" id="courierShareLocationButton" type="button">Compartir ubicacion</button>
+            <button class="customer-map-button" id="courierOpenGpsButton" type="button" disabled>Abrir GPS</button>
+            <button class="customer-icon-action" id="courierRefreshOffersButton" type="button" title="Actualizar pedidos" aria-label="Actualizar pedidos">
+              <span aria-hidden="true">&#8635;</span>
+            </button>
+          </div>
+          <p class="customer-map-result" id="courierLocationMessage" hidden></p>
+          <div class="courier-section-title">
+            <h3>Entregas disponibles</h3>
+          </div>
+          <div class="courier-offers-list" id="courierOffersList" aria-live="polite"></div>
+        </section>
+        <div class="customer-empty" id="courierHomeSignedOut">Inicia sesion desde Perfil para gestionar entregas.</div>
+      </section>
+
+      <section class="courier-view" data-courier-view="active" hidden>
+        <div class="customer-view-heading">
+          <p class="eyebrow">Ruta y estado</p>
+          <h2>Entrega activa</h2>
+        </div>
+        <section class="customer-account-panel courier-active-panel">
+          <div id="courierActiveDeliveryCard" class="courier-active-delivery"></div>
+          <div class="courier-map-panel">
+
+  <div class="courier-map-head">
+
+    <div>
+      <span>Ruta de entrega</span>
+
+      <strong id="courierMapTitle">
+        Tu ubicación
+      </strong>
+    </div>
+
+    <button
+      class="customer-icon-action"
+      id="courierMapCenterButton"
+      type="button"
+      title="Centrar mapa"
+      aria-label="Centrar mapa"
+    >
+      ◎
+    </button>
+
+  </div>
+
+
+  <div
+    id="courierDeliveryMap"
+    class="courier-delivery-map"
+    aria-label="Mapa de la entrega"
+  ></div>
+
+
+  <p
+    class="courier-map-status"
+    id="courierMapStatus"
+  >
+    Comparte tu ubicación para mostrar el mapa.
+  </p>
+
+</div>
+        
+          <div class="courier-steps" id="courierSteps">
+            <button id="courierArrivedRestaurantButton" type="button" disabled>Llegue al restaurante</button>
+            <button id="courierPickedUpButton" type="button" disabled>Pedido recogido</button>
+            <button id="courierArrivedCustomerButton" type="button" disabled>Llegue al cliente</button>
+            <button id="courierDeliveredButton" type="button" disabled>Pedido entregado</button>
+          </div>
+        </section>
+      </section>
+
+      <section class="courier-view" data-courier-view="history" hidden>
+        <div class="customer-view-heading">
+          <p class="eyebrow">Actividad</p>
+          <h2>Historial</h2>
+        </div>
+        <section class="customer-account-panel">
+          <div class="courier-offers-list" id="courierHistoryList"></div>
+        </section>
+      </section>
+
+      <section class="courier-view" data-courier-view="profile">
+        <div class="customer-view-heading">
+          <p class="eyebrow">Cuenta y documentos</p>
+          <h2>Perfil</h2>
+        </div>
+
+        <section class="customer-account-panel" aria-label="Acceso colaborador">
+          <div class="customer-account-head">
+            <div>
+              <h3>Acceso</h3>
+              <p id="courierAccountSummary">Inicia sesion o crea una cuenta para enviar tu solicitud.</p>
+            </div>
+            <button class="customer-map-button customer-sign-out-button" id="courierSignOutButton" type="button" hidden>Cerrar sesion</button>
+          </div>
+          <div class="customer-auth-fields" id="courierAuthFields">
+            <label>
+              Correo electronico
+              <input id="courierEmailInput" type="email" placeholder="correo@ejemplo.com" autocomplete="email" />
+            </label>
+            <label>
+              Contrasena
+              <input id="courierPasswordInput" type="password" placeholder="Minimo 6 caracteres" autocomplete="current-password" />
+            </label>
+            <div class="customer-auth-actions">
+              <button class="customer-map-button" id="courierSignInButton" type="button">Iniciar sesion</button>
+              <button class="customer-map-button" id="courierSignUpButton" type="button">Crear cuenta</button>
+              <button class="customer-map-button" id="courierResetPasswordButton" type="button">Recuperar contrasena</button>
+              <button class="customer-map-button" id="courierResendVerificationButton" type="button">Reenviar verificacion</button>
+            </div>
+            <div class="password-recovery-panel" id="courierPasswordRecoveryPanel" hidden>
+              <label>
+                Nueva contrasena
+                <input id="courierNewPasswordInput" type="password" autocomplete="new-password" placeholder="Minimo 6 caracteres" />
+              </label>
+              <div class="customer-auth-actions">
+                <button class="customer-map-button" id="courierUpdatePasswordButton" type="button">Guardar nueva contrasena</button>
+                <button class="customer-map-button" id="courierCancelRecoveryButton" type="button">Cancelar</button>
+              </div>
+            </div>
+          </div>
+          <p class="customer-map-result" id="courierAuthMessage" hidden></p>
+        </section>
+
+        <section
+  class="customer-account-panel"
+  id="courierRegistrationPanel"
+  aria-label="Solicitud de colaborador"
+  hidden
+>
+          <div class="customer-account-head">
+            <div>
+              <h3>Solicitud</h3>
+              <p id="courierProfileStatus">Completa tus datos para revision.</p>
+            </div>
+            <span class="courier-status-badge" id="courierStatusBadge">Sin enviar</span>
+          </div>
+          <div class="collaborator-form-grid">
+          <label>
+            Nombre
+            <input id="courierFirstNameInput" type="text" placeholder="Nombre" autocomplete="given-name" />
+          </label>
+          <label>
+            Apellidos
+            <input id="courierLastNameInput" type="text" placeholder="Apellidos" autocomplete="family-name" />
+          </label>
+          <label>
+            Telefono
+            <input id="courierPhoneInput" type="tel" placeholder="Numero de contacto" autocomplete="tel" />
+          </label>
+          <label>
+            Fecha de nacimiento
+            <input id="courierBirthDateInput" type="date" autocomplete="bday" />
+          </label>
+          <label>
+  <span id="courierCountryLabel">País</span>
+  <select id="courierCountryInput" autocomplete="country">
+    <option value="">Selecciona un país</option>
+    <option value="PL">Polonia</option>
+    <option value="CO">Colombia</option>
+  </select>
+</label>
+
+<label>
+  <span id="courierRegionLabel">Región / Departamento</span>
+  <select id="courierRegionInput" autocomplete="address-level1" disabled>
+    <option value="">Primero selecciona un país</option>
+  </select>
+</label>
+
+<label>
+  <span id="courierCityLabel">Localidad</span>
+  <input id="courierCityInput" type="text" placeholder="Ciudad, municipio, pueblo, corregimiento o vereda" autocomplete="address-level2" disabled />
+</label>
+
+<label>
+  <span id="courierPostalCodeLabel">Código postal</span>
+  <input
+    id="courierPostalCodeInput"
+    type="text"
+    placeholder="Código postal"
+    autocomplete="postal-code"
+  />
+</label>
+<label class="collaborator-wide-field">
+            Direccion
+            <input id="courierAddressInput" type="text" placeholder="Direccion completa" autocomplete="street-address" />
+          </label>
+          <label>
+            Documento de identidad
+            <input id="courierIdentityInput" type="text" placeholder="Numero o referencia del documento" autocomplete="off" />
+          </label>
+          <label class="collaborator-wide-field">
+            Archivo documento de identidad
+            <input id="courierIdentityFileInput" type="file" accept="image/*,.pdf" />
+            <input id="courierIdentityFileUrlInput" type="text" readonly placeholder="Sin archivo subido" />
+          </label>
+          <label>
+            Tipo de vehiculo
+            <select id="courierVehicleTypeInput">
+              <option value="">Seleccionar</option>
+              <option value="bicicleta">Bicicleta</option>
+              <option value="motocicleta">Motocicleta</option>
+              <option value="automovil">Automovil</option>
+              <option value="otro">Otro</option>
+            </select>
+          </label>
+          <label>
+            Matricula
+            <input id="courierVehiclePlateInput" type="text" placeholder="Si aplica" autocomplete="off" />
+          </label>
+          <label>
+            Licencia
+            <input id="courierDriverLicenseInput" type="text" placeholder="Si aplica" autocomplete="off" />
+          </label>
+          <label>
+            Archivo licencia
+            <input id="courierDriverLicenseFileInput" type="file" accept="image/*,.pdf" />
+            <input id="courierDriverLicenseFileUrlInput" type="text" readonly placeholder="Sin archivo subido" />
+          </label>
+          <label>
+            Seguro
+            <input id="courierInsuranceInput" type="text" placeholder="Si aplica" autocomplete="off" />
+          </label>
+          <label>
+            Archivo seguro
+            <input id="courierInsuranceFileInput" type="file" accept="image/*,.pdf" />
+            <input id="courierInsuranceFileUrlInput" type="text" readonly placeholder="Sin archivo subido" />
+          </label>
+          <label>
+            Cuenta bancaria
+            <input id="courierBankInput" type="text" placeholder="IBAN o datos de pago" autocomplete="off" />
+          </label>
+          <label>
+            Disponibilidad
+            <input id="courierAvailabilityInput" type="text" placeholder="Ej: lunes a viernes 12:00-20:00" autocomplete="off" />
+          </label>
+          <label>
+            Foto
+            <input id="courierPhotoFileInput" type="file" accept="image/*" />
+            <input id="courierPhotoUrlInput" type="text" readonly placeholder="Sin foto subida" autocomplete="off" />
+          </label>
+          <label>
+            Selfie de verificacion
+            <input id="courierSelfieFileInput" type="file" accept="image/*" />
+            <input id="courierSelfieUrlInput" type="text" readonly placeholder="Sin selfie subida" autocomplete="off" />
+          </label>
+          <label class="collaborator-wide-field">
+            Permiso de trabajo
+            <input id="courierWorkPermitFileInput" type="file" accept="image/*,.pdf" />
+            <input id="courierWorkPermitUrlInput" type="text" readonly placeholder="Sin archivo subido" autocomplete="off" />
+          </label>
+          <p class="customer-delivery-help collaborator-wide-field" id="courierVehicleHelp">
+            Bicicleta: no requiere licencia. Motocicleta o automovil: requiere matricula, licencia y seguro.
+          </p>
+          <p class="customer-delivery-help collaborator-wide-field">
+            Sube los soportes desde la camara o archivos del dispositivo. Si algo falla, tambien puedes enviarlos a pedidosapprinconcolombiano@gmail.com para revision manual.
+          </p>
+          <label class="customer-legal-checkbox">
+            <input id="courierTermsInput" type="checkbox" />
+            <span>Acepto el contrato, terminos, politica de privacidad y tratamiento de datos para revision y entregas.</span>
+          </label>
+          </div>
+          <div class="collaborator-actions">
+            <button class="customer-map-button" id="courierSaveProfileButton" type="button">Enviar solicitud</button>
+          </div>
+          <p class="customer-map-result" id="courierProfileMessage" hidden></p>
+        </section>
+
+        <section class="customer-account-panel courier-payout-panel" id="courierPayoutPanel" hidden aria-label="Cuenta para recibir pagos">
+          <div class="customer-account-head">
+            <div>
+              <h3>Cuenta de pagos</h3>
+              <p>Configura una cuenta verificada para recibir el valor neto de los domicilios completados.</p>
+            </div>
+            <span class="courier-status-badge" id="courierPayoutStatus">Sin configurar</span>
+          </div>
+          <button class="customer-map-button" id="courierPayoutButton" type="button">Configurar pagos</button>
+          <p class="customer-delivery-help">Disponible inicialmente en Polonia mediante Stripe Connect. La transferencia se habilita cuando el cliente y el colaborador confirman la entrega.</p>
+        </section>
+
+        <section class="customer-profile-settings">
+          <label class="app-language-inline">
+            <span>Idioma</span>
+            <select id="autoLanguageSelect">
+              <option value="es">Espanol</option>
+              <option value="pl">Polski</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+          <nav class="role-link-row" aria-label="Cambiar entorno">
+            <a href="index.html">Restaurante</a>
+            <a href="cliente.html">Cliente</a>
+          </nav>
+        </section>
+      </section>
+    </main>
+
+    <nav class="customer-bottom-nav collaborator-bottom-nav" aria-label="Navegacion del colaborador">
+      <button type="button" data-courier-view-target="home">Inicio</button>
+      <button type="button" data-courier-view-target="active">Entrega activa</button>
+      <button type="button" data-courier-view-target="history">Historial</button>
+      <button type="button" data-courier-view-target="profile" aria-current="page">Perfil</button>
+    </nav>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="auto-translate.js"></script>
+    <script src="colaborador.js"></script>
+  </body>
+</html>

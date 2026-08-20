@@ -1,0 +1,9681 @@
+:root {
+  color-scheme: light;
+  --ink: #18212f;
+  --muted: #647085;
+  --line: #d7dde8;
+  --panel: #ffffff;
+  --page: #f4f6f9;
+  --green: #1f8f4d;
+  --colombia-yellow: #f8d447;
+  --colombia-blue: #1f5fbf;
+  --colombia-red: #cf2f2f;
+  --red: #c7392f;
+  --gold: #f0b429;
+  --blue: #2d6cdf;
+  --dark: #111827;
+  --shadow: 0 18px 50px rgba(24, 33, 47, 0.11);
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
+
+.customer-page {
+  background: var(--page);
+}
+
+.customer-shell {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  padding: 18px;
+}
+
+.customer-hero {
+  display: grid;
+  gap: 6px;
+  padding: 18px 0;
+}
+
+.customer-hero h1,
+.customer-hero p {
+  margin: 0;
+}
+
+.customer-language-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.customer-language-label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.customer-language-label select {
+  min-height: 38px;
+  width: auto;
+  min-width: 118px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.customer-hero > p:not(.eyebrow) {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.customer-status {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.customer-status[data-type="ok"] {
+  border-color: rgba(31, 143, 77, 0.4);
+  color: var(--green);
+}
+
+.customer-status[data-type="error"] {
+  border-color: rgba(199, 57, 47, 0.35);
+  color: var(--red);
+}
+
+.customer-warning {
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border: 1px solid #f0d48a;
+  border-radius: 8px;
+  background: #fffbea;
+  color: #7c4a03;
+  font-weight: 900;
+}
+
+.customer-legal-notice {
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.customer-legal-notice summary {
+  cursor: pointer;
+  color: var(--ink);
+  font-weight: 950;
+}
+
+.customer-legal-notice p {
+  margin: 8px 0 0;
+}
+
+.customer-account-panel {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: var(--shadow);
+}
+.customer-account-panel[hidden] {
+  display: none !important;
+}
+.customer-restaurant-panel {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: var(--shadow);
+}
+
+.customer-restaurant-panel.is-compact {
+  gap: 6px;
+  padding: 12px 14px;
+  border-color: rgba(31, 143, 77, 0.38);
+  background: #f0fff5;
+}
+
+.customer-restaurant-panel.is-compact .customer-account-head {
+  align-items: center;
+}
+
+.customer-restaurant-panel.is-compact .customer-restaurant-search,
+.customer-restaurant-panel.is-compact .customer-restaurant-list {
+  display: none;
+}
+
+.customer-restaurant-panel.is-compact h2 {
+  color: var(--green);
+}
+
+.customer-account-head,
+.customer-history-head,
+.customer-history-total {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.customer-account-head h2,
+.customer-account-head p,
+.customer-history-head h3 {
+  margin: 0;
+}
+
+.customer-account-head p {
+  color: var(--muted);
+  font-weight: 850;
+}
+
+.customer-account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.customer-account-actions[hidden],
+.customer-sign-out-button[hidden] {
+  display: none !important;
+}
+
+.customer-platform-home-link {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  margin-top: 12px;
+  text-decoration: none;
+}
+
+.customer-auth-modal {
+  display: grid;
+  gap: 14px;
+  max-height: min(88vh, 820px);
+  overflow: auto;
+  padding: 20px;
+}
+
+.customer-auth-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  align-items: end;
+}
+
+.customer-auth-fields[hidden] {
+  display: none;
+}
+
+.customer-auth-fields label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-weight: 900;
+}
+.customer-auth-fields label[hidden] {
+  display: none !important;
+}
+.customer-auth-fields input,
+.customer-auth-fields select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 800;
+}
+
+.customer-register-field,
+.customer-auth-actions {
+  grid-column: 1 / -1;
+}
+
+.customer-auth-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.customer-restaurant-search label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.customer-restaurant-search input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 850;
+}
+
+.customer-restaurant-list {
+  display: grid;
+  gap: 10px;
+}
+
+.customer-restaurant-card {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.customer-restaurant-card.is-selected {
+  border-color: rgba(31, 143, 77, 0.5);
+  background: #f0fff5;
+}
+
+.customer-restaurant-card img,
+.customer-restaurant-initials {
+  width: 58px;
+  height: 58px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  object-fit: cover;
+  background: #ffffff;
+}
+
+.customer-restaurant-initials {
+  display: grid;
+  place-items: center;
+  color: var(--green);
+  font-weight: 950;
+}
+
+.customer-restaurant-info {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.customer-restaurant-info strong,
+.customer-restaurant-info span,
+.customer-restaurant-info small {
+  overflow-wrap: anywhere;
+}
+
+.customer-restaurant-info span,
+.customer-restaurant-info small {
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 820;
+  line-height: 1.3;
+}
+
+.customer-history-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.customer-history-list {
+  display: grid;
+  gap: 10px;
+  max-height: 420px;
+  overflow: auto;
+}
+
+.customer-history-item {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.customer-history-main,
+.customer-history-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.customer-history-main {
+  justify-content: space-between;
+}
+
+.customer-history-main span,
+.customer-history-meta span {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 850;
+}
+
+.customer-history-meta span[data-type="ok"] {
+  color: var(--green);
+}
+
+.customer-history-meta span[data-type="error"] {
+  color: var(--red);
+}
+
+.customer-menu-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 16px;
+  align-items: start;
+}
+
+.customer-menu-panel,
+.customer-cart-panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: var(--shadow);
+}
+
+.customer-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.customer-menu-search {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.customer-tabs button {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.customer-tabs button[aria-selected="true"] {
+  border-color: var(--green);
+  background: var(--green);
+  color: #ffffff;
+}
+
+.customer-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.customer-dish-button {
+  display: grid;
+  gap: 10px;
+  min-height: 92px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  text-align: left;
+}
+
+.customer-dish-button img,
+.dish-button img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 8px;
+  background: #eef2f7;
+}
+
+.customer-dish-button strong {
+  font-size: 1rem;
+}
+
+.customer-dish-button small,
+.dish-button small,
+.product-row-main p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.customer-dish-button span {
+  color: var(--green);
+  font-weight: 900;
+}
+
+.customer-dish-button em,
+.dish-button em {
+  width: fit-content;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: #fff5f4;
+  color: var(--red);
+  font-style: normal;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.customer-dish-button.is-unavailable,
+.dish-button.is-unavailable {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.customer-cart-panel {
+  position: sticky;
+  top: 14px;
+}
+
+.customer-cart-panel h2 {
+  margin: 0;
+}
+
+.customer-cart-panel label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.customer-cart-panel input,
+.customer-cart-panel select,
+.customer-cart-panel textarea {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 800;
+}
+
+.customer-cart-items {
+  display: grid;
+  gap: 10px;
+}
+
+.customer-delivery-fields {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.customer-delivery-fields[hidden] {
+  display: none;
+}
+
+.customer-delivery-help {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.customer-map-button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--blue);
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.customer-map-button:disabled {
+  opacity: 0.6;
+}
+
+#courierOpenGpsButton:disabled {
+  background: #d9dee7;
+  color: #667085;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.customer-map-result {
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.customer-map-result[data-type="ok"] {
+  border-color: rgba(31, 143, 77, 0.4);
+  color: var(--green);
+}
+
+.customer-map-result[data-type="error"] {
+  border-color: rgba(199, 57, 47, 0.35);
+  color: var(--red);
+}
+
+.customer-map-result[hidden] {
+  display: none;
+}
+
+.customer-cart-item {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.customer-cart-item > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.customer-qty-row {
+  display: grid;
+  grid-template-columns: 42px 64px 42px 1fr;
+  gap: 8px;
+}
+
+.customer-qty-row button,
+.customer-submit-button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--green);
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.customer-qty-row button:last-child {
+  background: var(--dark);
+}
+
+.customer-note-input {
+  text-transform: uppercase;
+}
+
+.customer-cart-total {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-weight: 900;
+}
+
+.customer-delivery-fee {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.customer-delivery-fee[hidden] {
+  display: none;
+}
+
+.customer-online-link {
+  display: grid;
+  place-items: center;
+  min-height: 42px;
+  border-radius: 8px;
+  background: var(--blue);
+  color: #ffffff;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.customer-online-link[hidden] {
+  display: none;
+}
+
+.customer-payment-box {
+  display: grid;
+  gap: 7px;
+  padding: 12px;
+  border: 1px solid rgba(31, 143, 77, 0.35);
+  border-radius: 8px;
+  background: #f0fff5;
+  color: #14532d;
+  font-weight: 850;
+}
+
+.customer-payment-box[hidden],
+.customer-tracking-status[hidden] {
+  display: none;
+}
+
+.customer-payment-box strong {
+  font-weight: 950;
+}
+
+.customer-payment-box p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.customer-chat-panel,
+.client-chat-box {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.customer-chat-panel[hidden] {
+  display: none;
+}
+
+.customer-chat-panel h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.customer-chat-messages,
+.client-chat-messages {
+  display: grid;
+  gap: 8px;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.customer-chat-message,
+.client-chat-message {
+  display: grid;
+  gap: 5px;
+  width: min(88%, 420px);
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.customer-chat-message.customer,
+.client-chat-message.restaurant {
+  justify-self: end;
+  border-color: rgba(31, 143, 77, 0.35);
+  background: #f0fff5;
+}
+
+.customer-chat-message.restaurant,
+.client-chat-message.customer {
+  justify-self: start;
+  border-color: rgba(45, 108, 223, 0.25);
+  background: #f5f8ff;
+}
+
+.customer-chat-message p,
+.client-chat-message p {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-weight: 800;
+}
+
+.customer-chat-message img,
+.client-chat-message img {
+  max-width: min(100%, 220px);
+  max-height: 220px;
+  border-radius: 8px;
+  object-fit: contain;
+  border: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.customer-cart-total strong {
+  color: var(--green);
+}
+
+.customer-submit-button:disabled {
+  opacity: 0.55;
+}
+
+.client-orders-button {
+  position: relative;
+}
+
+.client-orders-button span {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  margin-left: 6px;
+  border-radius: 999px;
+  background: var(--red);
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.client-orders-button span[hidden] {
+  display: none;
+}
+
+.sign-in-top-button.alarm-active {
+  border-color: var(--gold);
+  background: #fffbea;
+  color: #7c4a03;
+}
+
+.sign-in-top-button.alarm-pending {
+  animation: alarmPulse 0.95s ease-in-out infinite;
+}
+
+@keyframes alarmPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(199, 57, 47, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(199, 57, 47, 0.2);
+  }
+}
+
+.qr-preview {
+  display: grid;
+  place-items: center;
+  min-height: 280px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.qr-preview img {
+  width: min(260px, 100%);
+  height: auto;
+}
+
+.client-orders-list {
+  display: grid;
+  gap: 12px;
+}
+
+.client-order-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.client-order-head,
+.client-order-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.client-order-head div {
+  display: grid;
+  gap: 3px;
+}
+
+.client-order-head span,
+.client-order-items span,
+.client-order-note {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.client-order-items {
+  display: grid;
+  gap: 6px;
+}
+
+.client-order-items div {
+  display: grid;
+  gap: 2px;
+}
+
+.client-order-note {
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.client-order-actions button {
+  min-height: 42px;
+  border-radius: 8px;
+  font-weight: 900;
+}
+
+.client-order-actions button:first-child,
+.client-order-actions button[data-action="sent-client-order"],
+.client-order-actions button[data-action="delivered-client-order"] {
+  border: 0;
+  background: var(--green);
+  color: #ffffff;
+}
+
+.client-order-actions button[data-action="cancel-client-order"] {
+  border: 1px solid rgba(199, 57, 47, 0.35);
+  background: #ffffff;
+  color: var(--red);
+}
+
+.courier-documents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.courier-documents button,
+.courier-documents a,
+.courier-documents span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--ink);
+  font-size: 0.86rem;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.courier-documents span {
+  color: var(--muted);
+}
+
+.platform-admin-page {
+  background: #f3f6f8;
+}
+
+.platform-admin-shell {
+  max-width: 1120px;
+}
+
+.platform-admin-hero {
+  background:
+    linear-gradient(135deg, rgba(255, 205, 0, 0.18), rgba(0, 56, 168, 0.12)),
+    #ffffff;
+}
+
+.admin-install-button {
+  min-height: 40px;
+  white-space: nowrap;
+}
+
+.platform-courier-list {
+  margin-top: 12px;
+}
+
+.platform-courier-card .client-order-actions {
+  justify-content: flex-end;
+}
+
+.client-chat-box textarea,
+.client-chat-box input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 800;
+}
+
+.client-chat-box textarea {
+  min-height: 54px;
+  padding: 9px 10px;
+  resize: vertical;
+}
+
+.client-chat-box button {
+  min-height: 40px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--blue);
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.customer-empty {
+  padding: 14px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+@media (max-width: 860px) {
+  body.customer-page {
+    background: #eef3f7;
+  }
+
+  .customer-shell {
+    width: 100%;
+    padding: 0 10px 16px;
+  }
+
+  .customer-hero {
+    position: sticky;
+    top: 0;
+    z-index: 8;
+    margin: 0 -10px 10px;
+    padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 12px;
+    background: var(--green);
+    color: #ffffff;
+    box-shadow: 0 10px 26px rgba(24, 33, 47, 0.16);
+  }
+
+  .customer-hero h1 {
+    font-size: 1.3rem;
+    line-height: 1.05;
+  }
+
+  .customer-hero > p:not(.eyebrow),
+  .customer-hero .eyebrow,
+  .customer-language-label {
+    color: #ffffff;
+  }
+
+  .customer-language-row {
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .customer-language-label {
+    margin-left: auto;
+    justify-content: flex-end;
+  }
+
+  .customer-language-label select {
+    min-height: 36px;
+    width: 112px;
+    min-width: 112px;
+    border-color: rgba(255, 255, 255, 0.65);
+  }
+
+  .customer-hero .customer-map-button {
+    min-height: 36px;
+    border-color: rgba(255, 255, 255, 0.7);
+    background: #ffffff;
+    color: var(--green);
+  }
+
+  .customer-warning,
+  .customer-legal-notice,
+  .customer-status,
+  .customer-account-panel,
+  .customer-restaurant-panel,
+  .customer-menu-panel,
+  .customer-cart-panel {
+    box-shadow: none;
+  }
+
+  .customer-warning {
+    padding: 9px 10px;
+    font-size: 0.86rem;
+    line-height: 1.3;
+  }
+
+  .customer-legal-notice {
+    padding: 9px 10px;
+    font-size: 0.84rem;
+  }
+
+  .customer-auth-fields,
+  .customer-auth-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .restaurant-signup-panel,
+  .role-access-grid,
+  .client-entry-panel,
+  .collaborator-form-grid,
+  .courier-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-screen {
+    align-items: start;
+    justify-items: stretch;
+    padding: calc(12px + env(safe-area-inset-top, 0px)) 12px calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .auth-landing {
+    width: 100%;
+    max-height: none;
+    padding: 18px;
+    border-radius: 12px;
+  }
+
+  .auth-landing h1 {
+    font-size: clamp(1.65rem, 10vw, 2.35rem);
+    line-height: 1;
+  }
+
+  .colombia-flag {
+    width: 128px;
+    height: 26px;
+  }
+
+  .role-access-card {
+    min-height: auto;
+    padding: 14px;
+  }
+
+  .role-access-card button,
+  .role-access-card a {
+    min-height: 46px;
+  }
+
+  .customer-menu-search {
+    grid-template-columns: 1fr;
+  }
+
+  .customer-account-head,
+  .customer-history-head,
+  .customer-history-total {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .customer-restaurant-card {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+
+  .customer-restaurant-card button {
+    grid-column: 1 / -1;
+  }
+
+  .customer-restaurant-card img,
+  .customer-restaurant-initials {
+    width: 48px;
+    height: 48px;
+  }
+
+  .customer-restaurant-panel.is-compact .customer-account-head {
+    align-items: center;
+    flex-direction: row;
+  }
+
+  .customer-restaurant-panel.is-compact .customer-map-button {
+    min-width: 96px;
+  }
+
+  .customer-menu-layout {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .customer-menu-panel,
+  .customer-cart-panel {
+    padding: 12px;
+  }
+
+  .customer-menu-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .customer-dish-button {
+    min-height: 74px;
+    padding: 12px;
+  }
+
+  .customer-cart-panel {
+    position: static;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  overscroll-behavior-y: none;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  overscroll-behavior-y: none;
+  background:
+    linear-gradient(135deg, rgba(248, 212, 71, 0.14), transparent 30%),
+    linear-gradient(90deg, rgba(31, 143, 77, 0.1), transparent 22%, transparent 78%, rgba(199, 57, 47, 0.1)),
+    var(--page);
+  color: var(--ink);
+}
+
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.brand-logo {
+  width: 58px;
+  height: 58px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  object-fit: cover;
+  background: #ffffff;
+}
+
+.brand-logo[hidden] {
+  display: none;
+}
+
+.auth-brand-logo,
+.customer-brand-logo {
+  width: 74px;
+  height: 74px;
+}
+
+.auth-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  padding: calc(18px + env(safe-area-inset-top, 0px)) 18px calc(18px + env(safe-area-inset-bottom, 0px));
+  background:
+    linear-gradient(135deg, rgba(248, 212, 71, 0.32), rgba(255, 255, 255, 0.8) 38%, rgba(31, 95, 191, 0.14) 68%, rgba(207, 47, 47, 0.18)),
+    var(--page);
+}
+
+.auth-screen[hidden] {
+  display: none;
+}
+
+body.auth-mode {
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body.auth-mode .app-shell,
+body.auth-mode .print-ticket {
+  display: none;
+}
+
+.auth-card {
+  display: grid;
+  gap: 14px;
+  width: min(560px, 100%);
+  max-height: calc(100dvh - 36px);
+  overflow: auto;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: var(--shadow);
+}
+
+.auth-dialog {
+  width: min(620px, calc(100% - 32px));
+}
+
+.auth-dialog .auth-card {
+  width: 100%;
+  max-height: min(88vh, 820px);
+  border: 0;
+  box-shadow: none;
+}
+
+.auth-card[data-mode="login"] .restaurant-signup-panel {
+  display: none;
+}
+
+.auth-landing {
+  display: grid;
+  gap: 16px;
+  width: min(920px, 100%);
+  max-height: calc(100dvh - 36px);
+  overflow: auto;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(248, 212, 71, 0.16), transparent 120px),
+    #ffffff;
+  box-shadow: 0 24px 70px rgba(24, 33, 47, 0.16);
+}
+
+.colombia-flag {
+  display: grid;
+  width: min(160px, 46vw);
+  height: 30px;
+  overflow: hidden;
+  border: 1px solid rgba(24, 33, 47, 0.14);
+  border-radius: 8px;
+  box-shadow: 0 10px 22px rgba(24, 33, 47, 0.12);
+}
+
+.colombia-flag span:nth-child(1) {
+  background: var(--colombia-yellow);
+  min-height: 15px;
+}
+
+.colombia-flag span:nth-child(2) {
+  background: var(--colombia-blue);
+}
+
+.colombia-flag span:nth-child(3) {
+  background: var(--colombia-red);
+}
+
+.app-language-inline {
+  display: flex;
+  justify-self: start;
+  gap: 8px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.app-language-inline select {
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.auth-landing h1,
+.auth-landing p {
+  margin: 0;
+}
+
+.auth-landing h1 {
+  max-width: 720px;
+  color: #12233c;
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  line-height: 1.02;
+}
+
+.auth-tagline {
+  max-width: 520px;
+  color: var(--muted);
+  font-size: 1.02rem;
+  font-weight: 900;
+}
+
+.role-access-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.role-access-card {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  min-height: 190px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  box-shadow: 0 12px 30px rgba(24, 33, 47, 0.08);
+}
+
+.role-access-card h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.role-access-card button,
+.role-access-card a {
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  font-weight: 900;
+  text-align: center;
+  text-decoration: none;
+}
+
+.role-access-card button:first-of-type,
+.role-access-card a:first-of-type {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--green), #16703b);
+  color: #ffffff;
+}
+
+.role-access-card:nth-child(2) button:first-of-type,
+.role-access-card:nth-child(2) a:first-of-type {
+  background: linear-gradient(135deg, var(--colombia-blue), #174a95);
+}
+
+.role-access-card:nth-child(3) button:first-of-type,
+.role-access-card:nth-child(3) a:first-of-type {
+  background: linear-gradient(135deg, var(--colombia-red), #a62525);
+}
+
+.restaurant-signup-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.restaurant-signup-panel h2,
+.restaurant-signup-panel p {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.restaurant-signup-panel h2 {
+  font-size: 1rem;
+}
+
+.restaurant-signup-panel p {
+  color: var(--muted);
+  font-weight: 750;
+}
+
+.client-entry-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid rgba(45, 108, 223, 0.28);
+  border-radius: 8px;
+  background: #f2f7ff;
+}
+
+.client-entry-panel h2,
+.client-entry-panel p {
+  margin: 0;
+}
+
+.client-entry-panel h2 {
+  font-size: 1rem;
+}
+
+.client-entry-panel p {
+  color: var(--muted);
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.client-entry-button {
+  display: inline-grid;
+  place-items: center;
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 8px;
+  background: var(--blue);
+  color: #ffffff;
+  font-weight: 900;
+  text-align: center;
+  text-decoration: none;
+}
+
+.collaborator-entry-panel {
+  border-color: rgba(240, 180, 41, 0.42);
+  background: #fff8e6;
+}
+
+.collaborator-entry-button {
+  background: #8a5a00;
+}
+
+.role-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.role-link-row a {
+  display: inline-grid;
+  place-items: center;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.collaborator-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.collaborator-form-grid label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.collaborator-form-grid input,
+.collaborator-form-grid select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #ffffff;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 850;
+}
+
+.uploaded-file-status {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.uploaded-file-status[data-type="ok"] {
+  color: var(--green);
+}
+
+.uploaded-file-status[data-type="error"] {
+  color: var(--red);
+}
+
+.collaborator-wide-field,
+.collaborator-actions {
+  grid-column: 1 / -1;
+}
+
+.collaborator-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.courier-status-badge {
+  display: inline-grid;
+  place-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.courier-status-badge[data-status="pending_review"] {
+  border-color: #f0d48a;
+  background: #fff8e6;
+  color: #7c4a03;
+}
+
+.courier-status-badge[data-status="approved"] {
+  border-color: rgba(31, 143, 77, 0.4);
+  background: #f0fff5;
+  color: #14532d;
+}
+
+.courier-status-badge[data-status="rejected"],
+.courier-status-badge[data-status="suspended"] {
+  border-color: rgba(199, 57, 47, 0.35);
+  background: #fff1f1;
+  color: var(--red);
+}
+
+.courier-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.courier-steps button {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.courier-steps button:not(:disabled) {
+  border-color: rgba(31, 143, 77, 0.35);
+  background: #f0fff5;
+  color: #14532d;
+  cursor: pointer;
+}
+
+.courier-offers-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.courier-offer-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.courier-offer-card.is-targeted {
+  border-color: #146c43;
+  box-shadow: 0 0 0 3px rgba(20, 108, 67, 0.16);
+}
+
+.client-order-actions a,
+.courier-offer-card a {
+  display: inline-grid;
+  min-height: 38px;
+  place-items: center;
+  padding: 0 12px;
+  border: 1px solid rgba(31, 143, 77, 0.35);
+  border-radius: 8px;
+  background: #f0fff5;
+  color: #14532d;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.app-language-floating {
+  position: fixed;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  z-index: 80;
+  display: grid;
+  gap: 4px;
+  min-width: 118px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.app-language-floating select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 8px;
+  background: #ffffff;
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.legal-checkbox,
+.customer-legal-checkbox {
+  display: flex;
+  grid-column: 1 / -1;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 850;
+  line-height: 1.3;
+}
+
+.legal-checkbox input,
+.customer-legal-checkbox input {
+  width: 18px;
+  min-width: 18px;
+  height: 18px;
+  margin-top: 2px;
+}
+
+.auth-card h1,
+.auth-card p {
+  margin: 0;
+}
+
+.auth-card > p:not(.eyebrow):not(.auth-message) {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .role-access-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .role-access-card {
+    min-height: auto;
+  }
+
+  .role-access-card button,
+  .role-access-card a {
+    min-height: 46px;
+    white-space: normal;
+    line-height: 1.15;
+  }
+}
+
+.auth-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.auth-actions button {
+  min-height: 44px;
+  border-radius: 8px;
+  font-weight: 900;
+}
+
+.auth-actions button:first-child {
+  border: 0;
+  background: var(--green);
+  color: #ffffff;
+}
+
+.auth-actions button:last-child {
+  border: 1px solid var(--line);
+  background: #ffffff;
+  color: var(--dark);
+}
+
+.auth-actions button:nth-child(3) {
+  grid-column: 1 / -1;
+}
+
+.password-recovery-panel {
+  display: grid;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.password-recovery-panel[hidden] {
+  display: none;
+}
+
+.auth-message {
+  min-height: 20px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.toast-notice {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 50;
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 13px 16px;
+  border: 1px solid #b9e4c8;
+  border-left: 5px solid var(--green);
+  border-radius: 8px;
+  background: #f0fff5;
+  color: #14532d;
+  box-shadow: var(--shadow);
+  font-weight: 900;
+  line-height: 1.25;
+  transform: translateY(10px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.toast-notice.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.toast-notice[hidden] {
+  display: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.app-shell {
+  width: min(1500px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 24px 0;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.topbar h1,
+.panel h2,
+.counter-form h2,
+.monthly-form h2 {
+  margin: 0;
+  letter-spacing: 0;
+}
+
+.topbar h1 {
+  font-size: clamp(1.55rem, 2vw, 2.2rem);
+  line-height: 1.05;
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 0.77rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ticket-counter {
+  min-width: 160px;
+  padding: 12px 16px;
+  border-left: 5px solid var(--gold);
+  background: #fff8e6;
+  border-radius: 8px;
+}
+
+.ticket-counter span {
+  display: block;
+  color: #725111;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.ticket-counter strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 1.65rem;
+  line-height: 1;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.restaurant-service-bar {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) auto minmax(150px, auto);
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-left: 5px solid #64748b;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: var(--shadow);
+}
+
+.restaurant-service-bar[data-open="true"] {
+  border-left-color: var(--green);
+}
+
+.restaurant-service-bar[data-open="false"] {
+  border-left-color: var(--red);
+}
+
+.restaurant-service-summary {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+}
+
+.restaurant-service-summary strong,
+.restaurant-service-summary > div > span {
+  display: block;
+}
+
+.restaurant-service-summary strong {
+  color: var(--dark);
+  font-size: 1.05rem;
+}
+
+.restaurant-service-summary > div > span {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.restaurant-service-indicator {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  border-radius: 50%;
+  background: #64748b;
+  box-shadow: 0 0 0 5px rgba(100, 116, 139, 0.12);
+}
+
+.restaurant-service-bar[data-open="true"] .restaurant-service-indicator {
+  background: var(--green);
+  box-shadow: 0 0 0 5px rgba(31, 143, 77, 0.12);
+}
+
+.restaurant-service-bar[data-open="false"] .restaurant-service-indicator {
+  background: var(--red);
+  box-shadow: 0 0 0 5px rgba(199, 57, 47, 0.12);
+}
+
+.restaurant-schedule-toggle {
+  display: inline-flex;
+  flex-direction: row;
+  gap: 10px;
+  align-items: center;
+  min-height: 44px;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--dark);
+  font-size: 0.85rem;
+  font-weight: 900;
+}
+
+.restaurant-schedule-toggle input {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  accent-color: var(--green);
+}
+
+.restaurant-service-action {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--green);
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.restaurant-service-bar[data-open="true"] .restaurant-service-action {
+  background: var(--red);
+}
+
+.restaurant-service-bar .restaurant-service-action:disabled {
+  background: #d7dee8;
+  color: #59667a;
+  cursor: not-allowed;
+}
+
+.install-button {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--green);
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.install-button[hidden] {
+  display: none;
+}
+
+.cloud-status {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #f8fafc;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.sign-in-top-button,
+.sign-out-button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--dark);
+  font-weight: 900;
+}
+
+.sign-in-top-button[hidden],
+.sign-out-button[hidden] {
+  display: none;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.95fr) minmax(380px, 1.25fr) minmax(260px, 0.75fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.panel {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.panel h2 {
+  font-size: 1.15rem;
+  line-height: 1.2;
+}
+
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--dark);
+  font-weight: 900;
+}
+
+.icon-button:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.close-month-button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--dark);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.close-month-button:hover {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.category-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 14px 16px 4px;
+  overflow-x: auto;
+}
+
+.menu-search-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  padding: 14px 16px 0;
+}
+
+.menu-search-row label,
+.customer-menu-search label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.menu-search-row input,
+.customer-menu-search input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #ffffff;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 850;
+}
+
+.menu-search-row button,
+.customer-menu-search button {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--dark);
+  font-weight: 900;
+}
+
+.menu-search-row button[hidden],
+.customer-menu-search button[hidden] {
+  display: none;
+}
+
+.category-tabs button {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--muted);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.category-tabs button[aria-selected="true"] {
+  border-color: var(--green);
+  background: #e9f8ef;
+  color: var(--green);
+}
+
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px 16px 16px;
+}
+
+.dish-button {
+  display: grid;
+  gap: 8px;
+  min-height: 76px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  text-align: left;
+}
+
+.dish-button:hover {
+  border-color: var(--green);
+  background: #fbfffc;
+}
+
+.dish-button strong {
+  display: block;
+  font-size: 0.94rem;
+  line-height: 1.15;
+}
+
+.dish-button span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.empty-menu-category {
+  display: grid;
+  place-items: center;
+  min-height: 120px;
+  grid-column: 1 / -1;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-weight: 800;
+  text-align: center;
+}
+
+.custom-item {
+  display: grid;
+  grid-template-columns: 1.3fr 0.75fr;
+  gap: 10px;
+  padding: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.custom-item button {
+  grid-column: 1 / -1;
+  min-height: 42px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--dark);
+  color: #ffffff;
+  font-weight: 800;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+  color: #344052;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  outline: none;
+}
+
+input,
+select {
+  min-height: 42px;
+  padding: 0 11px;
+}
+
+textarea {
+  padding: 10px 11px;
+  resize: vertical;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(45, 108, 223, 0.14);
+}
+
+.status-pill {
+  min-width: 84px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: #eef2f7;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 900;
+  text-align: center;
+}
+
+.status-pill.saved {
+  background: #e9f8ef;
+  color: var(--green);
+}
+
+.status-pill.pending {
+  background: #fff7e6;
+  color: #b45309;
+}
+
+.order-info {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 16px;
+}
+
+.order-info label {
+  min-width: 0;
+}
+
+.customer-field-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  min-width: 0;
+}
+
+.customer-field-row input {
+  min-width: 0;
+}
+
+.customer-button {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--blue);
+  font-weight: 900;
+}
+
+.line-items {
+  display: grid;
+  gap: 10px;
+  min-height: 180px;
+  padding: 0 16px 16px;
+}
+
+.empty-order {
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-weight: 800;
+  text-align: center;
+}
+
+.line-item {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr) 42px;
+  gap: 10px;
+  align-items: start;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfe;
+}
+
+.qty-controls {
+  display: grid;
+  grid-template-columns: 30px 1fr 30px;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.qty-controls button {
+  width: 30px;
+  height: 36px;
+  border: 0;
+  background: #f1f4f8;
+  color: var(--dark);
+  font-weight: 900;
+}
+
+.qty-controls input {
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  text-align: center;
+  font-weight: 900;
+}
+
+.item-main {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.item-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.item-title strong {
+  overflow-wrap: anywhere;
+}
+
+.item-title span {
+  color: var(--muted);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.item-note {
+  min-height: 38px;
+  padding: 8px;
+  font-size: 0.9rem;
+  background: #fffbea;
+  border-color: #e6c65b;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.item-note-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.note-item-button {
+  min-height: 38px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--blue);
+  font-weight: 900;
+}
+
+.remove-item {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid #f0c4c0;
+  border-radius: 8px;
+  background: #fff5f4;
+  color: var(--red);
+  font-weight: 900;
+}
+
+.notes-field {
+  padding: 0 16px 16px;
+}
+
+.notes-field textarea,
+#itemNoteTextarea {
+  background: #fffbea;
+  border-color: #e6c65b;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.totals-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: #f8fafc;
+  font-weight: 900;
+}
+
+.totals-row strong {
+  font-size: 1.2rem;
+}
+
+.action-row {
+  display: grid;
+  grid-template-columns: 0.65fr 0.85fr 1fr 1.1fr 1fr 1fr;
+  gap: 10px;
+  padding: 16px;
+}
+
+.primary-action,
+.secondary-action,
+.danger-action {
+  min-height: 48px;
+  border-radius: 8px;
+  font-weight: 900;
+}
+
+.primary-action {
+  border: 0;
+  background: var(--green);
+  color: #ffffff;
+}
+
+.primary-action:disabled,
+.secondary-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.secondary-action {
+  border: 1px solid var(--line);
+  background: #ffffff;
+  color: var(--dark);
+}
+
+.danger-action {
+  border: 1px solid #f0c4c0;
+  background: #fff5f4;
+  color: var(--red);
+}
+
+.history-list {
+  display: grid;
+  gap: 10px;
+  max-height: calc(100vh - 210px);
+  overflow: auto;
+  padding: 16px;
+}
+
+.history-empty {
+  min-height: 120px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-weight: 800;
+  text-align: center;
+}
+
+.history-item {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.history-item button {
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  font-weight: 800;
+}
+
+.history-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.history-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-weight: 900;
+}
+
+.history-title span {
+  color: var(--green);
+  white-space: nowrap;
+}
+
+.sync-badge {
+  width: fit-content;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #fff7e6;
+  color: #b45309;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  margin: 0;
+  width: min(420px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  border: 0;
+  border-radius: 8px;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 0 28px 80px rgba(17, 24, 39, 0.28);
+  transform: translate(-50%, -50%);
+  z-index: 100;
+}
+
+dialog[open] {
+  display: block;
+}
+
+dialog::backdrop {
+  background: rgba(17, 24, 39, 0.45);
+}
+
+dialog > form {
+  box-sizing: border-box;
+  max-height: calc(100dvh - 32px);
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.counter-form {
+  display: grid;
+  gap: 14px;
+  max-height: calc(100dvh - 32px);
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 20px;
+}
+
+.counter-form p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.monthly-dialog,
+.menu-editor-dialog {
+  width: min(760px, calc(100% - 32px));
+}
+
+.menu-editor-dialog {
+  width: min(980px, calc(100% - 32px));
+}
+
+.monthly-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  max-height: min(calc(100dvh - 32px), 760px);
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 20px;
+}
+
+.monthly-form > * {
+  min-width: 0;
+}
+
+.monthly-form > .settings-wide-field {
+  grid-column: 1 / -1;
+}
+
+.menu-editor-form {
+  display: grid;
+  gap: 16px;
+  max-height: min(calc(100dvh - 32px), 820px);
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 20px;
+}
+
+.monthly-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.thermal-printer-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.thermal-printer-control span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.thermal-printer-control span[data-type="ok"] {
+  color: var(--green);
+}
+
+.thermal-printer-control span[data-type="error"] {
+  color: var(--red);
+}
+
+.ticket-history-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(150px, 1fr) minmax(150px, 1fr);
+  gap: 12px;
+}
+
+.ticket-history-list {
+  display: grid;
+  gap: 10px;
+  min-height: 120px;
+}
+
+.ticket-history-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.ticket-history-card-main,
+.ticket-history-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ticket-history-card-main > div,
+.ticket-history-amount {
+  display: grid;
+  gap: 4px;
+}
+
+.ticket-history-amount {
+  justify-items: end;
+}
+
+.ticket-history-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.payment-status-badge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 4px 8px;
+  border: 1px solid #a9b4c5;
+  border-radius: 999px;
+  background: #f4f6f9;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.payment-status-badge.is-paid {
+  border-color: #15965b;
+  background: #edf9f2;
+  color: #087342;
+}
+
+.payment-status-badge.is-pending {
+  border-color: #d59b00;
+  background: #fff8df;
+  color: #805800;
+}
+
+@media (max-width: 680px) {
+  .ticket-history-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .ticket-history-card-main {
+    align-items: flex-start;
+  }
+
+  .ticket-history-actions button,
+  .thermal-printer-control button {
+    flex: 1 1 140px;
+  }
+
+  .thermal-printer-control {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+.monthly-form > .dialog-actions,
+.menu-editor-form > .dialog-actions {
+  position: sticky;
+  bottom: -20px;
+  z-index: 2;
+  margin: 0 -20px -20px;
+  padding: 14px 20px 20px;
+  border-top: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.settings-card {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.customer-settings-card {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.restaurant-danger-card {
+  border-color: rgba(199, 57, 47, 0.22);
+  background: #fff7f7;
+}
+
+.restaurant-danger-card button {
+  background: var(--red);
+}
+
+.restaurant-danger-card button:first-of-type {
+  background: #7c2d12;
+}
+
+.restaurant-hours-card {
+  align-items: stretch;
+}
+
+.restaurant-hours-grid {
+  display: grid;
+  gap: 8px;
+  grid-column: 1 / -1;
+}
+
+.restaurant-hours-row {
+  display: grid;
+  grid-template-columns: minmax(130px, 1fr) minmax(120px, 0.8fr) minmax(120px, 0.8fr);
+  gap: 10px;
+  align-items: end;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.restaurant-hours-row:last-child {
+  border-bottom: 0;
+}
+
+.restaurant-hours-row label {
+  margin: 0;
+}
+
+.restaurant-day-toggle {
+  display: flex;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+}
+
+.restaurant-day-toggle input {
+  width: 20px;
+  height: 20px;
+}
+
+.settings-location-status {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  background: #f7f9fc;
+}
+
+.settings-location-status[data-type="ok"] {
+  color: #176b3a;
+  border-color: #9fd4b7;
+  background: #edf9f1;
+}
+
+.settings-location-status[data-type="error"] {
+  color: #a72c22;
+  border-color: #efb3ae;
+  background: #fff4f2;
+}
+
+.restaurant-deletion-dialog form {
+  display: grid;
+  gap: 14px;
+}
+
+.restaurant-deletion-dialog #confirmRestaurantDeletionButton {
+  background: #b42318;
+}
+
+.settings-wide-field {
+  min-width: 0;
+  grid-column: span 2;
+}
+
+.settings-card > div {
+  grid-column: 1 / -1;
+}
+
+.settings-card h3 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+}
+
+.settings-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.settings-card button {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--green);
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.menu-editor-layout {
+  display: grid;
+  grid-template-columns: minmax(230px, 0.75fr) minmax(360px, 1.25fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.editor-section {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.editor-section h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.product-section-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.product-section-header p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.product-section-header button {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--green);
+  color: #ffffff;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.editor-category-list,
+.product-list {
+  display: grid;
+  gap: 8px;
+}
+
+.editor-category-button {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--dark);
+  font-weight: 900;
+  text-align: left;
+}
+
+.editor-category-button[aria-selected="true"] {
+  border-color: var(--green);
+  background: #e9f8ef;
+  color: var(--green);
+}
+
+.editor-category-button span:last-child {
+  color: var(--muted);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.editor-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.editor-actions button {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--dark);
+  font-weight: 900;
+}
+
+.editor-actions button:first-child {
+  border-color: var(--green);
+  background: var(--green);
+  color: #ffffff;
+}
+
+#deleteCategoryButton {
+  border-color: #f0c4c0;
+  background: #fff5f4;
+  color: var(--red);
+}
+
+.product-form-grid {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.9fr) minmax(110px, 0.55fr);
+  gap: 10px;
+}
+
+.product-name-field {
+  grid-column: 1 / -1;
+}
+
+.product-name-field textarea {
+  width: 100%;
+  min-height: 84px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.product-available-field {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.product-available-field input {
+  width: 18px;
+  min-height: 18px;
+}
+
+.product-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfe;
+}
+
+.product-row.is-unavailable {
+  background: #fff8f8;
+}
+
+.product-row-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.product-row-main img {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  object-fit: cover;
+  border-radius: 8px;
+  background: #eef2f7;
+}
+
+.product-row-main div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.product-row strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.product-row small {
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.product-row span {
+  color: var(--muted);
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.product-row button {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  font-weight: 900;
+}
+
+.product-row button[data-action="delete-product"] {
+  border-color: #f0c4c0;
+  background: #fff5f4;
+  color: var(--red);
+}
+
+.editor-empty {
+  display: grid;
+  place-items: center;
+  min-height: 86px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-weight: 800;
+  text-align: center;
+}
+
+.monthly-close-content {
+  display: grid;
+  gap: 14px;
+}
+
+.monthly-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.monthly-metric {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.monthly-metric span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.monthly-metric strong {
+  display: block;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+  font-size: 1.18rem;
+}
+
+.monthly-section-title {
+  margin: 6px 0 0;
+  font-size: 0.95rem;
+}
+
+.monthly-table {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.monthly-table-row {
+  display: grid;
+  grid-template-columns: 1fr 0.6fr 0.6fr 0.8fr;
+  gap: 8px;
+  align-items: center;
+  min-height: 42px;
+  padding: 9px 12px;
+  border-top: 1px solid var(--line);
+  font-size: 0.92rem;
+}
+
+.monthly-table-row:first-child {
+  border-top: 0;
+}
+
+.monthly-table-row.header {
+  background: #f1f4f8;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.monthly-table-row strong,
+.monthly-table-row span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.monthly-empty {
+  display: grid;
+  place-items: center;
+  min-height: 130px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-weight: 800;
+  text-align: center;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.dialog-actions button {
+  min-height: 42px;
+  min-width: 100px;
+  border-radius: 8px;
+  font-weight: 900;
+}
+
+.dialog-actions button:first-child {
+  border: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.dialog-actions button:last-child {
+  border: 0;
+  background: var(--blue);
+  color: #ffffff;
+}
+
+.print-ticket {
+  display: none;
+}
+
+body.auth-checking::before {
+  content: "Verificando sesion segura...";
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #f4f6f9;
+  color: #102038;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+body.auth-checking > :not(script) {
+  visibility: hidden;
+}
+
+.waiter-link-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+}
+
+.waiter-member-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.waiter-member-fields #authorizeWaiterButton {
+  min-height: 44px;
+}
+
+.waiter-members-list {
+  display: grid;
+  gap: 8px;
+  min-height: 80px;
+}
+
+.waiter-member-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(130px, auto) minmax(180px, auto);
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.waiter-member-row > div:first-child {
+  min-width: 0;
+}
+
+.waiter-member-row strong,
+.waiter-member-row small {
+  overflow-wrap: anywhere;
+}
+
+.waiter-member-row span,
+.waiter-member-row small {
+  display: block;
+}
+
+.waiter-member-row.is-inactive {
+  opacity: 0.65;
+}
+
+.waiter-member-row.is-pending {
+  border-color: #e0a800;
+  background: #fffaf0;
+}
+
+.waiter-member-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.waiter-member-actions button {
+  min-height: 42px;
+}
+
+.waiter-member-actions .secondary-action {
+  background: #ffffff;
+  color: var(--ink);
+}
+
+.restaurant-station-board {
+  display: grid;
+  gap: 16px;
+  width: min(1080px, 100%);
+  margin: 0 auto;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-top: 5px solid var(--colombia-yellow);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: var(--shadow);
+}
+
+.restaurant-station-board[hidden] {
+  display: none;
+}
+
+.restaurant-station-help {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.restaurant-station-orders {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.restaurant-station-order {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--blue);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.restaurant-station-order header,
+.restaurant-station-order footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.restaurant-station-order h2,
+.restaurant-station-order p {
+  margin: 0;
+}
+
+.restaurant-station-items {
+  display: grid;
+  gap: 6px;
+  padding: 10px 0;
+  border-top: 1px dashed var(--line);
+  border-bottom: 1px dashed var(--line);
+}
+
+.restaurant-station-note {
+  padding: 10px;
+  border: 1px solid #e9bd35;
+  border-radius: 6px;
+  background: #fff8dd;
+  color: #151515;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.restaurant-station-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.restaurant-station-actions button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--green);
+  color: #ffffff;
+  font-weight: 900;
+}
+
+/* Estacion movil de mesero */
+.waiter-page {
+  min-height: 100vh;
+  margin: 0;
+  background: #f3f6f8;
+  color: #102038;
+}
+
+.waiter-shift-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 auto 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--green);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.waiter-shift-bar[hidden] {
+  display: none;
+}
+
+.waiter-shift-bar div {
+  display: grid;
+  gap: 3px;
+}
+
+.waiter-shift-bar span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.waiter-shift-bar button,
+.waiter-panel-actions button {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--dark);
+  font-weight: 900;
+}
+
+.waiter-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.waiter-daily-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.waiter-daily-summary > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.waiter-daily-summary span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.waiter-monthly-control {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffaf7;
+}
+
+.waiter-monthly-control > label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-weight: 800;
+}
+
+.waiter-monthly-control input {
+  width: min(190px, 100%);
+}
+
+.waiter-monthly-control .waiter-daily-summary {
+  margin-bottom: 0;
+}
+
+@media (max-width: 640px) {
+  .waiter-shift-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .waiter-daily-summary {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .waiter-monthly-control > label {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .waiter-monthly-control input {
+    width: 100%;
+  }
+}
+
+.waiter-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 72px;
+  padding: 10px max(16px, env(safe-area-inset-left));
+  border-bottom: 4px solid #f4cf24;
+  background: #1f8f4d;
+  color: #ffffff;
+}
+
+.waiter-brand,
+.waiter-session-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.waiter-brand img {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: #ffffff;
+}
+
+.waiter-brand span,
+.waiter-brand strong {
+  display: block;
+}
+
+.waiter-brand span {
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.waiter-brand strong {
+  font-size: 18px;
+}
+
+.waiter-status {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.waiter-status[data-type="error"] {
+  color: #ffe36d;
+}
+
+.waiter-status[data-type="offline"] {
+  color: #ffffff;
+}
+
+.waiter-session-actions button,
+.waiter-panel button,
+.waiter-auth-card button,
+.waiter-access-card button {
+  min-height: 44px;
+  border: 1px solid #cfd9e5;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #102038;
+  font-weight: 900;
+}
+
+.waiter-shell {
+  width: min(1440px, calc(100% - 24px));
+  margin: 0 auto;
+  padding: 20px 0 96px;
+}
+
+.waiter-auth-card,
+.waiter-access-card {
+  width: min(620px, 100%);
+  margin: 6vh auto 0;
+  padding: 24px;
+  border: 1px solid #d6dee8;
+  border-top: 5px solid #f4cf24;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 18px 50px rgba(16, 32, 56, 0.12);
+}
+
+.waiter-auth-card h1,
+.waiter-access-card h1 {
+  margin: 4px 0 8px;
+  font-size: 28px;
+}
+
+.waiter-auth-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.waiter-auth-form label,
+.waiter-order-fields label,
+.waiter-search,
+.waiter-notes {
+  display: grid;
+  gap: 6px;
+  color: #42526a;
+  font-weight: 800;
+}
+
+.waiter-auth-form input,
+.waiter-order-fields input,
+.waiter-order-fields select,
+.waiter-search input,
+.waiter-notes textarea,
+.waiter-cart-item input {
+  width: 100%;
+  min-height: 46px;
+  box-sizing: border-box;
+  border: 1px solid #cfd9e5;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #102038;
+  font: inherit;
+}
+
+.waiter-auth-actions {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.waiter-auth-actions button:first-child,
+.waiter-send-button {
+  border-color: #1f8f4d !important;
+  background: #1f8f4d !important;
+  color: #ffffff !important;
+}
+
+.waiter-mobile-nav {
+  display: none;
+}
+
+.waiter-layout {
+  display: grid;
+  grid-template-columns: minmax(360px, 1.15fr) minmax(360px, 0.95fr) minmax(280px, 0.7fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.waiter-panel {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid #d6dee8;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 12px 30px rgba(16, 32, 56, 0.08);
+}
+
+.waiter-order-panel {
+  position: sticky;
+  top: 92px;
+}
+
+.waiter-panel-heading,
+.waiter-total-row,
+.waiter-sent-card > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.waiter-panel-heading h2 {
+  margin: 2px 0 0;
+  font-size: 22px;
+}
+
+.waiter-search {
+  margin: 18px 0 12px;
+}
+
+.waiter-category-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: thin;
+}
+
+.waiter-category-tabs button {
+  flex: 0 0 auto;
+  padding: 0 14px;
+}
+
+.waiter-category-tabs button.is-active {
+  border-color: #1f8f4d;
+  background: #e9f7ef;
+  color: #126a38;
+}
+
+.waiter-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.waiter-product {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 10px;
+  min-height: 82px !important;
+  padding: 8px;
+  text-align: left;
+}
+
+.waiter-product:not(:has(img)) {
+  grid-template-columns: 1fr;
+}
+
+.waiter-product img {
+  width: 64px;
+  height: 64px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.waiter-product span,
+.waiter-product small {
+  display: block;
+}
+
+.waiter-product small {
+  margin-top: 8px;
+  color: #1f8f4d;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.waiter-product.is-unavailable {
+  opacity: 0.55;
+}
+
+.waiter-order-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.waiter-cart,
+.waiter-sent-list {
+  display: grid;
+  gap: 10px;
+}
+
+.waiter-cart-item,
+.waiter-sent-card {
+  padding: 12px;
+  border: 1px solid #d6dee8;
+  border-left: 4px solid #1f8f4d;
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+
+.waiter-cart-item > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.waiter-quantity {
+  display: grid;
+  grid-template-columns: 40px 36px 40px 1fr;
+  gap: 6px;
+  align-items: center;
+  margin: 10px 0;
+  text-align: center;
+}
+
+.waiter-quantity button {
+  min-height: 38px;
+}
+
+.waiter-cart-item input,
+.waiter-notes textarea {
+  padding: 10px;
+  text-transform: uppercase;
+  font-weight: 900;
+}
+
+.waiter-notes {
+  margin-top: 16px;
+}
+
+.waiter-total-row {
+  margin: 18px 0 10px;
+  padding-top: 14px;
+  border-top: 2px solid #102038;
+  font-size: 20px;
+}
+
+.waiter-send-button {
+  width: 100%;
+  min-height: 54px !important;
+}
+
+.waiter-send-button:disabled {
+  opacity: 0.55;
+}
+
+.waiter-sent-card {
+  border-left-color: #f4cf24;
+}
+
+.waiter-sent-card p {
+  margin: 10px 0;
+  color: #42526a;
+}
+
+.waiter-empty {
+  padding: 28px 16px;
+  border: 1px dashed #b9c6d6;
+  border-radius: 8px;
+  color: #607089;
+  text-align: center;
+  font-weight: 800;
+}
+
+@media (max-width: 1180px) {
+  .workspace {
+    grid-template-columns: minmax(300px, 0.9fr) minmax(420px, 1.1fr);
+  }
+
+  .history-panel {
+    grid-column: 1 / -1;
+  }
+
+  .history-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: none;
+  }
+}
+
+@media (min-width: 1500px) {
+  .order-info {
+    grid-template-columns: minmax(130px, 0.75fr) minmax(150px, 0.85fr) minmax(190px, 1fr) minmax(190px, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    width: min(100% - 20px, 720px);
+    padding: 10px 0;
+  }
+
+  .topbar,
+  .restaurant-service-bar,
+  .workspace {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .restaurant-service-bar {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .restaurant-schedule-toggle,
+  .restaurant-service-action {
+    width: 100%;
+  }
+
+  .ticket-counter {
+    width: 100%;
+  }
+
+  .topbar-actions {
+    justify-content: stretch;
+    width: 100%;
+  }
+
+  .install-button {
+    width: 100%;
+  }
+
+  .menu-grid,
+  .history-list {
+    grid-template-columns: 1fr;
+  }
+
+  .menu-search-row {
+    grid-template-columns: 1fr;
+  }
+
+  .order-info,
+  .custom-item,
+  .customer-field-row,
+  .action-row {
+    grid-template-columns: 1fr;
+  }
+
+  .line-item {
+    grid-template-columns: 82px minmax(0, 1fr) 38px;
+  }
+
+  .item-note-row {
+    grid-template-columns: 1fr;
+  }
+
+  .monthly-summary-grid,
+  .menu-editor-layout,
+  .monthly-table-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .menu-editor-layout,
+  .settings-card,
+  .product-form-grid,
+  .product-row {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-wide-field {
+    grid-column: 1 / -1;
+  }
+
+  .restaurant-hours-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .restaurant-day-toggle {
+    grid-column: 1 / -1;
+  }
+
+  .product-section-header {
+    display: grid;
+  }
+
+  .waiter-link-row,
+  .waiter-member-fields,
+  .waiter-member-row,
+  .restaurant-station-orders {
+    grid-template-columns: 1fr;
+  }
+
+  .waiter-member-actions {
+    justify-content: stretch;
+  }
+
+  .waiter-member-actions button {
+    flex: 1 1 180px;
+  }
+
+  .monthly-table-row.header {
+    display: none;
+  }
+}
+
+@media (max-width: 980px) {
+  .waiter-topbar {
+    align-items: flex-start;
+  }
+
+  .waiter-session-actions {
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
+  .waiter-shell {
+    width: min(100% - 16px, 760px);
+    padding-top: 10px;
+  }
+
+  .waiter-mobile-nav {
+    position: fixed;
+    right: 8px;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    left: 8px;
+    z-index: 30;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    padding: 6px;
+    border: 1px solid #cfd9e5;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 10px 28px rgba(16, 32, 56, 0.2);
+  }
+
+  .waiter-mobile-nav button {
+    min-height: 48px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    font-weight: 900;
+  }
+
+  .waiter-mobile-nav button.is-active {
+    background: #1f8f4d;
+    color: #ffffff;
+  }
+
+  .waiter-layout {
+    display: block;
+  }
+
+  .waiter-panel {
+    display: none;
+  }
+
+  .waiter-panel.is-mobile-active {
+    display: block;
+  }
+
+  .waiter-order-panel {
+    position: static;
+  }
+}
+
+@media (max-width: 560px) {
+  .waiter-brand strong {
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .waiter-status {
+    display: none;
+  }
+
+  .waiter-auth-card,
+  .waiter-access-card,
+  .waiter-panel {
+    padding: 16px;
+  }
+
+  .waiter-auth-form,
+  .waiter-auth-actions,
+  .waiter-order-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .waiter-menu-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =========================================================
+   RC ORDERA V85 - RESUMEN OPERATIVO Y PAGOS MARKETPLACE
+   ========================================================= */
+
+.restaurant-dashboard-summary {
+  display: grid;
+  gap: 18px;
+  margin: 0 22px 24px;
+  padding: 20px;
+  border: 1px solid #e4e8ef;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(18, 32, 56, 0.07);
+}
+
+.restaurant-dashboard-heading,
+.restaurant-module-nav,
+.marketplace-account-control,
+.employee-hours-row,
+.courier-payout-panel .customer-account-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.restaurant-dashboard-heading h2,
+.restaurant-dashboard-heading p,
+.marketplace-account-control strong,
+.marketplace-account-control span,
+.employee-hours-panel h3,
+.employee-hours-panel p {
+  margin: 0;
+}
+
+.restaurant-dashboard-heading > span {
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.restaurant-dashboard-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.restaurant-dashboard-metrics button {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  min-height: 104px;
+  padding: 16px;
+  border: 1px solid #e7eaf0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.restaurant-dashboard-metrics button:first-child {
+  border-top: 4px solid #ff4b00;
+}
+
+.restaurant-dashboard-metrics button:nth-child(2) {
+  border-top: 4px solid var(--gold);
+}
+
+.restaurant-dashboard-metrics button:nth-child(3) {
+  border-top: 4px solid #6f4ad7;
+}
+
+.restaurant-dashboard-metrics button:nth-child(4) {
+  border-top: 4px solid var(--green);
+}
+
+.restaurant-dashboard-metrics button:last-child {
+  border-top: 4px solid var(--blue);
+}
+
+.restaurant-dashboard-metrics button:hover,
+.restaurant-dashboard-metrics button:focus-visible {
+  border-color: #ff4b00;
+  box-shadow: 0 6px 18px rgba(255, 75, 0, 0.1);
+  outline: none;
+}
+
+.restaurant-dashboard-metrics span {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.restaurant-dashboard-metrics strong {
+  min-width: 0;
+  color: #102038;
+  font-size: clamp(1.45rem, 2.2vw, 2rem);
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+.restaurant-module-nav {
+  justify-content: center;
+  border-top: 1px solid #edf0f4;
+  padding-top: 14px;
+}
+
+.restaurant-module-nav button {
+  min-width: 112px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.restaurant-module-nav button[aria-current="page"],
+.restaurant-module-nav button:hover,
+.restaurant-module-nav button:focus-visible {
+  border-bottom-color: #ff4b00;
+  color: #ff4b00;
+  outline: none;
+}
+
+.marketplace-account-control {
+  min-height: 72px;
+  padding: 12px 14px;
+  border: 1px solid #dfe4ec;
+  border-left: 4px solid #ff4b00;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.marketplace-account-control > div {
+  display: grid;
+  gap: 4px;
+}
+
+.marketplace-account-control span,
+.courier-payout-panel p {
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 750;
+}
+
+.marketplace-account-control span[data-state="complete"],
+.courier-payout-panel .courier-status-badge[data-state="complete"] {
+  color: var(--green);
+}
+
+.marketplace-account-control span[data-state="pending"] {
+  color: #9a6200;
+}
+
+.marketplace-account-control button,
+.courier-payout-panel > button,
+.customer-confirm-delivery-button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: #ff4b00;
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.employee-hours-panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid #e3e7ed;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.employee-hours-list {
+  display: grid;
+  gap: 8px;
+}
+
+.employee-hours-row {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #e2e6ed;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.employee-hours-row > div {
+  min-width: 0;
+}
+
+.employee-hours-row > div > strong,
+.employee-hours-row > div > small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.employee-hours-row > div > small,
+.employee-hours-row span small {
+  color: var(--muted);
+}
+
+.employee-hours-row > span {
+  display: grid;
+  gap: 2px;
+  min-width: 82px;
+  text-align: right;
+}
+
+.courier-payout-panel {
+  border-left: 4px solid #ff4b00;
+}
+
+.courier-payout-panel .courier-status-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #f0f2f5;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.customer-confirm-delivery-button {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.waiter-language-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.waiter-language-select select {
+  width: auto;
+  min-width: 96px;
+  min-height: 38px;
+  padding: 0 8px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
+  background: #ffffff;
+  color: #102038;
+  font-weight: 850;
+}
+
+@media (max-width: 980px) {
+  .restaurant-dashboard-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .restaurant-module-nav {
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .restaurant-dashboard-summary {
+    gap: 14px;
+    margin: 0 12px 16px;
+    padding: 14px;
+  }
+
+  .restaurant-dashboard-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .restaurant-dashboard-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .restaurant-dashboard-metrics button {
+    min-height: 88px;
+    padding: 12px;
+  }
+
+  .restaurant-dashboard-metrics button:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .marketplace-account-control,
+  .employee-hours-row,
+  .courier-payout-panel .customer-account-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .marketplace-account-control button,
+  .employee-hours-row > span {
+    width: 100%;
+    text-align: left;
+  }
+
+  .waiter-topbar,
+  .waiter-session-actions {
+    align-items: stretch;
+  }
+
+  .waiter-session-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .waiter-language-select > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+
+  .waiter-language-select select {
+    min-width: 88px;
+  }
+}
+
+@media (max-width: 340px) {
+  .restaurant-dashboard-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .restaurant-dashboard-metrics button:last-child {
+    grid-column: auto;
+  }
+}
+
+@media print {
+  @page {
+    margin: 0;
+  }
+
+  body {
+    background: #ffffff;
+  }
+
+  .app-shell,
+  dialog {
+    display: none !important;
+  }
+
+  .print-ticket {
+    display: block;
+    box-sizing: border-box;
+    width: auto;
+    max-width: 100%;
+    margin: 0;
+    min-height: 0;
+    height: auto;
+    padding: 1.5mm 2mm 0.5mm;
+    break-after: auto;
+    page-break-after: auto;
+    color: #000000;
+    font-family: "Courier New", Courier, monospace;
+    font-size: 12px;
+  }
+
+  .print-ticket::after {
+    content: "";
+    display: block;
+    height: 1mm;
+  }
+
+  .print-ticket h1,
+  .print-ticket h2,
+  .print-ticket p {
+    margin: 0;
+  }
+
+  .print-ticket .receipt-brand {
+    text-align: center;
+    font-weight: 900;
+    font-size: 16px;
+  }
+
+  .print-ticket .receipt-number {
+    margin-top: 4px;
+    text-align: center;
+    font-size: 24px;
+    font-weight: 900;
+  }
+
+  .print-ticket .receipt-order-type {
+    margin-top: 8px;
+    padding: 6px 0;
+    border-top: 2px solid #000000;
+    border-bottom: 2px solid #000000;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 900;
+  }
+
+  .print-ticket .receipt-divider {
+    margin: 8px 0;
+    border-top: 1px dashed #000000;
+  }
+
+  .print-ticket .receipt-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .print-ticket .receipt-items {
+    display: grid;
+    gap: 7px;
+    margin-top: 8px;
+  }
+
+  .print-ticket .receipt-item {
+    break-inside: avoid;
+  }
+
+  .print-ticket .receipt-item strong {
+    display: block;
+    font-size: 14px;
+  }
+
+  .print-ticket .receipt-note {
+    margin: 4px 0 0 18px;
+    font-size: 15px;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+
+  .print-ticket .receipt-note-block {
+    font-size: 15px;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+
+  .print-ticket .receipt-total {
+    margin-top: 8px;
+    font-weight: 900;
+    text-align: right;
+  }
+}
+
+/* RC ORDERA customer application navigation */
+.customer-app-page {
+  padding-bottom: 84px;
+  background: #f3f6f8;
+}
+
+.customer-app-shell {
+  width: min(1180px, 100%);
+  padding: 16px 18px 30px;
+}
+
+.customer-app-header {
+  position: sticky;
+  top: 0;
+  z-index: 12;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px 18px;
+  align-items: center;
+  margin: -16px -18px 18px;
+  padding: calc(12px + env(safe-area-inset-top, 0px)) max(18px, calc((100vw - 1180px) / 2 + 18px)) 12px;
+  border-bottom: 1px solid rgba(24, 33, 47, 0.1);
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 8px 24px rgba(24, 33, 47, 0.08);
+  backdrop-filter: blur(12px);
+}
+
+.customer-app-brand {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+}
+
+.customer-app-brand img {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border-radius: 8px;
+}
+
+.customer-app-brand h1,
+.customer-app-brand p,
+.customer-location-summary span,
+.customer-location-summary strong {
+  margin: 0;
+}
+
+.customer-app-brand h1 {
+  font-size: 1.18rem;
+  line-height: 1.1;
+}
+
+.customer-app-brand .eyebrow {
+  color: var(--green);
+  font-size: 0.7rem;
+}
+
+.customer-profile-shortcut {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.customer-location-summary {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 2px;
+  min-width: 0;
+}
+
+.customer-location-summary span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.customer-location-summary strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 0.88rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.customer-test-badge {
+  width: fit-content;
+  margin: 0 0 12px auto;
+  padding: 5px 8px;
+  border: 1px solid #efd178;
+  border-radius: 8px;
+  background: #fff9df;
+  color: #795200;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.customer-view[hidden] {
+  display: none;
+}
+
+.customer-section-heading,
+.customer-cart-heading,
+.customer-store-title-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.customer-section-heading h2,
+.customer-section-heading p,
+.customer-view-heading h2,
+.customer-view-heading p,
+.customer-cart-heading h2,
+.customer-store-title-row h2 {
+  margin: 0;
+}
+
+.customer-section-heading > div {
+  display: grid;
+  gap: 4px;
+}
+
+.customer-section-heading > div > p:not(.eyebrow) {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.customer-icon-action {
+  display: inline-grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--green);
+  font-size: 1.35rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.customer-restaurant-panel {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.customer-restaurant-search {
+  max-width: 720px;
+}
+
+.customer-restaurant-search input {
+  min-height: 48px;
+  padding-left: 14px;
+  background: #ffffff;
+}
+
+.customer-restaurant-list {
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+}
+
+.customer-restaurant-card {
+  grid-template-columns: 72px minmax(0, 1fr) 28px;
+  min-height: 112px;
+  padding: 14px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(24, 33, 47, 0.06);
+  cursor: pointer;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.customer-restaurant-card:hover,
+.customer-restaurant-card:focus-visible {
+  border-color: rgba(31, 143, 77, 0.48);
+  box-shadow: 0 12px 30px rgba(24, 33, 47, 0.1);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.customer-restaurant-card.is-selected {
+  border-color: rgba(31, 143, 77, 0.48);
+  background: #f8fffa;
+}
+
+.customer-restaurant-card img,
+.customer-restaurant-initials {
+  width: 72px;
+  height: 72px;
+}
+
+.customer-restaurant-state {
+  width: fit-content;
+  color: var(--green) !important;
+  font-size: 0.74rem !important;
+  text-transform: uppercase;
+}
+
+.customer-restaurant-state.is-closed,
+.customer-open-badge.is-closed {
+  color: #9b2c24 !important;
+  background: #fff1ef;
+  border-color: #efb3ae;
+}
+
+.customer-restaurant-state.is-open,
+.customer-open-badge.is-open {
+  color: #176b3a !important;
+  background: #edf9f1;
+  border-color: #9fd4b7;
+}
+
+.customer-restaurant-chevron {
+  color: var(--muted);
+  font-size: 1.4rem;
+  font-weight: 900;
+}
+
+.customer-store-header {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 16px 58px 16px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.customer-back-button {
+  width: fit-content;
+  min-height: 38px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--green);
+  font-weight: 900;
+}
+
+.customer-store-identity {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  min-width: 0;
+}
+
+.customer-store-identity > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.customer-store-identity p,
+.customer-store-description {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.customer-open-badge {
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: #eaf8ef;
+  color: #14713a;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.customer-store-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 850;
+}
+
+.customer-store-refresh {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+.customer-store-favorite {
+  position: absolute;
+  top: 68px;
+  right: 16px;
+}
+
+.customer-store-favorite.is-active {
+  border-color: #d4473a;
+  background: #fff2f0;
+  color: #c7352b;
+}
+
+.customer-cart-heading h2 {
+  font-size: 1.2rem;
+}
+
+.customer-view-heading {
+  display: grid;
+  gap: 3px;
+  margin-bottom: 14px;
+}
+
+.customer-view-heading .eyebrow {
+  color: var(--green);
+}
+
+.customer-active-order-panel,
+.customer-history-page,
+.customer-profile-settings {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.customer-active-order-panel > h3,
+.customer-history-page h3 {
+  margin: 0;
+}
+
+.customer-order-timeline {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.customer-order-timeline[hidden] {
+  display: none;
+}
+
+.customer-order-timeline li {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 38px;
+  padding: 7px 0 7px 28px;
+  border-bottom: 1px solid var(--line);
+  font-weight: 800;
+}
+
+.customer-order-timeline li::before {
+  position: absolute;
+  top: 12px;
+  left: 6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--green);
+  content: "";
+}
+
+.customer-order-timeline time {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.customer-history-page .customer-history-list {
+  max-height: none;
+}
+
+.customer-empty-page {
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  background: #ffffff;
+  text-align: center;
+}
+
+.customer-profile-details {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.customer-profile-details > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.customer-profile-details span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.customer-profile-details strong {
+  overflow-wrap: anywhere;
+}
+
+.customer-profile-settings .customer-language-label {
+  justify-content: space-between;
+}
+
+.customer-profile-settings .customer-legal-notice {
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  padding: 12px 0 0;
+}
+
+.customer-sign-out-button {
+  background: var(--dark);
+}
+
+.customer-bottom-nav {
+  position: fixed;
+  left: 50%;
+  bottom: max(10px, env(safe-area-inset-bottom, 0px));
+  z-index: 30;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: min(620px, calc(100% - 20px));
+  padding: 6px;
+  border: 1px solid rgba(24, 33, 47, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 14px 34px rgba(24, 33, 47, 0.18);
+  transform: translateX(-50%);
+  backdrop-filter: blur(12px);
+}
+
+.customer-bottom-nav button {
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.customer-bottom-nav button[aria-current="page"] {
+  background: #eaf8ef;
+  color: var(--green);
+}
+
+@media (max-width: 860px) {
+  .customer-app-shell {
+    padding: 10px 10px 28px;
+  }
+
+  .customer-app-header {
+    margin: -10px -10px 12px;
+    padding: calc(9px + env(safe-area-inset-top, 0px)) 12px 9px;
+    border-bottom: 0;
+    background: var(--green);
+    color: #ffffff;
+  }
+
+  .customer-app-brand img {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+  }
+
+  .customer-app-brand .eyebrow,
+  .customer-location-summary span,
+  .customer-location-summary strong {
+    color: #ffffff;
+  }
+
+  .customer-profile-shortcut {
+    min-height: 38px;
+    border-color: rgba(255, 255, 255, 0.65);
+    background: #ffffff;
+    color: var(--green);
+  }
+
+  .customer-test-badge {
+    margin-right: 2px;
+  }
+
+  .customer-restaurant-list {
+    grid-template-columns: 1fr;
+  }
+
+  .customer-restaurant-card {
+    grid-template-columns: 62px minmax(0, 1fr) 22px;
+    min-height: 98px;
+    padding: 12px;
+  }
+
+  .customer-restaurant-card img,
+  .customer-restaurant-initials {
+    width: 62px;
+    height: 62px;
+  }
+
+  .customer-restaurant-card .customer-restaurant-chevron {
+    grid-column: auto;
+  }
+
+  .customer-store-header {
+    padding: 14px 54px 14px 14px;
+  }
+
+  .customer-store-title-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .customer-store-identity .customer-brand-logo {
+    width: 60px;
+    height: 60px;
+  }
+
+  .customer-account-head,
+  .customer-history-head,
+  .customer-history-total {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .customer-profile-details {
+    grid-template-columns: 1fr;
+  }
+
+  .customer-bottom-nav {
+    bottom: max(5px, env(safe-area-inset-bottom, 0px));
+    width: calc(100% - 10px);
+  }
+
+  .customer-bottom-nav button {
+    min-height: 50px;
+    padding: 0 4px;
+    font-size: 0.78rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .customer-app-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .customer-app-brand h1 {
+    font-size: 1.02rem;
+  }
+
+  .customer-profile-shortcut {
+    padding: 0 10px;
+    font-size: 0.82rem;
+  }
+
+  .customer-section-heading {
+    align-items: flex-start;
+  }
+
+  .customer-restaurant-card {
+    grid-template-columns: 54px minmax(0, 1fr) 18px;
+  }
+
+  .customer-restaurant-card img,
+  .customer-restaurant-initials {
+    width: 54px;
+    height: 54px;
+  }
+
+  .customer-store-identity {
+    align-items: flex-start;
+  }
+}
+
+/* RC ORDERA collaborator application navigation */
+.collaborator-app-page {
+  padding-bottom: 84px;
+  background: #f3f6f8;
+}
+
+.collaborator-app-shell {
+  width: min(1040px, 100%);
+  padding: 16px 18px 30px;
+}
+
+.collaborator-app-header {
+  position: sticky;
+  top: 0;
+  z-index: 12;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px 18px;
+  align-items: center;
+  margin: -16px -18px 18px;
+  padding: calc(12px + env(safe-area-inset-top, 0px)) max(18px, calc((100vw - 1040px) / 2 + 18px)) 12px;
+  border-bottom: 1px solid rgba(24, 33, 47, 0.1);
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 8px 24px rgba(24, 33, 47, 0.08);
+  backdrop-filter: blur(12px);
+}
+
+.collaborator-app-header .customer-app-brand .eyebrow {
+  color: #8a5a00;
+}
+
+.collaborator-header-status {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 2px;
+}
+
+.collaborator-header-status span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.collaborator-header-status strong {
+  color: var(--ink);
+  font-size: 0.88rem;
+}
+
+.courier-view[hidden] {
+  display: none;
+}
+
+.courier-view .customer-account-panel {
+  box-shadow: 0 8px 24px rgba(24, 33, 47, 0.06);
+}
+
+.courier-view .customer-account-head h3,
+.courier-section-title h3 {
+  margin: 0;
+}
+
+.courier-availability-button {
+  background: var(--green);
+}
+
+.courier-availability-button:not(:disabled) {
+  min-width: 130px;
+}
+
+.collaborator-location-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 42px;
+  justify-content: stretch;
+  gap: 8px;
+}
+
+.collaborator-location-actions .customer-map-button {
+  width: 100%;
+}
+
+.courier-section-title {
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+}
+
+.courier-active-panel {
+  gap: 14px;
+}
+
+.courier-active-delivery {
+  display: grid;
+}
+
+.courier-active-card {
+  border-color: rgba(31, 143, 77, 0.4);
+  background: #f8fffa;
+}
+
+.courier-steps {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.courier-steps button[hidden] {
+  display: none;
+}
+
+.courier-steps button:not(:disabled) {
+  min-height: 50px;
+  border: 0;
+  background: var(--green);
+  color: #ffffff;
+}
+
+.courier-offer-card .client-order-actions {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.courier-offer-card .client-order-actions button {
+  flex: 1 1 140px;
+}
+
+.collaborator-bottom-nav button {
+  font-size: 0.82rem;
+}
+
+.collaborator-page .customer-profile-settings {
+  align-items: start;
+}
+
+.collaborator-page .customer-profile-settings .role-link-row {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 860px) {
+  .collaborator-app-shell {
+    padding: 10px 10px 28px;
+  }
+
+  .collaborator-app-header {
+    margin: -10px -10px 12px;
+    padding: calc(9px + env(safe-area-inset-top, 0px)) 12px 9px;
+    border-bottom: 0;
+    background: #8a5a00;
+    color: #ffffff;
+  }
+
+  .collaborator-app-header .customer-app-brand .eyebrow,
+  .collaborator-header-status span,
+  .collaborator-header-status strong {
+    color: #ffffff;
+  }
+
+  .collaborator-location-actions {
+    grid-template-columns: 1fr 1fr 42px;
+  }
+
+  .collaborator-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .collaborator-wide-field,
+  .collaborator-actions {
+    grid-column: 1;
+  }
+
+  .collaborator-actions {
+    justify-content: stretch;
+  }
+
+  .collaborator-actions > .customer-map-button {
+    width: 100%;
+  }
+
+  .collaborator-bottom-nav button {
+    font-size: 0.72rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .collaborator-location-actions {
+    grid-template-columns: 1fr 42px;
+  }
+
+  .collaborator-location-actions #courierOpenGpsButton {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .collaborator-location-actions #courierRefreshOffersButton {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .courier-offer-card .client-order-head,
+  .courier-offer-card .client-order-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+.customer-courier-tracking {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 14px;
+  border: 1px solid #b9d8c5;
+  border-left: 4px solid #1d8f4e;
+  border-radius: 8px;
+  background: #f5fbf7;
+  color: #10223d;
+}
+
+.customer-courier-tracking[hidden] {
+  display: none;
+}
+
+.customer-courier-tracking strong,
+.customer-courier-tracking span {
+  overflow-wrap: anywhere;
+}
+
+.customer-courier-tracking-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  color: #526078;
+  font-size: 0.92rem;
+}
+
+.customer-courier-tracking .customer-map-button {
+  justify-self: start;
+}
+
+.client-order-tracking {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0;
+  padding: 10px;
+  border: 1px solid #c8d8cf;
+  border-radius: 6px;
+  background: #f7fbf8;
+}
+
+.client-order-tracking a {
+  color: #176b3b;
+  font-weight: 700;
+}
+/* =========================================================
+   RC ORDERA - CLIENTE
+   Cabecera principal
+   ========================================================= */
+
+.customer-client-header {
+  background: #ffffff;
+  padding: 20px 22px 16px;
+  border-bottom: 0;
+  box-shadow: none;
+}
+
+/* Fila superior: logo + acciones */
+.customer-client-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+/* RC ORDERA */
+.customer-client-logo {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.8px;
+}
+
+.customer-client-logo-rc {
+  color: #f4511e;
+}
+
+.customer-client-logo-ordera {
+  color: #172033;
+}
+
+/* Acciones de la derecha */
+.customer-client-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Notificaciones */
+.customer-notification-button {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #172033;
+  cursor: pointer;
+}
+
+.customer-notification-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.customer-notification-badge {
+  position: absolute;
+  top: 1px;
+  right: 0;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #f4511e;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  border: 2px solid #ffffff;
+}
+
+/* Avatar */
+.customer-profile-avatar {
+  width: 45px;
+  height: 45px;
+  flex: 0 0 45px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  padding: 0;
+  background: #fff0e8;
+  color: #f4511e;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+/* Tarjeta de dirección */
+.customer-delivery-location {
+  width: 100%;
+  display: block;
+  text-align: left;
+  padding: 13px 17px 14px;
+  background: #ffffff;
+  border: 1px solid #e7e7e7;
+  border-radius: 18px;
+  box-shadow: 0 2px 8px rgba(17, 24, 39, 0.04);
+  cursor: pointer;
+}
+
+.customer-delivery-location-label {
+  display: block;
+  margin: 0 0 5px 22px;
+  color: #777d87;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.customer-delivery-location-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.customer-location-pin {
+  flex: 0 0 auto;
+  color: #f4511e;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.customer-delivery-location-row strong {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #161b26;
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.customer-location-chevron {
+  flex: 0 0 auto;
+  color: #161b26;
+  font-size: 21px;
+  font-weight: 700;
+}
+
+/* Ajuste para móvil */
+@media (max-width: 600px) {
+  .customer-client-header {
+    padding: 18px 18px 14px;
+  }
+
+  .customer-client-logo {
+    font-size: 26px;
+  }
+
+  .customer-client-topbar {
+    margin-bottom: 16px;
+  }
+
+  .customer-delivery-location {
+    border-radius: 17px;
+  }
+}
+
+/* =========================================================
+   RC ORDERA - BASE RESPONSIVE CLIENTE
+   ========================================================= */
+
+html {
+  box-sizing: border-box;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}
+
+body {
+  margin: 0;
+  width: 100%;
+  min-width: 320px;
+  overflow-x: hidden;
+}
+
+.customer-app {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.customer-view {
+  width: 100%;
+  max-width: 100%;
+}
+
+.customer-client-header,
+.customer-home-intro {
+  width: 100%;
+}
+
+/* Evita que imágenes rompan el ancho */
+.customer-app img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Inputs y botones siempre dentro de la pantalla */
+.customer-app input,
+.customer-app select,
+.customer-app textarea,
+.customer-app button {
+  max-width: 100%;
+}
+
+/* Tablet */
+@media (min-width: 768px) {
+
+  .customer-client-header,
+  .customer-home-intro {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+
+  .customer-home-greeting h2 {
+    font-size: 30px;
+  }
+
+  .customer-home-search {
+    max-width: 720px;
+  }
+
+}
+
+/* Escritorio */
+@media (min-width: 1024px) {
+
+  .customer-app {
+    max-width: 1280px;
+  }
+
+  .customer-client-header,
+  .customer-home-intro {
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+
+}
+
+/* Pantallas pequeñas */
+@media (max-width: 380px) {
+
+  .customer-client-header,
+  .customer-home-intro {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .customer-client-logo {
+    font-size: 23px;
+  }
+
+  .customer-home-greeting h2 {
+    font-size: 23px;
+  }
+
+  .customer-delivery-location-row strong {
+    font-size: 15px;
+  }
+
+}
+.customer-restaurant-search {
+  display: none;
+}
+/* =========================================================
+   RC ORDERA - CLIENTE
+   Restaurantes cerca de ti
+   ========================================================= */
+
+.customer-restaurant-panel {
+  width: 100%;
+  padding: 24px 22px 110px;
+  background: #ffffff;
+  border: 0;
+  box-shadow: none;
+}
+
+.customer-restaurants-heading {
+  margin-bottom: 18px;
+}
+
+.customer-restaurants-heading > div {
+  min-width: 0;
+}
+
+.customer-restaurants-heading h2 {
+  margin: 0;
+  color: #171b24;
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+}
+
+.customer-restaurants-heading p {
+  margin: 5px 0 0;
+  color: #848a94;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* Lista */
+
+.customer-restaurant-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 22px;
+  width: 100%;
+}
+
+/* Tarjeta */
+
+.customer-restaurant-card {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+
+  display: block;
+
+  padding: 0;
+
+  background: #ffffff;
+
+  border: 1px solid #eceef1;
+  border-radius: 20px;
+
+  box-shadow:
+    0 4px 16px rgba(20, 25, 35, 0.06);
+
+  cursor: pointer;
+
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.customer-restaurant-card:hover {
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 8px 24px rgba(20, 25, 35, 0.09);
+}
+
+.customer-restaurant-card.is-selected {
+  border-color: rgba(244, 81, 30, 0.35);
+}
+
+/* Imagen */
+
+.customer-restaurant-cover {
+  position: relative;
+
+  width: 100%;
+  aspect-ratio: 16 / 9;
+
+  overflow: hidden;
+
+  background: #f2f3f5;
+}
+
+.customer-restaurant-cover-image {
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+
+  display: block;
+}
+
+.customer-restaurant-cover-placeholder {
+  width: 100%;
+  height: 100%;
+
+  display: grid;
+  place-items: center;
+
+  background:
+    linear-gradient(
+      135deg,
+      #fff2eb,
+      #f8f8f8
+    );
+}
+
+.customer-restaurant-cover-placeholder span {
+  color: #f4511e;
+  font-size: 38px;
+  font-weight: 850;
+}
+
+/* Favorito */
+
+.customer-restaurant-heart {
+  position: absolute;
+
+  top: 13px;
+  right: 13px;
+
+  width: 38px;
+  height: 38px;
+
+  display: grid;
+  place-items: center;
+
+  padding: 0;
+
+  border: 0;
+  border-radius: 50%;
+
+  background: rgba(255, 255, 255, 0.94);
+
+  color: #20242c;
+
+  font-size: 23px;
+  line-height: 1;
+
+  box-shadow:
+    0 3px 12px rgba(0, 0, 0, 0.12);
+}
+
+/* Abierto / cerrado */
+
+.customer-restaurant-open-label {
+  position: absolute;
+
+  left: 13px;
+  bottom: 13px;
+
+  padding: 6px 10px;
+
+  border-radius: 999px;
+
+  font-size: 11px;
+  font-weight: 800;
+
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.customer-restaurant-open-label.is-open {
+  background: #ffffff;
+  color: #239a55;
+}
+
+.customer-restaurant-open-label.is-closed {
+  background: #ffffff;
+  color: #d74343;
+}
+
+/* Información */
+
+.customer-restaurant-content {
+  padding: 15px 16px 17px;
+}
+
+.customer-restaurant-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+}
+
+.customer-restaurant-name {
+  min-width: 0;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  color: #171b24;
+
+  font-size: 17px;
+  line-height: 1.25;
+  font-weight: 800;
+}
+
+.customer-restaurant-rating {
+  flex: 0 0 auto;
+
+  color: #171b24;
+
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.customer-restaurant-address {
+  display: block;
+
+  margin-top: 5px;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  color: #7f858f;
+
+  font-size: 13px;
+}
+
+.customer-restaurant-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+
+  gap: 6px;
+
+  margin-top: 11px;
+
+  color: #747b85;
+
+  font-size: 12px;
+  font-weight: 550;
+}
+
+
+/* ==============================
+   RESPONSIVE
+   ============================== */
+
+/* Tablet */
+
+@media (min-width: 700px) {
+
+  .customer-restaurant-list {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+
+    gap: 22px;
+  }
+
+}
+
+/* Escritorio */
+
+@media (min-width: 1100px) {
+
+  .customer-restaurant-list {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+  }
+
+}
+
+/* Móvil pequeño */
+
+@media (max-width: 380px) {
+
+  .customer-restaurant-panel {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .customer-restaurant-card {
+    border-radius: 18px;
+  }
+
+  .customer-restaurant-content {
+    padding:
+      13px 14px 15px;
+  }
+
+}
+/* =========================================================
+   RC ORDERA CLIENTE
+   CORRECCIÓN ESTRUCTURAL RESPONSIVE
+   ========================================================= */
+
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+.customer-page {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  background: #ffffff;
+}
+
+.customer-app-shell {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0 0 90px;
+}
+
+/* Anula la estructura GRID del header antiguo */
+.customer-app-header.customer-client-header {
+  position: relative;
+
+  top: auto;
+
+  display: block;
+
+  width: 100%;
+  max-width: 100%;
+
+  margin: 0;
+
+  padding:
+    calc(18px + env(safe-area-inset-top, 0px))
+    max(18px, env(safe-area-inset-right, 0px))
+    14px
+    max(18px, env(safe-area-inset-left, 0px));
+
+  border: 0;
+
+  background: #ffffff;
+  color: #172033;
+
+  box-shadow: none;
+
+  backdrop-filter: none;
+}
+
+/* Logo y botones siempre en una sola fila */
+.customer-client-topbar {
+  width: 100%;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+
+  margin: 0 0 16px;
+}
+
+.customer-client-logo {
+  min-width: 0;
+
+  display: flex;
+  align-items: center;
+
+  gap: 6px;
+
+  white-space: nowrap;
+}
+
+/* Botones del lado derecho */
+.customer-client-header-actions {
+  flex: 0 0 auto;
+
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+}
+
+/* Dirección siempre debajo del logo */
+.customer-delivery-location {
+  display: block;
+
+  width: 100%;
+  max-width: 100%;
+
+  margin: 0;
+
+  padding: 12px 14px;
+
+  overflow: hidden;
+}
+
+.customer-delivery-location-row {
+  display: flex;
+
+  width: 100%;
+  min-width: 0;
+
+  align-items: center;
+
+  gap: 9px;
+}
+
+.customer-delivery-location-row strong {
+  flex: 1 1 auto;
+
+  min-width: 0;
+
+  overflow: hidden;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Contenido principal */
+.customer-view[data-customer-view="home"] {
+  width: 100%;
+  max-width: 100%;
+
+  margin: 0;
+  padding: 0;
+
+  overflow: hidden;
+}
+
+.customer-home-intro,
+.customer-categories-section,
+.customer-restaurant-panel {
+  width: 100%;
+  max-width: 100%;
+
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Buscador nunca puede salirse */
+.customer-home-search {
+  width: 100%;
+  max-width: 100%;
+}
+
+.customer-home-search input {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Categorías pueden deslizarse sin ampliar toda la página */
+.customer-category-scroll {
+  width: 100%;
+  max-width: 100%;
+
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  overscroll-behavior-x: contain;
+
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ningún elemento puede provocar scroll horizontal */
+.customer-page *,
+.customer-page *::before,
+.customer-page *::after {
+  box-sizing: border-box;
+}
+
+/* =========================================================
+   CELULAR
+   ========================================================= */
+
+@media (max-width: 767px) {
+
+  .customer-app-header.customer-client-header {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .customer-client-logo {
+    font-size: clamp(22px, 7vw, 27px);
+  }
+
+  .customer-notification-button {
+    width: 40px;
+    height: 40px;
+  }
+
+  .customer-profile-avatar {
+    width: 42px;
+    height: 42px;
+
+    flex-basis: 42px;
+  }
+
+  .customer-delivery-location {
+    border-radius: 16px;
+  }
+
+  .customer-home-intro,
+  .customer-categories-section,
+  .customer-restaurant-panel {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+}
+
+
+/* =========================================================
+   CELULAR MUY PEQUEÑO
+   ========================================================= */
+
+@media (max-width: 360px) {
+
+  .customer-app-header.customer-client-header {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .customer-client-header-actions {
+    gap: 4px;
+  }
+
+  .customer-notification-button {
+    width: 36px;
+    height: 36px;
+  }
+
+  .customer-profile-avatar {
+    width: 38px;
+    height: 38px;
+
+    flex-basis: 38px;
+  }
+
+  .customer-delivery-location-row strong {
+    font-size: 14px;
+  }
+
+  .customer-home-intro,
+  .customer-categories-section,
+  .customer-restaurant-panel {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+}
+
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (min-width: 768px) and (max-width: 1099px) {
+
+  .customer-app-header.customer-client-header,
+  .customer-home-intro,
+  .customer-categories-section,
+  .customer-restaurant-panel {
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+
+}
+
+
+/* =========================================================
+   ESCRITORIO
+   ========================================================= */
+
+@media (min-width: 1100px) {
+
+  .customer-app-header.customer-client-header,
+  .customer-home-intro,
+  .customer-categories-section,
+  .customer-restaurant-panel {
+    padding-left:
+      max(40px, calc((100vw - 1280px) / 2));
+
+    padding-right:
+      max(40px, calc((100vw - 1280px) / 2));
+  }
+
+}
+/* =========================================================
+   RC ORDERA - CLIENTE
+   LAYOUT RESPONSIVE DEFINITIVO
+   ========================================================= */
+
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+body.customer-page {
+  background: #f7f8fa;
+}
+
+.customer-app-shell {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0 0 88px;
+}
+
+/* ---------------------------------------------------------
+   HEADER
+   --------------------------------------------------------- */
+
+.customer-app-header.customer-client-header {
+  position: relative;
+  top: auto;
+
+  display: block;
+
+  width: 100%;
+  max-width: 100%;
+
+  margin: 0;
+
+  padding:
+    calc(18px + env(safe-area-inset-top, 0px))
+    18px
+    16px;
+
+  background: #ffffff;
+  border: 0;
+  box-shadow: none;
+
+  color: #172033;
+}
+
+.customer-client-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  width: 100%;
+
+  gap: 12px;
+
+  margin: 0 0 16px;
+}
+
+.customer-client-logo {
+  flex: 1 1 auto;
+  min-width: 0;
+
+  display: flex;
+  align-items: center;
+
+  gap: 6px;
+
+  font-size: clamp(23px, 5vw, 28px);
+  font-weight: 850;
+
+  white-space: nowrap;
+}
+
+.customer-client-header-actions {
+  flex: 0 0 auto;
+
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+}
+
+.customer-notification-button {
+  flex: 0 0 42px;
+
+  width: 42px;
+  height: 42px;
+}
+
+.customer-profile-avatar {
+  flex: 0 0 42px;
+
+  width: 42px;
+  height: 42px;
+}
+
+/* ---------------------------------------------------------
+   DIRECCIÓN
+   --------------------------------------------------------- */
+
+.customer-delivery-location {
+  display: block;
+
+  width: 100%;
+  max-width: 100%;
+
+  margin: 0;
+
+  padding: 13px 15px;
+
+  background: #ffffff;
+
+  border: 1px solid #e7e9ed;
+  border-radius: 17px;
+
+  overflow: hidden;
+}
+
+.customer-delivery-location-label {
+  display: block;
+
+  margin: 0 0 5px 24px;
+
+  color: #7d838c;
+
+  font-size: 13px;
+}
+
+.customer-delivery-location-row {
+  display: flex;
+  align-items: center;
+
+  width: 100%;
+  min-width: 0;
+
+  gap: 9px;
+}
+
+.customer-location-pin {
+  flex: 0 0 auto;
+}
+
+.customer-delivery-location-row strong {
+  flex: 1 1 auto;
+  min-width: 0;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  font-size: clamp(14px, 4vw, 17px);
+}
+
+.customer-location-chevron {
+  flex: 0 0 auto;
+}
+
+/* ---------------------------------------------------------
+   VISTA HOME
+   --------------------------------------------------------- */
+
+.customer-view[data-customer-view="home"] {
+  width: 100%;
+  max-width: 100%;
+
+  margin: 0;
+  padding: 0;
+
+  overflow: hidden;
+}
+
+.customer-home-intro,
+.customer-categories-section,
+.customer-restaurant-panel {
+  width: min(100%, 1280px);
+  max-width: 100%;
+
+  margin-left: auto;
+  margin-right: auto;
+
+  padding-left: 18px;
+  padding-right: 18px;
+}
+
+.customer-home-intro {
+  padding-top: 22px;
+}
+
+.customer-home-search {
+  width: 100%;
+  max-width: 100%;
+}
+
+.customer-home-search input {
+  width: 100%;
+  min-width: 0;
+}
+
+/* ---------------------------------------------------------
+   PROTECCIÓN CONTRA DESBORDAMIENTO
+   --------------------------------------------------------- */
+
+.customer-page *,
+.customer-page *::before,
+.customer-page *::after {
+  box-sizing: border-box;
+}
+
+.customer-page img,
+.customer-page video,
+.customer-page canvas,
+.customer-page svg {
+  max-width: 100%;
+}
+
+.customer-page input,
+.customer-page select,
+.customer-page textarea,
+.customer-page button {
+  max-width: 100%;
+}
+
+/* ---------------------------------------------------------
+   CATEGORÍAS
+   --------------------------------------------------------- */
+
+.customer-category-scroll {
+  display: flex;
+  align-items: flex-start;
+
+  width: 100%;
+  max-width: 100%;
+
+  gap: 12px;
+
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  padding-bottom: 8px;
+
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.customer-category-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* ---------------------------------------------------------
+   RESTAURANTES
+   --------------------------------------------------------- */
+
+.customer-restaurant-list {
+  width: 100%;
+  max-width: 100%;
+
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+
+  gap: 18px;
+}
+
+.customer-restaurant-card {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* ---------------------------------------------------------
+   BARRA INFERIOR
+   --------------------------------------------------------- */
+
+.customer-bottom-nav {
+  width: min(calc(100% - 24px), 720px);
+  max-width: calc(100% - 24px);
+
+  left: 50%;
+  right: auto;
+
+  transform: translateX(-50%);
+}
+
+/* =========================================================
+   MÓVILES PEQUEÑOS
+   ========================================================= */
+
+@media (max-width: 380px) {
+
+  .customer-app-header.customer-client-header {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .customer-home-intro,
+  .customer-categories-section,
+  .customer-restaurant-panel {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .customer-client-logo {
+    font-size: 22px;
+  }
+
+  .customer-notification-button {
+    flex-basis: 38px;
+    width: 38px;
+    height: 38px;
+  }
+
+  .customer-profile-avatar {
+    flex-basis: 38px;
+    width: 38px;
+    height: 38px;
+  }
+
+}
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (min-width: 768px) {
+
+  .customer-app-header.customer-client-header {
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+
+  .customer-home-intro,
+  .customer-categories-section,
+  .customer-restaurant-panel {
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+
+  .customer-restaurant-list {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+}
+
+/* =========================================================
+   ESCRITORIO
+   ========================================================= */
+
+@media (min-width: 1100px) {
+
+  .customer-app-header.customer-client-header {
+    padding-left:
+      max(40px, calc((100vw - 1280px) / 2));
+
+    padding-right:
+      max(40px, calc((100vw - 1280px) / 2));
+  }
+
+  .customer-home-intro,
+  .customer-categories-section,
+  .customer-restaurant-panel {
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+
+  .customer-restaurant-list {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+  }
+
+}
+/* =========================================================
+   RESTAURANTES CERCA DE TI
+   ========================================================= */
+
+.customer-restaurant-panel {
+  background: #ffffff;
+  padding-top: 20px;
+  padding-bottom: 110px;
+}
+
+.customer-restaurants-heading {
+  margin-bottom: 16px;
+}
+
+.customer-restaurants-heading h2 {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 800;
+  color: #171b24;
+}
+
+.customer-restaurants-heading p {
+  margin: 5px 0 0;
+  font-size: 13px;
+  color: #7f858f;
+}
+
+.customer-restaurant-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+
+.customer-restaurant-card {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 19px;
+  background: #ffffff;
+  border: 1px solid #eceef1;
+  box-shadow: 0 4px 16px rgba(18, 24, 32, 0.06);
+  cursor: pointer;
+}
+
+.customer-restaurant-cover {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #f1f2f4;
+  overflow: hidden;
+}
+
+.customer-restaurant-cover-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.customer-restaurant-cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #fff2eb, #f5f6f8);
+}
+
+.customer-restaurant-cover-placeholder span {
+  font-size: 36px;
+  font-weight: 850;
+  color: #f4511e;
+}
+
+.customer-restaurant-heart {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255,255,255,.96);
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  box-shadow: 0 3px 10px rgba(0,0,0,.12);
+}
+
+.customer-restaurant-open-label {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.customer-restaurant-open-label.is-open {
+  color: #249a55;
+}
+
+.customer-restaurant-open-label.is-closed {
+  color: #d34242;
+}
+
+.customer-restaurant-content {
+  padding: 14px 15px 16px;
+}
+
+.customer-restaurant-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.customer-restaurant-name {
+  min-width: 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: #171b24;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.customer-restaurant-rating {
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.customer-restaurant-address {
+  display: block;
+  margin-top: 5px;
+  font-size: 13px;
+  color: #7c828c;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.customer-restaurant-meta {
+  margin-top: 9px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  color: #717883;
+  font-size: 12px;
+}
+
+@media (min-width: 700px) {
+  .customer-restaurant-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1100px) {
+  .customer-restaurant-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+/* =========================================================
+   RC ORDERA - CLIENTE
+   CATEGORÍAS VISUALES
+   ========================================================= */
+
+.customer-categories-section {
+  padding-top: 18px;
+  padding-bottom: 10px;
+  background: #ffffff;
+}
+
+.customer-section-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.customer-section-title-row h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: #171b24;
+}
+
+.customer-see-all-button {
+  border: 0;
+  background: transparent;
+  color: #f4511e;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.customer-category-scroll {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 0 8px;
+  scroll-snap-type: x proximity;
+}
+
+.customer-category-card {
+  flex: 0 0 auto;
+  width: 82px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  scroll-snap-align: start;
+}
+
+.customer-category-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  background: #f4f5f7;
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.customer-category-name {
+  width: 100%;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 650;
+  color: #343943;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.customer-category-card.active .customer-category-icon {
+  background: #fff0e9;
+  box-shadow: inset 0 0 0 1px rgba(244,81,30,.15);
+}
+
+.customer-category-card.active .customer-category-name {
+  color: #f4511e;
+}
+
+@media (max-width: 380px) {
+  .customer-category-card {
+    width: 74px;
+  }
+
+  .customer-category-icon {
+    width: 58px;
+    height: 58px;
+    font-size: 25px;
+    border-radius: 16px;
+  }
+}
+/* =========================================================
+   RC ORDERA CLIENTE
+   NAVEGACION INFERIOR DEFINITIVA + SCROLL SEGURO
+   ========================================================= */
+
+
+/* =========================================================
+   BASE SEGURA SOLO PARA CLIENTE
+   ========================================================= */
+
+html {
+  width: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
+body.customer-page {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+
+  overflow-x: hidden;
+  overflow-y: auto;
+
+  background: #ffffff;
+}
+
+
+/* =========================================================
+   CONTENEDOR PRINCIPAL
+   ========================================================= */
+
+body.customer-page .customer-app-shell {
+  width: 100%;
+  max-width: 100%;
+
+  min-height: 100vh;
+  height: auto;
+
+  margin: 0;
+
+  padding-bottom:
+    calc(90px + env(safe-area-inset-bottom, 0px));
+
+  overflow: visible;
+}
+
+
+/* Evita que una vista bloquee el scroll vertical */
+
+body.customer-page .customer-view {
+  width: 100%;
+  max-width: 100%;
+
+  height: auto;
+  min-height: 0;
+
+  overflow-x: hidden;
+  overflow-y: visible;
+}
+
+
+/* Protección general contra elementos que se salgan */
+
+body.customer-page *,
+body.customer-page *::before,
+body.customer-page *::after {
+  box-sizing: border-box;
+}
+
+body.customer-page img,
+body.customer-page video,
+body.customer-page canvas {
+  max-width: 100%;
+}
+
+
+/* =========================================================
+   BARRA INFERIOR
+   ========================================================= */
+
+body.customer-page .customer-bottom-nav {
+  position: fixed;
+
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  z-index: 2000;
+
+  width: 100%;
+  max-width: 100%;
+
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+
+  gap: 0;
+
+  margin: 0;
+
+  padding:
+    6px
+    max(6px, env(safe-area-inset-right, 0px))
+    calc(6px + env(safe-area-inset-bottom, 0px))
+    max(6px, env(safe-area-inset-left, 0px));
+
+  background: rgba(255, 255, 255, 0.98);
+
+  border: 0;
+  border-top: 1px solid #e8eaee;
+
+  border-radius: 0;
+
+  box-shadow:
+    0 -4px 18px rgba(17, 24, 39, 0.08);
+
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+
+/* =========================================================
+   BOTONES DE NAVEGACION
+   ========================================================= */
+
+body.customer-page
+.customer-bottom-nav
+.customer-bottom-nav-item {
+
+  appearance: none;
+  -webkit-appearance: none;
+
+  width: 100%;
+  min-width: 0;
+
+  height: 58px;
+  min-height: 58px;
+  max-height: 58px;
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 4px;
+
+  margin: 0;
+  padding: 4px 2px;
+
+  border: 0;
+  border-radius: 12px;
+
+  background: transparent;
+
+  box-shadow: none;
+
+  color: #7b828d;
+
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+
+  cursor: pointer;
+
+  overflow: hidden;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+
+/* Evita fondos negros heredados */
+
+body.customer-page
+.customer-bottom-nav
+.customer-bottom-nav-item:hover,
+
+body.customer-page
+.customer-bottom-nav
+.customer-bottom-nav-item:focus,
+
+body.customer-page
+.customer-bottom-nav
+.customer-bottom-nav-item:active {
+
+  background: transparent;
+  box-shadow: none;
+}
+
+
+/* =========================================================
+   ICONOS
+   ========================================================= */
+
+body.customer-page
+.customer-bottom-nav
+.customer-bottom-nav-icon {
+
+  flex: 0 0 23px;
+
+  width: 23px;
+  height: 23px;
+
+  min-width: 23px;
+  min-height: 23px;
+
+  max-width: 23px;
+  max-height: 23px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  margin: 0;
+  padding: 0;
+
+  background: transparent;
+
+  overflow: visible;
+}
+
+
+body.customer-page
+.customer-bottom-nav
+.customer-bottom-nav-icon svg {
+
+  display: block;
+
+  width: 22px;
+  height: 22px;
+
+  min-width: 22px;
+  min-height: 22px;
+
+  max-width: 22px;
+  max-height: 22px;
+
+  margin: 0;
+  padding: 0;
+
+  fill: none;
+
+  stroke: currentColor;
+  stroke-width: 1.8;
+
+  stroke-linecap: round;
+  stroke-linejoin: round;
+
+  overflow: visible;
+}
+
+
+/* Fuerza todos los elementos SVG a ser líneas, no masas negras */
+
+body.customer-page
+.customer-bottom-nav
+.customer-bottom-nav-icon svg path,
+
+body.customer-page
+.customer-bottom-nav
+.customer-bottom-nav-icon svg rect,
+
+body.customer-page
+.customer-bottom-nav
+.customer-bottom-nav-icon svg circle,
+
+body.customer-page
+.customer-bottom-nav
+.customer-bottom-nav-icon svg line,
+
+body.customer-page
+.customer-bottom-nav
+.customer-bottom-nav-icon svg polyline {
+
+  fill: none;
+
+  stroke: currentColor;
+  stroke-width: 1.8;
+
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+
+/* =========================================================
+   TEXTO
+   ========================================================= */
+
+body.customer-page
+.customer-bottom-nav
+.customer-bottom-nav-item > span:last-child {
+
+  display: block;
+
+  width: 100%;
+  min-width: 0;
+
+  margin: 0;
+  padding: 0;
+
+  overflow: hidden;
+
+  color: inherit;
+
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 14px;
+
+  text-align: center;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+
+/* =========================================================
+   BOTON ACTIVO
+   ========================================================= */
+
+body.customer-page
+.customer-bottom-nav
+.customer-bottom-nav-item.active,
+
+body.customer-page
+.customer-bottom-nav
+.customer-bottom-nav-item[aria-current="page"] {
+
+  background: transparent;
+
+  color: #f4511e;
+}
+
+
+body.customer-page
+.customer-bottom-nav
+.customer-bottom-nav-item.active
+.customer-bottom-nav-icon svg,
+
+body.customer-page
+.customer-bottom-nav
+.customer-bottom-nav-item[aria-current="page"]
+.customer-bottom-nav-icon svg {
+
+  stroke-width: 2;
+}
+
+
+/* =========================================================
+   MOVIL
+   ========================================================= */
+
+@media (max-width: 720px) {
+
+  body.customer-page .customer-bottom-nav {
+    left: 0;
+    right: 0;
+
+    bottom: 0;
+
+    width: 100%;
+    max-width: 100%;
+
+    transform: none;
+
+    border-radius: 0;
+  }
+
+}
+
+
+/* =========================================================
+   TELEFONOS PEQUENOS
+   ========================================================= */
+
+@media (max-width: 360px) {
+
+  body.customer-page
+  .customer-bottom-nav
+  .customer-bottom-nav-item {
+
+    padding-left: 1px;
+    padding-right: 1px;
+  }
+
+
+  body.customer-page
+  .customer-bottom-nav
+  .customer-bottom-nav-item > span:last-child {
+
+    font-size: 10px;
+  }
+
+
+  body.customer-page
+  .customer-bottom-nav
+  .customer-bottom-nav-icon {
+
+    flex-basis: 21px;
+
+    width: 21px;
+    height: 21px;
+
+    min-width: 21px;
+    min-height: 21px;
+
+    max-width: 21px;
+    max-height: 21px;
+  }
+
+
+  body.customer-page
+  .customer-bottom-nav
+  .customer-bottom-nav-icon svg {
+
+    width: 20px;
+    height: 20px;
+
+    min-width: 20px;
+    min-height: 20px;
+
+    max-width: 20px;
+    max-height: 20px;
+  }
+
+}
+
+
+/* =========================================================
+   TABLET Y ESCRITORIO
+   ========================================================= */
+
+@media (min-width: 721px) {
+
+  body.customer-page .customer-bottom-nav {
+
+    left: 50%;
+    right: auto;
+
+    bottom: 12px;
+
+    transform: translateX(-50%);
+
+    width: min(680px, calc(100% - 32px));
+    max-width: 680px;
+
+    border: 1px solid #e7e9ed;
+    border-radius: 20px;
+
+    box-shadow:
+      0 8px 28px rgba(17, 24, 39, 0.12);
+  }
+
+}
+/* =========================================================
+   RC ORDERA CLIENTE
+   CATEGORIAS DEFINITIVAS
+   ========================================================= */
+
+body.customer-page .customer-categories-section {
+  width: 100%;
+  max-width: 1280px;
+
+  margin: 0 auto;
+
+  padding:
+    20px
+    18px
+    10px;
+
+  background: #ffffff;
+}
+
+
+/* Titulo + ver todas */
+
+body.customer-page .customer-section-title-row {
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+
+  margin-bottom: 16px;
+}
+
+body.customer-page .customer-section-title-row h2 {
+  margin: 0;
+
+  color: #171b24;
+
+  font-size: 20px;
+  line-height: 1.2;
+  font-weight: 800;
+
+  letter-spacing: -0.3px;
+}
+
+body.customer-page .customer-see-all-button {
+  appearance: none;
+  -webkit-appearance: none;
+
+  display: inline-flex;
+  align-items: center;
+
+  gap: 5px;
+
+  flex: 0 0 auto;
+
+  margin: 0;
+  padding: 4px 0;
+
+  border: 0;
+
+  background: transparent;
+
+  color: #f4511e;
+
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 750;
+
+  box-shadow: none;
+
+  cursor: pointer;
+}
+
+
+/* Franja horizontal */
+
+body.customer-page .customer-category-scroll {
+  width: 100%;
+  max-width: 100%;
+
+  display: flex;
+  align-items: flex-start;
+
+  gap: 12px;
+
+  margin: 0;
+
+  padding:
+    2px
+    1px
+    8px;
+
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  scroll-snap-type: x proximity;
+
+  scrollbar-width: none;
+
+  overscroll-behavior-x: contain;
+
+  -webkit-overflow-scrolling: touch;
+}
+
+body.customer-page .customer-category-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+
+/* Boton individual */
+
+body.customer-page .customer-category-card {
+  appearance: none;
+  -webkit-appearance: none;
+
+  flex: 0 0 78px;
+
+  width: 78px;
+  min-width: 78px;
+  max-width: 78px;
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: flex-start;
+
+  gap: 7px;
+
+  margin: 0;
+  padding: 0;
+
+  border: 0;
+  border-radius: 0;
+
+  background: transparent;
+
+  color: #333943;
+
+  box-shadow: none;
+
+  cursor: pointer;
+
+  scroll-snap-align: start;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+
+/* Icono */
+
+body.customer-page .customer-category-icon {
+  width: 62px;
+  height: 62px;
+
+  min-width: 62px;
+  min-height: 62px;
+
+  display: grid;
+  place-items: center;
+
+  margin: 0;
+  padding: 0;
+
+  border: 1px solid #eff0f2;
+  border-radius: 18px;
+
+  background: #f6f7f8;
+
+  font-size: 27px;
+  line-height: 1;
+
+  box-shadow: none;
+
+  transition:
+    transform 0.16s ease,
+    background 0.16s ease,
+    border-color 0.16s ease;
+}
+
+
+/* Texto */
+
+body.customer-page .customer-category-name {
+  display: block;
+
+  width: 100%;
+
+  margin: 0;
+  padding: 0;
+
+  overflow: hidden;
+
+  color: inherit;
+
+  font-size: 11px;
+  line-height: 1.25;
+  font-weight: 650;
+
+  text-align: center;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+
+/* Seleccionada */
+
+body.customer-page .customer-category-card.active {
+  background: transparent;
+  color: #f4511e;
+}
+
+body.customer-page .customer-category-card.active .customer-category-icon {
+  background: #fff1ea;
+
+  border-color:
+    rgba(244, 81, 30, 0.18);
+}
+
+
+/* Hover solo donde exista raton */
+
+@media (hover: hover) {
+
+  body.customer-page
+  .customer-category-card:hover
+  .customer-category-icon {
+
+    transform: translateY(-2px);
+
+    background: #f1f2f4;
+  }
+
+}
+
+
+/* =========================================================
+   MOVIL PEQUENO
+   ========================================================= */
+
+@media (max-width: 380px) {
+
+  body.customer-page .customer-categories-section {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  body.customer-page .customer-category-scroll {
+    gap: 8px;
+  }
+
+  body.customer-page .customer-category-card {
+    flex-basis: 70px;
+
+    width: 70px;
+    min-width: 70px;
+    max-width: 70px;
+  }
+
+  body.customer-page .customer-category-icon {
+    width: 56px;
+    height: 56px;
+
+    min-width: 56px;
+    min-height: 56px;
+
+    border-radius: 16px;
+
+    font-size: 24px;
+  }
+
+  body.customer-page .customer-category-name {
+    font-size: 10px;
+  }
+
+}
+
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (min-width: 768px) {
+
+  body.customer-page .customer-categories-section {
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+
+  body.customer-page .customer-category-card {
+    flex-basis: 86px;
+
+    width: 86px;
+    min-width: 86px;
+    max-width: 86px;
+  }
+
+  body.customer-page .customer-category-icon {
+    width: 68px;
+    height: 68px;
+
+    min-width: 68px;
+    min-height: 68px;
+  }
+
+}
+
+
+/* =========================================================
+   ESCRITORIO
+   ========================================================= */
+
+@media (min-width: 1100px) {
+
+  body.customer-page .customer-categories-section {
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+
+}
+/* =========================================================
+   RC ORDERA CLIENTE
+   SCROLL NATIVO DEFINITIVO
+   Un solo scroll vertical: el documento
+   ========================================================= */
+
+/* El documento es el único encargado del scroll vertical */
+html {
+  width: 100%;
+  min-width: 320px;
+  min-height: 100%;
+
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+
+  overscroll-behavior-x: none;
+  overscroll-behavior-y: auto !important;
+
+  scroll-behavior: auto;
+}
+
+
+/* BODY NO debe convertirse en un segundo contenedor de scroll */
+body.customer-page {
+  width: 100%;
+  max-width: 100%;
+
+  min-height: 100vh;
+  height: auto !important;
+
+  margin: 0;
+
+  overflow-x: clip !important;
+  overflow-y: visible !important;
+
+  position: static !important;
+
+  overscroll-behavior-y: auto !important;
+
+  touch-action: auto;
+}
+
+
+/* Contenedor general */
+body.customer-page .customer-app-shell {
+  width: 100%;
+  max-width: 100%;
+
+  min-height: 100vh;
+  height: auto !important;
+
+  margin: 0;
+
+  overflow: visible !important;
+
+  padding-bottom:
+    calc(100px + env(safe-area-inset-bottom, 0px));
+}
+
+
+/* Cada pantalla debe crecer según su contenido */
+body.customer-page .customer-view {
+  width: 100%;
+  max-width: 100%;
+
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+
+  overflow: visible !important;
+
+  position: relative;
+}
+
+
+/* HOME */
+body.customer-page
+.customer-view[data-customer-view="home"] {
+  height: auto !important;
+  min-height: 0 !important;
+
+  overflow: visible !important;
+}
+
+
+/* RESTAURANTE */
+body.customer-page
+.customer-view[data-customer-view="store"] {
+  height: auto !important;
+  min-height: 0 !important;
+
+  overflow: visible !important;
+}
+
+
+/* PEDIDOS */
+body.customer-page
+.customer-view[data-customer-view="orders"] {
+  height: auto !important;
+  min-height: 0 !important;
+
+  overflow: visible !important;
+}
+
+
+/* RESERVAS */
+body.customer-page
+.customer-view[data-customer-view="reservations"] {
+  height: auto !important;
+  min-height: 0 !important;
+
+  overflow: visible !important;
+}
+
+
+/* CUENTA */
+body.customer-page
+.customer-view[data-customer-view="profile"] {
+  height: auto !important;
+  min-height: 0 !important;
+
+  overflow: visible !important;
+}
+
+
+/* Elementos internos que NO deben secuestrar el scroll */
+body.customer-page .customer-restaurant-panel,
+body.customer-page .customer-menu-layout,
+body.customer-page .customer-menu-panel,
+body.customer-page .customer-cart-panel {
+  max-height: none !important;
+}
+
+
+/* En móvil el carrito tampoco debe ser sticky */
+@media (max-width: 860px) {
+
+  body.customer-page .customer-cart-panel {
+    position: static !important;
+
+    top: auto !important;
+
+    height: auto !important;
+    max-height: none !important;
+
+    overflow: visible !important;
+  }
+
+}
+
+
+/* La barra de categorías conserva SOLO su scroll horizontal */
+body.customer-page .customer-category-scroll {
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+
+  touch-action: auto;
+
+  -webkit-overflow-scrolling: touch;
+}
+
+
+/* Deja espacio después del último contenido para que
+   la navegación inferior jamás lo tape */
+body.customer-page main.customer-app-shell::after {
+  content: "";
+
+  display: block;
+
+  width: 100%;
+  height: calc(24px + env(safe-area-inset-bottom, 0px));
+
+  pointer-events: none;
+}
+
+/* =========================================================
+   RC ORDERA CLIENTE
+   TARJETAS DE RESTAURANTES - VERSION DEFINITIVA
+   ========================================================= */
+
+
+/* =========================================================
+   CONTENEDOR DE RESTAURANTES
+   ========================================================= */
+
+body.customer-page .customer-restaurant-panel {
+  width: 100%;
+  max-width: 1280px;
+
+  margin: 0 auto;
+
+  padding:
+    18px
+    18px
+    calc(115px + env(safe-area-inset-bottom, 0px));
+
+  border: 0;
+  border-radius: 0;
+
+  background: #ffffff;
+
+  box-shadow: none;
+}
+
+
+/* =========================================================
+   TITULO
+   ========================================================= */
+
+body.customer-page .customer-restaurants-heading {
+  width: 100%;
+
+  margin: 0 0 16px;
+}
+
+body.customer-page .customer-restaurants-heading h2 {
+  margin: 0;
+
+  color: #171b24;
+
+  font-size: 21px;
+  line-height: 1.2;
+  font-weight: 800;
+
+  letter-spacing: -0.3px;
+}
+
+body.customer-page .customer-restaurants-heading p {
+  margin: 5px 0 0;
+
+  color: #7d838c;
+
+  font-size: 13px;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+
+/* =========================================================
+   LISTA
+   ========================================================= */
+
+body.customer-page .customer-restaurant-list {
+  width: 100%;
+  max-width: 100%;
+
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1fr);
+
+  gap: 18px;
+
+  margin: 0;
+  padding: 0;
+
+  overflow: visible;
+}
+
+
+/* =========================================================
+   TARJETA
+   ========================================================= */
+
+body.customer-page .customer-restaurant-card {
+  position: relative;
+
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+
+  display: block;
+
+  margin: 0;
+  padding: 0;
+
+  overflow: hidden;
+
+  border: 1px solid #eceef1;
+  border-radius: 20px;
+
+  background: #ffffff;
+
+  color: #171b24;
+
+  box-shadow:
+    0 4px 16px rgba(17, 24, 39, 0.06);
+
+  cursor: pointer;
+
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+
+/* El restaurante seleccionado no cambia
+   radicalmente de diseño */
+
+body.customer-page
+.customer-restaurant-card.is-selected {
+
+  border-color:
+    rgba(244, 81, 30, 0.28);
+
+  background: #ffffff;
+}
+
+
+/* =========================================================
+   PORTADA
+   ========================================================= */
+
+body.customer-page .customer-restaurant-cover {
+  position: relative;
+
+  width: 100%;
+
+  aspect-ratio: 16 / 8.5;
+
+  margin: 0;
+  padding: 0;
+
+  overflow: hidden;
+
+  background: #f3f4f6;
+}
+
+
+/* Imagen real */
+
+body.customer-page
+.customer-restaurant-cover-image {
+
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  margin: 0;
+
+  object-fit: cover;
+  object-position: center;
+
+  border: 0;
+  border-radius: 0;
+
+  background: #f3f4f6;
+}
+
+
+/* Si no hay foto */
+
+body.customer-page
+.customer-restaurant-cover-placeholder {
+
+  width: 100%;
+  height: 100%;
+
+  display: grid;
+
+  place-items: center;
+
+  margin: 0;
+
+  background:
+    linear-gradient(
+      135deg,
+      #fff1e9 0%,
+      #fff7f3 45%,
+      #f4f5f7 100%
+    );
+}
+
+body.customer-page
+.customer-restaurant-cover-placeholder span {
+
+  color: #f4511e;
+
+  font-size: 38px;
+  line-height: 1;
+  font-weight: 850;
+
+  letter-spacing: -1px;
+}
+
+
+/* =========================================================
+   CORAZON
+   ========================================================= */
+
+body.customer-page
+.customer-restaurant-heart {
+
+  position: absolute;
+
+  top: 12px;
+  right: 12px;
+
+  z-index: 3;
+
+  width: 39px;
+  height: 39px;
+
+  min-width: 39px;
+  min-height: 39px;
+
+  display: grid;
+  place-items: center;
+
+  margin: 0;
+  padding: 0;
+
+  border: 0;
+  border-radius: 50%;
+
+  background:
+    rgba(255, 255, 255, 0.96);
+
+  color: #20252d;
+
+  font-family: Arial, sans-serif;
+  font-size: 25px;
+  line-height: 1;
+
+  box-shadow:
+    0 3px 12px rgba(0, 0, 0, 0.13);
+
+  cursor: pointer;
+}
+
+
+/* =========================================================
+   ABIERTO / CERRADO
+   ========================================================= */
+
+body.customer-page
+.customer-restaurant-open-label {
+
+  position: absolute;
+
+  left: 12px;
+  bottom: 12px;
+
+  z-index: 2;
+
+  display: inline-flex;
+
+  align-items: center;
+  justify-content: center;
+
+  min-height: 27px;
+
+  padding: 5px 10px;
+
+  border-radius: 999px;
+
+  background:
+    rgba(255, 255, 255, 0.96);
+
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 800;
+
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.10);
+}
+
+
+/* Abierto */
+
+body.customer-page
+.customer-restaurant-open-label.is-open {
+
+  color: #168447;
+}
+
+
+/* Cerrado */
+
+body.customer-page
+.customer-restaurant-open-label.is-closed {
+
+  color: #cf3838;
+}
+
+
+/* =========================================================
+   INFORMACION
+   ========================================================= */
+
+body.customer-page
+.customer-restaurant-content {
+
+  width: 100%;
+
+  display: block;
+
+  margin: 0;
+
+  padding: 14px 15px 16px;
+
+  background: #ffffff;
+}
+
+
+/* =========================================================
+   NOMBRE
+   ========================================================= */
+
+body.customer-page
+.customer-restaurant-name-row {
+
+  width: 100%;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 10px;
+}
+
+body.customer-page
+.customer-restaurant-name {
+
+  display: block;
+
+  min-width: 0;
+
+  margin: 0;
+
+  overflow: hidden;
+
+  color: #171b24;
+
+  font-size: 17px;
+  line-height: 1.25;
+  font-weight: 800;
+
+  letter-spacing: -0.15px;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+
+/* =========================================================
+   DIRECCION
+   ========================================================= */
+
+body.customer-page
+.customer-restaurant-address {
+
+  display: block;
+
+  width: 100%;
+
+  margin: 5px 0 0;
+
+  overflow: hidden;
+
+  color: #7a818b;
+
+  font-size: 13px;
+  line-height: 1.35;
+  font-weight: 500;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+
+/* =========================================================
+   DATOS INFERIORES
+   ========================================================= */
+
+body.customer-page
+.customer-restaurant-meta {
+
+  width: 100%;
+
+  display: flex;
+
+  align-items: center;
+  flex-wrap: wrap;
+
+  gap: 5px;
+
+  margin: 9px 0 0;
+
+  color: #727984;
+
+  font-size: 12px;
+  line-height: 1.35;
+  font-weight: 550;
+}
+
+body.customer-page
+.customer-restaurant-meta span {
+
+  margin: 0;
+  padding: 0;
+
+  color: inherit;
+
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+
+/* =========================================================
+   INTERACCION
+   ========================================================= */
+
+@media (hover: hover) {
+
+  body.customer-page
+  .customer-restaurant-card:hover {
+
+    transform: translateY(-2px);
+
+    border-color: #e0e3e7;
+
+    box-shadow:
+      0 8px 22px rgba(17, 24, 39, 0.10);
+  }
+
+}
+
+
+/* =========================================================
+   MOVIL
+   ========================================================= */
+
+@media (max-width: 699px) {
+
+  body.customer-page
+  .customer-restaurant-panel {
+
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+
+  body.customer-page
+  .customer-restaurant-list {
+
+    grid-template-columns:
+      minmax(0, 1fr);
+
+    gap: 16px;
+  }
+
+
+  body.customer-page
+  .customer-restaurant-card {
+
+    border-radius: 18px;
+  }
+
+
+  body.customer-page
+  .customer-restaurant-cover {
+
+    aspect-ratio: 16 / 9;
+  }
+
+}
+
+
+/* =========================================================
+   TELEFONOS MUY PEQUENOS
+   ========================================================= */
+
+@media (max-width: 360px) {
+
+  body.customer-page
+  .customer-restaurant-panel {
+
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+
+  body.customer-page
+  .customer-restaurant-content {
+
+    padding:
+      12px
+      13px
+      14px;
+  }
+
+
+  body.customer-page
+  .customer-restaurant-name {
+
+    font-size: 16px;
+  }
+
+}
+
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (min-width: 700px)
+and (max-width: 1099px) {
+
+  body.customer-page
+  .customer-restaurant-panel {
+
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+
+
+  body.customer-page
+  .customer-restaurant-list {
+
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(0, 1fr)
+      );
+  }
+
+}
+
+
+/* =========================================================
+   ESCRITORIO
+   ========================================================= */
+
+@media (min-width: 1100px) {
+
+  body.customer-page
+  .customer-restaurant-panel {
+
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+
+
+  body.customer-page
+  .customer-restaurant-list {
+
+    grid-template-columns:
+      repeat(
+        3,
+        minmax(0, 1fr)
+      );
+
+    gap: 20px;
+  }
+
+
+  body.customer-page
+  .customer-restaurant-cover {
+
+    aspect-ratio: 16 / 9;
+  }
+
+}
+
+/* =========================================================
+   RC ORDERA CLIENTE
+   VER TODAS LAS CATEGORIAS
+   ========================================================= */
+
+body.customer-page
+.customer-category-scroll.is-expanded {
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(auto-fill, minmax(72px, 1fr));
+
+  gap: 18px 10px;
+
+  width: 100%;
+
+  overflow: visible;
+
+  padding-bottom: 12px;
+
+  scroll-snap-type: none;
+}
+
+
+body.customer-page
+.customer-category-scroll.is-expanded
+.customer-category-card {
+
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+
+  flex: none;
+
+  justify-self: center;
+
+  scroll-snap-align: unset;
+}
+
+
+body.customer-page
+.customer-see-all-button {
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+
+body.customer-page
+.customer-see-all-button:active {
+
+  opacity: 0.65;
+}
+
+
+/* Móvil */
+
+@media (max-width: 480px) {
+
+  body.customer-page
+  .customer-category-scroll.is-expanded {
+
+    grid-template-columns:
+      repeat(4, minmax(0, 1fr));
+
+    gap: 16px 6px;
+  }
+
+}
+
+
+/* Teléfonos pequeños */
+
+@media (max-width: 360px) {
+
+  body.customer-page
+  .customer-category-scroll.is-expanded {
+
+    grid-template-columns:
+      repeat(4, minmax(0, 1fr));
+
+    gap: 14px 4px;
+  }
+
+}
+
+
+/* Tablet */
+
+@media (min-width: 700px) {
+
+  body.customer-page
+  .customer-category-scroll.is-expanded {
+
+    grid-template-columns:
+      repeat(auto-fill, minmax(84px, 1fr));
+  }
+
+}
+/* =========================================================
+   RC ORDERA CLIENTE
+   RESTAURANTES HORIZONTALES EN MOVIL
+   ========================================================= */
+
+
+/* MOVIL Y TABLET */
+
+@media (max-width: 1099px) {
+
+  body.customer-page
+  .customer-restaurant-list {
+
+    display: flex !important;
+
+    width: 100%;
+    max-width: 100%;
+
+    gap: 14px;
+
+    margin: 0;
+
+    padding:
+      2px
+      2px
+      12px;
+
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+
+    scroll-snap-type: x mandatory;
+
+    scrollbar-width: none;
+
+    overscroll-behavior-x: contain;
+
+    -webkit-overflow-scrolling: touch;
+  }
+
+
+  body.customer-page
+  .customer-restaurant-list::-webkit-scrollbar {
+
+    display: none;
+
+  }
+
+
+  body.customer-page
+  .customer-restaurant-card {
+
+    flex:
+      0
+      0
+      min(84vw, 360px);
+
+    width:
+      min(84vw, 360px);
+
+    min-width:
+      min(84vw, 360px);
+
+    max-width:
+      min(84vw, 360px);
+
+    scroll-snap-align: start;
+
+    scroll-snap-stop: normal;
+  }
+
+}
+
+
+/* =========================================================
+   TELEFONOS MUY PEQUENOS
+   ========================================================= */
+
+@media (max-width: 360px) {
+
+  body.customer-page
+  .customer-restaurant-card {
+
+    flex-basis: 86vw;
+
+    width: 86vw;
+    min-width: 86vw;
+    max-width: 86vw;
+  }
+
+}
+
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (min-width: 700px)
+and (max-width: 1099px) {
+
+  body.customer-page
+  .customer-restaurant-card {
+
+    flex-basis: 390px;
+
+    width: 390px;
+    min-width: 390px;
+    max-width: 390px;
+  }
+
+}
+
+
+/* =========================================================
+   PC
+   ========================================================= */
+
+@media (min-width: 1100px) {
+
+  body.customer-page
+  .customer-restaurant-list {
+
+    display: grid !important;
+
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+
+    gap: 20px;
+
+    overflow: visible !important;
+
+    padding-bottom: 0;
+  }
+
+
+  body.customer-page
+  .customer-restaurant-card {
+
+    width: 100%;
+
+    min-width: 0;
+    max-width: 100%;
+
+    flex: none;
+  }
+
+}
+/* =========================================================
+   RC ORDERA
+   SISTEMA DE SCROLL GLOBAL DEFINITIVO
+   Restaurante + Cliente + Colaborador + Admin + Mesero
+   ========================================================= */
+
+
+/* =========================================================
+   DOCUMENTO
+   Un único scroll vertical principal
+   ========================================================= */
+
+html {
+  width: 100% !important;
+  max-width: 100% !important;
+
+  min-height: 100% !important;
+  height: auto !important;
+
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+
+  overscroll-behavior-x: none !important;
+  overscroll-behavior-y: auto !important;
+
+  scroll-behavior: auto;
+
+  -webkit-text-size-adjust: 100%;
+}
+
+
+/* =========================================================
+   BODY GENERAL
+   El BODY crece; no crea un segundo scroll
+   ========================================================= */
+
+body {
+  width: 100% !important;
+  max-width: 100% !important;
+
+  min-height: 100vh !important;
+  height: auto !important;
+
+  margin: 0;
+
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
+
+  overscroll-behavior-y: auto !important;
+
+  touch-action: auto;
+}
+
+
+/* =========================================================
+   RESTAURANTE
+   ========================================================= */
+
+body:not(.customer-page):not(.waiter-page)
+.app-shell {
+
+  width: min(1500px, calc(100% - 32px));
+
+  min-height: 100vh;
+  height: auto !important;
+  max-height: none !important;
+
+  overflow: visible !important;
+}
+
+
+/* Ningún contenedor principal del restaurante
+   debe bloquear el documento */
+
+body:not(.customer-page):not(.waiter-page)
+main,
+
+body:not(.customer-page):not(.waiter-page)
+.app-shell {
+
+  height: auto !important;
+  max-height: none !important;
+}
+
+
+/* =========================================================
+   CLIENTE
+   ========================================================= */
+
+body.customer-page.customer-app-page {
+
+  min-height: 100vh !important;
+  height: auto !important;
+
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
+
+  overscroll-behavior-y: auto !important;
+}
+
+
+body.customer-page.customer-app-page
+.customer-app-shell {
+
+  min-height: 100vh !important;
+  height: auto !important;
+
+  max-height: none !important;
+
+  overflow: visible !important;
+}
+
+
+body.customer-page.customer-app-page
+.customer-view {
+
+  height: auto !important;
+
+  min-height: 0 !important;
+  max-height: none !important;
+
+  overflow: visible !important;
+}
+
+
+/* =========================================================
+   COLABORADOR
+   ========================================================= */
+
+body.collaborator-page {
+
+  min-height: 100vh !important;
+  height: auto !important;
+
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
+
+  overscroll-behavior-y: auto !important;
+}
+
+
+body.collaborator-page
+.collaborator-app-shell {
+
+  min-height: 100vh !important;
+  height: auto !important;
+
+  max-height: none !important;
+
+  overflow: visible !important;
+}
+
+
+/* =========================================================
+   ADMIN
+   ========================================================= */
+
+body.platform-admin-page {
+
+  min-height: 100vh !important;
+  height: auto !important;
+
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
+
+  overscroll-behavior-y: auto !important;
+}
+
+
+/* =========================================================
+   MESERO
+   ========================================================= */
+
+body.waiter-page {
+
+  min-height: 100vh !important;
+  height: auto !important;
+
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
+
+  overscroll-behavior-y: auto !important;
+}
+
+
+body.waiter-page
+.waiter-shell,
+
+body.waiter-page
+.waiter-app {
+
+  height: auto !important;
+
+  max-height: none !important;
+
+  overflow: visible !important;
+}
+
+
+/* =========================================================
+   CONTENEDORES INTERNOS CON SCROLL
+   Sí pueden desplazarse, pero NO deben encerrar
+   el scroll de toda la aplicación
+   ========================================================= */
+
+.auth-screen,
+.auth-card,
+.auth-dialog,
+.history-list,
+.customer-chat-messages {
+
+  overscroll-behavior-y: auto !important;
+
+  -webkit-overflow-scrolling: touch;
+}
+
+
+/* =========================================================
+   CARRITO CLIENTE
+   En móvil jamás captura el scroll
+   ========================================================= */
+
+@media (max-width: 860px) {
+
+  body.customer-page
+  .customer-cart-panel {
+
+    position: static !important;
+
+    top: auto !important;
+
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    overflow: visible !important;
+  }
+
+}
+
+
+/* =========================================================
+   SCROLL HORIZONTAL INTENCIONAL
+   Estas zonas SÍ pueden desplazarse lateralmente
+   sin bloquear el movimiento vertical de la página
+   ========================================================= */
+
+body.customer-page
+.customer-category-scroll,
+
+body.customer-page
+.customer-restaurant-list {
+
+  overscroll-behavior-x: contain;
+
+  -webkit-overflow-scrolling: touch;
+
+  touch-action: pan-x pan-y;
+}
+
+
+/* =========================================================
+   MODALES Y DIALOGOS
+   Deben poder desplazarse internamente si son altos
+   ========================================================= */
+
+dialog[open],
+.auth-screen:not([hidden]) {
+
+  overscroll-behavior: contain;
+}
+
+
+/* =========================================================
+   PROTECCION CONTRA DESBORDAMIENTO
+   ========================================================= */
+
+body *,
+body *::before,
+body *::after {
+
+  box-sizing: border-box;
+}
+
+
+img,
+video,
+canvas {
+
+  max-width: 100%;
+}
+
+
+/* =========================================================
+   SOPORTE MOVIL MODERNO
+   ========================================================= */
+
+@supports (min-height: 100dvh) {
+
+  body {
+    min-height: 100dvh !important;
+  }
+
+}
+
+
+/* =========================================================
+   ESPACIO INFERIOR PARA NAVEGACIONES FIJAS
+   ========================================================= */
+
+body.customer-app-page,
+body.collaborator-app-page,
+body.platform-admin-page {
+
+  padding-bottom:
+    env(safe-area-inset-bottom, 0px);
+}
+/* =========================================================
+   RC ORDERA CLIENTE
+   AJUSTE FINAL ESPACIO SUPERIOR HOME
+   ========================================================= */
+
+body.customer-page
+.customer-view[data-customer-view="home"]
+.customer-home-intro {
+ padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+/* =========================================================
+   PC / TABLET
+   ========================================================= */
+
+@media (min-width: 900px) {
+
+  body.collaborator-page
+  .courier-delivery-map {
+
+    height: 390px;
+  }
+
+}
+/* =========================================================
+   RC ORDERA
+   MAPA DOMICILIARIO
+   ========================================================= */
+
+body.collaborator-page
+.courier-map-panel {
+  width: 100%;
+
+  margin: 16px 0;
+
+  padding: 12px;
+
+  border: 1px solid #e9ebef;
+  border-radius: 20px;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 6px 22px rgba(17, 24, 39, 0.07);
+
+  overflow: hidden;
+}
+
+
+body.collaborator-page
+.courier-map-head {
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+
+  margin-bottom: 10px;
+}
+
+
+body.collaborator-page
+.courier-map-head > div {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 2px;
+}
+
+
+body.collaborator-page
+.courier-map-head span {
+  color: #8a9099;
+
+  font-size: 11px;
+  font-weight: 700;
+
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+
+body.collaborator-page
+.courier-map-head strong {
+  color: #181c23;
+
+  font-size: 16px;
+  line-height: 1.2;
+  font-weight: 800;
+}
+
+
+body.collaborator-page
+.courier-delivery-map {
+  display: block;
+
+  width: 100%;
+
+  height: 330px;
+  min-height: 330px;
+
+  border-radius: 16px;
+
+  background: #eef1f4;
+
+  overflow: hidden;
+}
+
+
+body.collaborator-page
+.courier-map-status {
+  margin: 9px 2px 0;
+
+  color: #7b818a;
+
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+
+@media (max-width: 600px) {
+
+  body.collaborator-page
+  .courier-map-panel {
+    margin-top: 12px;
+
+    padding: 9px;
+
+    border-radius: 16px;
+  }
+
+
+  body.collaborator-page
+  .courier-delivery-map {
+    height: 280px;
+    min-height: 280px;
+
+    border-radius: 13px;
+  }
+
+}
+
+
+@media (min-width: 900px) {
+
+  body.collaborator-page
+  .courier-delivery-map {
+    height: 390px;
+    min-height: 390px;
+  }
+
+}
+/* =========================================================
+   RC ORDERA
+   MESERO - TARJETAS DE PRODUCTOS
+   BLOQUE FINAL AISLADO
+   ========================================================= */
+
+body.waiter-page
+.waiter-product-card {
+  display: grid !important;
+
+  grid-template-columns:
+    82px minmax(0, 1fr) !important;
+
+  gap: 12px !important;
+
+  width: 100% !important;
+
+  margin: 0 !important;
+  padding: 10px !important;
+
+  border: 1px solid #e4e7ec !important;
+  border-radius: 16px !important;
+
+  background: #ffffff !important;
+
+  color: #18212f !important;
+
+  cursor: pointer !important;
+
+  overflow: hidden !important;
+
+  box-shadow:
+    0 2px 8px rgba(17, 24, 39, 0.04) !important;
+
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    border-color 120ms ease !important;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+
+body.waiter-page
+.waiter-product-card:hover {
+  border-color: #cfd5dd !important;
+
+  box-shadow:
+    0 5px 16px rgba(17, 24, 39, 0.08) !important;
+}
+
+
+body.waiter-page
+.waiter-product-card:active {
+  transform: scale(0.985) !important;
+}
+
+
+body.waiter-page
+.waiter-product-card:focus-visible {
+  outline: 3px solid rgba(31, 143, 77, 0.22) !important;
+  outline-offset: 2px !important;
+}
+
+
+body.waiter-page
+.waiter-product-card.is-unavailable {
+  opacity: 0.55 !important;
+
+  cursor: not-allowed !important;
+}
+
+
+/* =========================================================
+   IMAGEN
+   ========================================================= */
+
+body.waiter-page
+.waiter-product-image {
+  width: 82px !important;
+  height: 82px !important;
+
+  min-width: 82px !important;
+  min-height: 82px !important;
+
+  overflow: hidden !important;
+
+  border-radius: 13px !important;
+
+  background: #f2f4f7 !important;
+}
+
+
+body.waiter-page
+.waiter-product-image img {
+  display: block !important;
+
+  width: 100% !important;
+  height: 100% !important;
+
+  object-fit: cover !important;
+}
+
+
+body.waiter-page
+.waiter-product-placeholder {
+  width: 100% !important;
+  height: 100% !important;
+
+  display: grid !important;
+  place-items: center !important;
+
+  font-size: 28px !important;
+}
+
+
+/* =========================================================
+   INFORMACION
+   ========================================================= */
+
+body.waiter-page
+.waiter-product-info {
+  min-width: 0 !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+
+  gap: 5px !important;
+}
+
+
+body.waiter-page
+.waiter-product-name {
+  display: block !important;
+
+  margin: 0 !important;
+
+  color: #18212f !important;
+
+  font-size: 15px !important;
+  line-height: 1.25 !important;
+  font-weight: 800 !important;
+
+  overflow-wrap: anywhere !important;
+}
+
+
+body.waiter-page
+.waiter-product-description {
+  display: -webkit-box !important;
+
+  margin: 0 !important;
+
+  color: #7a8290 !important;
+
+  font-size: 12px !important;
+  line-height: 1.35 !important;
+
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+
+  overflow: hidden !important;
+}
+
+
+/* =========================================================
+   PRECIO + BOTON
+   ========================================================= */
+
+body.waiter-page
+.waiter-product-bottom {
+  display: flex !important;
+
+  align-items: center !important;
+  justify-content: space-between !important;
+
+  gap: 10px !important;
+
+  margin-top: auto !important;
+}
+
+
+body.waiter-page
+.waiter-product-price {
+  color: #1f8f4d !important;
+
+  font-size: 14px !important;
+  line-height: 1.2 !important;
+  font-weight: 900 !important;
+}
+
+
+body.waiter-page
+.waiter-add-product-button {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+
+  flex: 0 0 38px !important;
+
+  width: 38px !important;
+  height: 38px !important;
+
+  min-width: 38px !important;
+  min-height: 38px !important;
+
+  max-width: 38px !important;
+  max-height: 38px !important;
+
+  display: grid !important;
+  place-items: center !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  border: 0 !important;
+  border-radius: 50% !important;
+
+  background: #1f8f4d !important;
+
+  color: #ffffff !important;
+
+  font-size: 25px !important;
+  line-height: 1 !important;
+  font-weight: 700 !important;
+
+  cursor: pointer !important;
+
+  box-shadow:
+    0 3px 9px rgba(31, 143, 77, 0.2) !important;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+
+body.waiter-page
+.waiter-add-product-button:hover {
+  filter: brightness(0.96);
+}
+
+
+body.waiter-page
+.waiter-add-product-button:active {
+  transform: scale(0.92) !important;
+}
+
+
+body.waiter-page
+.waiter-add-product-button:disabled {
+  background: #d0d5dd !important;
+
+  color: #ffffff !important;
+
+  cursor: not-allowed !important;
+
+  box-shadow: none !important;
+}
+
+
+/* =========================================================
+   CARRITO / PEDIDO
+   ========================================================= */
+
+body.waiter-page
+.waiter-cart-item {
+  display: grid !important;
+
+  gap: 12px !important;
+
+  width: 100% !important;
+
+  padding: 14px !important;
+
+  border: 1px solid #e4e7ec !important;
+  border-radius: 16px !important;
+
+  background: #ffffff !important;
+
+  box-shadow:
+    0 3px 12px rgba(17, 24, 39, 0.05) !important;
+}
+
+
+body.waiter-page
+.waiter-cart-item-head {
+  display: flex !important;
+
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+
+  gap: 12px !important;
+}
+
+
+body.waiter-page
+.waiter-cart-item-head > div {
+  min-width: 0 !important;
+
+  display: grid !important;
+
+  gap: 3px !important;
+}
+
+
+body.waiter-page
+.waiter-cart-item-head strong {
+  color: #18212f !important;
+
+  font-weight: 800 !important;
+}
+
+
+body.waiter-page
+.waiter-cart-item-head small {
+  color: #7a8290 !important;
+
+  font-size: 12px !important;
+}
+
+
+body.waiter-page
+.waiter-cart-subtotal {
+  flex: 0 0 auto !important;
+
+  color: #1f8f4d !important;
+
+  font-weight: 900 !important;
+}
+
+
+/* =========================================================
+   CANTIDAD
+   ========================================================= */
+
+body.waiter-page
+.waiter-quantity {
+  display: flex !important;
+
+  align-items: center !important;
+
+  gap: 8px !important;
+
+  flex-wrap: wrap !important;
+}
+
+
+body.waiter-page
+.waiter-quantity button {
+  min-width: 38px !important;
+  min-height: 38px !important;
+
+  padding: 0 10px !important;
+
+  border: 1px solid #dfe3e8 !important;
+  border-radius: 10px !important;
+
+  background: #f8fafc !important;
+
+  color: #18212f !important;
+
+  font-weight: 800 !important;
+}
+
+
+body.waiter-page
+.waiter-quantity > strong {
+  min-width: 34px !important;
+
+  text-align: center !important;
+
+  color: #18212f !important;
+}
+
+
+body.waiter-page
+.waiter-remove-product {
+  margin-left: auto !important;
+
+  border-color: rgba(199, 57, 47, 0.25) !important;
+
+  background: #fff7f7 !important;
+
+  color: #c7392f !important;
+}
+
+
+/* =========================================================
+   NOTA POR PLATO
+   ========================================================= */
+
+body.waiter-page
+.waiter-item-note-label {
+  display: grid !important;
+
+  gap: 6px !important;
+
+  width: 100% !important;
+
+  color: #667085 !important;
+
+  font-size: 12px !important;
+  font-weight: 800 !important;
+}
+
+
+body.waiter-page
+.waiter-item-note-label textarea {
+  display: block !important;
+
+  width: 100% !important;
+
+  min-height: 72px !important;
+
+  resize: vertical !important;
+
+  padding: 10px 12px !important;
+
+  border: 1px solid #d7dde8 !important;
+  border-radius: 12px !important;
+
+  background: #ffffff !important;
+
+  color: #18212f !important;
+
+  font: inherit !important;
+  font-size: 13px !important;
+  line-height: 1.35 !important;
+
+  text-transform: uppercase !important;
+
+  outline: none !important;
+}
+
+
+body.waiter-page
+.waiter-item-note-label textarea:focus {
+  border-color: #1f8f4d !important;
+
+  box-shadow:
+    0 0 0 3px rgba(31, 143, 77, 0.12) !important;
+}
+
+
+/* =========================================================
+   MOVIL
+   ========================================================= */
+
+@media (max-width: 560px) {
+
+  body.waiter-page
+  .waiter-product-card {
+    grid-template-columns:
+      72px minmax(0, 1fr) !important;
+
+    gap: 10px !important;
+
+    padding: 9px !important;
+
+    border-radius: 14px !important;
+  }
+
+
+  body.waiter-page
+  .waiter-product-image {
+    width: 72px !important;
+    height: 72px !important;
+
+    min-width: 72px !important;
+    min-height: 72px !important;
+  }
+
+
+  body.waiter-page
+  .waiter-product-name {
+    font-size: 14px !important;
+  }
+
+
+  body.waiter-page
+  .waiter-add-product-button {
+    flex-basis: 36px !important;
+
+    width: 36px !important;
+    height: 36px !important;
+
+    min-width: 36px !important;
+    min-height: 36px !important;
+
+    max-width: 36px !important;
+    max-height: 36px !important;
+  }
+
+
+  body.waiter-page
+  .waiter-cart-item {
+    padding: 12px !important;
+
+    border-radius: 14px !important;
+  }
+
+
+  body.waiter-page
+  .waiter-remove-product {
+    margin-left: 0 !important;
+  }
+
+}
