@@ -3431,6 +3431,121 @@ body.auth-checking > :not(script) {
   color: #102038;
 }
 
+.waiter-shift-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 auto 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--green);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.waiter-shift-bar[hidden] {
+  display: none;
+}
+
+.waiter-shift-bar div {
+  display: grid;
+  gap: 3px;
+}
+
+.waiter-shift-bar span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.waiter-shift-bar button,
+.waiter-panel-actions button {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--dark);
+  font-weight: 900;
+}
+
+.waiter-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.waiter-daily-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.waiter-daily-summary > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.waiter-daily-summary span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.waiter-monthly-control {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffaf7;
+}
+
+.waiter-monthly-control > label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-weight: 800;
+}
+
+.waiter-monthly-control input {
+  width: min(190px, 100%);
+}
+
+.waiter-monthly-control .waiter-daily-summary {
+  margin-bottom: 0;
+}
+
+@media (max-width: 640px) {
+  .waiter-shift-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .waiter-daily-summary {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .waiter-monthly-control > label {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .waiter-monthly-control input {
+    width: 100%;
+  }
+}
+
 .waiter-topbar {
   position: sticky;
   top: 0;
@@ -3980,6 +4095,345 @@ body.auth-checking > :not(script) {
 
   .waiter-menu-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* =========================================================
+   RC ORDERA V85 - RESUMEN OPERATIVO Y PAGOS MARKETPLACE
+   ========================================================= */
+
+.restaurant-dashboard-summary {
+  display: grid;
+  gap: 18px;
+  margin: 0 22px 24px;
+  padding: 20px;
+  border: 1px solid #e4e8ef;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(18, 32, 56, 0.07);
+}
+
+.restaurant-dashboard-heading,
+.restaurant-module-nav,
+.marketplace-account-control,
+.employee-hours-row,
+.courier-payout-panel .customer-account-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.restaurant-dashboard-heading h2,
+.restaurant-dashboard-heading p,
+.marketplace-account-control strong,
+.marketplace-account-control span,
+.employee-hours-panel h3,
+.employee-hours-panel p {
+  margin: 0;
+}
+
+.restaurant-dashboard-heading > span {
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.restaurant-dashboard-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.restaurant-dashboard-metrics button {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  min-height: 104px;
+  padding: 16px;
+  border: 1px solid #e7eaf0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.restaurant-dashboard-metrics button:first-child {
+  border-top: 4px solid #ff4b00;
+}
+
+.restaurant-dashboard-metrics button:nth-child(2) {
+  border-top: 4px solid var(--gold);
+}
+
+.restaurant-dashboard-metrics button:nth-child(3) {
+  border-top: 4px solid #6f4ad7;
+}
+
+.restaurant-dashboard-metrics button:nth-child(4) {
+  border-top: 4px solid var(--green);
+}
+
+.restaurant-dashboard-metrics button:last-child {
+  border-top: 4px solid var(--blue);
+}
+
+.restaurant-dashboard-metrics button:hover,
+.restaurant-dashboard-metrics button:focus-visible {
+  border-color: #ff4b00;
+  box-shadow: 0 6px 18px rgba(255, 75, 0, 0.1);
+  outline: none;
+}
+
+.restaurant-dashboard-metrics span {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.restaurant-dashboard-metrics strong {
+  min-width: 0;
+  color: #102038;
+  font-size: clamp(1.45rem, 2.2vw, 2rem);
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+.restaurant-module-nav {
+  justify-content: center;
+  border-top: 1px solid #edf0f4;
+  padding-top: 14px;
+}
+
+.restaurant-module-nav button {
+  min-width: 112px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.restaurant-module-nav button[aria-current="page"],
+.restaurant-module-nav button:hover,
+.restaurant-module-nav button:focus-visible {
+  border-bottom-color: #ff4b00;
+  color: #ff4b00;
+  outline: none;
+}
+
+.marketplace-account-control {
+  min-height: 72px;
+  padding: 12px 14px;
+  border: 1px solid #dfe4ec;
+  border-left: 4px solid #ff4b00;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.marketplace-account-control > div {
+  display: grid;
+  gap: 4px;
+}
+
+.marketplace-account-control span,
+.courier-payout-panel p {
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 750;
+}
+
+.marketplace-account-control span[data-state="complete"],
+.courier-payout-panel .courier-status-badge[data-state="complete"] {
+  color: var(--green);
+}
+
+.marketplace-account-control span[data-state="pending"] {
+  color: #9a6200;
+}
+
+.marketplace-account-control button,
+.courier-payout-panel > button,
+.customer-confirm-delivery-button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: #ff4b00;
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.employee-hours-panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid #e3e7ed;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.employee-hours-list {
+  display: grid;
+  gap: 8px;
+}
+
+.employee-hours-row {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #e2e6ed;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.employee-hours-row > div {
+  min-width: 0;
+}
+
+.employee-hours-row > div > strong,
+.employee-hours-row > div > small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.employee-hours-row > div > small,
+.employee-hours-row span small {
+  color: var(--muted);
+}
+
+.employee-hours-row > span {
+  display: grid;
+  gap: 2px;
+  min-width: 82px;
+  text-align: right;
+}
+
+.courier-payout-panel {
+  border-left: 4px solid #ff4b00;
+}
+
+.courier-payout-panel .courier-status-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #f0f2f5;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.customer-confirm-delivery-button {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.waiter-language-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.waiter-language-select select {
+  width: auto;
+  min-width: 96px;
+  min-height: 38px;
+  padding: 0 8px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
+  background: #ffffff;
+  color: #102038;
+  font-weight: 850;
+}
+
+@media (max-width: 980px) {
+  .restaurant-dashboard-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .restaurant-module-nav {
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .restaurant-dashboard-summary {
+    gap: 14px;
+    margin: 0 12px 16px;
+    padding: 14px;
+  }
+
+  .restaurant-dashboard-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .restaurant-dashboard-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .restaurant-dashboard-metrics button {
+    min-height: 88px;
+    padding: 12px;
+  }
+
+  .restaurant-dashboard-metrics button:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .marketplace-account-control,
+  .employee-hours-row,
+  .courier-payout-panel .customer-account-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .marketplace-account-control button,
+  .employee-hours-row > span {
+    width: 100%;
+    text-align: left;
+  }
+
+  .waiter-topbar,
+  .waiter-session-actions {
+    align-items: stretch;
+  }
+
+  .waiter-session-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .waiter-language-select > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+
+  .waiter-language-select select {
+    min-width: 88px;
+  }
+}
+
+@media (max-width: 340px) {
+  .restaurant-dashboard-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .restaurant-dashboard-metrics button:last-child {
+    grid-column: auto;
   }
 }
 

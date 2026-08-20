@@ -1,10 +1,54 @@
-# RC ORDERA
+# RC ORDERA V85
 
-Plataforma PWA para clientes, restaurantes, personal, colaboradores y administracion.
+RC ORDERA es una plataforma multi-restaurante para clientes, restaurantes,
+personal, estaciones de preparacion, colaboradores de entrega y administracion.
+La misma aplicacion soporta Polonia y Colombia con configuracion separada por
+restaurante.
 
-La entrega actual es **V84.1**, una candidata para despliegue controlado construida
-de forma incremental sobre V84.
+## Modulos
 
-Consulta `ENTREGA-RC-ORDERA-V84.1.md` para el orden exacto de preflight, migracion,
-Supabase, Edge Functions, Vercel, pruebas reales, limitaciones y rollback. El resultado
-local esta documentado en `REPORTE-AUDITORIA-Y-VALIDACION-V84.1.md`.
+- `index.html`: restaurante, caja, pedidos, menu, personal, estaciones y cierres.
+- `cliente.html`: restaurantes, menu, carrito, seguimiento y pagos.
+- `mesero.html`: toma de pedidos, estaciones, jornada y cierres del mesero.
+- `colaborador.html`: disponibilidad, ofertas, entregas, ubicacion y ganancias.
+- `admin.html`: administracion protegida de la plataforma.
+- Supabase: autenticacion, RLS, Realtime, RPC, Storage y Edge Functions.
+- PWA: instalacion web y funcionamiento con conexion inestable.
+- Android: proyecto preparado para Capacitor 8 mediante `package.json`.
+
+## V85
+
+- Protege un menu valido frente a sobrescrituras vacias y crea respaldos.
+- Agrega estaciones: cocina, parrilla, bebidas, comidas rapidas, entradas,
+  ensaladas, empaque, despacho, caja, mesero y administracion.
+- Agrega registro de jornada y reportes semanales/mensuales de personal.
+- Agrega cierres internos diarios, mensuales y anuales del restaurante.
+- Agrega cierre diario y mensual del mesero sin borrar el historial contable.
+- Prepara pagos reales en Polonia con Stripe Connect: 5% al restaurante y 0.1%
+  al colaborador. Los fondos se liberan solamente bajo las reglas documentadas.
+- Mantiene Colombia desactivada para pagos divididos hasta contratar un proveedor
+  que autorice legal y tecnicamente el reparto de fondos requerido.
+
+## Inicio seguro
+
+1. Conserva una copia del proyecto y de la base de datos.
+2. Ejecuta las migraciones indicadas en `MIGRACIONES-V85.md`.
+3. Ejecuta `VALIDACION-V85.sql` y confirma que no produce excepciones.
+4. Configura y despliega las Edge Functions de pagos.
+5. Ejecuta `npm run qa`.
+6. Despliega los archivos publicos en Vercel.
+7. Completa las pruebas reales de `REPORTE-VALIDACION-V85.md`.
+
+No habilites pagos reales solo por haber desplegado el codigo. Antes se requieren
+credenciales live, webhook firmado, cuentas Connect verificadas, conciliacion,
+pruebas de reembolso y aprobacion operativa/legal.
+
+Documentos principales:
+
+- `AUDITORIA-V85-PREPRODUCCION.md`
+- `MIGRACIONES-V85.md`
+- `GUIA-DESPLIEGUE-V85.md`
+- `PAGOS-MARKETPLACE-V85.md`
+- `ANDROID-V85.md`
+- `REPORTE-VALIDACION-V85.md`
+- `ROLLBACK-V85.md`
