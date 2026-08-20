@@ -1,5 +1,5 @@
 const COURIER_VAPID_PUBLIC_KEY = "BJzCszQo4HrAtXYFQBkA_HSiqTjSqPGIa-InDIqgYc1Bqcq3V2Cj4lAuN-HcV0fO1Z95EPNx-qhJU85Rl4nxJxE";
-const COURIER_APP_VERSION = "v84.1";
+const COURIER_APP_VERSION = "v85";
 const courierParams = new URLSearchParams(window.location.search);
 const COURIER_PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 const COURIER_DOCUMENT_BUCKET = "courier-documents";
@@ -90,6 +90,9 @@ const courierElements = {
   termsInput: document.querySelector("#courierTermsInput"),
   saveProfileButton: document.querySelector("#courierSaveProfileButton"),
   profileMessage: document.querySelector("#courierProfileMessage"),
+  payoutPanel: document.querySelector("#courierPayoutPanel"),
+  payoutStatus: document.querySelector("#courierPayoutStatus"),
+  payoutButton: document.querySelector("#courierPayoutButton"),
   dashboard: document.querySelector("#courierDashboard"),
   dashboardText: document.querySelector("#courierDashboardText"),
   availabilityButton: document.querySelector("#courierAvailabilityButton"),
@@ -103,6 +106,7 @@ const courierElements = {
   deliveredButton: document.querySelector("#courierDeliveredButton"),
   locationMessage: document.querySelector("#courierLocationMessage"),
   headerStatus: document.querySelector("#courierHeaderStatus"),
+  dashboardStatus: document.querySelector("#courierDashboardStatus"),
   homeSignedOut: document.querySelector("#courierHomeSignedOut"),
   activeDeliveryCard: document.querySelector("#courierActiveDeliveryCard"),
   deliveryMap: document.querySelector("#courierDeliveryMap"),
@@ -431,6 +435,7 @@ let courierRegistrationRegion = courierDetectedRegion();
 let courierGoogleMapsScriptPromise = null;
 let courierCityAutocomplete = null;
 let courierDeliveryMap = null;
+let courierPayoutState = null;
 
 let courierMapCourierMarker = null;
 let courierMapRestaurantMarker = null;
@@ -1692,9 +1697,22 @@ function courierStartDeliveryRealtime() {
     .subscribe();
 }
 
+async function courierConfirmDeliveryPayment(assignment) {
+  if (!assignment?.customer_order_id || !courierClient) return false;
+  const { data, error } = await courierClient.functions.invoke("marketplace-confirm-delivery", {
+    body: { orderId: assignment.customer_order_id, publicToken: "", actor: "courier" },
+  });
+  if (error) {
+    courierLogError("confirm_delivery_payment", error, { assignmentId: assignment.assignment_id });
+    return false;
+  }
+  return data?.courierConfirmed === true;
+}
+
 async function courierUpdateAssignmentStatus(assignmentId, status) {
   const client = courierEnsureClient();
   if (!client || !courierUser) return;
+  const currentAssignment = courierAssignments.find((assignment) => assignment.assignment_id === assignmentId) || null;
   courierSetMessage(courierElements.locationMessage, "Actualizando entrega...");
   const { error } = await client.rpc("update_delivery_assignment_status", {
     p_assignment_id: assignmentId,
@@ -1706,21 +1724,24 @@ async function courierUpdateAssignmentStatus(assignmentId, status) {
     return;
   }
 
-await courierLoadDeliveryOffers({ silent: true });
+  let paymentConfirmationSaved = true;
+  if (status === "delivered" && currentAssignment) {
+    paymentConfirmationSaved = await courierConfirmDeliveryPayment(currentAssignment);
+  }
 
-if (
-  status === "delivered" ||
-  status === "rejected" ||
-  status === "cancelled"
-) {
-  await courierLoadHistory();
-}
+  await courierLoadDeliveryOffers({ silent: true });
 
-courierSetMessage(
-  courierElements.locationMessage,
-  `${courierAssignmentStatusLabel(status)}.`,
-  "ok"
-);
+  if (["delivered", "rejected", "cancelled"].includes(status)) {
+    await courierLoadHistory();
+  }
+
+  courierSetMessage(
+    courierElements.locationMessage,
+    status === "delivered" && !paymentConfirmationSaved
+      ? "Entrega guardada. La confirmacion del pago quedo pendiente de sincronizacion."
+      : `${courierAssignmentStatusLabel(status)}.`,
+    status === "delivered" && !paymentConfirmationSaved ? "error" : "ok"
+  );
   if (status === "delivered" && courierAvailable) {
     courierLoadDeliveryOffers({ silent: true }).catch((error) => courierLogError("load_next_offer", error));
   }
@@ -1898,6 +1919,64 @@ function courierApplyProfileFields(profile = {}) {
   courierRenderVehicleRequirements();
 }
 
+function courierCountryCode() {
+  const value = String(courierProfile?.country || courierElements.countryInput?.value || "").trim().toUpperCase();
+  if (value === "PL" || value.includes("POL")) return "PL";
+  if (value === "CO" || value.includes("COL")) return "CO";
+  return value;
+}
+
+function courierRenderPayoutState() {
+  if (!courierElements.payoutPanel || !courierElements.payoutStatus || !courierElements.payoutButton) return;
+  const approved = Boolean(courierUser && courierProfile?.status === "approved");
+  const countryCode = courierCountryCode();
+  const complete = courierPayoutState?.onboardingStatus === "complete"
+    && courierPayoutState?.payoutsEnabled === true;
+  courierElements.payoutPanel.hidden = !approved;
+  if (!approved) return;
+  if (countryCode !== "PL") {
+    courierElements.payoutStatus.textContent = "No disponible en este pais";
+    courierElements.payoutStatus.dataset.state = "inactive";
+    courierElements.payoutButton.textContent = "No disponible";
+    courierElements.payoutButton.disabled = true;
+    return;
+  }
+  courierElements.payoutButton.disabled = !navigator.onLine;
+  courierElements.payoutStatus.textContent = complete
+    ? "Verificada"
+    : courierPayoutState?.onboardingStatus === "pending"
+      ? "Pendiente"
+      : "Sin configurar";
+  courierElements.payoutStatus.dataset.state = complete ? "complete" : "pending";
+  courierElements.payoutButton.textContent = complete ? "Revisar cuenta" : "Configurar pagos";
+}
+
+async function courierRefreshPayoutState(action = "status") {
+  if (!courierClient || !courierUser || courierProfile?.status !== "approved") return false;
+  if (courierCountryCode() !== "PL") {
+    courierRenderPayoutState();
+    return false;
+  }
+  courierElements.payoutButton.disabled = true;
+  courierElements.payoutStatus.textContent = "Comprobando...";
+  const { data, error } = await courierClient.functions.invoke("marketplace-onboarding", {
+    body: { accountType: "courier", action },
+  });
+  if (error) {
+    console.error("No fue posible verificar la cuenta de pagos:", error);
+    courierSetMessage(courierElements.profileMessage, "No fue posible verificar la cuenta de pagos. Revisa la configuracion de Supabase.", "error");
+    courierRenderPayoutState();
+    return false;
+  }
+  if (data?.url && action !== "status") {
+    window.location.assign(data.url);
+    return true;
+  }
+  courierPayoutState = data || null;
+  courierRenderPayoutState();
+  return courierPayoutState?.onboardingStatus === "complete" && courierPayoutState?.payoutsEnabled === true;
+}
+
 function courierRender() {
   const email = courierUser?.email || "";
   const status = courierProfile?.status || "draft";
@@ -1920,6 +1999,13 @@ function courierRender() {
     courierElements.headerStatus.textContent = statusLabel;
   }
 }
+  if (courierElements.dashboardStatus) {
+    courierElements.dashboardStatus.textContent = !courierUser
+      ? "SIN INICIAR SESION"
+      : status === "approved"
+        ? courierAvailable ? "EN LINEA" : "FUERA DE LINEA"
+        : statusLabel.toUpperCase();
+  }
   courierElements.profileStatus.textContent = courierUser
     ? `Estado actual: ${statusLabel}.`
     : "Puedes llenar los datos, pero debes iniciar sesion para guardar la solicitud.";
@@ -1946,6 +2032,7 @@ function courierRender() {
 
 courierElements.availabilityButton.textContent =
   courierAvailable ? "DESCONECTARME" : "PONERME EN LINEA";
+  courierRenderPayoutState();
   courierRenderVehicleRequirements();
   courierRenderDeliveryOffers();
   courierSyncOffersPolling();
@@ -2155,6 +2242,7 @@ if (data.status === "approved") {
   courierStartDeliveryRealtime();
   courierLoadDeliveryOffers({ silent: true }).catch(() => {});
   courierLoadHistory().catch(() => {});
+  courierRefreshPayoutState("status").catch(() => {});
 }
 }
 
@@ -2891,6 +2979,7 @@ courierElements.arrivedCustomerButton?.addEventListener("click", () => {
 courierElements.deliveredButton?.addEventListener("click", () => {
   if (courierActiveAssignmentId) courierUpdateAssignmentStatus(courierActiveAssignmentId, "delivered");
 });
+courierElements.payoutButton?.addEventListener("click", () => courierRefreshPayoutState("onboarding"));
 courierElements.viewButtons.forEach((button) => {
   button.addEventListener("click", () => courierSetView(button.dataset.courierViewTarget));
 });

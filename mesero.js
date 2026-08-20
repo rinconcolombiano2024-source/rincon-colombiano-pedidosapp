@@ -40,6 +40,14 @@ const waiterElements = {
   orderMessage: document.querySelector("#waiterOrderMessage"),
   sentOrders: document.querySelector("#waiterSentOrders"),
   refreshSentButton: document.querySelector("#waiterRefreshSentButton"),
+  dailySummary: document.querySelector("#waiterDailySummary"),
+  dailyCloseButton: document.querySelector("#waiterDailyCloseButton"),
+  monthlyCloseButton: document.querySelector("#waiterMonthlyCloseButton"),
+  monthInput: document.querySelector("#waiterMonthInput"),
+  monthlySummary: document.querySelector("#waiterMonthlySummary"),
+  shiftBar: document.querySelector("#waiterShiftBar"),
+  shiftStatus: document.querySelector("#waiterShiftStatus"),
+  shiftButton: document.querySelector("#waiterShiftButton"),
   toast: document.querySelector("#waiterToast"),
 };
 
@@ -195,12 +203,23 @@ function waiterNormalizeMenu(rawMenu) {
             product?.image ||
             ""
           ).trim(),
+
+          station: waiterNormalizeProductStation(
+            product?.station || product?.preparationStation || product?.preparation_station
+          ),
         };
       })
       .filter(Boolean);
   });
 
   return normalized;
+}
+
+function waiterNormalizeProductStation(station) {
+  const value = String(station || "").trim().toLowerCase();
+  return ["kitchen", "grill", "drinks", "fast_food", "starters", "salads"].includes(value)
+    ? value
+    : "kitchen";
 }
 
 function waiterMoney(value) {
@@ -559,6 +578,8 @@ function waiterAddProduct(productId, category) {
 
       note: "",
 
+      station: waiterNormalizeProductStation(product.station),
+
     });
 
   }
@@ -605,6 +626,11 @@ function waiterStationLabel(station) {
     waiter: "Mesero",
     cashier: "Caja",
     kitchen: "Cocina",
+    grill: "Parrilla",
+    drinks: "Bebidas",
+    fast_food: "Comidas rapidas",
+    starters: "Entradas",
+    salads: "Ensaladas",
     packing: "Empaque",
     dispatch: "Despacho",
     manager: "Encargado",
@@ -613,6 +639,7 @@ function waiterStationLabel(station) {
 
 function waiterStationStatusLabel(status) {
   return {
+    blocked: "Esperando preparacion",
     received: "Recibido en cocina",
     preparing: "En preparacion",
     ready: "Listo para empacar",
@@ -626,7 +653,7 @@ function waiterStationStatusLabel(status) {
 function waiterStationActions(order) {
   const station = waiterMembership?.station;
   const status = order.station_status || "received";
-  if (station === "kitchen") {
+  if (["kitchen", "grill", "drinks", "fast_food", "starters", "salads"].includes(station)) {
     if (status === "received") return `<button type="button" data-next-status="preparing">Iniciar preparacion</button>`;
     if (status === "preparing") return `<button type="button" data-next-status="ready">Marcar listo</button>`;
   }
@@ -709,11 +736,15 @@ async function waiterAdvanceStationOrder(orderId, nextStatus, button) {
 
 async function waiterLoadSentOrders() {
   if (!waiterClient || !waiterUser) return;
+  const businessDate = waiterBusinessDateKey();
+  const { startAt, endAt } = waiterBusinessDayBounds(businessDate);
   const { data, error } = await waiterClient
     .from("customer_orders")
     .select("id,status,table_label,customer_name,total,created_at,order_json")
     .eq("created_by_user_id", waiterUser.id)
     .eq("user_id", waiterStoreId)
+    .gte("created_at", startAt)
+    .lt("created_at", endAt)
     .order("created_at", { ascending: false })
     .limit(30);
   if (error) {
@@ -729,7 +760,150 @@ async function waiterLoadSentOrders() {
           return `<article class="waiter-sent-card"><div><strong>${waiterEscape(order.table_label || order.customer_name || "Pedido")}</strong><span>${waiterEscape(time)}</span></div><strong>${waiterStatusLabel(order.status)}</strong><p>${items.map((item) => `${item.qty || item.quantity || 1} x ${item.name || item.product_name_snapshot || "Producto"}`).join(" | ")}</p><span>${waiterMoney(order.total)}</span></article>`;
         })
         .join("")
-    : `<div class="waiter-empty">Aun no has enviado pedidos.</div>`;
+    : `<div class="waiter-empty">Aun no has enviado pedidos hoy.</div>`;
+
+  const reportResult = await waiterClient.rpc("get_my_waiter_daily_report", {
+    p_restaurant_user_id: waiterStoreId,
+    p_business_date: businessDate,
+  });
+  if (!reportResult.error && waiterElements.dailySummary) {
+    const report = reportResult.data || {};
+    waiterElements.dailySummary.innerHTML = `
+      <div><span>Pedidos</span><strong>${Number(report.order_count) || 0}</strong></div>
+      <div><span>Total</span><strong>${waiterMoney(report.sales_total)}</strong></div>
+      <div><span>Promedio</span><strong>${waiterMoney(report.average_ticket)}</strong></div>
+      <div><span>Cancelados</span><strong>${Number(report.cancelled_count) || 0}</strong></div>`;
+  } else if (waiterElements.dailySummary) {
+    waiterElements.dailySummary.innerHTML = `<p>Ejecuta la migracion V85.02 para ver el cierre diario confirmado.</p>`;
+  }
+  await waiterLoadMonthlyReport();
+}
+
+function waiterBusinessDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function waiterMonthKey(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function waiterSelectedMonthAnchor() {
+  const month = /^\d{4}-\d{2}$/.test(waiterElements.monthInput?.value || "")
+    ? waiterElements.monthInput.value
+    : waiterMonthKey();
+  if (waiterElements.monthInput) waiterElements.monthInput.value = month;
+  return `${month}-01`;
+}
+
+function waiterRenderMonthlyReport(report = {}) {
+  if (!waiterElements.monthlySummary) return;
+  waiterElements.monthlySummary.innerHTML = `
+    <div><span>Pedidos del mes</span><strong>${Number(report.order_count) || 0}</strong></div>
+    <div><span>Total del mes</span><strong>${waiterMoney(report.sales_total)}</strong></div>
+    <div><span>Promedio</span><strong>${waiterMoney(report.average_ticket)}</strong></div>
+    <div><span>Cancelados</span><strong>${Number(report.cancelled_count) || 0}</strong></div>`;
+}
+
+async function waiterLoadMonthlyReport() {
+  if (!waiterClient || !waiterUser || !waiterElements.monthlySummary) return;
+  const { data, error } = await waiterClient.rpc("get_my_waiter_monthly_report", {
+    p_restaurant_user_id: waiterStoreId,
+    p_anchor_date: waiterSelectedMonthAnchor(),
+  });
+  if (error) {
+    waiterElements.monthlySummary.innerHTML = `<p>Ejecuta la migracion V85.02 para ver el cierre mensual confirmado.</p>`;
+    return;
+  }
+  waiterRenderMonthlyReport(data || {});
+}
+
+function waiterBusinessDayBounds(day) {
+  const [year, month, date] = String(day).split("-").map(Number);
+  const start = new Date(year, month - 1, date, 0, 0, 0, 0);
+  const end = new Date(year, month - 1, date + 1, 0, 0, 0, 0);
+  return { startAt: start.toISOString(), endAt: end.toISOString() };
+}
+
+async function waiterCloseDay() {
+  if (!waiterClient || !waiterUser || !navigator.onLine) {
+    waiterShowToast("Necesitas conexion para confirmar el cierre diario.");
+    return;
+  }
+  if (!confirm("Confirmar el cierre de tus pedidos de hoy? El historial del restaurante se conserva.")) return;
+  waiterElements.dailyCloseButton.disabled = true;
+  const { data, error } = await waiterClient.rpc("close_my_waiter_day", {
+    p_restaurant_user_id: waiterStoreId,
+    p_business_date: waiterBusinessDateKey(),
+  });
+  waiterElements.dailyCloseButton.disabled = false;
+  if (error) {
+    waiterShowToast(["42883", "PGRST202"].includes(error.code) ? "Ejecuta la migracion V85.02 en Supabase." : "No fue posible confirmar el cierre diario.");
+    return;
+  }
+  const closure = Array.isArray(data) ? data[0] : data;
+  waiterShowToast(`Cierre diario confirmado: ${waiterMoney(closure?.report_snapshot?.sales_total)}.`);
+  await waiterLoadSentOrders();
+}
+
+async function waiterCloseMonth() {
+  if (!waiterClient || !waiterUser || !navigator.onLine) {
+    waiterShowToast("Necesitas conexion para confirmar el cierre mensual.");
+    return;
+  }
+  const month = waiterElements.monthInput?.value || waiterMonthKey();
+  if (!confirm(`Confirmar el cierre de tus pedidos de ${month}? El historial del restaurante se conserva.`)) return;
+  waiterElements.monthlyCloseButton.disabled = true;
+  const { data, error } = await waiterClient.rpc("close_my_waiter_month", {
+    p_restaurant_user_id: waiterStoreId,
+    p_anchor_date: waiterSelectedMonthAnchor(),
+  });
+  waiterElements.monthlyCloseButton.disabled = false;
+  if (error) {
+    waiterShowToast(["42883", "PGRST202"].includes(error.code) ? "Ejecuta la migracion V85.02 en Supabase." : "No fue posible confirmar el cierre mensual.");
+    return;
+  }
+  const closure = Array.isArray(data) ? data[0] : data;
+  waiterShowToast(`Cierre mensual confirmado: ${waiterMoney(closure?.report_snapshot?.sales_total)}.`);
+  await waiterLoadMonthlyReport();
+}
+
+async function waiterLoadShiftStatus() {
+  if (!waiterClient || !waiterUser || !waiterMembership) return;
+  const { data, error } = await waiterClient.rpc("get_my_restaurant_shift_status", {
+    p_restaurant_user_id: waiterStoreId,
+  });
+  if (error) {
+    waiterElements.shiftStatus.textContent = "Migracion V85.02 pendiente";
+    waiterElements.shiftButton.disabled = true;
+    return;
+  }
+  const entry = Array.isArray(data) ? data[0] : data;
+  const open = entry?.is_open === true;
+  waiterElements.shiftStatus.textContent = open
+    ? `En servicio · ${Number(entry.worked_minutes) || 0} min`
+    : entry?.clock_out_at ? "Jornada finalizada" : "Sin registrar entrada";
+  waiterElements.shiftButton.textContent = open ? "Registrar salida" : "Registrar entrada";
+  waiterElements.shiftButton.dataset.action = open ? "out" : "in";
+  waiterElements.shiftButton.disabled = false;
+}
+
+async function waiterToggleShift() {
+  if (!navigator.onLine || !waiterClient || !waiterUser) {
+    waiterShowToast("La entrada y salida requieren confirmacion en linea.");
+    return;
+  }
+  waiterElements.shiftButton.disabled = true;
+  const action = waiterElements.shiftButton.dataset.action || "in";
+  const { error } = await waiterClient.rpc("clock_my_restaurant_shift", {
+    p_restaurant_user_id: waiterStoreId,
+    p_action: action,
+  });
+  if (error) waiterShowToast(["42883", "PGRST202"].includes(error.code) ? "Ejecuta la migracion V85.02 en Supabase." : "No fue posible registrar la jornada.");
+  else waiterShowToast(action === "in" ? "Entrada registrada." : "Salida registrada.");
+  await waiterLoadShiftStatus();
 }
 
 function waiterOrderPayload() {
@@ -746,6 +920,7 @@ function waiterOrderPayload() {
       name: item.name,
       qty: item.qty,
       note: String(item.note || "").trim().toUpperCase(),
+      station: waiterNormalizeProductStation(item.station),
     })),
   };
 }
@@ -905,7 +1080,10 @@ async function waiterAuthorize() {
     return;
   }
   waiterMembership = Array.isArray(data) ? data[0] : data;
-  const validStations = ["waiter", "cashier", "kitchen", "packing", "dispatch", "manager"];
+  const validStations = [
+    "waiter", "cashier", "manager", "kitchen", "grill", "drinks",
+    "fast_food", "starters", "salads", "packing", "dispatch"
+  ];
   if (!waiterMembership || !validStations.includes(waiterMembership.station)) {
     waiterElements.authCard.hidden = true;
     waiterElements.app.hidden = true;
@@ -918,6 +1096,7 @@ async function waiterAuthorize() {
   waiterElements.authCard.hidden = true;
   waiterElements.accessCard.hidden = true;
   waiterElements.signOutButton.hidden = false;
+  waiterElements.shiftBar.hidden = false;
   const stationLabel = waiterStationLabel(waiterMembership.station);
   const restaurantName = waiterMembership.business_name || "Restaurante";
   waiterElements.restaurantName.textContent = `${restaurantName} / ${stationLabel}`;
@@ -938,11 +1117,17 @@ async function waiterAuthorize() {
     waiterElements.stationTitle.textContent = `${restaurantName} / Pedidos activos`;
     waiterElements.stationHelp.textContent = {
       kitchen: "Prepara los productos y marca el pedido listo para empaque.",
+      grill: "Prepara los productos de parrilla y marcalos listos.",
+      drinks: "Prepara las bebidas y marcalas listas.",
+      fast_food: "Prepara los productos de comidas rapidas y marcalos listos.",
+      starters: "Prepara las entradas y marcalas listas.",
+      salads: "Prepara las ensaladas y marcalas listas.",
       packing: "Revisa el pedido completo y confirma cuando quede empacado.",
       dispatch: "Confirma la salida y la entrega del pedido.",
     }[waiterMembership.station] || "Actualiza el estado operativo del pedido.";
     await waiterLoadStationOrders();
   }
+  await waiterLoadShiftStatus();
   waiterStartRealtime();
 }
 
@@ -1004,7 +1189,7 @@ async function waiterSignOut() {
   } finally {
     waiterUser = null;
     waiterMembership = null;
-    window.location.replace("index.html?app=v84.1");
+    window.location.replace("index.html?app=v85");
   }
 }
 
@@ -1014,6 +1199,7 @@ function waiterRenderLoggedOut() {
   waiterElements.accessCard.hidden = true;
   waiterElements.app.hidden = true;
   waiterElements.stationBoard.hidden = true;
+  waiterElements.shiftBar.hidden = true;
   waiterElements.signOutButton.hidden = true;
   waiterSetStatus("Inicia sesion", "");
 }
@@ -1068,6 +1254,10 @@ waiterElements.signOutButton.addEventListener("click", waiterSignOut);
 waiterElements.retryAccessButton.addEventListener("click", waiterActivateAuthorization);
 waiterElements.refreshButton.addEventListener("click", () => waiterLoadMenu().catch((error) => waiterSetMessage(waiterElements.orderMessage, error.message, "error")));
 waiterElements.refreshSentButton.addEventListener("click", waiterLoadSentOrders);
+waiterElements.dailyCloseButton.addEventListener("click", waiterCloseDay);
+waiterElements.monthlyCloseButton?.addEventListener("click", waiterCloseMonth);
+waiterElements.monthInput?.addEventListener("change", waiterLoadMonthlyReport);
+waiterElements.shiftButton.addEventListener("click", waiterToggleShift);
 waiterElements.stationRefreshButton.addEventListener("click", waiterLoadStationOrders);
 waiterElements.stationOrders.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-next-status]");

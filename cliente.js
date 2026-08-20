@@ -76,6 +76,7 @@ editProfileButton: document.querySelector("#customerEditProfileButton"),
   notifyButton: document.querySelector("#customerNotifyButton"),
   orderType: document.querySelector("#customerOrderType"),
   paymentMethod: document.querySelector("#customerPaymentMethod"),
+  onlinePaymentOption: document.querySelector("#customerOnlinePaymentOption"),
   nameInput: document.querySelector("#customerNameInput"),
   tableInput: document.querySelector("#customerTableInput"),
   deliveryFields: document.querySelector("#customerDeliveryFields"),
@@ -91,6 +92,7 @@ editProfileButton: document.querySelector("#customerEditProfileButton"),
   deliveryFeeRow: document.querySelector("#customerDeliveryFeeRow"),
   deliveryFeeLabel: document.querySelector("#customerDeliveryFeeLabel"),
   paymentBox: document.querySelector("#customerPaymentBox"),
+  confirmDeliveryButton: document.querySelector("#customerConfirmDeliveryButton"),
   chatPanel: document.querySelector("#customerChatPanel"),
   chatMessages: document.querySelector("#customerChatMessages"),
   chatInput: document.querySelector("#customerChatInput"),
@@ -104,6 +106,7 @@ const CUSTOMER_LANGUAGE_KEY = "rincon_colombiano_customer_language";
 const CUSTOMER_APP_LANGUAGE_KEY = "rincon_colombiano_app_language";
 const CUSTOMER_TRANSLATION_CACHE_KEY = "rincon_colombiano_description_translations_v1";
 const CUSTOMER_PENDING_ORDER_KEY_PREFIX = "rc_ordera_pending_customer_order";
+const CUSTOMER_TRACKED_ORDER_KEY_PREFIX = "rc_ordera_tracked_customer_order";
 const CUSTOMER_DELIVERY_MARKUP = 1.6714285714;
 const CUSTOMER_I18N = {
   es: {
@@ -369,6 +372,16 @@ const CUSTOMER_I18N = {
     payOnDelivery: "Paga {amount} en {method} cuando el restaurante confirme.",
     cashLower: "efectivo",
     cardLower: "datafono/tarjeta",
+    onlinePayment: "Pago en linea",
+    payOnlineNow: "Pagar en linea de forma segura",
+    paymentRedirecting: "Abriendo el pago seguro...",
+    onlinePaymentFailed: "No fue posible iniciar el pago en linea. Puedes reintentarlo desde este pedido.",
+    paymentSuccess: "El pago fue recibido y se esta confirmando.",
+    paymentCancelled: "El pago no se completo. El pedido sigue visible para que puedas reintentarlo.",
+    confirmDelivery: "Confirmar que recibi el pedido",
+    confirmingDelivery: "Confirmando entrega...",
+    deliveryConfirmed: "Entrega confirmada. Gracias.",
+    deliveryConfirmError: "No fue posible confirmar la entrega.",
     notificationUnsupported: "Este navegador no permite notificaciones.",
     notificationsOn: "Notificaciones activadas para avisarte el estado del pedido.",
     notificationsOff: "Notificaciones no activadas. Puedes ver el estado en esta pantalla.",
@@ -655,6 +668,16 @@ const CUSTOMER_I18N = {
     payOnDelivery: "Zapalc {amount} metoda {method}, gdy restauracja potwierdzi.",
     cashLower: "gotowka",
     cardLower: "terminal/karta",
+    onlinePayment: "Platnosc online",
+    payOnlineNow: "Zaplac bezpiecznie online",
+    paymentRedirecting: "Otwieranie bezpiecznej platnosci...",
+    onlinePaymentFailed: "Nie udalo sie uruchomic platnosci online. Mozesz sprobowac ponownie przy tym zamowieniu.",
+    paymentSuccess: "Platnosc zostala odebrana i jest potwierdzana.",
+    paymentCancelled: "Platnosc nie zostala zakonczona. Zamowienie pozostaje dostepne do ponowienia platnosci.",
+    confirmDelivery: "Potwierdz odbior zamowienia",
+    confirmingDelivery: "Potwierdzanie dostawy...",
+    deliveryConfirmed: "Dostawa potwierdzona. Dziekujemy.",
+    deliveryConfirmError: "Nie udalo sie potwierdzic dostawy.",
     notificationUnsupported: "Ta przegladarka nie obsluguje powiadomien.",
     notificationsOn: "Powiadomienia wlaczone dla statusu zamowienia.",
     notificationsOff: "Powiadomienia nie sa wlaczone. Status widac na tej stronie.",
@@ -941,6 +964,16 @@ const CUSTOMER_I18N = {
     payOnDelivery: "Pay {amount} by {method} when the restaurant confirms.",
     cashLower: "cash",
     cardLower: "card terminal/card",
+    onlinePayment: "Online payment",
+    payOnlineNow: "Pay securely online",
+    paymentRedirecting: "Opening secure payment...",
+    onlinePaymentFailed: "Online payment could not be started. You can retry it from this order.",
+    paymentSuccess: "The payment was received and is being confirmed.",
+    paymentCancelled: "The payment was not completed. The order remains available so you can retry.",
+    confirmDelivery: "Confirm that I received the order",
+    confirmingDelivery: "Confirming delivery...",
+    deliveryConfirmed: "Delivery confirmed. Thank you.",
+    deliveryConfirmError: "Delivery could not be confirmed.",
     notificationUnsupported: "This browser does not support notifications.",
     notificationsOn: "Notifications enabled for order status.",
     notificationsOff: "Notifications not enabled. You can see the status on this screen.",
@@ -1428,6 +1461,7 @@ function customerOrderTypeText(value) {
 function customerPaymentMethodText(value) {
   if (value === "Transferencia") return customerT("transfer");
   if (value === "Datafono") return customerT("cardTerminal");
+  if (value === "Online") return customerT("onlinePayment");
   return customerT("cash");
 }
 
@@ -1459,6 +1493,8 @@ let customerSettings = {
   googleMapsApiKey: "",
   bankAccount: "",
   bankTransferNote: "",
+  onlinePaymentProvider: "disabled",
+  onlinePaymentNote: "",
 };
 
 let customerMapDistance = null;
@@ -1482,6 +1518,7 @@ let customerDirectoryRealtimeTimer = null;
 let customerDirectoryPollTimer = null;
 let customerRestaurantFavorite = false;
 let customerCurrentView = customerStoreId ? "store" : "home";
+let customerPaymentReturnHandled = false;
 
 const CUSTOMER_DELIVERY_RATES = {
   baseKm: 1.5,
@@ -2301,7 +2338,7 @@ async function customerSignOut() {
     customerUser = null;
     customerHistoryRows = [];
     customerRenderAccount();
-    window.location.replace("index.html?app=v84.1");
+    window.location.replace("index.html?app=v85");
   }
 }
 
@@ -2605,6 +2642,8 @@ function customerOpenHistoryOrder(orderId) {
   const row = customerHistoryRows.find((item) => item.id === orderId);
   if (!row) return;
   customerStartStatusTracking(row.id, row.public_token, row.order_json?.paymentMethod || "", "");
+  customerTrackedOrder.total = Number(row.total) || 0;
+  customerPersistTrackedOrder();
   customerSetTrackingStatus(customerStatusText(row), customerStatusType(row.status));
   customerRenderPaymentBox(row.id, Number(row.total) || 0, row.order_json || {});
   customerSetView("orders");
@@ -2873,7 +2912,7 @@ function customerStartDirectoryRealtime() {
     changeFilter.filter = `country_code=eq.${customerRegistrationRegion.countryCode}`;
   }
   customerDirectoryRealtimeChannel = customerClient
-    .channel(`public-restaurant-directory-v84-1-${customerRegistrationRegion.countryCode || "all"}`)
+    .channel(`public-restaurant-directory-v85-${customerRegistrationRegion.countryCode || "all"}`)
     .on(
       "postgres_changes",
       changeFilter,
@@ -2921,6 +2960,19 @@ function customerSelectedRestaurant() {
   return customerRestaurants.find((restaurant) => restaurant.userId === customerStoreId) || null;
 }
 
+function customerRenderPaymentMethods() {
+  const option = customerElements.onlinePaymentOption;
+  if (!option) return;
+  const restaurant = customerSelectedRestaurant();
+  const enabled = customerSettings.onlinePaymentProvider === "stripe"
+    && restaurant?.countryCode === "PL";
+  option.hidden = !enabled;
+  option.disabled = !enabled;
+  if (!enabled && customerElements.paymentMethod?.value === "Online") {
+    customerElements.paymentMethod.value = "Efectivo";
+  }
+}
+
 function customerClearRestaurantSelection(messageKey = "") {
   customerStoreId = "";
   customerStopMenuRealtime();
@@ -2938,11 +2990,13 @@ function customerClearRestaurantSelection(messageKey = "") {
     openingHours: {},
     restaurantLatitude: null,
     restaurantLongitude: null,
+    onlinePaymentProvider: "disabled",
+    onlinePaymentNote: "",
   };
 
   const nextUrl = new URL(window.location.href);
   nextUrl.searchParams.delete("store");
-  nextUrl.searchParams.set("app", "v84.1");
+  nextUrl.searchParams.set("app", "v85");
   window.history.replaceState({}, "", nextUrl.toString());
 
   customerApplyBusinessName();
@@ -2951,6 +3005,7 @@ function customerClearRestaurantSelection(messageKey = "") {
   customerRenderCategories();
   customerRenderMenu();
   customerRenderCart();
+  customerRenderPaymentMethods();
   customerSetView("home", { keepScroll: true });
   if (messageKey) customerSetStatus(customerT(messageKey), "error");
 }
@@ -3204,7 +3259,7 @@ async function customerSelectRestaurant(storeId, options = {}) {
   if (options.updateUrl !== false) {
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("store", customerStoreId);
-    nextUrl.searchParams.set("app", "v84.1");
+  nextUrl.searchParams.set("app", "v85");
     window.history.replaceState({}, "", nextUrl.toString());
   }
 
@@ -3381,6 +3436,10 @@ function customerNormalizeMenu(menu) {
             available: dish?.available === false ? false : true,
             imageUrl,
             description,
+            translations: dish?.translations && typeof dish.translations === "object" ? dish.translations : {},
+            station: customerNormalizeProductStation(
+              dish?.station || dish?.preparationStation || dish?.preparation_station
+            ),
           });
         }
       });
@@ -3388,6 +3447,13 @@ function customerNormalizeMenu(menu) {
   });
 
   return normalized;
+}
+
+function customerNormalizeProductStation(station) {
+  const value = String(station || "").trim().toLowerCase();
+  return ["kitchen", "grill", "drinks", "fast_food", "starters", "salads"].includes(value)
+    ? value
+    : "kitchen";
 }
 
 function customerFormatMoney(amount) {
@@ -3958,7 +4024,63 @@ function customerClearPaymentBox() {
   if (!customerElements.paymentBox) return;
   customerElements.paymentBox.hidden = true;
   customerElements.paymentBox.innerHTML = "";
+  if (customerElements.confirmDeliveryButton) customerElements.confirmDeliveryButton.hidden = true;
   customerRenderActiveOrderState();
+}
+
+async function customerStartOnlinePayment(orderId, publicToken) {
+  if (!customerClient || !orderId || !publicToken || !navigator.onLine) {
+    customerSetTrackingStatus(customerT("onlinePaymentFailed"), "error");
+    return false;
+  }
+  customerSetTrackingStatus(customerT("paymentRedirecting"), "");
+  const { data, error } = await customerClient.functions.invoke("marketplace-checkout", {
+    body: { orderId, publicToken },
+  });
+  if (error || !data?.url) {
+    console.error("No fue posible iniciar el pago online:", error || data);
+    customerSetTrackingStatus(customerT("onlinePaymentFailed"), "error");
+    return false;
+  }
+  if (customerTrackedOrder?.id === orderId) {
+    customerTrackedOrder.paymentUrl = data.url;
+    customerPersistTrackedOrder();
+  }
+  window.location.assign(data.url);
+  return true;
+}
+
+async function customerConfirmDelivery() {
+  if (!customerClient || !customerTrackedOrder?.id || !customerTrackedOrder.publicToken) return;
+  const button = customerElements.confirmDeliveryButton;
+  if (button) {
+    button.disabled = true;
+    button.textContent = customerT("confirmingDelivery");
+  }
+  const { data, error } = await customerClient.functions.invoke("marketplace-confirm-delivery", {
+    body: {
+      orderId: customerTrackedOrder.id,
+      publicToken: customerTrackedOrder.publicToken,
+      actor: "customer",
+    },
+  });
+  if (error) {
+    console.error("No fue posible confirmar la entrega:", error);
+    if (button) {
+      button.disabled = false;
+      button.textContent = customerT("confirmDelivery");
+    }
+    customerSetTrackingStatus(customerT("deliveryConfirmError"), "error");
+    return;
+  }
+  customerTrackedOrder.customerConfirmed = true;
+  customerPersistTrackedOrder();
+  if (button) {
+    button.disabled = true;
+    button.textContent = customerT("deliveryConfirmed");
+  }
+  customerSetTrackingStatus(customerT("deliveryConfirmed"), "ok");
+  return data;
 }
 
 function customerRenderPaymentBox(orderId, total, payload) {
@@ -3974,6 +4096,11 @@ function customerRenderPaymentBox(orderId, total, payload) {
     actionHtml = `
       <p><strong>${customerEscapeHtml(customerT("bankAccountLabel"))}:</strong> ${customerEscapeHtml(bankAccount)}</p>
       <p><strong>${customerEscapeHtml(customerT("transferNoteLabel"))}:</strong> ${customerEscapeHtml(transferNote)}</p>
+    `;
+  } else if (paymentMethod === "Online") {
+    actionHtml = `
+      <p>${customerEscapeHtml(customerSettings.onlinePaymentNote || customerT("payOnlineNow"))}</p>
+      <button class="customer-map-button" type="button" data-action="retry-online-payment">${customerEscapeHtml(customerT("payOnlineNow"))}</button>
     `;
   } else {
     actionHtml = `<p>${customerEscapeHtml(
@@ -4215,6 +4342,59 @@ function customerNormalizeRpcRow(data) {
 
 function customerPendingOrderStorageKey() {
   return `${CUSTOMER_PENDING_ORDER_KEY_PREFIX}_${customerStoreId || "unknown"}`;
+}
+
+function customerTrackedOrderStorageKey() {
+  return `${CUSTOMER_TRACKED_ORDER_KEY_PREFIX}_${customerStoreId || "unknown"}`;
+}
+
+function customerPersistTrackedOrder() {
+  if (!customerTrackedOrder?.id || !customerTrackedOrder.publicToken || !customerStoreId) return;
+  localStorage.setItem(customerTrackedOrderStorageKey(), JSON.stringify({
+    ...customerTrackedOrder,
+    restaurantUserId: customerStoreId,
+    savedAt: Date.now(),
+  }));
+}
+
+function customerRestoreTrackedOrder() {
+  if (!customerStoreId || customerTrackedOrder) return false;
+  try {
+    const stored = JSON.parse(localStorage.getItem(customerTrackedOrderStorageKey()) || "null");
+    if (!stored?.id || !stored.publicToken || stored.restaurantUserId !== customerStoreId) return false;
+    customerStartStatusTracking(
+      stored.id,
+      stored.publicToken,
+      stored.paymentMethod || "",
+      stored.paymentUrl || ""
+    );
+    customerTrackedOrder.status = stored.status || "pending";
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function customerHandlePaymentReturn() {
+  if (customerPaymentReturnHandled) return;
+  const result = customerParams.get("payment");
+  if (!result) return;
+  customerPaymentReturnHandled = true;
+  const returnedOrderId = customerParams.get("order") || "";
+  if (customerTrackedOrder?.id && (!returnedOrderId || returnedOrderId === customerTrackedOrder.id)) {
+    customerSetView("orders", { keepScroll: true });
+    if (result === "success") {
+      customerSetTrackingStatus(customerT("paymentSuccess"), "ok");
+      customerPollOrderStatus().catch(() => {});
+    } else {
+      customerSetTrackingStatus(customerT("paymentCancelled"), "error");
+      customerRenderPaymentBox(customerTrackedOrder.id, Number(customerTrackedOrder.total) || 0, { paymentMethod: "Online" });
+    }
+  }
+  const nextUrl = new URL(window.location.href);
+  nextUrl.searchParams.delete("payment");
+  nextUrl.searchParams.delete("order");
+  window.history.replaceState({}, "", nextUrl.toString());
 }
 
 function customerOrderFingerprint(orderPayload) {
@@ -4476,6 +4656,7 @@ async function customerPollOrderStatus() {
   const nextStatus = row.canonical_status || row.status || "pending";
   const previousStatus = customerTrackedOrder.status;
   customerTrackedOrder.status = nextStatus;
+  customerPersistTrackedOrder();
   const statusRow = { ...row, status: nextStatus };
   const message = customerStatusText(statusRow);
   const type = customerStatusType(nextStatus);
@@ -4483,6 +4664,13 @@ async function customerPollOrderStatus() {
   customerRenderCourierTracking(row);
   customerStartOrderTrackingRealtime(row);
   customerLoadOrderTimeline().catch(() => {});
+  if (customerElements.confirmDeliveryButton) {
+    customerElements.confirmDeliveryButton.hidden = nextStatus !== "delivered";
+    customerElements.confirmDeliveryButton.disabled = customerTrackedOrder.customerConfirmed === true;
+    customerElements.confirmDeliveryButton.textContent = customerTrackedOrder.customerConfirmed
+      ? customerT("deliveryConfirmed")
+      : customerT("confirmDelivery");
+  }
 
   if (previousStatus && previousStatus !== nextStatus) {
     customerShowNotification(customerT("notificationStatusTitle"), message);
@@ -4506,6 +4694,7 @@ function customerStartStatusTracking(orderId, publicToken, paymentMethod, paymen
     status: "pending",
   };
   customerSetTrackingStatus(customerT("orderSentWaiting"), "");
+  if (customerElements.confirmDeliveryButton) customerElements.confirmDeliveryButton.hidden = true;
   customerRenderCourierTracking(null);
   customerRenderOrderTimeline([]);
   customerPollOrderStatus().catch(() => {});
@@ -4655,6 +4844,7 @@ function customerAddItem(dish) {
       price: Number.parseFloat(dish.price) || 0,
       qty: 1,
       note: "",
+      station: customerNormalizeProductStation(dish.station),
     });
   }
   customerRenderCart();
@@ -4687,6 +4877,7 @@ function customerSyncCartWithCurrentMenu() {
       name: product.name || item.name,
       description: product.description || "",
       price: Number.parseFloat(product.price) || 0,
+      station: customerNormalizeProductStation(product.station),
     };
   });
 }
@@ -4764,9 +4955,16 @@ async function customerLoadMenu(options = {}) {
     googleMapsApiKey: customerNormalizeText(data.settings?.googleMapsApiKey),
     bankAccount: customerNormalizeText(data.settings?.bankAccount),
     bankTransferNote: customerNormalizeText(data.settings?.bankTransferNote),
+    onlinePaymentProvider: String(data.settings?.onlinePaymentProvider || "disabled").toLowerCase() === "stripe"
+      ? "stripe"
+      : "disabled",
+    onlinePaymentNote: customerNormalizeText(data.settings?.onlinePaymentNote),
   };
+  customerRestoreTrackedOrder();
+  await customerHandlePaymentReturn();
   customerApplyBusinessName();
   customerRenderSelectedRestaurantDetails();
+  customerRenderPaymentMethods();
 
   const loadedMenu = customerNormalizeMenu(data.menu || {});
   if (!customerMenuProductCount(loadedMenu)) {
@@ -4874,6 +5072,7 @@ async function customerSendOrder() {
       options_snapshot: {
         description: item.description || "",
         note: itemNote,
+        station: customerNormalizeProductStation(item.station),
       },
       total_snapshot: itemTotal,
       name: productName,
@@ -4881,6 +5080,7 @@ async function customerSendOrder() {
       price: unitPrice,
       qty: quantity,
       note: itemNote,
+      station: customerNormalizeProductStation(item.station),
     };
   });
   const total = customerCartTotal();
@@ -4934,6 +5134,8 @@ async function customerSendOrder() {
   customerRenderCart();
   if (insertedOrder.trackingAvailable) {
     customerStartStatusTracking(insertedOrder.id, insertedOrder.publicToken, paymentMethod, "");
+    customerTrackedOrder.total = total;
+    customerPersistTrackedOrder();
   } else {
     customerTrackedOrder = {
       id: insertedOrder.id,
@@ -4949,6 +5151,9 @@ async function customerSendOrder() {
   customerSetStatus(customerT("orderSent"), "ok");
   customerLoadHistory().catch(() => {});
   customerSetView("orders");
+  if (paymentMethod === "Online" && insertedOrder.publicToken) {
+    await customerStartOnlinePayment(insertedOrder.id, insertedOrder.publicToken);
+  }
 }
 
 customerElements.categoryTabs.addEventListener("click", (event) => {
@@ -5301,6 +5506,14 @@ customerElements.useLocationButton.addEventListener("click", customerUseLocation
 customerElements.calculateDistanceButton.addEventListener("click", customerCalculateDistanceWithMaps);
 customerElements.chatSendButton.addEventListener("click", customerSendChatMessage);
 customerElements.sendButton.addEventListener("click", customerSendOrder);
+customerElements.paymentBox?.addEventListener("click", (event) => {
+  const button = event.target.closest('button[data-action="retry-online-payment"]');
+  if (!button || !customerTrackedOrder?.id) return;
+  button.disabled = true;
+  customerStartOnlinePayment(customerTrackedOrder.id, customerTrackedOrder.publicToken)
+    .finally(() => { button.disabled = false; });
+});
+customerElements.confirmDeliveryButton?.addEventListener("click", customerConfirmDelivery);
 customerElements.backToRestaurantsButton?.addEventListener("click", () => customerSetView("home"));
 customerElements.viewButtons.forEach((button) => {
   button.addEventListener("click", () => customerSetView(button.dataset.customerViewTarget));

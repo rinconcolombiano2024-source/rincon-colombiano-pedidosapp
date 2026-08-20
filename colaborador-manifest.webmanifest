@@ -3,7 +3,7 @@
   "short_name": "RC Colaborador",
   "id": "./courier-app",
   "description": "Entregas y seguimiento para colaboradores de RC ORDERA.",
-  "start_url": "./colaborador.html?app=v84.1",
+  "start_url": "./colaborador.html?app=v85",
   "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],

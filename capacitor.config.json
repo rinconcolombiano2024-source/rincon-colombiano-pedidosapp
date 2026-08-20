@@ -1,0 +1,13 @@
+{
+  "appId": "com.rcordera.app",
+  "appName": "RC ORDERA",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": false
+  },
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#ffffff"
+  }
+}

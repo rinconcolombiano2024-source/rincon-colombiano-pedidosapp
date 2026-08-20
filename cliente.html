@@ -588,6 +588,7 @@
                 <option value="Efectivo" data-i18n="cash">Efectivo</option>
                 <option value="Transferencia" data-i18n="transfer">Transferencia</option>
                 <option value="Datafono" data-i18n="cardTerminal">Datafono / tarjeta al recibir</option>
+                <option id="customerOnlinePaymentOption" value="Online" data-i18n="onlinePayment" hidden disabled>Pago en linea</option>
               </select>
             </label>
 
@@ -651,6 +652,7 @@
           <section class="customer-courier-tracking" id="customerCourierTracking" aria-live="polite" hidden></section>
           <ol class="customer-order-timeline" id="customerOrderTimeline" aria-label="Progreso del pedido" data-i18n-aria-label="orderTimelineLabel" hidden></ol>
           <div class="customer-payment-box" id="customerPaymentBox" hidden></div>
+          <button class="customer-submit-button customer-confirm-delivery-button" id="customerConfirmDeliveryButton" type="button" hidden data-i18n="confirmDelivery">Confirmar que recibi el pedido</button>
           <section class="customer-chat-panel" id="customerChatPanel" hidden>
             <h3 data-i18n="chatTitle">Chat con el restaurante</h3>
             <div class="customer-chat-messages" id="customerChatMessages"></div>
@@ -715,7 +717,7 @@
     Editar perfil
   </button>
 </div>
-          <a class="customer-map-button customer-platform-home-link" href="index.html?app=v84.1" data-i18n="platformHome">Volver a la pantalla principal</a>
+          <a class="customer-map-button customer-platform-home-link" href="index.html?app=v85" data-i18n="platformHome">Volver a la pantalla principal</a>
         </section>
 
         <section class="customer-profile-settings">

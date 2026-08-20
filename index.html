@@ -190,6 +190,45 @@
         <button class="restaurant-service-action" id="mainRestaurantToggleButton" type="button">Abrir atencion</button>
       </section>
 
+      <section class="restaurant-dashboard-summary" aria-labelledby="restaurantDashboardTitle">
+        <div class="restaurant-dashboard-heading">
+          <div>
+            <p class="eyebrow">Operacion en tiempo real</p>
+            <h2 id="restaurantDashboardTitle">Resumen de hoy</h2>
+          </div>
+          <span id="restaurantDashboardDate" aria-live="polite"></span>
+        </div>
+        <div class="restaurant-dashboard-metrics">
+          <button type="button" data-restaurant-dashboard-action="orders">
+            <span>Pedidos recibidos</span>
+            <strong id="restaurantMetricReceived">0</strong>
+          </button>
+          <button type="button" data-restaurant-dashboard-action="orders">
+            <span>Nuevos</span>
+            <strong id="restaurantMetricPending">0</strong>
+          </button>
+          <button type="button" data-restaurant-dashboard-action="orders">
+            <span>En preparacion</span>
+            <strong id="restaurantMetricPreparing">0</strong>
+          </button>
+          <button type="button" data-restaurant-dashboard-action="orders">
+            <span>Listos / reparto</span>
+            <strong id="restaurantMetricReady">0</strong>
+          </button>
+          <button type="button" data-restaurant-dashboard-action="statistics">
+            <span>Ventas de hoy</span>
+            <strong id="restaurantMetricSales">0</strong>
+          </button>
+        </div>
+        <nav class="restaurant-module-nav" aria-label="Modulos del restaurante">
+          <button type="button" data-restaurant-dashboard-action="orders" aria-current="page">Pedidos</button>
+          <button type="button" data-restaurant-dashboard-action="menu">Menu</button>
+          <button type="button" data-restaurant-dashboard-action="kitchen">Cocina</button>
+          <button type="button" data-restaurant-dashboard-action="statistics">Estadisticas</button>
+          <button type="button" data-restaurant-dashboard-action="staff">Personal</button>
+        </nav>
+      </section>
+
       <section class="workspace" aria-label="Pedidos del restaurante">
         <aside class="panel menu-panel" aria-label="Menu">
           <div class="panel-header">
@@ -303,6 +342,7 @@
             <div class="header-actions">
               <button class="close-month-button" id="dailyCloseButton" type="button">Cierre dia</button>
               <button class="close-month-button" id="monthlyCloseButton" type="button">Cierre mes</button>
+              <button class="close-month-button" id="annualCloseButton" type="button">Cierre anual</button>
               <button class="close-month-button" id="ticketHistoryButton" type="button">Historial</button>
               <button class="icon-button" id="counterButton" type="button" title="Cambiar proximo numero" aria-label="Cambiar proximo numero">
                 <span aria-hidden="true">#</span>
@@ -509,15 +549,20 @@
             Pago en linea
             <select id="onlinePaymentProviderSelect">
               <option value="disabled">Desactivado</option>
-              <option value="sumup">SumUp preparado</option>
-              <option value="stripe">Stripe preparado</option>
-              <option value="manual_link">Link externo preparado</option>
+              <option value="stripe">Stripe Connect (Polonia)</option>
             </select>
           </label>
           <label class="settings-wide-field">
             Nota / link de pago
             <input id="onlinePaymentNoteInput" type="text" placeholder="Pendiente de conectar proveedor real" autocomplete="off" />
           </label>
+          <div class="settings-wide-field marketplace-account-control">
+            <div>
+              <strong>Cuenta para recibir pagos</strong>
+              <span id="marketplaceAccountStatus">Sin verificar</span>
+            </div>
+            <button id="marketplaceAccountButton" type="button">Configurar pagos</button>
+          </div>
           <button id="saveCustomerSettingsButton" type="button">Guardar cliente</button>
         </section>
 
@@ -570,6 +615,17 @@
               <label>
                 Precio
                 <input id="productPriceInput" type="number" min="0" step="0.01" placeholder="0.00" />
+              </label>
+              <label>
+                Estacion de preparacion
+                <select id="productStationSelect">
+                  <option value="kitchen">Cocina</option>
+                  <option value="grill">Parrilla</option>
+                  <option value="drinks">Bebidas</option>
+                  <option value="fast_food">Comidas rapidas</option>
+                  <option value="starters">Entradas</option>
+                  <option value="salads">Ensaladas</option>
+                </select>
               </label>
               <!-- ESPAÑOL -->
 <label class="product-name-field">
@@ -714,6 +770,29 @@
       </form>
     </dialog>
 
+    <dialog id="annualCloseDialog" class="monthly-dialog">
+      <form method="dialog" class="monthly-form">
+        <div class="monthly-dialog-header">
+          <div>
+            <p class="eyebrow">Reporte</p>
+            <h2>Cierre anual</h2>
+          </div>
+          <button class="icon-button" value="cancel" type="submit" title="Cerrar" aria-label="Cerrar">
+            <span aria-hidden="true">x</span>
+          </button>
+        </div>
+        <label>
+          Ano
+          <input id="closeYearInput" type="number" min="2020" max="2200" step="1" />
+        </label>
+        <div class="monthly-close-content" id="annualCloseContent"></div>
+        <div class="dialog-actions">
+          <button value="cancel" type="submit">Cerrar</button>
+          <button id="printAnnualCloseButton" value="default" type="button">Guardar e imprimir cierre anual</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="qrDialog" class="monthly-dialog">
       <form method="dialog" class="monthly-form">
         <div class="monthly-dialog-header">
@@ -799,6 +878,11 @@
               <option value="waiter">Mesero</option>
               <option value="cashier">Caja</option>
               <option value="kitchen">Cocina</option>
+              <option value="grill">Parrilla</option>
+              <option value="drinks">Bebidas</option>
+              <option value="fast_food">Comidas rapidas</option>
+              <option value="starters">Entradas</option>
+              <option value="salads">Ensaladas</option>
               <option value="packing">Empaque</option>
               <option value="dispatch">Despacho</option>
               <option value="manager">Encargado</option>
@@ -808,6 +892,15 @@
         </div>
         <p class="auth-message" id="waiterTeamMessage"></p>
         <div class="waiter-members-list" id="waiterMembersList"></div>
+        <section class="employee-hours-panel" aria-labelledby="employeeHoursTitle">
+          <div>
+            <h3 id="employeeHoursTitle">Registro de horarios</h3>
+            <p>Horas registradas por el personal durante la semana y el mes actuales.</p>
+          </div>
+          <div class="employee-hours-list" id="employeeHoursList">
+            <div class="monthly-empty">Cargando horarios...</div>
+          </div>
+        </section>
         <div class="dialog-actions">
           <button id="refreshWaiterMembersButton" value="default" type="button">Actualizar</button>
           <button value="cancel" type="submit">Cerrar</button>

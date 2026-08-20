@@ -49,7 +49,7 @@
         <span class="courier-status-dot" id="courierStatusDot"></span>
 
         <div>
-          <strong class="courier-status-title" id="courierHeaderStatus">
+          <strong class="courier-status-title" id="courierDashboardStatus">
             FUERA DE LINEA
           </strong>
 
@@ -358,6 +358,18 @@
             <button class="customer-map-button" id="courierSaveProfileButton" type="button">Enviar solicitud</button>
           </div>
           <p class="customer-map-result" id="courierProfileMessage" hidden></p>
+        </section>
+
+        <section class="customer-account-panel courier-payout-panel" id="courierPayoutPanel" hidden aria-label="Cuenta para recibir pagos">
+          <div class="customer-account-head">
+            <div>
+              <h3>Cuenta de pagos</h3>
+              <p>Configura una cuenta verificada para recibir el valor neto de los domicilios completados.</p>
+            </div>
+            <span class="courier-status-badge" id="courierPayoutStatus">Sin configurar</span>
+          </div>
+          <button class="customer-map-button" id="courierPayoutButton" type="button">Configurar pagos</button>
+          <p class="customer-delivery-help">Disponible inicialmente en Polonia mediante Stripe Connect. La transferencia se habilita cuando el cliente y el colaborador confirman la entrega.</p>
         </section>
 
         <section class="customer-profile-settings">

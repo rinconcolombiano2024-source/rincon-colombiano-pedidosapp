@@ -23,6 +23,14 @@
         </div>
       </div>
       <div class="waiter-session-actions">
+        <label class="app-language-inline waiter-language-select">
+          <span>Idioma</span>
+          <select id="autoLanguageSelect" aria-label="Idioma">
+            <option value="es">Espanol</option>
+            <option value="pl">Polski</option>
+            <option value="en">English</option>
+          </select>
+        </label>
         <span id="waiterConnectionStatus" class="waiter-status">Verificando acceso...</span>
         <button id="waiterSignOutButton" type="button" hidden>Cerrar sesion</button>
       </div>
@@ -56,11 +64,19 @@
         <button id="waiterRetryAccessButton" type="button">Activar autorizacion</button>
       </section>
 
+      <section class="waiter-shift-bar" id="waiterShiftBar" aria-label="Jornada laboral" hidden>
+          <div>
+            <span>Jornada</span>
+            <strong id="waiterShiftStatus">Sin registrar entrada</strong>
+          </div>
+          <button id="waiterShiftButton" type="button">Registrar entrada</button>
+      </section>
+
       <section class="waiter-app" id="waiterApp" hidden>
         <nav class="waiter-mobile-nav" aria-label="Secciones">
           <button class="is-active" type="button" data-waiter-view="menu">Menu</button>
           <button type="button" data-waiter-view="order">Pedido <span id="waiterCartBadge">0</span></button>
-          <button type="button" data-waiter-view="sent">Enviados</button>
+          <button type="button" data-waiter-view="sent">Pedidos de hoy</button>
         </nav>
 
         <div class="waiter-layout">
@@ -136,7 +152,19 @@
                 <p class="eyebrow">Seguimiento</p>
                 <h2>Pedidos enviados</h2>
               </div>
-              <button id="waiterRefreshSentButton" type="button">Actualizar</button>
+              <div class="waiter-panel-actions">
+                <button id="waiterDailyCloseButton" type="button">Cierre diario</button>
+                <button id="waiterMonthlyCloseButton" type="button">Cierre mensual</button>
+                <button id="waiterRefreshSentButton" type="button">Actualizar</button>
+              </div>
+            </div>
+            <div id="waiterDailySummary" class="waiter-daily-summary" aria-live="polite"></div>
+            <div class="waiter-monthly-control">
+              <label>
+                Mes del informe
+                <input id="waiterMonthInput" type="month" />
+              </label>
+              <div id="waiterMonthlySummary" class="waiter-daily-summary" aria-live="polite"></div>
             </div>
             <div id="waiterSentOrders" class="waiter-sent-list"></div>
           </section>
@@ -159,6 +187,7 @@
     <div class="toast-notice" id="waiterToast" role="status" aria-live="polite" hidden></div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
+    <script src="auto-translate.js"></script>
     <script src="mesero.js"></script>
   </body>
 </html>
