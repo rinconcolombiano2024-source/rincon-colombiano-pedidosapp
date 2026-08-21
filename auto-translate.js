@@ -679,68 +679,88 @@
   ) {
     return false;
   }
+// Fechas numéricas.
+if (
+  /^\d{1,4}[./-]\d{1,2}[./-]\d{1,4}$/.test(text)
+) {
+  return false;
+}
 
+// Horas.
+if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(text)) {
+  return false;
+}
+
+// Coordenadas GPS.
+if (
+  /^-?\d{1,3}\.\d+,\s*-?\d{1,3}\.\d+$/.test(text)
+) {
+  return false;
+}
+
+// Códigos postales polacos.
+if (/^\d{2}-\d{3}$/.test(text)) {
+  return false;
+}
+
+// Números de pedido/ticket simples.
+if (/^#?\d{1,10}$/.test(text)) {
+  return false;
+}
+
+// IBAN.
+if (/^[A-Z]{2}\d{2}[A-Z0-9\s]{10,32}$/i.test(text)) {
+  return false;
+}
+
+// Matrículas/códigos cortos con letras y números.
+if (
+  /^[A-Z0-9]{1,5}[-\s]?[A-Z0-9]{1,5}$/i.test(text) &&
+  /\d/.test(text)
+) {
+  return false;
+}
   return true;
 }
 
-  function shouldSkipElement(element) {
-    if (!element || element.nodeType !== Node.ELEMENT_NODE) return false;
-    return Boolean(
-      element.closest(
-        [
-          "script",
-          "style",
-          "input",
-          "textarea",
-          ".print-ticket",
-          ".line-items",
-          ".menu-grid",
-          ".history-list",
-          ".product-list",
-          ".editor-category-list",
-          ".client-order-items",
-          ".client-chat-messages",
-          ".customer-menu-grid",
-          ".customer-cart-items",
-          ".customer-chat-messages",
-          ".customer-restaurant-list",
-          "#authBusinessName",
-          "#appBusinessName",
-          "#customerBusinessName",
-          "[data-no-auto-i18n]",
-        ].join(",")
-      )
-    );
+ function shouldSkipElement(element) {
+  if (!element || element.nodeType !== Node.ELEMENT_NODE) {
+    return false;
   }
 
-  function shouldSkipAttributeElement(element) {
-    if (!element || element.nodeType !== Node.ELEMENT_NODE) return false;
-    return Boolean(
-      element.closest(
-        [
-          "script",
-          "style",
-          ".print-ticket",
-          ".line-items",
-          ".menu-grid",
-          ".history-list",
-          ".product-list",
-          ".editor-category-list",
-          ".client-order-items",
-          ".client-chat-messages",
-          ".customer-menu-grid",
-          ".customer-cart-items",
-          ".customer-chat-messages",
-          ".customer-restaurant-list",
-          "#authBusinessName",
-          "#appBusinessName",
-          "#customerBusinessName",
-          "[data-no-auto-i18n]",
-        ].join(",")
-      )
-    );
+  return Boolean(
+    element.closest(
+      [
+        "script",
+        "style",
+        "noscript",
+        "code",
+        "pre",
+        "textarea",
+        "[contenteditable='true']",
+        "[data-no-auto-i18n]",
+      ].join(",")
+    )
+  );
+}
+ function shouldSkipAttributeElement(element) {
+  if (!element || element.nodeType !== Node.ELEMENT_NODE) {
+    return false;
   }
 
+  return Boolean(
+    element.closest(
+      [
+        "script",
+        "style",
+        "noscript",
+        "code",
+        "pre",
+        "[data-no-auto-i18n]",
+      ].join(",")
+    )
+  );
+}
   function cacheKey(targetLanguage, text) {
     return `${targetLanguage}|${text}`;
   }
@@ -970,12 +990,13 @@ function setOriginalAttribute(element, attribute) {
   async function translateAttributes(element) {
   if (shouldSkipAttributeElement(element)) return;
 
-  const attributes = [
-    "placeholder",
-    "title",
-    "aria-label",
-    "aria-description",
-  ];
+ const attributes = [
+  "placeholder",
+  "title",
+  "aria-label",
+  "aria-description",
+  "alt",
+];
 
   const tagName = element.tagName?.toLowerCase();
   const inputType = String(element.type || "").toLowerCase();
@@ -1036,14 +1057,15 @@ if (!shouldTranslateContent(source)) {
       const elements = root.querySelectorAll
   ? root.querySelectorAll(
       [
-        "[placeholder]",
-        "[title]",
-        "[aria-label]",
-        "[aria-description]",
-        'input[type="button"][value]',
-        'input[type="submit"][value]',
-        'input[type="reset"][value]',
-      ].join(",")
+  "[placeholder]",
+  "[title]",
+  "[aria-label]",
+  "[aria-description]",
+  "[alt]",
+  'input[type="button"][value]',
+  'input[type="submit"][value]',
+  'input[type="reset"][value]',
+].join(",")
     )
   : [];
       for (const element of elements) await translateAttributes(element);
