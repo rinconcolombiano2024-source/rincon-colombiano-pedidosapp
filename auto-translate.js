@@ -857,15 +857,53 @@
   }
 
   async function translateAttributes(element) {
-    if (shouldSkipAttributeElement(element)) return;
-    for (const attribute of ["placeholder", "title", "aria-label"]) {
-      if (!element.hasAttribute(attribute)) continue;
-      const state = setOriginalAttribute(element, attribute);
-      const translated = language === "es" ? state.source : await fetchTranslation(state.source, language);
-      state.last = translated;
-      if (element.getAttribute(attribute) !== translated) element.setAttribute(attribute, translated);
+  if (shouldSkipAttributeElement(element)) return;
+
+  const attributes = [
+    "placeholder",
+    "title",
+    "aria-label",
+    "aria-description",
+  ];
+
+  const tagName = element.tagName?.toLowerCase();
+  const inputType = String(element.type || "").toLowerCase();
+
+  if (
+    tagName === "input" &&
+    ["button", "submit", "reset"].includes(inputType)
+  ) {
+    attributes.push("value");
+  }
+
+  for (const attribute of attributes) {
+    if (!element.hasAttribute(attribute)) continue;
+
+    const state = setOriginalAttribute(element, attribute);
+    const source = normalize(state.source);
+
+    if (!source) continue;
+
+    const translated =
+      language === "es"
+        ? state.source
+        : await fetchTranslation(state.source, language);
+
+    state.last = translated;
+
+    if (element.getAttribute(attribute) !== translated) {
+      element.setAttribute(attribute, translated);
+    }
+
+    if (
+      attribute === "value" &&
+      tagName === "input" &&
+      ["button", "submit", "reset"].includes(inputType)
+    ) {
+      element.value = translated;
     }
   }
+}
 
   async function translateTree(root = document.body) {
     if (!root || translating) return;
@@ -882,7 +920,19 @@
       const textNodes = [];
       while (walker.nextNode()) textNodes.push(walker.currentNode);
       for (const node of textNodes) await translateTextNode(node);
-      const elements = root.querySelectorAll ? root.querySelectorAll("[placeholder], [title], [aria-label]") : [];
+      const elements = root.querySelectorAll
+  ? root.querySelectorAll(
+      [
+        "[placeholder]",
+        "[title]",
+        "[aria-label]",
+        "[aria-description]",
+        'input[type="button"][value]',
+        'input[type="submit"][value]',
+        'input[type="reset"][value]',
+      ].join(",")
+    )
+  : [];
       for (const element of elements) await translateAttributes(element);
     } catch {
       // Si la traduccion externa falla, se conserva el texto original.
