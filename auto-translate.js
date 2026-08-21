@@ -12,6 +12,7 @@
   let renderTimer = null;
   let translating = false;
   let cache = readCache();
+  let translationGeneration = 0;
 
   const dictionary = {
     pl: {
@@ -936,7 +937,10 @@ function setOriginalAttribute(element, attribute) {
   return state;
 }
 
-  async function translateTextNode(node) {
+ async function translateTextNode(
+  node,
+  generation = translationGeneration
+) {
   const parent = node.parentElement;
 
   if (!parent || shouldSkipElement(parent)) {
@@ -980,6 +984,9 @@ function setOriginalAttribute(element, attribute) {
     language === "es"
       ? sourceText
       : await fetchTranslation(sourceText, language);
+   if (generation !== translationGeneration) {
+  return;
+}
 
   state.last = translated;
 
@@ -987,7 +994,10 @@ function setOriginalAttribute(element, attribute) {
     node.nodeValue = translated;
   }
 }
-  async function translateAttributes(element) {
+ async function translateAttributes(
+  element,
+  generation = translationGeneration
+) {
   if (shouldSkipAttributeElement(element)) return;
 
  const attributes = [
@@ -1022,7 +1032,9 @@ if (!shouldTranslateContent(source)) {
       language === "es"
         ? state.source
         : await fetchTranslation(state.source, language);
-
+if (generation !== translationGeneration) {
+  return;
+}
     state.last = translated;
 
     if (element.getAttribute(attribute) !== translated) {
@@ -1039,7 +1051,8 @@ if (!shouldTranslateContent(source)) {
   }
 }
 
-  async function translateTree(root = document.body) {
+ async function translateTree(root = document.body) {
+  const generation = translationGeneration;
     if (!root || translating) return;
     translating = true;
     document.documentElement.lang = language;
@@ -1053,7 +1066,14 @@ if (!shouldTranslateContent(source)) {
       });
       const textNodes = [];
       while (walker.nextNode()) textNodes.push(walker.currentNode);
-      for (const node of textNodes) await translateTextNode(node);
+      for (const node of textNodes) {
+  if (generation !== translationGeneration) {
+    return;
+  }
+
+  await translateTextNode(node, generation);
+}
+      
       const elements = root.querySelectorAll
   ? root.querySelectorAll(
       [
@@ -1068,7 +1088,13 @@ if (!shouldTranslateContent(source)) {
 ].join(",")
     )
   : [];
-      for (const element of elements) await translateAttributes(element);
+      for (const element of elements) {
+  if (generation !== translationGeneration) {
+    return;
+  }
+
+  await translateAttributes(element, generation);
+}
     } catch {
       // Si la traduccion externa falla, se conserva el texto original.
     } finally {
@@ -1099,7 +1125,8 @@ function scheduleTranslate(delay = 180) {
       existingSelect.value = language;
       existingSelect.addEventListener("change", () => {
   language = existingSelect.value;
-
+translationGeneration += 1;
+        
   localStorage.setItem(LANGUAGE_KEY, language);
   localStorage.setItem(
     "rincon_colombiano_customer_language",
@@ -1112,7 +1139,36 @@ function scheduleTranslate(delay = 180) {
 });
       return;
     }
-    if (document.querySelector("#customerLanguageSelect")) return;
+    const customerSelect =
+  document.querySelector("#customerLanguageSelect");
+
+if (customerSelect) {
+  customerSelect.value = language;
+
+  customerSelect.addEventListener("change", () => {
+    language = String(
+      customerSelect.value || "es"
+    ).toLowerCase();
+
+    translationGeneration += 1;
+
+    localStorage.setItem(
+      LANGUAGE_KEY,
+      language
+    );
+
+    localStorage.setItem(
+      "rincon_colombiano_customer_language",
+      language
+    );
+
+    document.documentElement.lang = language;
+
+    scheduleTranslate(0);
+  });
+
+  return;
+}
     const label = document.createElement("label");
     label.className = "app-language-floating";
     label.innerHTML = `
@@ -1128,7 +1184,8 @@ function scheduleTranslate(delay = 180) {
     select.value = language;
    select.addEventListener("change", () => {
   language = select.value;
-
+ translationGeneration += 1;
+     
   localStorage.setItem(LANGUAGE_KEY, language);
   localStorage.setItem(
     "rincon_colombiano_customer_language",
@@ -1152,6 +1209,7 @@ function scheduleTranslate(delay = 180) {
   }
 
   language = normalizedLanguage;
+      translationGeneration += 1;
 
   localStorage.setItem(LANGUAGE_KEY, language);
   localStorage.setItem(
@@ -1170,6 +1228,15 @@ function scheduleTranslate(delay = 180) {
   ) {
     languageSelect.value = language;
   }
+      const customerLanguageSelect =
+  document.querySelector("#customerLanguageSelect");
+
+if (
+  customerLanguageSelect &&
+  customerLanguageSelect.value !== language
+) {
+  customerLanguageSelect.value = language;
+}
 
   scheduleTranslate(0);
 },
