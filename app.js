@@ -3894,25 +3894,24 @@ async function signUpWithEmail() {
     return;
   }
 
-  elements.authMessage.textContent =
-    "Cuenta del restaurante creada. RC ORDERA te envio un correo de verificacion. Abre ese correo, confirma la cuenta y despues inicia sesion.";
+elements.authMessage.textContent = t("auth.accountCreated");
   elements.authPassword.value = "";
 }
 
 async function sendPasswordResetEmail() {
   const email = elements.authEmail.value.trim();
   if (!email) {
-    elements.authMessage.textContent = "Escribe tu correo electronico para recuperar la contrasena.";
+    elements.authMessage.textContent = t("auth.enterRecoveryEmail");
     elements.authEmail.focus();
     return;
   }
 
   if (!cloudState.client) {
-    elements.authMessage.textContent = "No se pudo conectar con Supabase. Revisa internet.";
+   elements.authMessage.textContent = t("auth.cloudConnectionError");
     return;
   }
 
-  elements.authMessage.textContent = "RC ORDERA esta enviando el correo de recuperacion...";
+  elements.authMessage.textContent = t("auth.sendingRecovery");
   const redirectTo = window.location.href.split("#")[0].split("?")[0];
 
   try {
@@ -3921,8 +3920,7 @@ async function sendPasswordResetEmail() {
       elements.authMessage.textContent = friendlyAuthError(error);
       return;
     }
-    elements.authMessage.textContent =
-      "Correo enviado por RC ORDERA. Abre el enlace del correo para crear una contrasena nueva.";
+   elements.authMessage.textContent = t("auth.recoveryEmailSent");
   } catch (error) {
     elements.authMessage.textContent = friendlyAuthError(error);
   }
@@ -3931,17 +3929,17 @@ async function sendPasswordResetEmail() {
 async function resendVerificationEmail() {
   const email = elements.authEmail.value.trim();
   if (!email) {
-    elements.authMessage.textContent = "Escribe tu correo electronico para reenviar la verificacion.";
+    elements.authMessage.textContent = t("auth.enterVerificationEmail");
     elements.authEmail.focus();
     return;
   }
 
   if (!cloudState.client) {
-    elements.authMessage.textContent = "No se pudo conectar con Supabase. Revisa internet.";
+    elements.authMessage.textContent = t("auth.cloudConnectionError");
     return;
   }
 
-  elements.authMessage.textContent = "RC ORDERA esta reenviando el correo de verificacion...";
+  elements.authMessage.textContent = t("auth.resendingVerification");
   try {
     const { error } = await cloudState.client.auth.resend({
       type: "signup",
@@ -3952,8 +3950,7 @@ async function resendVerificationEmail() {
       elements.authMessage.textContent = friendlyAuthError(error);
       return;
     }
-    elements.authMessage.textContent =
-      "Correo de verificacion reenviado por RC ORDERA. Revisa entrada, spam o promociones.";
+    elements.authMessage.textContent = t("auth.verificationResent");
   } catch (error) {
     elements.authMessage.textContent = friendlyAuthError(error);
   }
@@ -4032,7 +4029,7 @@ async function updateRecoveredPassword() {
   }
 
   if (!cloudState.client) {
-    elements.authMessage.textContent = "No se pudo conectar con Supabase. Revisa internet.";
+    elements.authMessage.textContent = t("auth.cloudConnectionError");
     return;
   }
 
@@ -4453,6 +4450,14 @@ const UI_TRANSLATIONS = {
 "auth.acceptLegalConsent": "Debes confirmar que puedes administrar el restaurante y aceptar el tratamiento técnico de datos.",
 "auth.restaurantNameExists": "Ya existe un restaurante activo con ese nombre. Usa un nombre diferente o inicia sesión con la cuenta correcta.",
 "auth.creatingAccount": "Creando cuenta...",
+    "auth.accountCreated": "Cuenta del restaurante creada. RC ORDERA te envió un correo de verificación. Abre ese correo, confirma la cuenta y después inicia sesión.",
+"auth.enterRecoveryEmail": "Escribe tu correo electrónico para recuperar la contraseña.",
+"auth.cloudConnectionError": "No se pudo conectar con Supabase. Revisa internet.",
+"auth.sendingRecovery": "RC ORDERA está enviando el correo de recuperación...",
+"auth.recoveryEmailSent": "Correo enviado por RC ORDERA. Abre el enlace del correo para crear una contraseña nueva.",
+"auth.enterVerificationEmail": "Escribe tu correo electrónico para reenviar la verificación.",
+"auth.resendingVerification": "RC ORDERA está reenviando el correo de verificación...",
+"auth.verificationResent": "Correo de verificación reenviado por RC ORDERA. Revisa la bandeja de entrada, spam o promociones.",
   },
 
   pl: {
@@ -4488,6 +4493,14 @@ const UI_TRANSLATIONS = {
 "auth.acceptLegalConsent": "Potwierdź, że masz prawo zarządzać restauracją i zaakceptuj techniczne przetwarzanie danych.",
 "auth.restaurantNameExists": "Aktywna restauracja o tej nazwie już istnieje. Użyj innej nazwy lub zaloguj się na właściwe konto.",
 "auth.creatingAccount": "Tworzenie konta...",
+    "auth.accountCreated": "Konto restauracji zostało utworzone. RC ORDERA wysłało wiadomość e-mail z linkiem weryfikacyjnym. Otwórz wiadomość, potwierdź konto, a następnie się zaloguj.",
+"auth.enterRecoveryEmail": "Wpisz swój adres e-mail, aby odzyskać hasło.",
+"auth.cloudConnectionError": "Nie udało się połączyć z Supabase. Sprawdź połączenie z internetem.",
+"auth.sendingRecovery": "RC ORDERA wysyła wiadomość e-mail do odzyskania hasła...",
+"auth.recoveryEmailSent": "Wiadomość została wysłana przez RC ORDERA. Otwórz link w wiadomości, aby ustawić nowe hasło.",
+"auth.enterVerificationEmail": "Wpisz swój adres e-mail, aby ponownie wysłać wiadomość weryfikacyjną.",
+"auth.resendingVerification": "RC ORDERA ponownie wysyła wiadomość weryfikacyjną...",
+"auth.verificationResent": "Wiadomość weryfikacyjna została ponownie wysłana przez RC ORDERA. Sprawdź skrzynkę odbiorczą, spam lub zakładkę Oferty.",
   },
 
   en: {
@@ -4522,6 +4535,15 @@ const UI_TRANSLATIONS = {
 "auth.acceptLegalConsent": "Confirm that you are authorized to manage the restaurant and accept the technical processing of data.",
 "auth.restaurantNameExists": "An active restaurant with that name already exists. Use a different name or sign in with the correct account.",
 "auth.creatingAccount": "Creating account...",
+    "auth.accountCreated": "The restaurant account has been created. RC ORDERA sent you a verification email. Open the email, confirm your account, and then sign in.",
+"auth.enterRecoveryEmail": "Enter your email address to recover your password.",
+"auth.cloudConnectionError": "Could not connect to Supabase. Check your internet connection.",
+"auth.sendingRecovery": "RC ORDERA is sending the password recovery email...",
+"auth.recoveryEmailSent": "Email sent by RC ORDERA. Open the link in the email to create a new password.",
+"auth.enterVerificationEmail": "Enter your email address to resend the verification email.",
+"auth.resendingVerification": "RC ORDERA is resending the verification email...",
+"auth.verificationResent": "Verification email resent by RC ORDERA. Check your inbox, spam, or promotions folder.",
+    
   },
 };
 /*
