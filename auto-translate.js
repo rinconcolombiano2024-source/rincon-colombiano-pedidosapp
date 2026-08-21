@@ -767,29 +767,66 @@
   }
 
   async function fetchTranslation(text, targetLanguage) {
-    const clean = normalize(text);
-    if (!clean || targetLanguage === "es" || clean.length > 220 || !navigator.onLine) return clean;
-    const direct = dictionaryTranslation(clean, targetLanguage);
-    if (direct) return direct;
-    const key = cacheKey(targetLanguage, clean);
-    if (cache[key]) return cache[key];
-    if (!window.RINCON_ENABLE_EXTERNAL_UI_TRANSLATION) return clean;
+  const clean = normalize(text);
 
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=es&tl=${encodeURIComponent(
-      targetLanguage
-    )}&dt=t&q=${encodeURIComponent(clean)}`;
+  if (!clean) return clean;
+  if (targetLanguage === "es") return clean;
+
+  // 1. Primero usa nuestro diccionario profesional.
+  const direct = dictionaryTranslation(clean, targetLanguage);
+  if (direct) return direct;
+
+  // 2. Después revisa traducciones ya guardadas.
+  const key = cacheKey(targetLanguage, clean);
+  if (cache[key]) return cache[key];
+
+  // 3. No traducir datos demasiado largos o sin conexión.
+  if (clean.length > 500 || !navigator.onLine) {
+    return clean;
+  }
+
+  // 4. Cualquier texto de interfaz que no conozcamos
+  // se traduce automáticamente.
+  try {
+    const url =
+      `https://translate.googleapis.com/translate_a/single` +
+      `?client=gtx` +
+      `&sl=es` +
+      `&tl=${encodeURIComponent(targetLanguage)}` +
+      `&dt=t` +
+      `&q=${encodeURIComponent(clean)}`;
+
     const response = await fetch(url);
-    if (!response.ok) throw new Error("translation unavailable");
+
+    if (!response.ok) {
+      return clean;
+    }
+
     const data = await response.json();
-    const translated = normalize((data?.[0] || []).map((part) => part?.[0] || "").join(""));
-    if (translated && translated.toLowerCase() !== clean.toLowerCase()) {
+
+    const translated = normalize(
+      (data?.[0] || [])
+        .map((part) => part?.[0] || "")
+        .join("")
+    );
+
+    if (
+      translated &&
+      translated.toLowerCase() !== clean.toLowerCase()
+    ) {
       cache[key] = translated;
       saveCache();
       return translated;
     }
-    return clean;
+  } catch (error) {
+    console.warn(
+      "RC ORDERA: traducción automática no disponible.",
+      error
+    );
   }
 
+  return clean;
+}
   function setOriginalAttribute(element, attribute) {
     let values = originalAttributes.get(element);
     if (!values) {
