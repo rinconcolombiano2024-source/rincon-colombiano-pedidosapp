@@ -3802,43 +3802,43 @@ async function signUpWithEmail() {
     restaurantRegistrationRegion.longitude = null;
   }
   const profile = restaurantSignupProfileFromInputs(email);
-  if (!["PL", "CO"].includes(profile.countryCode)) {
-    elements.authMessage.textContent = "Selecciona Colombia o Polonia.";
+ if (!["PL", "CO"].includes(profile.countryCode)) {
+  elements.authMessage.textContent = t("auth.selectCountry");
     elements.authCountryCodeInput?.focus();
     return;
   }
   if (!profile.region) {
-    elements.authMessage.textContent = "Escribe o selecciona el departamento o voivodato.";
+    elements.authMessage.textContent = t("auth.enterRegion");
     elements.authRegionInput?.focus();
     return;
   }
   if (!profile.city) {
-    elements.authMessage.textContent = "Escribe la ciudad, municipio, pueblo, corregimiento, vereda o localidad.";
+   elements.authMessage.textContent = t("auth.enterCity");
     elements.authCityInput?.focus();
     return;
   }
   if (!normalizeTextSetting(elements.authRestaurantNameInput?.value || "")) {
-    elements.authMessage.textContent = "Escribe el nombre comercial del restaurante para registrarlo.";
+    elements.authMessage.textContent = t("auth.enterRestaurantName");
     elements.authRestaurantNameInput?.focus();
     return;
   }
   if (!profile.legalBusinessName) {
-    elements.authMessage.textContent = "Escribe la razon social o nombre legal de la empresa.";
+    elements.authMessage.textContent = t("auth.enterLegalName");
     elements.authLegalNameInput?.focus();
     return;
   }
   if (!profile.legalAddress) {
-    elements.authMessage.textContent = "Escribe la direccion legal o direccion del punto.";
+    elements.authMessage.textContent = t("auth.enterLegalAddress");
     elements.authLegalAddressInput?.focus();
     return;
   }
   if (!profile.businessPhone) {
-    elements.authMessage.textContent = "Escribe el telefono del restaurante.";
+    elements.authMessage.textContent = t("auth.enterBusinessPhone");
     elements.authBusinessPhoneInput?.focus();
     return;
   }
   if (!profile.ownerName) {
-    elements.authMessage.textContent = "Escribe el nombre del responsable o administrador.";
+    elements.authMessage.textContent = t("auth.enterOwnerName");
     elements.authOwnerNameInput?.focus();
     return;
   }
@@ -3848,13 +3848,13 @@ async function signUpWithEmail() {
     return;
   }
   if (await restaurantNameAlreadyExists(profile.businessName)) {
-    elements.authMessage.textContent = "Ya existe un restaurante activo con ese nombre. Usa un nombre diferente o inicia sesion con la cuenta correcta.";
+    elements.authMessage.textContent = t("auth.restaurantNameExists");
     elements.authRestaurantNameInput?.focus();
     return;
   }
 
   applyRestaurantProfile(profile, { onlyIfEmpty: false });
-  elements.authMessage.textContent = "Creando cuenta...";
+  elements.authMessage.textContent = t("auth.creatingAccount");
   try {
     const { error } = await cloudState.client.auth.signUp({
       email,
@@ -4442,6 +4442,17 @@ const UI_TRANSLATIONS = {
     "auth.enterCredentials": "Escribe correo y contraseña.",
     "auth.invalidRegister": "Usa un correo y una contraseña de mínimo 6 caracteres.",
     "auth.detectingRegion": "Detectando país e idioma...",
+    "auth.selectCountry": "Selecciona Colombia o Polonia.",
+"auth.enterRegion": "Escribe o selecciona el departamento o voivodato.",
+"auth.enterCity": "Escribe la ciudad, municipio, pueblo, corregimiento, vereda o localidad.",
+"auth.enterRestaurantName": "Escribe el nombre comercial del restaurante para registrarlo.",
+"auth.enterLegalName": "Escribe la razón social o nombre legal de la empresa.",
+"auth.enterLegalAddress": "Escribe la dirección legal o dirección del punto.",
+"auth.enterBusinessPhone": "Escribe el teléfono del restaurante.",
+"auth.enterOwnerName": "Escribe el nombre del responsable o administrador.",
+"auth.acceptLegalConsent": "Debes confirmar que puedes administrar el restaurante y aceptar el tratamiento técnico de datos.",
+"auth.restaurantNameExists": "Ya existe un restaurante activo con ese nombre. Usa un nombre diferente o inicia sesión con la cuenta correcta.",
+"auth.creatingAccount": "Creando cuenta...",
   },
 
   pl: {
@@ -4466,6 +4477,17 @@ const UI_TRANSLATIONS = {
     "auth.enterCredentials": "Wpisz adres e-mail i hasło.",
     "auth.invalidRegister": "Wpisz adres e-mail i hasło składające się z co najmniej 6 znaków.",
     "auth.detectingRegion": "Wykrywanie kraju i języka...",
+    "auth.selectCountry": "Wybierz Kolumbię lub Polskę.",
+"auth.enterRegion": "Wpisz lub wybierz departament albo województwo.",
+"auth.enterCity": "Wpisz miasto, gminę, miejscowość lub inną lokalizację.",
+"auth.enterRestaurantName": "Wpisz nazwę handlową restauracji.",
+"auth.enterLegalName": "Wpisz nazwę prawną firmy.",
+"auth.enterLegalAddress": "Wpisz adres prawny firmy lub adres lokalu.",
+"auth.enterBusinessPhone": "Wpisz numer telefonu restauracji.",
+"auth.enterOwnerName": "Wpisz imię i nazwisko osoby odpowiedzialnej lub administratora.",
+"auth.acceptLegalConsent": "Potwierdź, że masz prawo zarządzać restauracją i zaakceptuj techniczne przetwarzanie danych.",
+"auth.restaurantNameExists": "Aktywna restauracja o tej nazwie już istnieje. Użyj innej nazwy lub zaloguj się na właściwe konto.",
+"auth.creatingAccount": "Tworzenie konta...",
   },
 
   en: {
@@ -4489,6 +4511,17 @@ const UI_TRANSLATIONS = {
     "auth.enterCredentials": "Enter your email address and password.",
     "auth.invalidRegister": "Enter an email address and a password of at least 6 characters.",
     "auth.detectingRegion": "Detecting country and language...",
+    "auth.selectCountry": "Select Colombia or Poland.",
+"auth.enterRegion": "Enter or select the department or voivodeship.",
+"auth.enterCity": "Enter the city, municipality, town, village, district, or locality.",
+"auth.enterRestaurantName": "Enter the restaurant's business name.",
+"auth.enterLegalName": "Enter the company's legal name.",
+"auth.enterLegalAddress": "Enter the company's legal address or restaurant address.",
+"auth.enterBusinessPhone": "Enter the restaurant phone number.",
+"auth.enterOwnerName": "Enter the name of the person responsible or administrator.",
+"auth.acceptLegalConsent": "Confirm that you are authorized to manage the restaurant and accept the technical processing of data.",
+"auth.restaurantNameExists": "An active restaurant with that name already exists. Use a different name or sign in with the correct account.",
+"auth.creatingAccount": "Creating account...",
   },
 };
 /*
