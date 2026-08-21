@@ -598,6 +598,12 @@
           <button id="saveCustomerSettingsButton" type="button">Guardar cliente</button>
         </section>
 </div>
+        <div
+  id="restaurantHoursSection"
+  class="restaurant-edit-section"
+  data-edit-panel="restaurant-hours"
+  hidden
+>
         <section class="settings-card restaurant-hours-card">
           <div>
             <h3>Horario de atencion</h3>
@@ -606,7 +612,7 @@
           <div class="restaurant-hours-grid" id="restaurantHoursGrid" aria-label="Horario semanal"></div>
           <button id="saveRestaurantHoursButton" type="button">Guardar horario</button>
         </section>
-
+</div>
         <section class="settings-card restaurant-danger-card">
           <div>
             <h3>Estado del restaurante</h3>
@@ -615,7 +621,12 @@
           <button id="closeRestaurantButton" type="button">Abrir atencion</button>
           <button id="requestRestaurantDeletionButton" type="button">Eliminar restaurante</button>
         </section>
-
+<div
+  id="restaurantMenuSection"
+  class="restaurant-edit-section"
+  data-edit-panel="restaurant-menu"
+  hidden
+>
         <div class="menu-editor-layout">
           <section class="editor-section">
             <h3>Categorias</h3>
@@ -739,10 +750,17 @@
           </section>
         </div>
 
-        <div class="dialog-actions">
-          <button id="resetMenuButton" value="default" type="button">Vaciar menu</button>
-          <button value="cancel" type="submit">Cerrar</button>
-        </div>
+       <div class="dialog-actions">
+  <button id="resetMenuButton" value="default" type="button">
+    Vaciar menu
+  </button>
+</div>
+
+</div>
+
+<div class="dialog-actions">
+  <button value="cancel" type="submit">Cerrar</button>
+</div>
       </form>
     </dialog>
 
