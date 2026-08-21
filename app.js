@@ -291,6 +291,13 @@ const elements = {
   installHelpDialog: document.querySelector("#installHelpDialog"),
   editMenuButton: document.querySelector("#editMenuButton"),
   menuEditorDialog: document.querySelector("#menuEditorDialog"),
+  restaurantInfoTabButton: document.querySelector("#restaurantInfoTabButton"),
+restaurantHoursTabButton: document.querySelector("#restaurantHoursTabButton"),
+restaurantMenuTabButton: document.querySelector("#restaurantMenuTabButton"),
+
+restaurantInfoSection: document.querySelector("#restaurantInfoSection"),
+restaurantHoursSection: document.querySelector("#restaurantHoursSection"),
+restaurantMenuSection: document.querySelector("#restaurantMenuSection"),
   editorCategoryList: document.querySelector("#editorCategoryList"),
   categoryNameInput: document.querySelector("#categoryNameInput"),
   addCategoryButton: document.querySelector("#addCategoryButton"),
@@ -8244,7 +8251,49 @@ elements.printAnnualCloseButton?.addEventListener("click", () => {
     alert(error.message || "No fue posible confirmar el cierre anual.");
   });
 });
+function showRestaurantEditSection(sectionName) {
+  const tabs = [
+    elements.restaurantInfoTabButton,
+    elements.restaurantHoursTabButton,
+    elements.restaurantMenuTabButton,
+  ];
 
+  const sections = [
+    elements.restaurantInfoSection,
+    elements.restaurantHoursSection,
+    elements.restaurantMenuSection,
+  ];
+
+  tabs.forEach((tab) => {
+    if (!tab) return;
+
+    const isActive = tab.dataset.editSection === sectionName;
+
+    tab.classList.toggle("is-active", isActive);
+    tab.setAttribute("aria-selected", isActive ? "true" : "false");
+  });
+
+  sections.forEach((section) => {
+    if (!section) return;
+
+    const isActive = section.dataset.editPanel === sectionName;
+
+    section.hidden = !isActive;
+    section.classList.toggle("is-active", isActive);
+  });
+}
+
+elements.restaurantInfoTabButton?.addEventListener("click", () => {
+  showRestaurantEditSection("restaurant-info");
+});
+
+elements.restaurantHoursTabButton?.addEventListener("click", () => {
+  showRestaurantEditSection("restaurant-hours");
+});
+
+elements.restaurantMenuTabButton?.addEventListener("click", () => {
+  showRestaurantEditSection("restaurant-menu");
+});
 elements.editMenuButton.addEventListener("click", openMenuEditor);
 elements.restaurantDashboardSummary?.addEventListener("click", (event) => {
   const button = event.target.closest("[data-restaurant-dashboard-action]");
