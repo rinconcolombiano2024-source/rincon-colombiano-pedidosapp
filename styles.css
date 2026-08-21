@@ -9679,3 +9679,72 @@ body.waiter-page
   }
 
 }
+/* =========================================================
+   EDITAR INFORMACION - NAVEGACION HORIZONTAL
+   ========================================================= */
+
+.restaurant-edit-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+  margin: 18px 0 24px;
+  padding: 0 0 4px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.restaurant-edit-tab {
+  flex: 1 1 0;
+  min-width: 190px;
+
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+
+  border-radius: 14px;
+  padding: 14px 18px;
+
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+
+  cursor: pointer;
+  white-space: nowrap;
+
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.restaurant-edit-tab:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.restaurant-edit-tab.is-active {
+  border-color: #ff7a00;
+  background: #fff7ed;
+  box-shadow: 0 4px 14px rgba(255, 122, 0, 0.12);
+}
+
+.restaurant-edit-tab:focus-visible {
+  outline: 3px solid rgba(255, 122, 0, 0.25);
+  outline-offset: 2px;
+}
+
+/* MOVIL */
+@media (max-width: 700px) {
+  .restaurant-edit-tabs {
+    gap: 8px;
+    margin: 14px 0 18px;
+  }
+
+  .restaurant-edit-tab {
+    flex: 0 0 auto;
+    min-width: 175px;
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+}
