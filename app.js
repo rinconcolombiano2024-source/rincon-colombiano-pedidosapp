@@ -3740,11 +3740,11 @@ async function signInWithEmail() {
   const email = elements.authEmail.value.trim();
   const password = elements.authPassword.value;
   if (!email || !password) {
-    elements.authMessage.textContent = "Escribe correo y contrasena.";
+    elements.authMessage.textContent = t("auth.enterCredentials");
     return;
   }
 
- elements.authMessage.textContent = t("auth.signingIn");
+   elements.authMessage.textContent = t("auth.signingIn");
   try {
     const { error } = await cloudState.client.auth.signInWithPassword({ email, password });
     if (error) {
@@ -3763,11 +3763,11 @@ async function signUpWithEmail() {
   const email = elements.authEmail.value.trim();
   const password = elements.authPassword.value;
   if (!email || password.length < 6) {
-    elements.authMessage.textContent = "Usa un correo y una contrasena de minimo 6 caracteres.";
+    elements.authMessage.textContent = t("auth.invalidRegister");
     return;
   }
 
-  elements.authMessage.textContent = "Detectando pais e idioma...";
+  elements.authMessage.textContent = t("auth.detectingRegion");
   const registrationCoords = await registrationPosition();
   const detectedRegion = detectRegionalDefaults(registrationCoords);
   restaurantRegistrationRegion = {
@@ -4439,12 +4439,14 @@ const UI_TRANSLATIONS = {
     "restaurant.close": "Cerrar restaurante",
 
     "auth.signingIn": "Iniciando sesión...",
+    "auth.enterCredentials": "Escribe correo y contraseña.",
     "auth.invalidRegister": "Usa un correo y una contraseña de mínimo 6 caracteres.",
     "auth.detectingRegion": "Detectando país e idioma...",
   },
 
   pl: {
     "common.loading": "Ładowanie...",
+    
     "common.save": "Zapisz",
     "common.cancel": "Anuluj",
     "common.close": "Zamknij",
@@ -4461,6 +4463,7 @@ const UI_TRANSLATIONS = {
     "restaurant.close": "Zamknij restaurację",
 
     "auth.signingIn": "Logowanie...",
+    "auth.enterCredentials": "Wpisz adres e-mail i hasło.",
     "auth.invalidRegister": "Wpisz adres e-mail i hasło składające się z co najmniej 6 znaków.",
     "auth.detectingRegion": "Wykrywanie kraju i języka...",
   },
@@ -4483,6 +4486,7 @@ const UI_TRANSLATIONS = {
     "restaurant.close": "Close restaurant",
 
     "auth.signingIn": "Signing in...",
+    "auth.enterCredentials": "Enter your email address and password.",
     "auth.invalidRegister": "Enter an email address and a password of at least 6 characters.",
     "auth.detectingRegion": "Detecting country and language...",
   },
