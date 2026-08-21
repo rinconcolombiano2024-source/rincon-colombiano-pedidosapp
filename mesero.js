@@ -990,6 +990,7 @@ async function waiterSendOrder() {
     await waiterLoadSentOrders();
     waiterSelectView("sent");
   } catch (error) {
+    console.error("ERROR REAL submit_waiter_order:", error);
     const message = String(error?.message || "");
     if (/fetch|network|timeout/i.test(message)) {
       waiterQueueOrder(payload);
