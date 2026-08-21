@@ -4437,9 +4437,56 @@ const UI_TRANSLATIONS = {
 
     "restaurant.open": "Abrir restaurante",
     "restaurant.close": "Cerrar restaurante",
+
+    "auth.signingIn": "Iniciando sesión...",
+    "auth.invalidRegister": "Usa un correo y una contraseña de mínimo 6 caracteres.",
+    "auth.detectingRegion": "Detectando país e idioma...",
+  },
+
+  pl: {
+    "common.loading": "Ładowanie...",
+    "common.save": "Zapisz",
+    "common.cancel": "Anuluj",
+    "common.close": "Zamknij",
+    "common.edit": "Edytuj",
+    "common.delete": "Usuń",
+    "common.yes": "Tak",
+    "common.no": "Nie",
+
+    "order.new": "Nowe zamówienie",
+    "order.save": "Zapisz zamówienie",
+    "order.cancel": "Anuluj zamówienie",
+
+    "restaurant.open": "Otwórz restaurację",
+    "restaurant.close": "Zamknij restaurację",
+
+    "auth.signingIn": "Logowanie...",
+    "auth.invalidRegister": "Wpisz adres e-mail i hasło składające się z co najmniej 6 znaków.",
+    "auth.detectingRegion": "Wykrywanie kraju i języka...",
+  },
+
+  en: {
+    "common.loading": "Loading...",
+    "common.save": "Save",
+    "common.cancel": "Cancel",
+    "common.close": "Close",
+    "common.edit": "Edit",
+    "common.delete": "Delete",
+    "common.yes": "Yes",
+    "common.no": "No",
+
+    "order.new": "New order",
+    "order.save": "Save order",
+    "order.cancel": "Cancel order",
+
+    "restaurant.open": "Open restaurant",
+    "restaurant.close": "Close restaurant",
+
+    "auth.signingIn": "Signing in...",
+    "auth.invalidRegister": "Enter an email address and a password of at least 6 characters.",
+    "auth.detectingRegion": "Detecting country and language...",
   },
 };
-
 /*
  * Permite agregar traducciones para
  * CUALQUIER idioma sin modificar
