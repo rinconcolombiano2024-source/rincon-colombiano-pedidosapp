@@ -1760,9 +1760,38 @@ body.auth-mode .print-ticket {
 
 .toast-notice {
   position: fixed;
-  right: 18px;
-  bottom: 18px;
-  z-index: 50;
+
+  left: 50%;
+  top: 24px;
+  right: auto;
+  bottom: auto;
+
+  z-index: 99999;
+
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 14px 18px;
+
+  border: 1px solid #b9e4c8;
+  border-left: 5px solid var(--green);
+  border-radius: 10px;
+
+  background: #f0fff5;
+  color: #14532d;
+
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.22);
+
+  font-weight: 900;
+  line-height: 1.25;
+
+  transform: translate(-50%, -10px);
+  opacity: 0;
+
+  pointer-events: none;
+
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
   max-width: min(360px, calc(100vw - 32px));
   padding: 13px 16px;
   border: 1px solid #b9e4c8;
@@ -1780,7 +1809,7 @@ body.auth-mode .print-ticket {
 }
 
 .toast-notice.show {
-  transform: translateY(0);
+  transform: translate(-50%, 0);
   opacity: 1;
 }
 
