@@ -632,6 +632,56 @@
   function normalize(value) {
     return String(value || "").trim().replace(/\s+/g, " ");
   }
+  function shouldTranslateContent(value) {
+  const text = normalize(value);
+
+  if (!text) return false;
+
+  // Solo números, precios, porcentajes, horas, etc.
+  if (/^[\d\s.,:+\-/%€$£złPLNCOP]+$/i.test(text)) {
+    return false;
+  }
+
+  // Correos electrónicos.
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(text)) {
+    return false;
+  }
+
+  // URLs.
+  if (/^(https?:\/\/|www\.)/i.test(text)) {
+    return false;
+  }
+
+  // Teléfonos.
+  if (/^\+?[\d\s()\-]{6,}$/.test(text)) {
+    return false;
+  }
+
+  // UUID.
+  if (
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      text
+    )
+  ) {
+    return false;
+  }
+
+  // Códigos, referencias e identificadores técnicos.
+  if (/^[A-Z0-9_-]{4,}$/i.test(text) && /\d/.test(text)) {
+    return false;
+  }
+
+  // Extensiones y nombres de archivo.
+  if (
+    /^[^\s]+\.(jpg|jpeg|png|webp|gif|pdf|doc|docx|xls|xlsx|zip|js|css|html)$/i.test(
+      text
+    )
+  ) {
+    return false;
+  }
+
+  return true;
+}
 
   function shouldSkipElement(element) {
     if (!element || element.nodeType !== Node.ELEMENT_NODE) return false;
@@ -845,7 +895,10 @@
     const parent = node.parentElement;
     if (!parent || shouldSkipElement(parent)) return;
     const clean = normalize(node.nodeValue);
-    if (!clean || /^\d+([:.,]\d+)?$/.test(clean)) return;
+
+if (!shouldTranslateContent(clean)) {
+  return;
+}  
     const state = originalText.get(node);
     if (!state || (clean !== normalize(state.source) && clean !== normalize(state.last))) {
       originalText.set(node, { source: node.nodeValue, last: "" });
@@ -882,7 +935,9 @@
     const state = setOriginalAttribute(element, attribute);
     const source = normalize(state.source);
 
-    if (!source) continue;
+if (!shouldTranslateContent(source)) {
+  continue;
+}
 
     const translated =
       language === "es"
