@@ -5936,6 +5936,9 @@ function openMenuEditor() {
   clearProductForm();
   renderCurrencySettings();
   renderMenuEditor();
+
+  showRestaurantEditSection("restaurant-info");
+
   elements.menuEditorDialog.showModal();
   refreshMarketplaceAccountState("status").catch(() => {});
 }
