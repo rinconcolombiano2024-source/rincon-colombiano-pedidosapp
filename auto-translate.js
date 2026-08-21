@@ -996,21 +996,40 @@ if (!shouldTranslateContent(source)) {
     }
   }
 
-  function scheduleTranslate() {
-    if (renderTimer) window.clearTimeout(renderTimer);
-    renderTimer = window.setTimeout(() => translateTree(), 180);
+function scheduleTranslate(delay = 180) {
+  if (renderTimer) {
+    window.clearTimeout(renderTimer);
   }
+
+  renderTimer = window.setTimeout(async () => {
+    renderTimer = null;
+
+    if (translating) {
+      scheduleTranslate(120);
+      return;
+    }
+
+    await translateTree(document.body);
+  }, delay);
+}
 
   function createLanguageControl() {
     const existingSelect = document.querySelector("#autoLanguageSelect");
     if (existingSelect) {
       existingSelect.value = language;
       existingSelect.addEventListener("change", () => {
-        language = existingSelect.value;
-        localStorage.setItem(LANGUAGE_KEY, language);
-        localStorage.setItem("rincon_colombiano_customer_language", language);
-        translateTree();
-      });
+  language = existingSelect.value;
+
+  localStorage.setItem(LANGUAGE_KEY, language);
+  localStorage.setItem(
+    "rincon_colombiano_customer_language",
+    language
+  );
+
+  document.documentElement.lang = language;
+
+  scheduleTranslate(0);
+});
       return;
     }
     if (document.querySelector("#customerLanguageSelect")) return;
@@ -1027,21 +1046,53 @@ if (!shouldTranslateContent(source)) {
     document.body.appendChild(label);
     const select = label.querySelector("select");
     select.value = language;
-    select.addEventListener("change", () => {
-      language = select.value;
-      localStorage.setItem(LANGUAGE_KEY, language);
-      localStorage.setItem("rincon_colombiano_customer_language", language);
-      translateTree();
-    });
+   select.addEventListener("change", () => {
+  language = select.value;
+
+  localStorage.setItem(LANGUAGE_KEY, language);
+  localStorage.setItem(
+    "rincon_colombiano_customer_language",
+    language
+  );
+
+  document.documentElement.lang = language;
+
+  scheduleTranslate(0);
+});
   }
 
   window.RinconAutoTranslate = {
     setLanguage(nextLanguage) {
-      if (!SUPPORTED[nextLanguage]) return;
-      language = nextLanguage;
-      localStorage.setItem(LANGUAGE_KEY, language);
-      scheduleTranslate();
-    },
+  const normalizedLanguage = String(
+    nextLanguage || ""
+  ).toLowerCase();
+
+  if (!SUPPORTED[normalizedLanguage]) {
+    return;
+  }
+
+  language = normalizedLanguage;
+
+  localStorage.setItem(LANGUAGE_KEY, language);
+  localStorage.setItem(
+    "rincon_colombiano_customer_language",
+    language
+  );
+
+  document.documentElement.lang = language;
+
+  const languageSelect =
+    document.querySelector("#autoLanguageSelect");
+
+  if (
+    languageSelect &&
+    languageSelect.value !== language
+  ) {
+    languageSelect.value = language;
+  }
+
+  scheduleTranslate(0);
+},
   };
 
   if (document.readyState === "loading") {
