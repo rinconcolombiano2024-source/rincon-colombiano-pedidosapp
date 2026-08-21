@@ -3744,7 +3744,7 @@ async function signInWithEmail() {
     return;
   }
 
-  elements.authMessage.textContent = "Iniciando sesion...";
+ elements.authMessage.textContent = t("auth.signingIn");
   try {
     const { error } = await cloudState.client.auth.signInWithPassword({ email, password });
     if (error) {
