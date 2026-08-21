@@ -877,38 +877,96 @@
 
   return clean;
 }
-  function setOriginalAttribute(element, attribute) {
-    let values = originalAttributes.get(element);
-    if (!values) {
-      values = {};
-      originalAttributes.set(element, values);
-    }
-    const current = element.getAttribute(attribute) || "";
-    const state = values[attribute];
-    if (!state || (normalize(current) !== normalize(state.source) && normalize(current) !== normalize(state.last))) {
-      values[attribute] = { source: current, last: "" };
-    }
-    return values[attribute];
+function setOriginalAttribute(element, attribute) {
+  let values = originalAttributes.get(element);
+
+  if (!values) {
+    values = {};
+    originalAttributes.set(element, values);
   }
+
+  const current = element.getAttribute(attribute) || "";
+  let state = values[attribute];
+
+  if (!state) {
+    state = {
+      source: current,
+      last: "",
+    };
+
+    values[attribute] = state;
+
+    return state;
+  }
+
+  const currentNormalized = normalize(current);
+  const sourceNormalized = normalize(state.source);
+  const lastNormalized = normalize(state.last);
+
+  // Si otra parte de la app modificó realmente el atributo,
+  // guardamos ese nuevo valor como original.
+  if (
+    currentNormalized !== sourceNormalized &&
+    currentNormalized !== lastNormalized
+  ) {
+    state.source = current;
+    state.last = "";
+  }
+
+  return state;
+}
 
   async function translateTextNode(node) {
-    const parent = node.parentElement;
-    if (!parent || shouldSkipElement(parent)) return;
-    const clean = normalize(node.nodeValue);
+  const parent = node.parentElement;
 
-if (!shouldTranslateContent(clean)) {
-  return;
-}  
-    const state = originalText.get(node);
-    if (!state || (clean !== normalize(state.source) && clean !== normalize(state.last))) {
-      originalText.set(node, { source: node.nodeValue, last: "" });
-    }
-    const latestState = originalText.get(node);
-    const translated = language === "es" ? latestState.source : await fetchTranslation(latestState.source, language);
-    latestState.last = translated;
-    if (node.nodeValue !== translated) node.nodeValue = translated;
+  if (!parent || shouldSkipElement(parent)) {
+    return;
   }
 
+  const clean = normalize(node.nodeValue);
+
+  if (!shouldTranslateContent(clean)) {
+    return;
+  }
+
+  let state = originalText.get(node);
+
+  if (!state) {
+    state = {
+      source: node.nodeValue,
+      last: "",
+    };
+
+    originalText.set(node, state);
+  } else {
+    const currentNormalized = normalize(node.nodeValue);
+    const sourceNormalized = normalize(state.source);
+    const lastNormalized = normalize(state.last);
+
+    // Si otra parte de la app cambió realmente el texto,
+    // ese nuevo texto pasa a ser el nuevo original.
+    if (
+      currentNormalized !== sourceNormalized &&
+      currentNormalized !== lastNormalized
+    ) {
+      state.source = node.nodeValue;
+      state.last = "";
+    }
+  }
+
+  const sourceText = state.source;
+
+  const translated =
+    language === "es"
+      ? sourceText
+      : await fetchTranslation(sourceText, language);
+
+  state.last = translated;
+
+  if (node.nodeValue !== translated) {
+    node.nodeValue = translated;
+  }
+}
   async function translateAttributes(element) {
   if (shouldSkipAttributeElement(element)) return;
 
