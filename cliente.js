@@ -5108,7 +5108,9 @@ async function customerSendOrder() {
     await customerSaveProfile();
     insertedOrder = await customerCreateCustomerOrder(orderPayload, total, tableLabel, customerName, orderType);
   } catch (error) {
-    if (/restaurant is closed/i.test(String(error?.message || ""))) {
+  console.error("ERROR REAL create_customer_order:", error);
+
+  if (/restaurant is closed/i.test(String(error?.message || ""))) {
       customerSetStatus(customerT("restaurantClosedOrder"), "error");
       customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
     } else if (/restaurant (country|region) does not match/i.test(String(error?.message || ""))) {
