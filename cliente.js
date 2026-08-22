@@ -4918,12 +4918,14 @@ async function customerLoadMenu(options = {}) {
   let data = null;
 
   try {
-    data = await customerFetchPublicMenu(customerStoreId);
-  } catch (error) {
-    console.error(error);
-    customerSetStatus(customerT("menuLoadError"), "error");
-    return;
-  }
+  data = await customerFetchPublicMenu(customerStoreId);
+} catch (error) {
+  console.error("ERROR REAL CARGANDO RESTAURANTE:", error);
+  console.error("STORE ID:", customerStoreId);
+
+  customerSetStatus(customerT("menuLoadError"), "error");
+  return;
+}
 
   if (!data) {
     await customerLoadRestaurantDirectory({ silent: true });
