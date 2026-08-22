@@ -597,6 +597,52 @@ function waiterAddProduct(productId, category) {
   );
 
 }
+function waiterAddCustomItem() {
+  const name = String(
+    waiterElements.waiterCustomItemName?.value || ""
+  ).trim();
+
+  const price = Number.parseFloat(
+    waiterElements.waiterCustomItemPrice?.value || "0"
+  );
+
+  if (!name) {
+    waiterShowToast("Escribe el nombre del producto especial.");
+    waiterElements.waiterCustomItemName?.focus();
+    return;
+  }
+
+  if (!Number.isFinite(price) || price <= 0) {
+    waiterShowToast("Escribe un precio valido.");
+    waiterElements.waiterCustomItemPrice?.focus();
+    return;
+  }
+
+  waiterCart.push({
+    cartId: crypto.randomUUID
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random()}`,
+
+    productId: `custom-${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`,
+
+    name: name.toUpperCase(),
+    price: Math.round(price * 100) / 100,
+    qty: 1,
+    note: "",
+    station: "kitchen",
+    custom: true,
+  });
+
+  waiterElements.waiterCustomItemName.value = "";
+  waiterElements.waiterCustomItemPrice.value = "";
+
+  waiterRenderCart();
+  waiterSaveDraft();
+
+  waiterShowToast(`${name.toUpperCase()} agregado al pedido.`);
+}
 async function waiterLoadMenu() {
   if (!waiterClient || !waiterStoreId) return;
   waiterSetStatus(navigator.onLine ? "Actualizando menu..." : "Sin internet", navigator.onLine ? "" : "offline");
@@ -1267,6 +1313,10 @@ waiterElements.stationOrders.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-next-status]");
   const card = event.target.closest("[data-order-id]");
   if (button && card) waiterAdvanceStationOrder(card.dataset.orderId, button.dataset.nextStatus, button);
+});
+waiterElements.waiterCustomItemForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  waiterAddCustomItem();
 });
 waiterElements.searchInput.addEventListener("input", waiterRenderMenu);
 waiterElements.categoryTabs.addEventListener("click", (event) => {
