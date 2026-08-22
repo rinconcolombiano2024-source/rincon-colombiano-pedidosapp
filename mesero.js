@@ -964,13 +964,15 @@ function waiterOrderPayload() {
     p_order_type: waiterElements.orderType.value,
     p_payment_method: waiterElements.paymentMethod.value,
     p_notes: waiterElements.notes.value.trim().toUpperCase(),
-    p_items: waiterCart.map((item) => ({
-      productId: item.productId,
-      name: item.name,
-      qty: item.qty,
-      note: String(item.note || "").trim().toUpperCase(),
-      station: waiterNormalizeProductStation(item.station),
-    })),
+   p_items: waiterCart.map((item) => ({
+  productId: item.productId,
+  name: item.name,
+  price: item.price,
+  qty: item.qty,
+  note: String(item.note || "").trim().toUpperCase(),
+  station: waiterNormalizeProductStation(item.station),
+  custom: item.custom === true,
+})),
   };
 }
 
