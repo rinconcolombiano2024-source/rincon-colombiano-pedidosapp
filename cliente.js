@@ -5414,6 +5414,7 @@ customerElements.restaurantList?.addEventListener("click", async (event) => {
   );
 
   if (!card) return;
+  console.log("CLICK RESTAURANTE:", card.dataset.storeId);
 
   customerSelectRestaurant(
     card.dataset.storeId
