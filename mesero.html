@@ -94,6 +94,30 @@
             </label>
             <div class="waiter-category-tabs" id="waiterCategoryTabs"></div>
             <div class="waiter-menu-grid" id="waiterMenuGrid"></div>
+            <form class="waiter-custom-item" id="waiterCustomItemForm">
+  <label>
+    Producto especial
+    <input
+      id="waiterCustomItemName"
+      type="text"
+      placeholder="Ej: Plato especial"
+      autocomplete="off"
+    />
+  </label>
+
+  <label>
+    Precio
+    <input
+      id="waiterCustomItemPrice"
+      type="number"
+      min="0"
+      step="0.01"
+      placeholder="0.00"
+    />
+  </label>
+
+  <button type="submit">Agregar</button>
+</form>
           </section>
 
           <section class="waiter-panel waiter-order-panel" data-waiter-panel="order">
