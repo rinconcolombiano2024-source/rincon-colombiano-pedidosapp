@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -64,51 +64,40 @@ Deno.serve(async (request) => {
     return jsonResponse(404, { deleted: false, message: "No existe un restaurante asociado a esta cuenta." });
   }
 
-  // Retira primero el restaurante del directorio publico. Si una operacion posterior falla,
-  // los clientes nunca siguen viendo una cuenta cuya eliminacion ya fue confirmada.
-  const { error: hideRestaurantError } = await admin
-    .from("restaurant_profiles")
-    .update({
-      active: false,
-      operational_open: false,
-      deleted_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("user_id", user.id);
-  if (hideRestaurantError) {
-    return jsonResponse(500, { deleted: false, message: "No fue posible retirar el restaurante del directorio publico." });
+  const { data: deletionRows, error: deletionError } = await admin.rpc(
+    "rc_ordera_finalize_restaurant_deletion",
+    { p_user_id: user.id },
+  );
+  if (deletionError) {
+    const technicalMessage = String(deletionError.message || "");
+    if (/active orders/i.test(technicalMessage)) {
+      return jsonResponse(409, {
+        deleted: false,
+        message: "El restaurante tiene pedidos activos. Finalizalos o cancelalos antes de cerrar la cuenta.",
+      });
+    }
+    if (/payment settlements/i.test(technicalMessage)) {
+      return jsonResponse(409, {
+        deleted: false,
+        message: "El restaurante tiene liquidaciones de pago pendientes. Completa la conciliacion antes de cerrar la cuenta.",
+      });
+    }
+    return jsonResponse(500, {
+      deleted: false,
+      message: "No fue posible cerrar el restaurante de forma completa. No se aplicaron cambios parciales.",
+    });
   }
 
-  // Esta relacion usa ON DELETE RESTRICT para quien concedio permisos.
-  // Se limpia antes de borrar Auth para que no queden accesos de personal huerfanos.
-  const { error: grantedMembershipError } = await admin
-    .from("restaurant_staff_memberships")
-    .delete()
-    .eq("granted_by_user_id", user.id);
-  if (grantedMembershipError && grantedMembershipError.code !== "42P01") {
-    return jsonResponse(500, { deleted: false, message: "No fue posible retirar los permisos del personal." });
+  const deletion = Array.isArray(deletionRows) ? deletionRows[0] : deletionRows;
+  if (!deletion?.hidden_from_customers) {
+    return jsonResponse(500, { deleted: false, message: "Supabase no confirmo el cierre del restaurante." });
   }
 
-  const { error: restaurantMembershipError } = await admin
-    .from("restaurant_staff_memberships")
-    .delete()
-    .eq("restaurant_user_id", user.id);
-  if (restaurantMembershipError && restaurantMembershipError.code !== "42P01") {
-    return jsonResponse(500, { deleted: false, message: "No fue posible retirar el equipo del restaurante." });
-  }
-
-  // Si la misma cuenta tenia documentos de colaborador, elimina solo su carpeta.
-  const { data: files } = await admin.storage.from("courier-documents").list(user.id, { limit: 1000 });
-  if (files?.length) {
-    const paths = files.map((file) => `${user.id}/${file.name}`);
-    const { error: storageError } = await admin.storage.from("courier-documents").remove(paths);
-    if (storageError) return jsonResponse(500, { deleted: false, message: "No fue posible eliminar los archivos asociados." });
-  }
-
-  const { error: deleteError } = await admin.auth.admin.deleteUser(user.id, false);
-  if (deleteError) {
-    return jsonResponse(500, { deleted: false, message: "Supabase no pudo eliminar la cuenta. No se confirmo ningun borrado." });
-  }
-
-  return jsonResponse(200, { deleted: true });
+  // La cuenta Auth se conserva porque el mismo correo puede tener perfil de cliente
+  // o colaborador, y porque pedidos y pagos historicos deben mantener sus relaciones.
+  return jsonResponse(200, {
+    deleted: true,
+    accountPreserved: deletion.account_preserved === true,
+    restaurantUserId: deletion.restaurant_user_id,
+  });
 });
