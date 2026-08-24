@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
 const headers = { "content-type": "application/json; charset=utf-8" };
 function response(status: number, body: Record<string, unknown>) {
@@ -44,15 +44,34 @@ Deno.serve(async (request) => {
   if (!supabaseUrl || !serviceKey || !stripeKey || !authorized) return response(401, { error: "Unauthorized" });
 
   const admin = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
+  const claimedResult = await admin.rpc("claim_marketplace_settlement_jobs", { p_limit: 25 });
+  if (claimedResult.error) return response(500, { error: "Could not claim settlement jobs" });
+  const jobs = Array.isArray(claimedResult.data) ? claimedResult.data : [];
+  if (!jobs.length) return response(200, { processed: 0 });
+
+  const jobByAllocation = new Map(jobs.map((job: any) => [String(job.allocation_id), job]));
   const { data: allocations, error } = await admin.from("marketplace_payment_allocations")
     .select("*,payment_transactions!inner(transfer_group,status)")
+    .in("id", jobs.map((job: any) => job.allocation_id))
     .in("status", ["funds_held", "partially_released", "eligible", "failed"])
+    .eq("financial_hold", false)
     .eq("payment_transactions.status", "paid")
-    .order("created_at", { ascending: true }).limit(100);
-  if (error) return response(500, { error: "Could not load settlements" });
+    .order("created_at", { ascending: true });
+  if (error) {
+    for (const job of jobs) {
+      await admin.rpc("complete_marketplace_settlement_job", {
+        p_job_id: job.job_id,
+        p_completed: false,
+        p_error: "Could not load settlement allocation",
+      });
+    }
+    return response(500, { error: "Could not load settlements" });
+  }
 
   let processed = 0;
   for (const allocation of allocations || []) {
+    const job = jobByAllocation.get(String(allocation.id));
+    if (!job?.job_id) continue;
     let restaurantTransferId = allocation.restaurant_transfer_id || "";
     let courierTransferId = allocation.courier_transfer_id || "";
     const errors: string[] = [];
@@ -104,7 +123,7 @@ Deno.serve(async (request) => {
           ? "failed"
           : "funds_held";
     const now = new Date().toISOString();
-    await admin.from("marketplace_payment_allocations").update({
+    const updateResult = await admin.from("marketplace_payment_allocations").update({
       restaurant_transfer_id: restaurantTransferId,
       courier_transfer_id: courierTransferId,
       restaurant_transferred_at: restaurantTransferId ? allocation.restaurant_transferred_at || now : null,
@@ -113,7 +132,30 @@ Deno.serve(async (request) => {
       last_error: errors.join(" | ").slice(0, 1000),
       updated_at: now,
     }).eq("id", allocation.id);
+    if (updateResult.error) errors.push("Could not persist transfer result");
+
+    const eligibleRestaurantDone = !allocation.restaurant_release_eligible_at
+      || Number(allocation.restaurant_net_amount) === 0
+      || Boolean(restaurantTransferId);
+    const eligibleCourierDone = !allocation.courier_release_eligible_at
+      || Number(allocation.courier_net_amount) === 0
+      || Boolean(courierTransferId);
+    await admin.rpc("complete_marketplace_settlement_job", {
+      p_job_id: job.job_id,
+      p_completed: errors.length === 0 && eligibleRestaurantDone && eligibleCourierDone,
+      p_error: errors.join(" | ").slice(0, 1000),
+    });
     processed += 1;
+  }
+
+  const loadedAllocationIds = new Set((allocations || []).map((allocation: any) => String(allocation.id)));
+  for (const job of jobs) {
+    if (loadedAllocationIds.has(String(job.allocation_id))) continue;
+    await admin.rpc("complete_marketplace_settlement_job", {
+      p_job_id: job.job_id,
+      p_completed: false,
+      p_error: "Allocation is not eligible or is under financial hold",
+    });
   }
   return response(200, { processed });
 });
