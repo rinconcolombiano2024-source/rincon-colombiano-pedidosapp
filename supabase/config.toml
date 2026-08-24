@@ -6,3 +6,15 @@ verify_jwt = false
 
 [functions.delivery-dispatch]
 verify_jwt = false
+
+[functions.marketplace-webhook]
+verify_jwt = false
+
+[functions.translate-public-content]
+verify_jwt = false
+
+[functions.delivery-quote]
+verify_jwt = false
+
+[functions.marketplace-confirm-delivery]
+verify_jwt = false
