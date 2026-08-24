@@ -1,4 +1,4 @@
-const CACHE_NAME = "rc-ordera-v85-platform-core";
+const CACHE_NAME = "rc-ordera-v86-1-platform-core";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -96,8 +96,8 @@ self.addEventListener("push", (event) => {
 
     data: {
       url: data.url || (data.assignment_id
-        ? `./colaborador.html?view=offers&assignment=${encodeURIComponent(data.assignment_id)}&app=v85`
-        : "./colaborador.html?view=offers&app=v85"),
+        ? `./colaborador.html?view=offers&assignment=${encodeURIComponent(data.assignment_id)}&app=v86.1`
+        : "./colaborador.html?view=offers&app=v86.1"),
       assignment_id: data.assignment_id || "",
     },
   };
@@ -112,7 +112,7 @@ self.addEventListener("notificationclick", (event) => {
 
   const targetUrl =
     event.notification.data?.url ||
-    "./colaborador.html?view=offers&app=v85";
+    "./colaborador.html?view=offers&app=v86.1";
 
   event.waitUntil(
     clients.matchAll({
