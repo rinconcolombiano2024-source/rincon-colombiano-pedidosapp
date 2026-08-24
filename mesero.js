@@ -66,6 +66,7 @@ let waiterOrdersChannel = null;
 let waiterStationPollTimer = null;
 let waiterToastTimer = null;
 let waiterSyncingQueue = false;
+let waiterBusinessContext = null;
 
 function waiterEscape(value) {
   return String(value ?? "")
@@ -785,6 +786,7 @@ async function waiterAdvanceStationOrder(orderId, nextStatus, button) {
 
 async function waiterLoadSentOrders() {
   if (!waiterClient || !waiterUser) return;
+  await waiterRefreshBusinessContext();
   const businessDate = waiterBusinessDateKey();
   const { startAt, endAt } = waiterBusinessDayBounds(businessDate);
   const { data, error } = await waiterClient
@@ -828,14 +830,42 @@ async function waiterLoadSentOrders() {
   await waiterLoadMonthlyReport();
 }
 
-function waiterBusinessDateKey(date = new Date()) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+async function waiterRefreshBusinessContext() {
+  if (!waiterClient || !waiterUser || !waiterStoreId || !navigator.onLine) {
+    return waiterBusinessContext;
+  }
+  const { data, error } = await waiterClient.rpc("get_restaurant_business_context", {
+    p_restaurant_user_id: waiterStoreId,
+  });
+  if (error) {
+    if (!["42883", "PGRST202"].includes(error.code)) console.error(error);
+    return waiterBusinessContext;
+  }
+  const context = Array.isArray(data) ? data[0] : data;
+  if (context?.business_date && context?.day_start && context?.day_end) {
+    waiterBusinessContext = {
+      businessDate: String(context.business_date),
+      timezone: String(context.timezone_name || "UTC"),
+      dayStart: String(context.day_start),
+      dayEnd: String(context.day_end),
+    };
+  }
+  return waiterBusinessContext;
+}
+
+function waiterBusinessDateKey(date = null) {
+  if (!date && /^\d{4}-\d{2}-\d{2}$/.test(waiterBusinessContext?.businessDate || "")) {
+    return waiterBusinessContext.businessDate;
+  }
+  const source = date instanceof Date ? date : new Date();
+  const year = source.getFullYear();
+  const month = String(source.getMonth() + 1).padStart(2, "0");
+  const day = String(source.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
-function waiterMonthKey(date = new Date()) {
+function waiterMonthKey(date = null) {
+  if (!date) return waiterBusinessDateKey().slice(0, 7);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
@@ -870,6 +900,13 @@ async function waiterLoadMonthlyReport() {
 }
 
 function waiterBusinessDayBounds(day) {
+  if (
+    day === waiterBusinessContext?.businessDate &&
+    waiterBusinessContext?.dayStart &&
+    waiterBusinessContext?.dayEnd
+  ) {
+    return { startAt: waiterBusinessContext.dayStart, endAt: waiterBusinessContext.dayEnd };
+  }
   const [year, month, date] = String(day).split("-").map(Number);
   const start = new Date(year, month - 1, date, 0, 0, 0, 0);
   const end = new Date(year, month - 1, date + 1, 0, 0, 0, 0);
@@ -881,6 +918,7 @@ async function waiterCloseDay() {
     waiterShowToast("Necesitas conexion para confirmar el cierre diario.");
     return;
   }
+  await waiterRefreshBusinessContext();
   if (!confirm("Confirmar el cierre de tus pedidos de hoy? El historial del restaurante se conserva.")) return;
   waiterElements.dailyCloseButton.disabled = true;
   const { data, error } = await waiterClient.rpc("close_my_waiter_day", {
@@ -902,6 +940,7 @@ async function waiterCloseMonth() {
     waiterShowToast("Necesitas conexion para confirmar el cierre mensual.");
     return;
   }
+  await waiterRefreshBusinessContext();
   const month = waiterElements.monthInput?.value || waiterMonthKey();
   if (!confirm(`Confirmar el cierre de tus pedidos de ${month}? El historial del restaurante se conserva.`)) return;
   waiterElements.monthlyCloseButton.disabled = true;
@@ -1241,12 +1280,14 @@ async function waiterSignOut() {
   } finally {
     waiterUser = null;
     waiterMembership = null;
-    window.location.replace("index.html?app=v85");
+    waiterBusinessContext = null;
+    window.location.replace("index.html?app=v86.1");
   }
 }
 
 function waiterRenderLoggedOut() {
   waiterMembership = null;
+  waiterBusinessContext = null;
   waiterElements.authCard.hidden = false;
   waiterElements.accessCard.hidden = true;
   waiterElements.app.hidden = true;
@@ -1568,10 +1609,23 @@ document.querySelectorAll("[data-waiter-view]").forEach((button) => button.addEv
 window.addEventListener("online", () => {
   waiterSetStatus("Reconectando...");
   const canTakeOrders = ["waiter", "cashier", "manager"].includes(waiterMembership?.station);
-  if (canTakeOrders) waiterSyncQueue().then(() => waiterLoadMenu()).catch(console.error);
-  else waiterLoadStationOrders().catch(console.error);
+  waiterBusinessContext = null;
+  if (canTakeOrders) {
+    waiterSyncQueue()
+      .then(() => Promise.all([waiterLoadMenu(), waiterLoadSentOrders(), waiterLoadShiftStatus()]))
+      .then(() => waiterStartRealtime())
+      .catch(console.error);
+  } else {
+    Promise.all([waiterLoadStationOrders(), waiterLoadShiftStatus()])
+      .then(() => waiterStartRealtime())
+      .catch(console.error);
+  }
 });
 window.addEventListener("offline", () => waiterSetStatus("Sin internet", "offline"));
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible" || !waiterUser || !waiterMembership || !navigator.onLine) return;
+  waiterAuthorize().catch(console.error);
+});
 window.addEventListener("beforeunload", waiterSaveDraft);
 if ("serviceWorker" in navigator && window.location.protocol.startsWith("http")) navigator.serviceWorker.register("./service-worker.js").catch(() => {});
 

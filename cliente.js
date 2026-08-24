@@ -118,6 +118,14 @@ const CUSTOMER_I18N = {
     heroSubtitle: "Escanea, elige y envia tu pedido.",
     warning: "App de prueba: si algo sale diferente, el restaurante confirmara el pedido y cualquier ajuste antes de prepararlo.",
     testEnvironment: "Entorno de prueba",
+    greeting: "Hola,",
+    defaultCustomerName: "Cliente",
+    deliveryTo: "Entregar en",
+    homePrompt: "¿Que se te antoja hoy?",
+    homeSearchPlaceholder: "Buscar restaurantes o platos...",
+    categoriesTitle: "Categorias",
+    showAll: "Ver todas",
+    showLess: "Ver menos",
     homeEyebrow: "Cerca de ti",
     deliveryLocation: "Direccion de entrega",
     locationNotSet: "Agrega una direccion al hacer tu pedido",
@@ -291,7 +299,7 @@ const CUSTOMER_I18N = {
     distancePlaceholder: "Ej: 3.4",
     useLocation: "Usar mi ubicacion",
     calculateMaps: "Calcular con Google Maps",
-    deliveryHelp: "Domicilio: minimo configurado por el restaurante; si la distancia supera ese valor, se calcula por tramos con Google Maps o km aproximados e incluye ajuste operativo del 30%.",
+    deliveryHelp: "La distancia y el domicilio se calculan de forma segura con la ruta real antes de enviar el pedido.",
     kitchenNotesLabel: "Notas para cocina",
     kitchenNotesPlaceholder: "Ej: sin cebolla, salsa aparte...",
     estimatedTotal: "Total estimado",
@@ -338,7 +346,8 @@ const CUSTOMER_I18N = {
     nameRequired: "Escribe tu nombre para enviar el pedido.",
     phoneRequired: "Escribe un telefono para el domicilio.",
     addressRequired: "Escribe la direccion completa para el domicilio.",
-    distanceRequired: "Escribe la distancia aproximada en kilometros para calcular el domicilio.",
+    distanceRequired: "Calcula la ruta del domicilio antes de enviar el pedido.",
+    deliveryQuoteRequired: "Calcula nuevamente la ruta del domicilio. La cotizacion debe estar vigente al enviar el pedido.",
     locationDeliveryOnly: "La ubicacion se usa solo para pedidos a domicilio.",
     locationUnsupported: "Este navegador no permite compartir ubicacion.",
     locationRequest: "Solicitando permiso de ubicacion...",
@@ -356,9 +365,9 @@ const CUSTOMER_I18N = {
     mapsNeedDestination: "Escribe la direccion o permite usar tu ubicacion antes de calcular.",
     mapsCalculating: "Calculando distancia con Google Maps...",
     mapsResult: "Google Maps: {distance}{duration}. Domicilio: {fee}",
-    mapsManual: "{error} Puedes escribir km manualmente.",
+    mapsManual: "{error} Revisa la direccion e intenta nuevamente.",
     mapsFallback: "No se pudo calcular con Google Maps.",
-    manualDistanceHelp: "Puedes escribir kilometros manualmente. Google Maps funciona cuando el restaurante configure la API key y direccion.",
+    manualDistanceHelp: "Escribe o confirma la direccion y pulsa Calcular con Google Maps.",
     mapsLoadError: "No se pudo cargar Google Maps.",
     mapsResponseError: "Google Maps respondio: {status}",
     mapsRouteError: "No se pudo calcular ruta: {status}",
@@ -414,6 +423,14 @@ const CUSTOMER_I18N = {
     heroSubtitle: "Zeskanuj, wybierz i wyslij zamowienie.",
     warning: "Aplikacja testowa: jesli cos bedzie nie tak, restauracja potwierdzi zamowienie i korekty przed przygotowaniem.",
     testEnvironment: "Srodowisko testowe",
+    greeting: "Czesc,",
+    defaultCustomerName: "Klient",
+    deliveryTo: "Dostawa pod adres",
+    homePrompt: "Na co masz dzisiaj ochote?",
+    homeSearchPlaceholder: "Szukaj restauracji lub dan...",
+    categoriesTitle: "Kategorie",
+    showAll: "Zobacz wszystkie",
+    showLess: "Pokaz mniej",
     homeEyebrow: "W poblizu",
     deliveryLocation: "Adres dostawy",
     locationNotSet: "Dodaj adres podczas skladania zamowienia",
@@ -587,7 +604,7 @@ const CUSTOMER_I18N = {
     distancePlaceholder: "Np. 3.4",
     useLocation: "Uzyj mojej lokalizacji",
     calculateMaps: "Oblicz w Google Maps",
-    deliveryHelp: "Dostawa: obowiazuje minimum ustawione przez restauracje; jesli dystans przekracza ten koszt, cena liczona jest progami z Google Maps albo przyblizonych km i zawiera 30% korekty operacyjnej.",
+    deliveryHelp: "Odleglosc i koszt dostawy sa bezpiecznie obliczane z rzeczywistej trasy przed wyslaniem zamowienia.",
     kitchenNotesLabel: "Uwagi do kuchni",
     kitchenNotesPlaceholder: "Np. bez cebuli, sos osobno...",
     estimatedTotal: "Suma szacunkowa",
@@ -634,7 +651,8 @@ const CUSTOMER_I18N = {
     nameRequired: "Wpisz imie, aby wyslac zamowienie.",
     phoneRequired: "Wpisz telefon do dostawy.",
     addressRequired: "Wpisz pelny adres dostawy.",
-    distanceRequired: "Wpisz przyblizona odleglosc w kilometrach, aby obliczyc dostawe.",
+    distanceRequired: "Oblicz trase dostawy przed wyslaniem zamowienia.",
+    deliveryQuoteRequired: "Oblicz trase ponownie. Wycena musi byc wazna podczas wysylania zamowienia.",
     locationDeliveryOnly: "Lokalizacja jest uzywana tylko dla dostawy.",
     locationUnsupported: "Ta przegladarka nie pozwala udostepnic lokalizacji.",
     locationRequest: "Prosba o pozwolenie na lokalizacje...",
@@ -652,9 +670,9 @@ const CUSTOMER_I18N = {
     mapsNeedDestination: "Wpisz adres albo pozwol uzyc lokalizacji przed obliczeniem.",
     mapsCalculating: "Obliczanie odleglosci w Google Maps...",
     mapsResult: "Google Maps: {distance}{duration}. Dostawa: {fee}",
-    mapsManual: "{error} Mozesz wpisac km recznie.",
+    mapsManual: "{error} Sprawdz adres i sprobuj ponownie.",
     mapsFallback: "Nie udalo sie obliczyc w Google Maps.",
-    manualDistanceHelp: "Mozesz wpisac kilometry recznie. Google Maps dziala, gdy restauracja ustawi API key i adres.",
+    manualDistanceHelp: "Wpisz lub potwierdz adres i nacisnij Oblicz z Google Maps.",
     mapsLoadError: "Nie udalo sie zaladowac Google Maps.",
     mapsResponseError: "Google Maps odpowiedzial: {status}",
     mapsRouteError: "Nie udalo sie obliczyc trasy: {status}",
@@ -710,6 +728,14 @@ const CUSTOMER_I18N = {
     heroSubtitle: "Scan, choose, and send your order.",
     warning: "Test app: if something is different, the restaurant will confirm the order and any adjustment before preparing it.",
     testEnvironment: "Test environment",
+    greeting: "Hello,",
+    defaultCustomerName: "Customer",
+    deliveryTo: "Deliver to",
+    homePrompt: "What would you like today?",
+    homeSearchPlaceholder: "Search restaurants or dishes...",
+    categoriesTitle: "Categories",
+    showAll: "See all",
+    showLess: "Show less",
     homeEyebrow: "Near you",
     deliveryLocation: "Delivery address",
     locationNotSet: "Add an address when placing your order",
@@ -883,7 +909,7 @@ const CUSTOMER_I18N = {
     distancePlaceholder: "Ex: 3.4",
     useLocation: "Use my location",
     calculateMaps: "Calculate with Google Maps",
-    deliveryHelp: "Delivery: the restaurant minimum applies; if distance is higher than that amount, the price is calculated by tiers using Google Maps or approximate km and includes a 30% operating adjustment.",
+    deliveryHelp: "Distance and delivery cost are securely calculated from the real route before the order is sent.",
     kitchenNotesLabel: "Kitchen notes",
     kitchenNotesPlaceholder: "Ex: no onion, sauce on the side...",
     estimatedTotal: "Estimated total",
@@ -930,7 +956,8 @@ const CUSTOMER_I18N = {
     nameRequired: "Enter your name to send the order.",
     phoneRequired: "Enter a phone number for delivery.",
     addressRequired: "Enter the full delivery address.",
-    distanceRequired: "Enter the approximate distance in kilometers to calculate delivery.",
+    distanceRequired: "Calculate the delivery route before sending the order.",
+    deliveryQuoteRequired: "Calculate the delivery route again. The quote must still be valid when the order is sent.",
     locationDeliveryOnly: "Location is only used for delivery orders.",
     locationUnsupported: "This browser does not allow location sharing.",
     locationRequest: "Requesting location permission...",
@@ -948,9 +975,9 @@ const CUSTOMER_I18N = {
     mapsNeedDestination: "Enter the address or allow location before calculating.",
     mapsCalculating: "Calculating distance with Google Maps...",
     mapsResult: "Google Maps: {distance}{duration}. Delivery: {fee}",
-    mapsManual: "{error} You can enter km manually.",
+    mapsManual: "{error} Check the address and try again.",
     mapsFallback: "Could not calculate with Google Maps.",
-    manualDistanceHelp: "You can enter kilometers manually. Google Maps works when the restaurant configures API key and address.",
+    manualDistanceHelp: "Enter or confirm the address, then select Calculate with Google Maps.",
     mapsLoadError: "Could not load Google Maps.",
     mapsResponseError: "Google Maps responded: {status}",
     mapsRouteError: "Could not calculate route: {status}",
@@ -1170,6 +1197,48 @@ function customerDetectedRegion(coords = null) {
   };
 }
 
+const CUSTOMER_CATEGORY_LABELS = {
+  es: {
+    all: "Todos", colombiana: "Colombiana", polaca: "Polaca", mexicana: "Mexicana", italiana: "Italiana",
+    pizza: "Pizza", hamburguesas: "Hamburguesas", americana: "Americana", pollo: "Pollo", parrilla: "Parrilla",
+    bbq: "BBQ", mariscos: "Mariscos", pescados: "Pescados", sushi: "Sushi", japonesa: "Japonesa", china: "China",
+    coreana: "Coreana", tailandesa: "Tailandesa", vietnamita: "Vietnamita", india: "India", arabe: "Árabe",
+    turca: "Turca", griega: "Griega", mediterranea: "Mediterránea", espanola: "Española", francesa: "Francesa",
+    peruana: "Peruana", venezolana: "Venezolana", brasilena: "Brasileña", argentina: "Argentina", latina: "Latina",
+    africana: "Africana", caribena: "Caribeña", vegetariana: "Vegetariana", vegana: "Vegana", saludable: "Saludable",
+    ensaladas: "Ensaladas", sopas: "Sopas", desayunos: "Desayunos", brunch: "Brunch", sandwiches: "Sandwiches",
+    hotdogs: "Hot Dogs", empanadas: "Empanadas", "comida-rapida": "Comida rápida", "street-food": "Street Food",
+    panaderia: "Panadería", cafeteria: "Cafetería", postres: "Postres", helados: "Helados", dulces: "Dulces",
+    bebidas: "Bebidas", jugos: "Jugos", "comida-casera": "Casera", familiar: "Familiar", other: "Otras",
+  },
+  pl: {
+    all: "Wszystkie", colombiana: "Kolumbijska", polaca: "Polska", mexicana: "Meksykańska", italiana: "Włoska",
+    pizza: "Pizza", hamburguesas: "Burgery", americana: "Amerykańska", pollo: "Kurczak", parrilla: "Grill",
+    bbq: "BBQ", mariscos: "Owoce morza", pescados: "Ryby", sushi: "Sushi", japonesa: "Japońska", china: "Chińska",
+    coreana: "Koreańska", tailandesa: "Tajska", vietnamita: "Wietnamska", india: "Indyjska", arabe: "Arabska",
+    turca: "Turecka", griega: "Grecka", mediterranea: "Śródziemnomorska", espanola: "Hiszpańska", francesa: "Francuska",
+    peruana: "Peruwiańska", venezolana: "Wenezuelska", brasilena: "Brazylijska", argentina: "Argentyńska", latina: "Latynoamerykańska",
+    africana: "Afrykańska", caribena: "Karaibska", vegetariana: "Wegetariańska", vegana: "Wegańska", saludable: "Zdrowe",
+    ensaladas: "Sałatki", sopas: "Zupy", desayunos: "Śniadania", brunch: "Brunch", sandwiches: "Kanapki",
+    hotdogs: "Hot dogi", empanadas: "Empanady", "comida-rapida": "Fast food", "street-food": "Street food",
+    panaderia: "Piekarnia", cafeteria: "Kawiarnia", postres: "Desery", helados: "Lody", dulces: "Słodycze",
+    bebidas: "Napoje", jugos: "Soki", "comida-casera": "Domowe", familiar: "Dla rodziny", other: "Inne",
+  },
+  en: {
+    all: "All", colombiana: "Colombian", polaca: "Polish", mexicana: "Mexican", italiana: "Italian",
+    pizza: "Pizza", hamburguesas: "Burgers", americana: "American", pollo: "Chicken", parrilla: "Grill",
+    bbq: "BBQ", mariscos: "Seafood", pescados: "Fish", sushi: "Sushi", japonesa: "Japanese", china: "Chinese",
+    coreana: "Korean", tailandesa: "Thai", vietnamita: "Vietnamese", india: "Indian", arabe: "Arabic",
+    turca: "Turkish", griega: "Greek", mediterranea: "Mediterranean", espanola: "Spanish", francesa: "French",
+    peruana: "Peruvian", venezolana: "Venezuelan", brasilena: "Brazilian", argentina: "Argentinian", latina: "Latin American",
+    africana: "African", caribena: "Caribbean", vegetariana: "Vegetarian", vegana: "Vegan", saludable: "Healthy",
+    ensaladas: "Salads", sopas: "Soups", desayunos: "Breakfast", brunch: "Brunch", sandwiches: "Sandwiches",
+    hotdogs: "Hot Dogs", empanadas: "Empanadas", "comida-rapida": "Fast food", "street-food": "Street Food",
+    panaderia: "Bakery", cafeteria: "Cafe", postres: "Desserts", helados: "Ice cream", dulces: "Sweets",
+    bebidas: "Drinks", jugos: "Juices", "comida-casera": "Home-style", familiar: "Family", other: "Other",
+  },
+};
+
 const CUSTOMER_REGIONS = {
   PL: [
     "Dolnośląskie", "Kujawsko-Pomorskie", "Lubelskie", "Lubuskie", "Łódzkie", "Małopolskie",
@@ -1337,41 +1406,19 @@ async function customerFetchDescriptionTranslation(text, language) {
   const targetLanguage = ["es", "pl", "en"].includes(language) ? language : "";
   if (!description || !targetLanguage) return description;
 
-  const sources = [
-    async () => {
-      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(
-        targetLanguage
-      )}&dt=t&q=${encodeURIComponent(description)}`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("google translation unavailable");
-      const data = await response.json();
-      return String((data?.[0] || []).map((part) => part?.[0] || "").join("")).trim();
-    },
-    async () => {
-      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(description)}&langpair=autodetect|${encodeURIComponent(
-        targetLanguage
-      )}`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("backup translation unavailable");
-      const data = await response.json();
-      return String(data?.responseData?.translatedText || "").trim();
-    },
-  ];
-
-  let lastError = null;
-  for (const source of sources) {
-    try {
-      const translated = customerNormalizeProductDescription(await source());
-      if (translated) return translated;
-    } catch (error) {
-      lastError = error;
-    }
+  if (!customerClient?.functions) throw new Error("translation service unavailable");
+  const { data, error } = await customerClient.functions.invoke("translate-public-content", {
+    body: { text: description, targetLanguage },
+  });
+  if (!error) {
+    const translated = customerNormalizeProductDescription(data?.translatedText);
+    if (translated) return translated;
   }
 
   const fallback = customerFallbackDescriptionTranslation(description, targetLanguage);
   if (fallback && fallback.toLowerCase() !== description.toLowerCase()) return fallback;
   if (targetLanguage === "es" && fallback) return fallback;
-  throw lastError || new Error("translation unavailable");
+  throw error || new Error("translation unavailable");
 }
 
 function customerQueueMenuTextTranslation(text) {
@@ -1424,6 +1471,18 @@ function customerApplyTranslations() {
   document.querySelectorAll("[data-i18n-aria-label]").forEach((node) => {
     node.setAttribute("aria-label", customerT(node.dataset.i18nAriaLabel));
   });
+  const categoryLabels = CUSTOMER_CATEGORY_LABELS[customerLanguage] || CUSTOMER_CATEGORY_LABELS.es;
+  document.querySelectorAll(".customer-category-card[data-category]").forEach((button) => {
+    const label = button.querySelector(".customer-category-name");
+    const category = String(button.dataset.category || "");
+    if (label && categoryLabels[category]) label.textContent = categoryLabels[category];
+  });
+  if (
+    customerElements.greetingName &&
+    ["Cliente", "Klient", "Customer"].includes(customerElements.greetingName.textContent.trim())
+  ) {
+    customerElements.greetingName.textContent = customerT("defaultCustomerName");
+  }
 }
 
 function customerSetLanguage(language) {
@@ -1730,7 +1789,7 @@ function customerLoadSupabaseLibrary() {
     }
 
     const script = document.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+    script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4";
     script.async = true;
     script.dataset.supabaseLoader = "true";
     script.addEventListener("load", () => resolve(Boolean(window.supabase?.createClient)), { once: true });
@@ -1898,7 +1957,7 @@ function customerApplyProfileFields(
 
 if (customerElements.greetingName) {
   customerElements.greetingName.textContent =
-    fullName.split(/\s+/)[0] || "Cliente";
+    fullName.split(/\s+/)[0] || customerT("defaultCustomerName");
 }
   if (customerElements.profileAvatarInitials) {
 
@@ -2338,7 +2397,7 @@ async function customerSignOut() {
     customerUser = null;
     customerHistoryRows = [];
     customerRenderAccount();
-    window.location.replace("index.html?app=v85");
+    window.location.replace("index.html?app=v86.1");
   }
 }
 
@@ -2912,7 +2971,7 @@ function customerStartDirectoryRealtime() {
     changeFilter.filter = `country_code=eq.${customerRegistrationRegion.countryCode}`;
   }
   customerDirectoryRealtimeChannel = customerClient
-    .channel(`public-restaurant-directory-v85-${customerRegistrationRegion.countryCode || "all"}`)
+    .channel(`public-restaurant-directory-v86-1-${customerRegistrationRegion.countryCode || "all"}`)
     .on(
       "postgres_changes",
       changeFilter,
@@ -2996,7 +3055,7 @@ function customerClearRestaurantSelection(messageKey = "") {
 
   const nextUrl = new URL(window.location.href);
   nextUrl.searchParams.delete("store");
-  nextUrl.searchParams.set("app", "v85");
+  nextUrl.searchParams.set("app", "v86.1");
   window.history.replaceState({}, "", nextUrl.toString());
 
   customerApplyBusinessName();
@@ -3259,7 +3318,7 @@ async function customerSelectRestaurant(storeId, options = {}) {
   if (options.updateUrl !== false) {
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("store", customerStoreId);
-  nextUrl.searchParams.set("app", "v85");
+    nextUrl.searchParams.set("app", "v86.1");
     window.history.replaceState({}, "", nextUrl.toString());
   }
 
@@ -3294,9 +3353,9 @@ async function customerFetchPublicMenu(storeId) {
   if (!activeProfile) return null;
 
   const { data, error } = await customerClient
-    .from("app_settings")
+    .from("restaurant_public_catalogs")
     .select("menu, settings")
-    .eq("user_id", storeId)
+    .eq("restaurant_user_id", storeId)
     .maybeSingle();
 
   if (error) throw rpcError || error;
@@ -3349,8 +3408,8 @@ function customerStartMenuRealtime() {
       {
         event: "*",
         schema: "public",
-        table: "app_settings",
-        filter: `user_id=eq.${storeId}`,
+        table: "restaurant_public_catalogs",
+        filter: `restaurant_user_id=eq.${storeId}`,
       },
       () => {
         if (storeId !== customerStoreId) return;
@@ -3517,6 +3576,12 @@ function customerNormalizeDistance(value) {
   return Number.isFinite(number) && number > 0 ? number : 0;
 }
 
+function customerDeliveryQuoteIsUsable() {
+  if (!customerMapDistance?.quoteId || !customerMapDistance?.quoteToken) return false;
+  const expiresAt = new Date(customerMapDistance.expiresAt || 0).getTime();
+  return Number.isFinite(expiresAt) && expiresAt > Date.now() + 5000;
+}
+
 function customerCalculateDeliveryFee(distanceKm) {
   const distance = customerNormalizeDistance(distanceKm);
   if (distance <= 0) return 0;
@@ -3584,7 +3649,7 @@ function customerLoadGoogleMaps() {
       delete window[callbackName];
       resolve();
     };
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(customerSettings.googleMapsApiKey)}&libraries=places&callback=${callbackName}`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(customerSettings.googleMapsApiKey)}&libraries=places&loading=async&callback=${callbackName}`;
     script.async = true;
     script.defer = true;
     script.addEventListener("error", () => {
@@ -3700,6 +3765,8 @@ function customerApplyPlace(place, input) {
   }
   if (formattedAddress && input === customerElements.addressInput) {
     customerElements.addressInput.value = formattedAddress;
+    customerMapDistance = null;
+    customerElements.distanceInput.value = "";
   }
   customerRenderLocationSummary();
   customerRenderProfileDetails();
@@ -3871,11 +3938,7 @@ async function customerUseLocation() {
           );
         }
 
-        if (customerCanUseGoogleMaps()) {
-          await customerCalculateDistanceWithMaps();
-        } else {
-          customerSetMapResult(customerT("locationReceivedManual"), "");
-        }
+        await customerCalculateDistanceWithMaps();
       } catch (error) {
         console.warn("La ubicacion se obtuvo, pero no fue posible consultar Google Maps.", error);
         customerSetMapResult(customerT("locationReceivedManual"), "");
@@ -3902,12 +3965,13 @@ async function customerUseLocation() {
 
 async function customerCalculateDistanceWithMaps() {
   if (customerElements.orderType.value !== "Domicilio") return;
-  if (!customerSettings.restaurantAddress) {
-    customerSetMapResult(customerT("mapsNeedAddress"), "error");
+  if (!customerStoreId || !customerClient) {
+    customerSetMapResult(customerT("noConnection"), "error");
     return;
   }
-  if (!customerSettings.googleMapsApiKey) {
-    customerSetMapResult(customerT("mapsNeedKey"), "error");
+  if (!customerSettings.restaurantAddress
+      && !(Number.isFinite(customerSettings.restaurantLatitude) && Number.isFinite(customerSettings.restaurantLongitude))) {
+    customerSetMapResult(customerT("mapsNeedAddress"), "error");
     return;
   }
   if (!customerElements.addressInput.value.trim() && !customerLocationCoords) {
@@ -3916,16 +3980,47 @@ async function customerCalculateDistanceWithMaps() {
     return;
   }
 
-  const origin = customerSettings.restaurantAddress;
   customerSetMapResult(customerT("mapsCalculating"), "");
   customerElements.calculateDistanceButton.disabled = true;
 
   try {
-    await customerLoadGoogleMaps();
-    const destination = customerDeliveryDestinationForMaps();
-    customerMapDistance = await customerGetGoogleMapsDistance(origin, destination);
-     customerElements.distanceInput.value = customerMapDistance.distanceKm;
-     customerRenderLocationSummary();
+    const selectedRestaurant = customerSelectedRestaurant();
+    const countryCode = String(
+      customerRegistrationRegion.countryCode || selectedRestaurant?.countryCode || ""
+    ).trim().toUpperCase();
+    if (!["PL", "CO"].includes(countryCode)) throw new Error(customerT("registerCountryRequired"));
+
+    const { data, error } = await customerClient.functions.invoke("delivery-quote", {
+      body: {
+        restaurantUserId: customerStoreId,
+        destinationAddress: customerDeliveryDestination(),
+        destinationCountryCode: countryCode,
+        destinationRegion: customerRegistrationRegion.region || selectedRestaurant?.region || "",
+        destinationLat: customerLocationCoords?.lat ?? null,
+        destinationLng: customerLocationCoords?.lng ?? null,
+      },
+    });
+    if (error) throw error;
+    if (!data?.quoteId || !data?.quoteToken || !(Number(data?.distanceKm) > 0)) {
+      throw new Error(customerT("mapsRouteError", { status: "sin ruta" }));
+    }
+    customerMapDistance = {
+      quoteId: data.quoteId,
+      quoteToken: data.quoteToken,
+      expiresAt: data.expiresAt,
+      distanceKm: Number(data.distanceKm),
+      distanceText: `${Number(data.distanceKm).toFixed(1)} km`,
+      durationSeconds: Number(data.durationSeconds) || 0,
+      durationText: Number(data.durationSeconds) > 0
+        ? `${Math.max(1, Math.round(Number(data.durationSeconds) / 60))} min`
+        : "",
+      finalFee: Number(data.finalFee) || 0,
+      feeBreakdown: data.feeBreakdown || {},
+      origin: customerSettings.restaurantAddress || "",
+      destination: customerDeliveryDestination(),
+    };
+    customerElements.distanceInput.value = customerMapDistance.distanceKm;
+    customerRenderLocationSummary();
     customerSetMapResult(
       customerT("mapsResult", {
         distance: customerMapDistance.distanceText,
@@ -3945,10 +4040,9 @@ async function customerCalculateDistanceWithMaps() {
 
 function customerDeliveryFee() {
   if (customerElements.orderType.value !== "Domicilio") return 0;
-  const calculatedFee = customerCalculateDeliveryFee(customerElements.distanceInput.value);
-  const minimumFee = customerNormalizeDeliveryMinimumFee(customerSettings.deliveryMinimumFee);
-  const extraFee = customerNormalizeMoney(customerSettings.deliveryFee);
-  return customerRoundMoney(Math.max(minimumFee, calculatedFee) + extraFee);
+  return customerDeliveryQuoteIsUsable()
+    ? customerRoundMoney(customerMapDistance.finalFee)
+    : 0;
 }
 
 function customerItemTotal(item) {
@@ -3974,7 +4068,7 @@ function customerRenderDeliveryFields() {
   if (!isDelivery) {
     customerMapDistance = null;
     customerSetMapResult("");
-  } else if (!customerCanUseGoogleMaps()) {
+  } else if (!customerDeliveryQuoteIsUsable()) {
     customerSetMapResult(customerT("manualDistanceHelp"), "");
   }
   customerRenderCart();
@@ -3984,10 +4078,11 @@ function customerRenderDeliveryFields() {
 function customerDeliveryPayload() {
   if (customerElements.orderType.value !== "Domicilio") return null;
   const distanceKm = customerNormalizeDistance(customerElements.distanceInput.value);
-  const calculatedFee = customerCalculateDeliveryFee(distanceKm);
+  const calculatedFee = customerDeliveryQuoteIsUsable()
+    ? customerRoundMoney(customerMapDistance.finalFee)
+    : 0;
   const minimumFee = customerNormalizeDeliveryMinimumFee(customerSettings.deliveryMinimumFee);
   const extraFee = customerNormalizeMoney(customerSettings.deliveryFee);
-  const feeBeforeExtra = Math.max(minimumFee, calculatedFee);
   const markupPercent = customerRoundMoney((CUSTOMER_DELIVERY_MARKUP - 1) * 100);
   const currencyLabel = customerNormalizeText(customerSettings.currencySymbol || "");
   return {
@@ -4006,7 +4101,12 @@ function customerDeliveryPayload() {
     minimumFee,
     extraFee,
     markupPercent,
-    fee: customerRoundMoney(feeBeforeExtra + extraFee),
+    fee: calculatedFee,
+    quoteId: customerMapDistance?.quoteId || "",
+    quoteToken: customerMapDistance?.quoteToken || "",
+    quoteExpiresAt: customerMapDistance?.expiresAt || "",
+    durationSeconds: Number(customerMapDistance?.durationSeconds) || 0,
+    feeBreakdown: customerMapDistance?.feeBreakdown || {},
     mapDistanceText: customerMapDistance?.distanceText || "",
     mapDurationText: customerMapDistance?.durationText || "",
     mapOrigin: customerMapDistance?.origin || customerSettings.restaurantAddress || "",
@@ -4322,9 +4422,9 @@ function customerValidateOrderData() {
     return false;
   }
 
-  if (customerNormalizeDistance(customerElements.distanceInput.value) <= 0) {
-    customerSetStatus(customerT("distanceRequired"), "error");
-    customerElements.distanceInput.focus();
+  if (!customerDeliveryQuoteIsUsable()) {
+    customerSetStatus(customerT("deliveryQuoteRequired"), "error");
+    customerElements.calculateDistanceButton.focus();
     return false;
   }
 
@@ -5118,6 +5218,10 @@ async function customerSendOrder() {
     } else if (/restaurant (country|region) does not match/i.test(String(error?.message || ""))) {
       customerSetStatus(customerT("restaurantRegionMismatch"), "error");
       customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
+    } else if (/delivery quote|delivery route/i.test(String(error?.message || ""))) {
+      customerMapDistance = null;
+      customerElements.distanceInput.value = "";
+      customerSetStatus(customerT("deliveryQuoteRequired"), "error");
     } else if (/product .*unavailable|product not found|invalid product|menu changed/i.test(String(error?.message || ""))) {
       customerSetStatus(customerT("menuChangedBeforeOrder"), "error");
       customerLoadMenu({ silent: true }).catch(() => {});
@@ -5134,6 +5238,8 @@ async function customerSendOrder() {
   }
 
   customerCart = [];
+  customerMapDistance = null;
+  customerElements.distanceInput.value = "";
   customerElements.notesInput.value = "";
   customerRenderCart();
   if (insertedOrder.trackingAvailable) {
@@ -5309,10 +5415,9 @@ customerSeeAllCategoriesButton?.addEventListener("click", () => {
     customerCategoriesExpanded
   );
 
-  customerSeeAllCategoriesButton.innerHTML =
-    customerCategoriesExpanded
-      ? `Ver menos <span aria-hidden="true">↑</span>`
-      : `Ver todas <span aria-hidden="true">→</span>`;
+  customerSeeAllCategoriesButton.innerHTML = customerCategoriesExpanded
+    ? `${customerEscapeHtml(customerT("showLess"))} <span aria-hidden="true">↑</span>`
+    : `${customerEscapeHtml(customerT("showAll"))} <span aria-hidden="true">→</span>`;
 
 });
 
@@ -5667,7 +5772,7 @@ if (customerElements.registerNeighborhoodInput) {
   if (customerElements.greetingName) {
 
     customerElements.greetingName.textContent =
-      newName.split(/\s+/)[0] || "Cliente";
+      newName.split(/\s+/)[0] || customerT("defaultCustomerName");
 
   }
 

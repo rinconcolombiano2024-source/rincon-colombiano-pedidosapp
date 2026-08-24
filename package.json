@@ -1,10 +1,10 @@
 {
   "name": "rc-ordera",
-  "version": "85.0.0",
+  "version": "86.1.0",
   "private": true,
   "description": "RC ORDERA multi-restaurante",
   "scripts": {
-    "qa": "node qa-v85.cjs",
+    "qa": "node qa-v86.cjs",
     "android:prepare-web": "node scripts/prepare-capacitor.mjs",
     "android:add": "npm run android:prepare-web && npx cap add android",
     "android:sync": "npm run android:prepare-web && npx cap sync android",

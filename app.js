@@ -43,7 +43,7 @@ const STORAGE_KEYS = {
 
 const DEFAULT_BUSINESS_NAME = "MI RESTAURANTE";
 const DEFAULT_DELIVERY_MINIMUM_FEE = 20;
-const APP_VERSION = "v85";
+const APP_VERSION = "v86.1";
 const PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 const PLATFORM_APP_NAME = "RC ORDERA";
 const RESTAURANT_WEEK_DAYS = [
@@ -378,6 +378,7 @@ confirmMenuClearButton: document.querySelector("#confirmMenuClearButton"),
 let menuCatalog = readMenuCatalog();
 let activeCategory = Object.keys(menuCatalog)[0];
 let menuSearchQuery = "";
+let restaurantBusinessContext = null;
 let todayKey = currentBusinessDate();
 let nextTicket = initializeDailyTicket();
 let savedOrders = readOrders();
@@ -439,6 +440,42 @@ const cloudState = {
   lastError: "",
   moduleWarning: "",
 };
+
+async function refreshRestaurantBusinessContext(options = {}) {
+  const { force = false } = options;
+  const refreshedRecently = restaurantBusinessContext?.loadedAt
+    && Date.now() - restaurantBusinessContext.loadedAt < 60_000;
+  if (!force && refreshedRecently) return restaurantBusinessContext;
+  if (!cloudState.client || !cloudState.user || !navigator.onLine) return restaurantBusinessContext;
+
+  const { data, error } = await cloudState.client.rpc("get_current_restaurant_business_context");
+  if (error) {
+    if (["42883", "PGRST202"].includes(error.code)) return restaurantBusinessContext;
+    throw error;
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row?.business_date) return restaurantBusinessContext;
+
+  const previousDate = todayKey;
+  restaurantBusinessContext = {
+    businessDate: row.business_date,
+    timezone: row.timezone_name || "UTC",
+    dayStart: row.day_start || null,
+    dayEnd: row.day_end || null,
+    loadedAt: Date.now(),
+  };
+  todayKey = restaurantBusinessContext.businessDate;
+  if (previousDate !== todayKey) {
+    nextTicket = 1;
+    if (!currentOrder.saved) {
+      currentOrder.ticketNumber = null;
+      currentOrder.businessDate = todayKey;
+    }
+    saveTicketState();
+  }
+  return restaurantBusinessContext;
+}
 function createBlankOrder() {
   return {
     id: null,
@@ -513,10 +550,14 @@ function clearCurrentOrderDraft() {
   localStorage.removeItem(STORAGE_KEYS.currentOrderDraft);
 }
 
-function currentBusinessDate(date = new Date()) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+function currentBusinessDate(date = null) {
+  if (!date && /^\d{4}-\d{2}-\d{2}$/.test(restaurantBusinessContext?.businessDate || "")) {
+    return restaurantBusinessContext.businessDate;
+  }
+  const source = date instanceof Date ? date : new Date();
+  const year = source.getFullYear();
+  const month = String(source.getMonth() + 1).padStart(2, "0");
+  const day = String(source.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
@@ -537,7 +578,7 @@ function saveTicketState() {
 }
 
 function rollOverDayIfNeeded() {
-  const latestDate = currentBusinessDate();
+  const latestDate = restaurantBusinessContext?.businessDate || currentBusinessDate();
   if (latestDate === todayKey) return false;
 
   todayKey = latestDate;
@@ -591,7 +632,7 @@ function ordersForDay(day) {
   return savedOrders.filter((order) => orderBusinessDate(order) === day);
 }
 
-function currentMonthKey(date = new Date()) {
+function currentMonthKey(date = null) {
   return currentBusinessDate(date).slice(0, 7);
 }
 
@@ -616,7 +657,7 @@ function ordersForMonth(month) {
   return savedOrders.filter((order) => orderBusinessDate(order).startsWith(`${month}-`));
 }
 
-function currentYearKey(date = new Date()) {
+function currentYearKey(date = null) {
   return currentBusinessDate(date).slice(0, 4);
 }
 
@@ -1480,7 +1521,7 @@ function loadSupabaseLibrary() {
     }
 
     const script = document.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+    script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4";
     script.async = true;
     script.dataset.supabaseLoader = "true";
     script.addEventListener("load", () => resolve(Boolean(window.supabase?.createClient)), { once: true });
@@ -1675,7 +1716,8 @@ async function loadCloudData() {
     savedOrders = mergeOrders(normalizedCloudOrders, localPendingOrders);
     saveOrders();
 
-    todayKey = currentBusinessDate();
+    await refreshRestaurantBusinessContext({ force: true });
+    todayKey = restaurantBusinessContext?.businessDate || currentBusinessDate();
     const { data: counterRow, error: counterError } = await cloudState.client
       .from("ticket_counters")
       .select("next_ticket")
@@ -1719,6 +1761,66 @@ async function loadCloudData() {
   } finally {
     cloudState.loading = false;
   }
+}
+
+function closureReportRange(periodType, periodValue) {
+  const clean = String(periodValue || "").trim();
+  let start;
+  let end;
+  if (periodType === "day" && /^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+    start = new Date(`${clean}T00:00:00.000Z`);
+    end = new Date(start);
+    end.setUTCDate(end.getUTCDate() + 1);
+  } else if (periodType === "month" && /^\d{4}-\d{2}$/.test(clean)) {
+    start = new Date(`${clean}-01T00:00:00.000Z`);
+    end = new Date(start);
+    end.setUTCMonth(end.getUTCMonth() + 1);
+  } else if (periodType === "year" && /^\d{4}$/.test(clean)) {
+    start = new Date(`${clean}-01-01T00:00:00.000Z`);
+    end = new Date(start);
+    end.setUTCFullYear(end.getUTCFullYear() + 1);
+  } else {
+    throw new Error("Periodo de cierre no valido.");
+  }
+  return {
+    start: start.toISOString().slice(0, 10),
+    end: end.toISOString().slice(0, 10),
+  };
+}
+
+async function loadCloudOrdersForReport(periodType, periodValue) {
+  if (!cloudState.client || !cloudState.user || !navigator.onLine) return 0;
+  const range = closureReportRange(periodType, periodValue);
+  const pageSize = 1000;
+  const rows = [];
+
+  for (let page = 0; page < 200; page += 1) {
+    const from = page * pageSize;
+    const { data, error } = await cloudState.client
+      .from("orders")
+      .select("order_json,business_date")
+      .eq("user_id", cloudState.user.id)
+      .gte("business_date", range.start)
+      .lt("business_date", range.end)
+      .order("business_date", { ascending: false })
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    rows.push(...(data || []));
+    if ((data || []).length < pageSize) break;
+    if (page === 199) throw new Error("El periodo contiene demasiados pedidos para generar el cierre en este dispositivo.");
+  }
+
+  const cloudOrders = rows
+    .map((row) => ({
+      ...row.order_json,
+      type: normalizeOrderType(row.order_json?.type),
+      businessDate: row.business_date || orderBusinessDate(row.order_json),
+      syncStatus: "synced",
+    }))
+    .filter((order) => order?.id && !localDeletedOrderIds.includes(order.id));
+  savedOrders = mergeOrders(cloudOrders, savedOrders);
+  saveOrders();
+  return cloudOrders.length;
 }
 
 function currentRestaurantRpcProfilePayload() {
@@ -2242,18 +2344,6 @@ async function confirmRestaurantDeletion() {
     const { error: authError } = await cloudState.client.auth.signInWithPassword({ email, password });
     if (authError) throw new Error("La contrasena no es correcta. La cuenta no fue eliminada.");
 
-    const { data: preparedRows, error: prepareError } = await cloudState.client.rpc(
-      "prepare_current_restaurant_deletion"
-    );
-    if (prepareError) throw prepareError;
-    const prepared = Array.isArray(preparedRows) ? preparedRows[0] : preparedRows;
-    if (!prepared?.hidden_from_customers) {
-      throw new Error("Supabase no confirmo que el restaurante salio del directorio de clientes.");
-    }
-    restaurantActive = false;
-    restaurantOperationalOpen = false;
-    localStoreCurrentSettings();
-
     const { data, error } = await cloudState.client.functions.invoke("delete-own-restaurant-account", {
       body: { confirmation: "ELIMINAR" },
     });
@@ -2267,12 +2357,12 @@ async function confirmRestaurantDeletion() {
       // La cuenta ya fue eliminada en el servidor; se limpia el navegador igualmente.
     }
     elements.restaurantDeletionDialog?.close();
-    alert("La cuenta del restaurante y sus datos fueron eliminados de RC ORDERA.");
+    alert("El restaurante fue cerrado, retirado del directorio y sus accesos fueron revocados. Los pedidos y pagos historicos se conservaron de forma segura.");
     window.location.replace(`index.html?app=${APP_VERSION}`);
   } catch (error) {
     console.error(error);
     const message = /failed to send|function|404/i.test(String(error?.message || ""))
-      ? "El restaurante ya quedo oculto para los clientes, pero falta borrar la cuenta de acceso. Despliega la funcion delete-own-restaurant-account en Supabase y vuelve a confirmar la eliminacion."
+      ? "No se aplicaron cambios parciales. Despliega la funcion delete-own-restaurant-account y la migracion V86-06 en Supabase, y vuelve a intentarlo."
       : error.message || "No se pudo confirmar la eliminacion. La cuenta sigue intacta.";
     setRestaurantDeletionMessage(message, "error");
   } finally {
@@ -2283,6 +2373,8 @@ async function confirmRestaurantDeletion() {
 
 async function claimCloudTicket() {
   if (!cloudState.client || !cloudState.user) return null;
+
+  await refreshRestaurantBusinessContext({ force: true });
 
   const { data, error } = await cloudState.client.rpc("claim_next_ticket", {
     p_business_date: todayKey,
@@ -2307,19 +2399,37 @@ async function setCloudNextTicket(number) {
 async function saveCloudOrder(order) {
   if (!cloudState.client || !cloudState.user || !order.saved) return;
 
-  const orderForCloud = structuredCloneOrder(order);
-  orderForCloud.syncStatus = "synced";
+  const saveOrderRow = async () => {
+    const orderForCloud = structuredCloneOrder(order);
+    orderForCloud.syncStatus = "synced";
+    return cloudState.client.from("orders").upsert({
+      id: order.id,
+      user_id: cloudState.user.id,
+      ticket_number: order.ticketNumber,
+      business_date: orderBusinessDate(order),
+      order_json: orderForCloud,
+      total: orderTotal(order),
+      created_at: order.createdAt,
+      updated_at: order.updatedAt,
+    });
+  };
 
-  const { error } = await cloudState.client.from("orders").upsert({
-    id: order.id,
-    user_id: cloudState.user.id,
-    ticket_number: order.ticketNumber,
-    business_date: orderBusinessDate(order),
-    order_json: orderForCloud,
-    total: orderTotal(order),
-    created_at: order.createdAt,
-    updated_at: order.updatedAt,
-  });
+  let { error } = await saveOrderRow();
+  const ticketCollision = error?.code === "23505"
+    && /ticket|order_ticket_reservations|already assigned/i.test(String(error.message || ""));
+  if (ticketCollision) {
+    const offlineTicketNumber = Number(order.ticketNumber) || null;
+    await refreshRestaurantBusinessContext({ force: true });
+    order.offlineTicketNumber = order.offlineTicketNumber || offlineTicketNumber;
+    order.ticketNumber = await claimCloudTicket();
+    order.businessDate = todayKey;
+    order.updatedAt = new Date().toISOString();
+    ({ error } = await saveOrderRow());
+    if (!error) {
+      nextTicket = Math.max(nextTicket, Number(order.ticketNumber) + 1);
+      showToast(`El ticket local ${formatTicket(offlineTicketNumber)} se sincronizo como ${formatTicket(order.ticketNumber)}.`);
+    }
+  }
 
   if (error) throw error;
 
@@ -2639,16 +2749,12 @@ async function refreshClientOrders(options = {}) {
     return;
   }
 
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
-
   let { data, error } = await cloudState.client
     .from("customer_orders")
-    .select("id, status, table_label, customer_name, order_type, order_json, total, created_at, assigned_courier_user_id, courier_assignment_status, source, created_by_user_id, server_name, station_status")
+    .select("id, status, table_label, customer_name, order_type, order_json, total, created_at, assigned_courier_user_id, courier_assignment_status, source, created_by_user_id, server_name, station_status, payment_method, payment_status, payment_provider")
     .eq("user_id", cloudState.user.id)
     .in("status", ["pending", "accepted", "sent"])
-    .gte("created_at", startOfDay.toISOString())
-   .order("created_at", { ascending: false })
+    .order("created_at", { ascending: false })
     .limit(100);
 
   if (error && /source|created_by_user_id|server_name|column/i.test(String(error.message || ""))) {
@@ -2657,7 +2763,6 @@ async function refreshClientOrders(options = {}) {
       .select("id, status, table_label, customer_name, order_type, order_json, total, created_at, assigned_courier_user_id, courier_assignment_status")
       .eq("user_id", cloudState.user.id)
       .in("status", ["pending", "accepted", "sent"])
-      .gte("created_at", startOfDay.toISOString())
       .order("created_at", { ascending: false })
       .limit(100));
   }
@@ -2782,6 +2887,15 @@ function clientOrderActionsHtml(orderOrStatus) {
     : "";
 
   if (status === "pending") {
+    if (!clientOrderPaymentIsReady(order)) {
+      return `
+        <p class="client-order-note">PAGO EN LINEA PENDIENTE. EL PEDIDO NO SE PUEDE ACEPTAR TODAVIA.</p>
+        <div class="client-order-actions">
+          <button type="button" disabled aria-disabled="true">Esperando pago</button>
+          <button type="button" data-action="cancel-client-order">Cancelar</button>
+        </div>
+      `;
+    }
     return `
       <div class="client-order-actions">
         <button type="button" data-action="accept-client-order">Aceptar e imprimir</button>
@@ -2885,7 +2999,8 @@ function renderClientOrders() {
         : created.toLocaleTimeString("es-US", { hour: "2-digit", minute: "2-digit" });
       const items = clientOrderItems(order);
       const customerLabel = [order.table_label, order.customer_name].filter(Boolean).join(" - ") || "Cliente QR";
-      const paymentMethod = paymentMethodLabel(order.order_json?.paymentMethod);
+      const paymentMethod = paymentMethodLabel(order.payment_method || order.order_json?.paymentMethod);
+      const paymentStatus = paymentStatusLabel(order.payment_status || order.order_json?.paymentStatus);
       const deliverySummary = formatDeliverySummary(order.order_json?.delivery);
       const isWaiterOrder = order.source === "waiter" || order.order_json?.source === "waiter";
       const sourceLabel = isWaiterOrder
@@ -2900,7 +3015,7 @@ function renderClientOrders() {
               <span>${escapeHtml(orderTypeLabel(order.order_type))}${timeText ? ` / ${escapeHtml(timeText)}` : ""}</span>
               <span class="client-order-source ${isWaiterOrder ? "is-waiter" : ""}">${escapeHtml(sourceLabel)}</span>
               <span>Estado: ${clientOrderStatusLabel(order.status)}</span>
-              <span>Pago: ${escapeHtml(paymentMethod)}</span>
+              <span>Pago: ${escapeHtml(paymentMethod)} / ${escapeHtml(paymentStatus)}</span>
             </div>
             <strong>${formatMoney(clientOrderTotal(order))}</strong>
           </div>
@@ -3014,7 +3129,8 @@ function orderFromClientOrder(clientOrder) {
   return {
     ...createBlankOrder(),
     type: normalizeOrderType(clientOrder.order_type || payload.type),
-    paymentMethod: normalizePaymentMethod(payload.paymentMethod),
+    paymentMethod: normalizePaymentMethod(clientOrder.payment_method || payload.paymentMethod),
+    paymentStatus: normalizePaymentStatus(clientOrder.payment_status || payload.paymentStatus),
     customer: customerLabel,
     server: isWaiterOrder
       ? String(clientOrder.server_name || payload.serverName || "Mesero").trim()
@@ -3049,47 +3165,72 @@ async function acceptClientOrder(orderId) {
     if (!replaceOrder) return;
   }
 
-  currentOrder = orderFromClientOrder(clientOrder);
-  renderOrder();
-  if (!(await upsertCurrentOrder())) return;
-
-  const acceptedOrderId = currentOrder.id;
-  let { error } = await cloudState.client
-    .from("customer_orders")
-    .update({
-      status: "accepted",
-      station_status: "received",
-      restaurant_order_id: acceptedOrderId,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", orderId)
-    .eq("user_id", cloudState.user.id);
-
-  if (error && /station_status|column/i.test(String(error.message || ""))) {
-    ({ error } = await cloudState.client
-      .from("customer_orders")
-      .update({
-        status: "accepted",
-        restaurant_order_id: acceptedOrderId,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", orderId)
-      .eq("user_id", cloudState.user.id));
+  if (!clientOrderPaymentIsReady(clientOrder)) {
+    alert("El pago en linea todavia no ha sido confirmado. Actualiza la bandeja antes de aceptar.");
+    return;
   }
 
+  const acceptedOrderId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+  const serverName = clientOrder.source === "waiter"
+    ? String(clientOrder.server_name || clientOrder.order_json?.serverName || "Mesero").trim()
+    : shiftServerName || elements.serverName.value.trim() || "Caja";
+  const { data, error } = await cloudState.client.rpc("accept_customer_order_atomic", {
+    p_customer_order_id: orderId,
+    p_restaurant_order_id: acceptedOrderId,
+    p_server_name: serverName,
+  });
+
   if (error) {
-    alert("El pedido se guardo, pero no se pudo marcar como aceptado en la bandeja.");
-  } else {
-    pendingClientOrders = pendingClientOrders.map((order) =>
-      order.id === orderId
-        ? { ...order, status: "accepted", restaurant_order_id: acceptedOrderId, updated_at: new Date().toISOString() }
-        : order
-    );
-    updateClientOrdersBadge();
-    renderClientOrders();
-    if (clientOrderNeedsCourier(clientOrder)) {
-      await assignNearestCourierForOrder(orderId);
+    const message = String(error.message || "");
+    if (/payment is not confirmed/i.test(message)) {
+      alert("El pago en linea todavia no ha sido confirmado.");
+    } else if (/already|only pending|missing its restaurant ticket/i.test(message)) {
+      alert("Este pedido ya fue procesado en otra caja. La bandeja se actualizara.");
+      await refreshClientOrders({ silent: true });
+    } else if (["42883", "PGRST202"].includes(error.code)) {
+      alert("Falta ejecutar la migracion V86.01 en Supabase antes de aceptar pedidos.");
+    } else {
+      alert("No se pudo aceptar el pedido. No se creo ningun ticket incompleto.");
     }
+    return;
+  }
+
+  const result = Array.isArray(data) ? data[0] : data;
+  if (!result?.accepted_order_json) {
+    alert("Supabase no devolvio el ticket confirmado. Actualiza la bandeja e intenta nuevamente.");
+    return;
+  }
+  if (result.already_accepted) {
+    alert("Este pedido ya fue aceptado en otra caja. No se imprimira nuevamente.");
+    await refreshClientOrders({ silent: true });
+    return;
+  }
+
+  currentOrder = normalizeCurrentOrderDraft({
+    ...result.accepted_order_json,
+    id: result.restaurant_order_id,
+    ticketNumber: result.ticket_number,
+    businessDate: result.business_date,
+    saved: true,
+    syncStatus: "synced",
+  });
+  nextTicket = Math.max(nextTicket, Number(result.ticket_number) + 1);
+  savedOrders = mergeOrders([structuredCloneOrder(currentOrder)], savedOrders);
+  saveOrders();
+  saveTicketState();
+  clearCurrentOrderDraft();
+  renderOrder();
+  renderHistory();
+
+  pendingClientOrders = pendingClientOrders.map((order) =>
+    order.id === orderId
+      ? { ...order, status: "accepted", restaurant_order_id: result.restaurant_order_id, updated_at: new Date().toISOString() }
+      : order
+  );
+  updateClientOrdersBadge();
+  renderClientOrders();
+  if (clientOrderNeedsCourier(clientOrder)) {
+    await assignNearestCourierForOrder(orderId);
   }
 
   renderPrintTicket(currentOrder);
@@ -3106,11 +3247,11 @@ async function updateClientOrderStatus(orderId, nextStatus, successMessage, opti
     return false;
   }
 
-  const { error } = await cloudState.client
-    .from("customer_orders")
-    .update({ status: nextStatus, updated_at: new Date().toISOString() })
-    .eq("id", orderId)
-    .eq("user_id", cloudState.user.id);
+  const { error } = await cloudState.client.rpc("transition_customer_order_status", {
+    p_customer_order_id: orderId,
+    p_next_status: nextStatus,
+    p_reason: options.reason || "",
+  });
 
   if (error) {
     alert("No se pudo actualizar el estado del pedido del cliente.");
@@ -3165,21 +3306,10 @@ async function cancelClientOrder(orderId) {
   const shouldCancel = confirm(`Cancelar el pedido de ${label}?`);
   if (!shouldCancel) return;
 
-  const { error } = await cloudState.client
-    .from("customer_orders")
-    .update({ status: "cancelled", updated_at: new Date().toISOString() })
-    .eq("id", orderId)
-    .eq("user_id", cloudState.user.id);
-
-  if (error) {
-    alert("No se pudo cancelar el pedido del cliente.");
-    return;
-  }
-
-  pendingClientOrders = pendingClientOrders.filter((order) => order.id !== orderId);
-  updateClientOrdersBadge();
-  renderClientOrders();
-  showToast("Pedido de cliente cancelado.");
+  await updateClientOrderStatus(orderId, "cancelled", "Pedido de cliente cancelado.", {
+    removeFromList: true,
+    reason: "Cancelado por el restaurante",
+  });
 }
 
 async function restaurantImageFileToDataUrl(file) {
@@ -5341,7 +5471,7 @@ function loadRestaurantGoogleMaps() {
       delete window[callbackName];
       resolve();
     };
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(googleMapsApiKey)}&libraries=places&callback=${callbackName}`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(googleMapsApiKey)}&libraries=places&loading=async&callback=${callbackName}`;
     script.async = true;
     script.defer = true;
     script.addEventListener("error", () => {
@@ -5778,7 +5908,7 @@ function orderTypeLabel(type) {
 
 function normalizePaymentMethod(method) {
   const value = String(method || "").trim();
-  const allowed = ["Pago en caja", "Efectivo", "Transferencia", "Datafono"];
+  const allowed = ["Pago en caja", "Efectivo", "Transferencia", "Datafono", "Online"];
   return allowed.includes(value) ? value : "Pago en caja";
 }
 
@@ -5788,15 +5918,27 @@ function paymentMethodLabel(method) {
   return value;
 }
 
+function clientOrderPaymentIsReady(order) {
+  const method = normalizePaymentMethod(order?.payment_method || order?.order_json?.paymentMethod);
+  if (method !== "Online") return true;
+  return normalizePaymentStatus(order?.payment_status || order?.order_json?.paymentStatus) === "paid";
+}
+
 function normalizePaymentStatus(status, fallback = "pending") {
   const value = String(status || "").trim().toLowerCase();
-  return ["pending", "paid", "unverified"].includes(value) ? value : fallback;
+  return ["pending", "processing", "paid", "failed", "refunded", "partially_refunded", "unverified"].includes(value)
+    ? value
+    : fallback;
 }
 
 function paymentStatusLabel(status) {
   const value = normalizePaymentStatus(status, "unverified");
   if (value === "paid") return "Cobrado";
   if (value === "pending") return "Por cobrar";
+  if (value === "processing") return "Procesando";
+  if (value === "failed") return "Pago fallido";
+  if (value === "refunded") return "Reembolsado";
+  if (value === "partially_refunded") return "Reembolso parcial";
   return "Sin confirmar";
 }
 
@@ -8215,10 +8357,11 @@ elements.dailyCloseButton.addEventListener(
         });
 
         await loadCloudData();
+        await loadCloudOrdersForReport("day", todayKey);
 
       }
 
-      todayKey = currentBusinessDate();
+      todayKey = restaurantBusinessContext?.businessDate || currentBusinessDate();
 
       renderDailyClose(todayKey);
 
@@ -8237,7 +8380,7 @@ elements.dailyCloseButton.addEventListener(
        * que no ha sido verificado con Supabase.
        */
 
-      todayKey = currentBusinessDate();
+      todayKey = restaurantBusinessContext?.businessDate || currentBusinessDate();
 
       renderDailyClose(todayKey);
 
@@ -8256,8 +8399,15 @@ elements.dailyCloseButton.addEventListener(
   }
 );
 
-elements.closeDayInput.addEventListener("change", () => {
-  renderDailyClose(elements.closeDayInput.value || todayKey);
+elements.closeDayInput.addEventListener("change", async () => {
+  const day = elements.closeDayInput.value || todayKey;
+  try {
+    await loadCloudOrdersForReport("day", day);
+  } catch (error) {
+    console.warn("No fue posible actualizar el cierre diario desde Supabase.", error);
+    showToast("Cierre diario mostrado con los datos disponibles en este equipo.");
+  }
+  renderDailyClose(day);
 });
 
 elements.printDailyCloseButton.addEventListener("click", () => {
@@ -8287,6 +8437,7 @@ elements.monthlyCloseButton.addEventListener(
         });
 
         await loadCloudData();
+        await loadCloudOrdersForReport("month", currentMonthKey());
 
       }
 
@@ -8322,8 +8473,15 @@ elements.monthlyCloseButton.addEventListener(
   }
 );
 
-elements.closeMonthInput.addEventListener("change", () => {
-  renderMonthlyClose(elements.closeMonthInput.value || currentMonthKey());
+elements.closeMonthInput.addEventListener("change", async () => {
+  const month = elements.closeMonthInput.value || currentMonthKey();
+  try {
+    await loadCloudOrdersForReport("month", month);
+  } catch (error) {
+    console.warn("No fue posible actualizar el cierre mensual desde Supabase.", error);
+    showToast("Cierre mensual mostrado con los datos disponibles en este equipo.");
+  }
+  renderMonthlyClose(month);
 });
 
 elements.printCloseButton.addEventListener("click", () => {
@@ -8339,6 +8497,7 @@ elements.annualCloseButton?.addEventListener("click", async () => {
     if (cloudState.client && cloudState.user && navigator.onLine) {
       await syncPendingData({ silent: true, allowWhileLoading: true });
       await loadCloudData();
+      await loadCloudOrdersForReport("year", currentYearKey());
     }
     renderAnnualClose(currentYearKey());
     elements.annualCloseDialog.showModal();
@@ -8351,8 +8510,15 @@ elements.annualCloseButton?.addEventListener("click", async () => {
     elements.annualCloseButton.disabled = false;
   }
 });
-elements.closeYearInput?.addEventListener("change", () => {
-  renderAnnualClose(elements.closeYearInput.value || currentYearKey());
+elements.closeYearInput?.addEventListener("change", async () => {
+  const year = elements.closeYearInput.value || currentYearKey();
+  try {
+    await loadCloudOrdersForReport("year", year);
+  } catch (error) {
+    console.warn("No fue posible actualizar el cierre anual desde Supabase.", error);
+    showToast("Cierre anual mostrado con los datos disponibles en este equipo.");
+  }
+  renderAnnualClose(year);
 });
 elements.printAnnualCloseButton?.addEventListener("click", () => {
   printAnnualClose().catch((error) => {

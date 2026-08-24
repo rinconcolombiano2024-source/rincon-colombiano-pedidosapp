@@ -1,5 +1,5 @@
 const COURIER_VAPID_PUBLIC_KEY = "BJzCszQo4HrAtXYFQBkA_HSiqTjSqPGIa-InDIqgYc1Bqcq3V2Cj4lAuN-HcV0fO1Z95EPNx-qhJU85Rl4nxJxE";
-const COURIER_APP_VERSION = "v85";
+const COURIER_APP_VERSION = "v86.1";
 const courierParams = new URLSearchParams(window.location.search);
 const COURIER_PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 const COURIER_DOCUMENT_BUCKET = "courier-documents";
@@ -246,7 +246,7 @@ function courierLoadGoogleMaps() {
     const timeoutId = window.setTimeout(() => finish(false), 12000);
     window[callbackName] = () =>
   finish(Boolean(window.google?.maps));
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places&callback=${callbackName}`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places&loading=async&callback=${callbackName}`;
     script.async = true;
     script.defer = true;
     script.dataset.courierGoogleMapsLoader = "true";
@@ -552,7 +552,7 @@ function courierLoadSupabaseLibrary() {
     }
 
     const script = document.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+    script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4";
     script.async = true;
     script.dataset.supabaseLoader = "true";
     script.addEventListener("load", () => resolve(Boolean(window.supabase?.createClient)), { once: true });
@@ -610,13 +610,11 @@ function courierRefreshFileStatuses() {
 }
 
 function courierFileExtension(file) {
-  const nameExtension = String(file?.name || "").split(".").pop().toLowerCase();
-  const cleanNameExtension = nameExtension.replace(/[^a-z0-9]/g, "");
-  if (cleanNameExtension && cleanNameExtension.length <= 5) return cleanNameExtension;
   if (file?.type === "application/pdf") return "pdf";
   if (file?.type === "image/png") return "png";
   if (file?.type === "image/webp") return "webp";
-  return "jpg";
+  if (file?.type === "image/jpeg") return "jpg";
+  return "";
 }
 
 async function courierUploadDocument(file, kind) {
@@ -630,6 +628,9 @@ async function courierUploadDocument(file, kind) {
   }
 
   const extension = courierFileExtension(file);
+  if (!extension) {
+    throw new Error("Tipo de archivo no permitido. Usa PDF, JPG, PNG o WebP.");
+  }
   const cleanKind = courierNormalizeText(kind).toLowerCase().replace(/[^a-z0-9-]/g, "-") || "documento";
   const path = `${courierUser.id}/${cleanKind}-${Date.now()}.${extension}`;
   const { error } = await client.storage.from(COURIER_DOCUMENT_BUCKET).upload(path, file, {

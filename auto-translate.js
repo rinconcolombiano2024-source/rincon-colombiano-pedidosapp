@@ -13,6 +13,8 @@
   let translating = false;
   let cache = readCache();
   let translationGeneration = 0;
+  let translationServicePausedUntil = 0;
+  let translationWarningShownAt = 0;
 
   const dictionary = {
     pl: {
@@ -33,6 +35,7 @@
       "Instalar panel": "Zainstaluj panel",
       "Correo autorizado": "Autoryzowany email",
       "Solicitudes": "Wnioski",
+      "Verifica documentos en el correo y despues cambia el estado aqui.": "Sprawdz dokumenty w wiadomosci e-mail, a nastepnie zmien status tutaj.",
       "Revision de colaboradores": "Weryfikacja kurierow",
       "Restaurante": "Restauracja",
       "Operacion en tiempo real": "Operacje w czasie rzeczywistym",
@@ -102,6 +105,7 @@
       "Despacho": "Wydawanie",
       "Caja": "Kasa",
       "Cliente": "Klient",
+      "Hola,": "Czesc,",
       "Colaborador": "Kurier",
       "Iniciar sesion como restaurante": "Zaloguj jako restauracja",
       "Registrarse como restaurante": "Zarejestruj restauracje",
@@ -326,6 +330,7 @@
       "Instalar panel": "Install panel",
       "Correo autorizado": "Authorized email",
       "Solicitudes": "Applications",
+      "Verifica documentos en el correo y despues cambia el estado aqui.": "Review the documents in the email, then update the status here.",
       "Revision de colaboradores": "Courier review",
       "Restaurante": "Restaurant",
       "Operacion en tiempo real": "Real-time operations",
@@ -395,6 +400,7 @@
       "Despacho": "Dispatch",
       "Caja": "Cashier",
       "Cliente": "Customer",
+      "Hola,": "Hello,",
       "Colaborador": "Courier",
       "Iniciar sesion como restaurante": "Sign in as restaurant",
       "Registrarse como restaurante": "Register restaurant",
@@ -856,30 +862,36 @@ if (
     return clean;
   }
 
-  // 4. Cualquier texto de interfaz que no conozcamos
-  // se traduce automáticamente.
-  try {
-    const url =
-      `https://translate.googleapis.com/translate_a/single` +
-      `?client=gtx` +
-      `&sl=es` +
-      `&tl=${encodeURIComponent(targetLanguage)}` +
-      `&dt=t` +
-      `&q=${encodeURIComponent(clean)}`;
+  // Si el servicio remoto acaba de fallar, conserva el texto original y evita
+  // repetir decenas de solicitudes mientras se recupera la conexion.
+  if (Date.now() < translationServicePausedUntil) {
+    return clean;
+  }
 
-    const response = await fetch(url);
+  // 4. Los textos no incluidos en el diccionario se traducen en el servidor.
+  // La clave privada del proveedor nunca se expone en el navegador.
+  try {
+    const config = window.RINCON_SUPABASE || {};
+    const baseUrl = String(config.url || "").replace(/\/+$/, "");
+    const publicKey = String(config.anonKey || "");
+    if (!baseUrl || !publicKey) return clean;
+    const response = await fetch(`${baseUrl}/functions/v1/translate-public-content`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json; charset=utf-8",
+        apikey: publicKey,
+        Authorization: `Bearer ${publicKey}`,
+      },
+      body: JSON.stringify({ text: clean, targetLanguage, sourceLanguage: "es" }),
+    });
 
     if (!response.ok) {
+      translationServicePausedUntil = Date.now() + (response.status === 429 ? 60_000 : 20_000);
       return clean;
     }
 
     const data = await response.json();
-
-    const translated = normalize(
-      (data?.[0] || [])
-        .map((part) => part?.[0] || "")
-        .join("")
-    );
+    const translated = normalize(data?.translatedText || "");
 
     if (
       translated &&
@@ -890,10 +902,15 @@ if (
       return translated;
     }
   } catch (error) {
-    console.warn(
-      "RC ORDERA: traducción automática no disponible.",
-      error
-    );
+    const now = Date.now();
+    translationServicePausedUntil = now + 20_000;
+    if (now - translationWarningShownAt > 20_000) {
+      translationWarningShownAt = now;
+      console.warn(
+        "RC ORDERA: traducción automática no disponible; se mantiene la traducción local.",
+        error
+      );
+    }
   }
 
   return clean;
@@ -1051,6 +1068,21 @@ if (generation !== translationGeneration) {
   }
 }
 
+  function elementIsVisible(element) {
+    if (!element || !element.isConnected) return false;
+    const style = window.getComputedStyle(element);
+    if (style.display === "none" || style.visibility === "hidden") return false;
+    const rect = element.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  }
+
+  async function translateInBatches(items, worker, generation, batchSize = 6) {
+    for (let index = 0; index < items.length; index += batchSize) {
+      if (generation !== translationGeneration) return;
+      await Promise.all(items.slice(index, index + batchSize).map((item) => worker(item, generation)));
+    }
+  }
+
  async function translateTree(root = document.body) {
   const generation = translationGeneration;
     if (!root || translating) return;
@@ -1066,13 +1098,18 @@ if (generation !== translationGeneration) {
       });
       const textNodes = [];
       while (walker.nextNode()) textNodes.push(walker.currentNode);
-      for (const node of textNodes) {
-  if (generation !== translationGeneration) {
-    return;
-  }
-
-  await translateTextNode(node, generation);
-}
+      textNodes.sort((left, right) =>
+        Number(elementIsVisible(right.parentElement)) - Number(elementIsVisible(left.parentElement))
+      );
+      const localTextNodes = [];
+      const remoteTextNodes = [];
+      textNodes.forEach((node) => {
+        const source = originalText.get(node)?.source || node.nodeValue;
+        if (language === "es" || dictionaryTranslation(source, language)) localTextNodes.push(node);
+        else remoteTextNodes.push(node);
+      });
+      await translateInBatches(localTextNodes, translateTextNode, generation, 50);
+      await translateInBatches(remoteTextNodes, translateTextNode, generation);
       
       const elements = root.querySelectorAll
   ? root.querySelectorAll(
@@ -1088,13 +1125,23 @@ if (generation !== translationGeneration) {
 ].join(",")
     )
   : [];
-      for (const element of elements) {
-  if (generation !== translationGeneration) {
-    return;
-  }
-
-  await translateAttributes(element, generation);
-}
+      const attributeElements = [...elements].sort((left, right) =>
+        Number(elementIsVisible(right)) - Number(elementIsVisible(left))
+      );
+      const localAttributeElements = [];
+      const remoteAttributeElements = [];
+      attributeElements.forEach((element) => {
+        const candidates = ["placeholder", "title", "aria-label", "aria-description", "alt", "value"]
+          .map((attribute) => originalAttributes.get(element)?.[attribute]?.source || element.getAttribute(attribute) || "")
+          .filter(Boolean);
+        if (language === "es" || candidates.every((source) => dictionaryTranslation(source, language))) {
+          localAttributeElements.push(element);
+        } else {
+          remoteAttributeElements.push(element);
+        }
+      });
+      await translateInBatches(localAttributeElements, translateAttributes, generation, 30);
+      await translateInBatches(remoteAttributeElements, translateAttributes, generation);
     } catch {
       // Si la traduccion externa falla, se conserva el texto original.
     } finally {
