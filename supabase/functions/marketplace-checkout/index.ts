@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -32,26 +32,60 @@ Deno.serve(async (request) => {
   const accessToken = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
   const { data: userData } = accessToken ? await admin.auth.getUser(accessToken) : { data: { user: null } };
   const user = userData?.user || null;
-  const { data: order } = await admin.from("customer_orders")
-    .select("id,public_token,user_id,customer_user_id,total,currency,payment_status,order_json")
+  const orderResult = await admin.from("customer_orders")
+    .select("id,public_token,user_id,customer_user_id,status,total,currency,payment_method,payment_status,order_json")
     .eq("id", payload.orderId).maybeSingle();
+  if (orderResult.error) return response(500, { error: "Could not read order" });
+  const order = orderResult.data;
   if (!order) return response(404, { error: "Order was not found" });
   const tokenMatches = String(payload.publicToken || "").length >= 8 && payload.publicToken === order.public_token;
   if (!(tokenMatches || (user && user.id === order.customer_user_id))) return response(403, { error: "Not authorized" });
   if (order.payment_status === "paid") return response(409, { error: "Order is already paid" });
+  if (order.status !== "pending") return response(409, { error: "Order can no longer be paid online" });
+  if (String(order.payment_method || "").toLowerCase() !== "online") {
+    return response(409, { error: "Order was not created for online payment" });
+  }
 
-  const { data: restaurant } = await admin.from("restaurant_profiles")
+  const restaurantResult = await admin.from("restaurant_profiles")
     .select("business_name,country_code")
     .eq("user_id", order.user_id).eq("active", true).is("deleted_at", null).maybeSingle();
-  if (!restaurant || String(restaurant.country_code).toUpperCase() !== "PL") {
+  if (restaurantResult.error) return response(500, { error: "Could not read restaurant" });
+  const restaurant = restaurantResult.data;
+  if (!restaurant) {
     return response(409, { error: "Online payments are not enabled for this restaurant" });
   }
-  const { data: payoutAccount } = await admin.from("marketplace_accounts")
-    .select("provider_account_id,onboarding_status,payouts_enabled")
+
+  const countryCode = String(restaurant.country_code || "").toUpperCase();
+  const providerResult = await admin.from("marketplace_provider_availability")
+    .select("provider,online_payments_enabled,marketplace_split_enabled")
+    .eq("country_code", countryCode).maybeSingle();
+  if (providerResult.error) return response(500, { error: "Could not read payment availability" });
+  if (providerResult.data?.provider !== "stripe_connect"
+      || !providerResult.data?.online_payments_enabled
+      || !providerResult.data?.marketplace_split_enabled) {
+    return response(409, { error: "Online marketplace payments are not available in this country" });
+  }
+
+  const settingsResult = await admin.from("app_settings")
+    .select("settings")
+    .eq("user_id", order.user_id).maybeSingle();
+  if (settingsResult.error) return response(500, { error: "Could not read restaurant payment settings" });
+  if (String(settingsResult.data?.settings?.onlinePaymentProvider || "disabled").toLowerCase() !== "stripe") {
+    return response(409, { error: "Restaurant has not enabled online payments" });
+  }
+
+  const payoutResult = await admin.from("marketplace_accounts")
+    .select("provider_account_id,onboarding_status,payouts_enabled,country_code,currency")
     .eq("owner_user_id", order.user_id).eq("account_type", "restaurant")
     .eq("provider", "stripe_connect").maybeSingle();
+  if (payoutResult.error) return response(500, { error: "Could not read payout account" });
+  const payoutAccount = payoutResult.data;
   if (!payoutAccount || payoutAccount.onboarding_status !== "complete" || !payoutAccount.payouts_enabled) {
     return response(409, { error: "Restaurant payout account is not ready" });
+  }
+  if (String(payoutAccount.country_code || "").toUpperCase() !== countryCode
+      || String(payoutAccount.currency || "").toUpperCase() !== String(order.currency || "").toUpperCase()) {
+    return response(409, { error: "Order currency does not match payout account" });
   }
 
   const { data: attempts, error: attemptsError } = await admin.from("payment_transactions")
