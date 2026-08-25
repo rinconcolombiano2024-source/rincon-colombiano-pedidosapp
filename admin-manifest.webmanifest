@@ -1,9 +1,9 @@
 {
-  "name": "RC ORDERA Administracion",
+  "name": "RC ORDERA Administración",
   "short_name": "RC Admin",
   "id": "./admin.html",
-  "description": "Panel privado de administracion de RC ORDERA.",
-  "start_url": "./admin.html?app=v86.1",
+  "description": "Panel privado de administración de RC ORDERA.",
+  "start_url": "./admin.html?app=v87.0.0&lang=es",
   "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],

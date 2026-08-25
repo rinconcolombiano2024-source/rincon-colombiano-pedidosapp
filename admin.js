@@ -46,10 +46,10 @@ function adminSupabaseConfig() {
 function adminConnectionMessage() {
   const config = adminSupabaseConfig();
   if (!config.url || !config.anonKey) {
-    return "Falta configurar la conexion de Supabase para usar la administracion.";
+    return "La administracion en la nube aun no esta disponible.";
   }
   if (!window.supabase?.createClient) {
-    return "No se pudo cargar la conexion de Supabase. Revisa internet, actualiza la pagina o prueba nuevamente.";
+    return "No se pudo cargar la administracion. Revisa internet e intenta nuevamente.";
   }
   return "No se pudo iniciar la conexion de administracion.";
 }
@@ -110,25 +110,25 @@ function adminFriendlyAuthError(error) {
   const message = String(error?.message || "");
   const code = String(error?.code || error?.status || "");
   if (/invalid login credentials/i.test(message)) {
-    return "Supabase no acepto las credenciales. Verifica que la cuenta exista en Authentication > Users o recupera la contrasena.";
+    return "Correo o contrasena incorrectos. Tambien puedes recuperar la contrasena.";
   }
   if (/email not confirmed/i.test(message)) return "Confirma el correo electronico antes de iniciar sesion.";
   if (/email address not authorized/i.test(message)) {
-    return "El servicio de correo de prueba de Supabase no autoriza este destinatario. Agrega el correo al equipo del proyecto o configura SMTP.";
+    return "No fue posible enviar el correo de recuperacion. Contacta al soporte de la plataforma.";
   }
   if (code === "429" || /rate limit|too many requests|over_email_send_rate_limit/i.test(message)) {
-    return "Supabase alcanzo el limite temporal de correos. Espera antes de reintentar o configura SMTP propio.";
+    return "Se alcanzo el limite temporal de correos. Espera unos minutos e intenta nuevamente.";
   }
   if (/redirect|not allowed|site url/i.test(message)) {
-    return "La direccion de recuperacion no esta autorizada en Supabase. Revisa Site URL y Redirect URLs.";
+    return "La recuperacion no esta disponible desde esta direccion. Abre la app publicada e intenta nuevamente.";
   }
   if (/failed to fetch|network|fetch/i.test(message)) {
-    return "No fue posible conectar con Supabase. Revisa internet e intenta nuevamente.";
+    return "No fue posible conectar con la administracion. Revisa internet e intenta nuevamente.";
   }
   if (/expired|invalid.*token|otp/i.test(message)) {
     return "El enlace de recuperacion vencio o ya fue utilizado. Solicita uno nuevo.";
   }
-  return "No se pudo completar la accion en Supabase. Revisa los registros de Authentication.";
+  return "No se pudo completar la accion. Intenta nuevamente o contacta al soporte de la plataforma.";
 }
 
 function adminStatusLabel(status) {
@@ -144,7 +144,7 @@ function adminCourierRpcMessage(error, action = "load") {
   const code = String(error?.code || error?.status || "");
   const message = String(error?.message || "");
   if (code === "PGRST202" || /get_courier_review_queue|review_courier_profile|schema cache/i.test(message)) {
-    return "Falta instalar la migracion V76 de autorizaciones y revision de colaboradores en Supabase.";
+    return "La revision de colaboradores aun no esta disponible. Contacta al soporte de la plataforma.";
   }
   if (code === "42501" || /not authorized|permission denied/i.test(message)) {
     return "Esta cuenta no tiene permiso administrativo para revisar colaboradores.";
@@ -261,7 +261,9 @@ function adminRenderCourierList(rows = []) {
               <span>Estado: ${adminEscapeHtml(adminStatusLabel(row.status))}</span>
               <span>Vehiculo: ${adminEscapeHtml(vehicle)}</span>
             </div>
-            <strong>${adminEscapeHtml(row.created_at ? new Date(row.created_at).toLocaleDateString("es-US") : "")}</strong>
+            <strong>${adminEscapeHtml(row.created_at ? new Date(row.created_at).toLocaleDateString(
+              { es: "es-ES", pl: "pl-PL", en: "en-GB" }[document.documentElement.lang] || "es-ES"
+            ) : "")}</strong>
           </div>
           <p class="client-order-note">Documento escrito: ${adminEscapeHtml(row.identity_document || "No indicado")}</p>
           <p class="client-order-note">Licencia escrita: ${adminEscapeHtml(row.driver_license || "No aplica / no indicada")}</p>
@@ -380,7 +382,7 @@ async function adminReviewCourier(userId, status) {
   ) {
     adminSetMessage(
       adminElements.authMessage,
-      "Supabase no confirmo el perfil y el permiso del colaborador. La accion no se mostrara como completada; actualiza e intenta nuevamente.",
+      "No se pudo confirmar el cambio del colaborador. Actualiza la lista e intenta nuevamente.",
       "error"
     );
     return false;
@@ -388,12 +390,12 @@ async function adminReviewCourier(userId, status) {
   adminSetMessage(
     adminElements.authMessage,
     status === "approved"
-      ? "Colaborador aprobado y confirmado en Supabase. Ya puede trabajar."
+      ? "Colaborador aprobado y confirmado. Ya puede trabajar."
       : status === "suspended"
-        ? "Colaborador suspendido y desconectado en Supabase."
+        ? "Colaborador suspendido y desconectado."
         : status === "inactive"
-          ? "Colaborador desactivado y desconectado en Supabase."
-          : "Solicitud rechazada y confirmada en Supabase.",
+          ? "Colaborador desactivado y desconectado."
+          : "Solicitud rechazada y confirmada.",
     "ok"
   );
   return true;
@@ -530,7 +532,7 @@ async function adminSendPasswordResetEmail() {
     }
     adminSetMessage(
       adminElements.authMessage,
-      "Supabase acepto la solicitud. Revisa entrada, spam y promociones. El envio puede tardar algunos minutos.",
+      "La solicitud fue aceptada. Revisa entrada, spam y promociones. El envio puede tardar algunos minutos.",
       "ok"
     );
   } catch (error) {

@@ -43,9 +43,21 @@ const STORAGE_KEYS = {
 
 const DEFAULT_BUSINESS_NAME = "MI RESTAURANTE";
 const DEFAULT_DELIVERY_MINIMUM_FEE = 20;
-const APP_VERSION = "v86.1";
+const APP_VERSION = "v87.0.0";
 const PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 const PLATFORM_APP_NAME = "RC ORDERA";
+function appUiLanguage() {
+  const language = String(document.documentElement.lang || localStorage.getItem(STORAGE_KEYS.appLanguage) || "es").toLowerCase();
+  return ["es", "pl", "en"].includes(language) ? language : "es";
+}
+
+function appUiLocale() {
+  return { es: "es-ES", pl: "pl-PL", en: "en-GB" }[appUiLanguage()];
+}
+
+function appUiText(source) {
+  return window.RinconAutoTranslate?.translate?.(source) || window.rcUiText?.(source) || String(source || "");
+}
 const RESTAURANT_WEEK_DAYS = [
   ["monday", "Lunes"],
   ["tuesday", "Martes"],
@@ -638,7 +650,7 @@ function currentMonthKey(date = null) {
 
 function formatMonthLabel(month) {
   const [year, monthNumber] = month.split("-").map(Number);
-  return new Date(year, monthNumber - 1, 1).toLocaleDateString("es-US", {
+  return new Date(year, monthNumber - 1, 1).toLocaleDateString(appUiLocale(), {
     month: "long",
     year: "numeric",
   });
@@ -646,7 +658,7 @@ function formatMonthLabel(month) {
 
 function formatDayLabel(day) {
   const [year, monthNumber, dayNumber] = day.split("-").map(Number);
-  return new Date(year, monthNumber - 1, dayNumber).toLocaleDateString("es-US", {
+  return new Date(year, monthNumber - 1, dayNumber).toLocaleDateString(appUiLocale(), {
     weekday: "short",
     month: "short",
     day: "2-digit",
@@ -971,22 +983,22 @@ function friendlyCloudError(error) {
   const message = String(error?.message || error?.error_description || "").toLowerCase();
 
   if (code === "42703" || message.includes("column") && message.includes("does not exist")) {
-    return "Supabase necesita la migracion V66 para completar las columnas nuevas.";
+    return "La nube necesita una actualizacion antes de continuar. Contacta al soporte.";
   }
   if (code === "42P01" || code === "PGRST205" || message.includes("could not find the table")) {
-    return "Supabase necesita completar las tablas de RC ORDERA.";
+    return "La nube necesita una actualizacion antes de continuar. Contacta al soporte.";
   }
   if (code === "42501" || code === "401" || code === "403" || message.includes("row-level security")) {
-    return "Supabase rechazo la operacion por permisos. Ejecuta la migracion V66.";
+    return "No tienes autorizacion para completar esta operacion.";
   }
   if (message.includes("jwt") || message.includes("refresh token") || message.includes("session")) {
     return "La sesion de nube vencio. Cierra sesion y vuelve a ingresar.";
   }
   if (message.includes("fetch") || message.includes("network") || message.includes("internet")) {
-    return "No fue posible conectar con Supabase. Revisa internet e intenta nuevamente.";
+    return "No fue posible conectar con la nube. Revisa internet e intenta nuevamente.";
   }
   if (message.includes("tiempo") || message.includes("timeout")) {
-    return "Supabase no respondio a tiempo. El pedido y los cambios siguen guardados localmente.";
+    return "La nube no respondio a tiempo. El pedido y los cambios siguen guardados localmente.";
   }
   return "No fue posible completar la carga de la nube. Los datos locales se conservaron.";
 }
@@ -1396,7 +1408,7 @@ function applySettingsPayload(settings = {}) {
 function updateCloudStatus(message = "") {
   if (!cloudState.configured) {
     elements.cloudStatus.textContent = "Modo local";
-    elements.cloudStatus.title = "La conexion con Supabase no esta configurada.";
+    elements.cloudStatus.title = "La conexion con la nube no esta configurada.";
     return;
   }
 
@@ -1540,7 +1552,7 @@ async function initializeCloud() {
 
   if (!window.supabase?.createClient && !(await loadSupabaseLibrary())) {
     cloudState.authChecked = true;
-    renderCloudState(hasKnownCloudSession() ? "" : "No se pudo cargar Supabase. Revisa la conexion a internet.");
+    renderCloudState(hasKnownCloudSession() ? "" : "No se pudo cargar la nube. Revisa la conexion a internet.");
     return;
   }
 
@@ -1877,7 +1889,7 @@ async function saveCloudSettings() {
   if (!rpcError) {
     const confirmed = Array.isArray(rpcData) ? rpcData[0] : rpcData;
     if (!confirmed?.settings || !confirmed?.profile) {
-      throw new Error("Supabase no devolvio la confirmacion completa de los ajustes.");
+      throw new Error("La nube no devolvio la confirmacion completa de los ajustes.");
     }
     applySettingsPayload(confirmed.settings);
     applyPublicRestaurantProfileFallback(confirmed.profile);
@@ -1923,7 +1935,7 @@ async function saveCloudMenu() {
   });
   if (!rpcError) {
     const confirmed = Array.isArray(rpcData) ? rpcData[0] : rpcData;
-    if (!confirmed?.menu) throw new Error("Supabase no confirmo el menu guardado.");
+    if (!confirmed?.menu) throw new Error("La nube no confirmo el menu guardado.");
     menuCatalog = normalizeMenuCatalog(confirmed.menu);
     localStorage.setItem(STORAGE_KEYS.menu, JSON.stringify(menuCatalog));
     storeCloudRevision(STORAGE_KEYS.menuRevision, confirmed.menuRevision ?? confirmed.menu_revision);
@@ -2005,7 +2017,7 @@ async function saveRestaurantPublicProfile() {
     throw error;
   }
   if (!data || data.user_id !== cloudState.user.id || data.active !== payload.active) {
-    throw new Error("Supabase no confirmo el estado del restaurante.");
+    throw new Error("La nube no confirmo el estado del restaurante.");
   }
   return data;
 }
@@ -2044,7 +2056,7 @@ async function verifyRestaurantActiveInCloud(expectedActive) {
 
   if (error) throw error;
   if (!data || data.active !== Boolean(expectedActive)) {
-    throw new Error("Supabase no confirmo el cambio de estado del restaurante.");
+    throw new Error("La nube no confirmo el cambio de estado del restaurante.");
   }
   return data;
 }
@@ -2118,10 +2130,10 @@ async function verifyRestaurantOperationalOpenInCloud(expectedOpen, expectedMode
 
   if (error) throw error;
   if (!data || data.operational_open !== Boolean(expectedOpen)) {
-    throw new Error("Supabase no confirmo el estado operativo del restaurante.");
+    throw new Error("La nube no confirmo el estado operativo del restaurante.");
   }
   if (expectedMode && normalizeRestaurantOperationalMode(data.operational_mode) !== expectedMode) {
-    throw new Error("Supabase no confirmo el modo operativo del restaurante.");
+    throw new Error("La nube no confirmo el modo operativo del restaurante.");
   }
   return data;
 }
@@ -2154,7 +2166,7 @@ async function persistRestaurantOperationalModeInCloud(nextMode) {
   if (error) throw error;
   const result = Array.isArray(data) ? data[0] : data;
   if (!result || normalizeRestaurantOperationalMode(result.operational_mode) !== expectedMode) {
-    throw new Error("Supabase no confirmo el modo operativo del restaurante.");
+    throw new Error("La nube no confirmo el modo operativo del restaurante.");
   }
   return verifyRestaurantOperationalOpenInCloud(result.operational_open === true, expectedMode);
 }
@@ -2171,14 +2183,14 @@ async function syncRestaurantOperationalStatus(options = {}) {
 
   restaurantStatusSyncing = true;
   if (!silent && elements.mainRestaurantStatusDetail) {
-    elements.mainRestaurantStatusDetail.textContent = "Comprobando el horario con Supabase...";
+    elements.mainRestaurantStatusDetail.textContent = "Comprobando el horario en la nube...";
   }
   try {
     const { data, error } = await cloudState.client.rpc("sync_current_restaurant_operational_status");
     if (error) throw error;
     const result = Array.isArray(data) ? data[0] : data;
     if (!result || normalizeRestaurantOperationalMode(result.operational_mode) !== "schedule") {
-      throw new Error("Supabase no devolvio el estado automatico esperado.");
+      throw new Error("La nube no devolvio el estado automatico esperado.");
     }
     restaurantOperationalOpen = result.operational_open === true;
     localStoreCurrentSettings();
@@ -2244,8 +2256,8 @@ async function setRestaurantOperationalMode(nextMode) {
     updateRestaurantStatusSync();
     showToast(
       expectedMode === "schedule"
-        ? "Horario automatico activado y confirmado en Supabase."
-        : "Control manual activado y confirmado en Supabase."
+        ? "Horario automatico activado y confirmado en la nube."
+        : "Control manual activado y confirmado en la nube."
     );
     return true;
   } catch (error) {
@@ -2254,7 +2266,7 @@ async function setRestaurantOperationalMode(nextMode) {
     restaurantOperationalOpen = previousOpen;
     localStoreCurrentSettings();
     renderRestaurantStatus();
-    alert("No se pudo confirmar el modo de atencion. Ejecuta la migracion V76 y vuelve a intentarlo.");
+    alert("No se pudo confirmar el modo de atencion. Contacta al soporte e intenta nuevamente.");
     return false;
   } finally {
     setRestaurantStatusControlsDisabled(false);
@@ -2289,7 +2301,7 @@ async function setRestaurantOperationalOpen(nextOpen) {
     restaurantOperationalOpen = previousOpen;
     localStoreCurrentSettings();
     renderRestaurantStatus();
-    alert("No se pudo confirmar el cambio en Supabase. La atencion conserva su estado anterior.");
+    alert("No se pudo confirmar el cambio. La atencion conserva su estado anterior.");
   } finally {
     setRestaurantStatusControlsDisabled(false);
   }
@@ -2348,7 +2360,7 @@ async function confirmRestaurantDeletion() {
       body: { confirmation: "ELIMINAR" },
     });
     if (error) throw error;
-    if (!data?.deleted) throw new Error(data?.message || "Supabase no confirmo la eliminacion.");
+    if (!data?.deleted) throw new Error(data?.message || "La nube no confirmo la eliminacion.");
 
     clearRestaurantLocalData();
     try {
@@ -2361,9 +2373,12 @@ async function confirmRestaurantDeletion() {
     window.location.replace(`index.html?app=${APP_VERSION}`);
   } catch (error) {
     console.error(error);
-    const message = /failed to send|function|404/i.test(String(error?.message || ""))
-      ? "No se aplicaron cambios parciales. Despliega la funcion delete-own-restaurant-account y la migracion V86-06 en Supabase, y vuelve a intentarlo."
-      : error.message || "No se pudo confirmar la eliminacion. La cuenta sigue intacta.";
+    const rawMessage = String(error?.message || "");
+    const message = /failed to send|function|404/i.test(rawMessage)
+      ? "No se aplicaron cambios parciales. El servicio de eliminacion no esta disponible; contacta al soporte e intenta nuevamente."
+      : /La contrasena no es correcta|La nube no confirmo la eliminacion/i.test(rawMessage)
+        ? rawMessage
+        : "No se pudo confirmar la eliminacion. La cuenta sigue intacta.";
     setRestaurantDeletionMessage(message, "error");
   } finally {
     elements.confirmRestaurantDeletionButton.disabled = false;
@@ -2996,7 +3011,7 @@ function renderClientOrders() {
       const created = new Date(order.created_at);
       const timeText = Number.isNaN(created.getTime())
         ? ""
-        : created.toLocaleTimeString("es-US", { hour: "2-digit", minute: "2-digit" });
+        : created.toLocaleTimeString(appUiLocale(), { hour: "2-digit", minute: "2-digit" });
       const items = clientOrderItems(order);
       const customerLabel = [order.table_label, order.customer_name].filter(Boolean).join(" - ") || "Cliente QR";
       const paymentMethod = paymentMethodLabel(order.payment_method || order.order_json?.paymentMethod);
@@ -3050,14 +3065,14 @@ function renderClientOrders() {
 function friendlyCourierAssignmentError(error) {
   const message = String(error?.message || "");
   if (/assign_nearest_courier|function .* does not exist|schema cache/i.test(message)) {
-    return "La asignacion de colaboradores cercanos aun no esta activa en la nube. Revisa la configuracion de Supabase.";
+    return "La asignacion de colaboradores cercanos aun no esta disponible. Intenta nuevamente mas tarde.";
   }
   if (/Restaurant location is missing|location/i.test(message)) {
     return "Guarda la ubicacion del restaurante en Editar menu > Pedidos cliente > Usar ubicacion actual.";
   }
   if (/Order is not delivery/i.test(message)) return "Solo los pedidos a domicilio necesitan colaborador.";
   if (/not authenticated/i.test(message)) return "Inicia sesion como restaurante para asignar colaborador.";
-  return message || "No se pudo buscar colaborador cercano.";
+  return "No se pudo buscar colaborador cercano.";
 }
 
 async function assignNearestCourierForOrder(orderId) {
@@ -3188,7 +3203,7 @@ async function acceptClientOrder(orderId) {
       alert("Este pedido ya fue procesado en otra caja. La bandeja se actualizara.");
       await refreshClientOrders({ silent: true });
     } else if (["42883", "PGRST202"].includes(error.code)) {
-      alert("Falta ejecutar la migracion V86.01 en Supabase antes de aceptar pedidos.");
+      alert("El servicio de pedidos necesita una actualizacion. Contacta al soporte antes de aceptar pedidos.");
     } else {
       alert("No se pudo aceptar el pedido. No se creo ningun ticket incompleto.");
     }
@@ -3197,7 +3212,7 @@ async function acceptClientOrder(orderId) {
 
   const result = Array.isArray(data) ? data[0] : data;
   if (!result?.accepted_order_json) {
-    alert("Supabase no devolvio el ticket confirmado. Actualiza la bandeja e intenta nuevamente.");
+    alert("La nube no devolvio el ticket confirmado. Actualiza la bandeja e intenta nuevamente.");
     return;
   }
   if (result.already_accepted) {
@@ -3379,7 +3394,7 @@ async function sendRestaurantChatMessage(orderId, card) {
     showToast("Mensaje enviado al cliente.");
     await refreshClientOrders({ silent: true });
   } catch (error) {
-    alert(error.message || "No se pudo enviar el mensaje.");
+    alert("No se pudo enviar el mensaje.");
   } finally {
     button.disabled = false;
   }
@@ -3435,7 +3450,7 @@ async function syncMenuBeforeQr() {
 
 async function openQrDialog() {
   if (!cloudState.configured) {
-    alert("La conexion de la nube no esta configurada. Revisa Supabase antes de usar pedidos por QR.");
+    alert("La conexion de la nube no esta disponible. Intenta nuevamente antes de usar pedidos por QR.");
     return;
   }
   if (!cloudState.user) {
@@ -3521,7 +3536,7 @@ function waiterMembershipError(error) {
     return "Ese correo aun no tiene cuenta. El empleado debe crearla desde el enlace del personal y confirmar su correo.";
   }
   if (/function .* does not exist|schema cache|PGRST202|42883/i.test(message)) {
-    return "La autorizacion de personal necesita la migracion V73 en Supabase.";
+    return "La autorizacion de personal aun no esta disponible. Contacta al soporte.";
   }
   if (/Restaurant owner profile is missing/i.test(message)) {
     return "Primero completa y guarda el perfil del restaurante.";
@@ -3532,7 +3547,7 @@ function waiterMembershipError(error) {
   if (/Owner cannot be added as staff/i.test(message)) {
     return "El propietario ya tiene control del restaurante y no necesita agregarse como empleado.";
   }
-  return message || "No fue posible actualizar el equipo.";
+  return "No fue posible actualizar el equipo.";
 }
 
 function restaurantStationLabel(station) {
@@ -3622,7 +3637,7 @@ async function loadEmployeeHours() {
   });
   if (error) {
     elements.employeeHoursList.innerHTML = isMissingRestaurantRpc(error)
-      ? `<div class="monthly-empty">Ejecuta la migracion V85.02 para activar el registro de horarios.</div>`
+      ? `<div class="monthly-empty">El registro de horarios aun no esta disponible. Contacta al soporte de la plataforma.</div>`
       : `<div class="monthly-empty">No fue posible cargar los horarios.</div>`;
     return;
   }
@@ -3742,7 +3757,7 @@ async function toggleWaiterMembership(memberId, memberEmail, station, nextActive
 }
 
 async function confirmWaiterInvitation(memberEmail, station, displayName) {
-  setWaiterTeamMessage("Confirmando autorizacion con Supabase...");
+  setWaiterTeamMessage("Confirmando autorizacion en la nube...");
   let { data, error } = await cloudState.client.rpc("confirm_current_restaurant_staff_invitation", {
     p_email: memberEmail,
   });
@@ -3771,7 +3786,7 @@ async function confirmWaiterInvitation(memberEmail, station, displayName) {
     (row) => String(row.member_email || "").trim().toLowerCase() === normalizedEmail && row.active === true && row.pending !== true
   );
   if (!result?.active || !confirmedMember) {
-    setWaiterTeamMessage("Supabase no confirmo la membresia activa. Actualiza la lista e intenta nuevamente.", "error");
+    setWaiterTeamMessage("La nube no confirmo la autorizacion activa. Actualiza la lista e intenta nuevamente.", "error");
     return false;
   }
   setWaiterTeamMessage(`${restaurantStationLabel(station)} autorizado correctamente. Ya puede entrar desde su dispositivo.`, "ok");
@@ -3781,7 +3796,7 @@ async function confirmWaiterInvitation(memberEmail, station, displayName) {
 
 async function openClientOrdersDialog() {
   if (!cloudState.configured) {
-    alert("La conexion de la nube no esta configurada. Revisa Supabase antes de recibir pedidos.");
+    alert("La conexion de la nube no esta disponible. Intenta nuevamente antes de recibir pedidos.");
     return;
   }
   if (!cloudState.user) {
@@ -4109,7 +4124,7 @@ async function refreshRestaurantApp() {
         return;
       }
       if (loadResult.warning) {
-        showToast("Nube conectada. Falta completar la migracion V66 para pedidos de clientes.");
+        showToast("Nube conectada. La recepcion de pedidos de clientes aun no esta disponible; contacta al soporte de la plataforma.");
         return;
       }
       showToast("App y nube actualizadas. Pedido actual conservado.");
@@ -4179,7 +4194,7 @@ async function updateRecoveredPassword() {
 function friendlyAuthError(error) {
   const message = error?.message || String(error || "");
   if (message.toLowerCase().includes("invalid path specified")) {
-    return "URL de Supabase incorrecta. Usa solo https://tu-proyecto.supabase.co, sin /rest/v1.";
+    return "La direccion del servicio en la nube no es valida. Revisa la configuracion de la aplicacion.";
   }
   if (/email not confirmed/i.test(message)) {
     return "RC ORDERA envio un correo de verificacion. Revisa tu correo, confirma la cuenta y vuelve a iniciar sesion.";
@@ -4582,7 +4597,7 @@ const UI_TRANSLATIONS = {
 "auth.creatingAccount": "Creando cuenta...",
     "auth.accountCreated": "Cuenta del restaurante creada. RC ORDERA te envió un correo de verificación. Abre ese correo, confirma la cuenta y después inicia sesión.",
 "auth.enterRecoveryEmail": "Escribe tu correo electrónico para recuperar la contraseña.",
-"auth.cloudConnectionError": "No se pudo conectar con Supabase. Revisa internet.",
+"auth.cloudConnectionError": "No se pudo conectar con la nube. Revisa internet.",
 "auth.sendingRecovery": "RC ORDERA está enviando el correo de recuperación...",
 "auth.recoveryEmailSent": "Correo enviado por RC ORDERA. Abre el enlace del correo para crear una contraseña nueva.",
 "auth.enterVerificationEmail": "Escribe tu correo electrónico para reenviar la verificación.",
@@ -4625,7 +4640,7 @@ const UI_TRANSLATIONS = {
 "auth.creatingAccount": "Tworzenie konta...",
     "auth.accountCreated": "Konto restauracji zostało utworzone. RC ORDERA wysłało wiadomość e-mail z linkiem weryfikacyjnym. Otwórz wiadomość, potwierdź konto, a następnie się zaloguj.",
 "auth.enterRecoveryEmail": "Wpisz swój adres e-mail, aby odzyskać hasło.",
-"auth.cloudConnectionError": "Nie udało się połączyć z Supabase. Sprawdź połączenie z internetem.",
+"auth.cloudConnectionError": "Nie udało się połączyć z chmurą. Sprawdź połączenie z internetem.",
 "auth.sendingRecovery": "RC ORDERA wysyła wiadomość e-mail do odzyskania hasła...",
 "auth.recoveryEmailSent": "Wiadomość została wysłana przez RC ORDERA. Otwórz link w wiadomości, aby ustawić nowe hasło.",
 "auth.enterVerificationEmail": "Wpisz swój adres e-mail, aby ponownie wysłać wiadomość weryfikacyjną.",
@@ -4667,7 +4682,7 @@ const UI_TRANSLATIONS = {
 "auth.creatingAccount": "Creating account...",
     "auth.accountCreated": "The restaurant account has been created. RC ORDERA sent you a verification email. Open the email, confirm your account, and then sign in.",
 "auth.enterRecoveryEmail": "Enter your email address to recover your password.",
-"auth.cloudConnectionError": "Could not connect to Supabase. Check your internet connection.",
+"auth.cloudConnectionError": "Could not connect to the cloud. Check your internet connection.",
 "auth.sendingRecovery": "RC ORDERA is sending the password recovery email...",
 "auth.recoveryEmailSent": "Email sent by RC ORDERA. Open the link in the email to create a new password.",
 "auth.enterVerificationEmail": "Enter your email address to resend the verification email.",
@@ -5390,7 +5405,10 @@ async function saveCurrencySymbol() {
     showToast(syncResultMessage("Ajustes guardados.", result));
   } catch (error) {
     console.error("No fue posible guardar los ajustes:", error);
-    alert(error.message || "No fue posible guardar los ajustes. Revisa la conexion e intenta nuevamente.");
+    const message = String(error?.message || "");
+    alert(/Stripe Connect solo|Completa primero la verificacion/i.test(message)
+      ? message
+      : "No fue posible guardar los ajustes. Revisa la conexion e intenta nuevamente.");
   } finally {
     saveButtons.forEach((button) => {
       button.disabled = false;
@@ -5446,7 +5464,10 @@ async function saveRestaurantHours() {
     }
     showToast(syncResultMessage("Horario guardado.", result));
   } catch (error) {
-    alert(error.message || "Revisa el horario antes de guardar.");
+    const message = String(error?.message || "");
+    alert(/^El horario de .+ debe tener horas diferentes\.$/i.test(message)
+      ? message
+      : "Revisa el horario antes de guardar.");
   } finally {
     if (elements.saveRestaurantHoursButton) elements.saveRestaurantHoursButton.disabled = false;
   }
@@ -5651,7 +5672,7 @@ function useRestaurantCurrentLocation() {
 function marketplacePaymentErrorMessage(error) {
   const message = String(error?.message || error?.context?.message || "");
   if (/not configured|503/i.test(message)) {
-    return "Falta configurar Stripe y las funciones seguras de Supabase.";
+    return "El pago en linea aun no esta disponible. Contacta al soporte de la plataforma.";
   }
   if (/not enabled for this country|409/i.test(message)) {
     return "Los pagos marketplace todavia no estan habilitados para este pais.";
@@ -5659,7 +5680,7 @@ function marketplacePaymentErrorMessage(error) {
   if (/session expired|unauthorized|401/i.test(message)) {
     return "La sesion vencio. Inicia sesion nuevamente.";
   }
-  return message || "No fue posible comprobar la cuenta de pagos.";
+  return "No fue posible comprobar la cuenta de pagos.";
 }
 
 function renderMarketplaceAccountState() {
@@ -5968,16 +5989,16 @@ function formatDeliverySummary(delivery) {
   const info = normalizeDeliveryInfo(delivery);
   if (!info) return "";
   return [
-    info.name ? `Nombre: ${info.name}` : "",
-    info.phone ? `Telefono: ${info.phone}` : "",
-    info.address ? `Direccion: ${info.address}` : "",
-    info.neighborhood ? `Barrio/Ciudad: ${info.neighborhood}` : "",
-    info.reference ? `Referencia: ${info.reference}` : "",
-    info.distanceKm > 0 ? `Distancia: ${info.distanceKm} km` : "",
-    info.mapDurationText ? `Tiempo Google Maps: ${info.mapDurationText}` : "",
-    info.calculatedFee > 0 ? `Tarifa km: ${formatMoney(info.calculatedFee)}` : "",
-    info.extraFee > 0 ? `Recargo: ${formatMoney(info.extraFee)}` : "",
-    info.fee > 0 ? `Domicilio: ${formatMoney(info.fee)}` : "",
+    info.name ? `${appUiText("Nombre:")} ${info.name}` : "",
+    info.phone ? `${appUiText("Telefono:")} ${info.phone}` : "",
+    info.address ? `${appUiText("Direccion:")} ${info.address}` : "",
+    info.neighborhood ? `${appUiText("Barrio/Ciudad:")} ${info.neighborhood}` : "",
+    info.reference ? `${appUiText("Referencia:")} ${info.reference}` : "",
+    info.distanceKm > 0 ? `${appUiText("Distancia:")} ${info.distanceKm} km` : "",
+    info.mapDurationText ? `${appUiText("Tiempo Google Maps:")} ${info.mapDurationText}` : "",
+    info.calculatedFee > 0 ? `${appUiText("Tarifa km:")} ${formatMoney(info.calculatedFee)}` : "",
+    info.extraFee > 0 ? `${appUiText("Recargo:")} ${formatMoney(info.extraFee)}` : "",
+    info.fee > 0 ? `${appUiText("Domicilio:")} ${formatMoney(info.fee)}` : "",
   ].filter(Boolean).join(" | ");
 }
 
@@ -6642,7 +6663,7 @@ async function clearMenuSecurely() {
     return;
   }
   if (!cloudState.client || !cloudState.user || !navigator.onLine) {
-    message.textContent = "Esta operacion necesita una sesion activa e internet para crear el respaldo en Supabase.";
+    message.textContent = "Esta operacion necesita una sesion activa e internet para crear el respaldo en la nube.";
     message.hidden = false;
     return;
   }
@@ -6662,7 +6683,7 @@ async function clearMenuSecurely() {
     if (authError) throw new Error("La contrasena no coincide. El menu no fue modificado.");
 
     const finalConfirmation = window.confirm(
-      "Ultima confirmacion: Supabase creara un respaldo y luego vaciara todas las categorias y productos. Deseas continuar?"
+      "Ultima confirmacion: se creara un respaldo en la nube y luego se vaciaran todas las categorias y productos. Deseas continuar?"
     );
     if (!finalConfirmation) {
       message.textContent = "Operacion cancelada. El menu permanece sin cambios.";
@@ -6675,13 +6696,13 @@ async function clearMenuSecurely() {
     });
     if (error) {
       if (isMissingRestaurantRpc(error)) {
-        throw new Error("Ejecuta la migracion V85 de proteccion del menu antes de usar esta operacion.");
+        throw new Error("La proteccion del menu aun no esta disponible. Contacta al soporte de la plataforma.");
       }
       throw error;
     }
     const confirmed = Array.isArray(data) ? data[0] : data;
     if (!confirmed?.backupId && !confirmed?.backup_id) {
-      throw new Error("Supabase no confirmo el respaldo. El menu local no se vacio.");
+      throw new Error("La nube no confirmo el respaldo. El menu local no se vacio.");
     }
 
     menuCatalog = EMPTY_MENU_CATALOG;
@@ -6696,10 +6717,13 @@ async function clearMenuSecurely() {
     elements.menuClearPasswordInput.value = "";
     elements.menuClearConfirmationInput.value = "";
     elements.menuClearSecurityDialog.close();
-    showToast("Menu vaciado. El respaldo fue confirmado por Supabase.");
+    showToast("Menu vaciado. El respaldo fue confirmado en la nube.");
   } catch (error) {
     console.error(error);
-    message.textContent = error.message || "No fue posible vaciar el menu. No se modificaron los datos locales.";
+    const rawMessage = String(error?.message || "");
+    message.textContent = /La contrasena no coincide|La proteccion del menu aun no esta disponible|La nube no confirmo el respaldo/i.test(rawMessage)
+      ? rawMessage
+      : "No fue posible vaciar el menu. No se modificaron los datos locales.";
     message.hidden = false;
   } finally {
     button.disabled = false;
@@ -7028,7 +7052,7 @@ async function printWithThermalPrinter() {
 function printTicketWithSystemDialog() {
   const width = normalizeReceiptWidth(receiptWidthMm);
   const printFrame = document.createElement("iframe");
-  printFrame.title = "Impresion de ticket RC ORDERA";
+  printFrame.title = appUiText("Impresion de ticket RC ORDERA");
   printFrame.style.position = "fixed";
   printFrame.style.right = "0";
   printFrame.style.bottom = "0";
@@ -7046,7 +7070,7 @@ function printTicketWithSystemDialog() {
     return;
   }
   printDocument.open();
-  printDocument.write(`<!doctype html><html><head><meta charset="utf-8"><title>RC ORDERA - Ticket</title><style>
+  printDocument.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(appUiText("RC ORDERA - Ticket"))}</title><style>
     @page { size: ${width}mm auto; margin: 0; }
     * { box-sizing: border-box; }
     html, body { width: ${width}mm; min-height: 0; margin: 0; padding: 0; background: #fff; color: #000; }
@@ -7094,36 +7118,36 @@ async function printRenderedTicket() {
 
 function renderPrintTicket(order) {
   const created = new Date(order.createdAt);
-  const dateText = created.toLocaleDateString("es-US");
-  const timeText = created.toLocaleTimeString("es-US", { hour: "2-digit", minute: "2-digit" });
-  const place = order.customer || "Sin mesa/cliente";
-  const server = order.server || "No indicado";
+  const dateText = created.toLocaleDateString(appUiLocale());
+  const timeText = created.toLocaleTimeString(appUiLocale(), { hour: "2-digit", minute: "2-digit" });
+  const place = order.customer || appUiText("Sin mesa/cliente");
+  const server = order.server || appUiText("No indicado");
   const cashier =
   String(
     order.cashier ||
     currentCashierName() ||
     ""
-  ).trim() || "No indicado";
+  ).trim() || appUiText("No indicado");
   const orderType = normalizeOrderType(order.type);
-  const orderTypeText = orderTypeLabel(orderType);
-  const paymentMethod = paymentMethodLabel(order.paymentMethod);
+  const orderTypeText = appUiText(orderTypeLabel(orderType));
+  const paymentMethod = appUiText(paymentMethodLabel(order.paymentMethod));
   const deliverySummary = formatDeliverySummary(order.delivery);
 
   elements.printTicket.innerHTML = `
     <div class="receipt-brand">${escapeHtml(businessName)}</div>
-    <div class="receipt-number">COCINA ${formatTicket(order.ticketNumber)}</div>
-    <div class="receipt-order-type">TIPO DE PEDIDO<br>${escapeHtml(orderTypeText).toUpperCase()}</div>
+    <div class="receipt-number">${escapeHtml(appUiText("COCINA"))} ${formatTicket(order.ticketNumber)}</div>
+    <div class="receipt-order-type">${escapeHtml(appUiText("TIPO DE PEDIDO"))}<br>${escapeHtml(orderTypeText).toUpperCase()}</div>
     <div class="receipt-divider"></div>
-    <div class="receipt-row"><strong>Tipo:</strong><span>${escapeHtml(orderTypeText)}</span></div>
-    <div class="receipt-row"><strong>Pago:</strong><span>${escapeHtml(paymentMethod)}</span></div>
-    <div class="receipt-row"><strong>Mesa/Cliente:</strong><span>${escapeHtml(place)}</span></div>
-    <div class="receipt-row"><strong>Tomo pedido:</strong><span>${escapeHtml(server)}</span></div>
-    <div class="receipt-row"><strong>Cajero:</strong><span>${escapeHtml(cashier)}</span></div>
-    <div class="receipt-row"><strong>Fecha:</strong><span>${escapeHtml(dateText)}</span></div>
-    <div class="receipt-row"><strong>Hora:</strong><span>${escapeHtml(timeText)}</span></div>
+    <div class="receipt-row"><strong>${escapeHtml(appUiText("Tipo:"))}</strong><span>${escapeHtml(orderTypeText)}</span></div>
+    <div class="receipt-row"><strong>${escapeHtml(appUiText("Pago:"))}</strong><span>${escapeHtml(paymentMethod)}</span></div>
+    <div class="receipt-row"><strong>${escapeHtml(appUiText("Mesa/Cliente:"))}</strong><span>${escapeHtml(place)}</span></div>
+    <div class="receipt-row"><strong>${escapeHtml(appUiText("Tomo pedido:"))}</strong><span>${escapeHtml(server)}</span></div>
+    <div class="receipt-row"><strong>${escapeHtml(appUiText("Cajero:"))}</strong><span>${escapeHtml(cashier)}</span></div>
+    <div class="receipt-row"><strong>${escapeHtml(appUiText("Fecha:"))}</strong><span>${escapeHtml(dateText)}</span></div>
+    <div class="receipt-row"><strong>${escapeHtml(appUiText("Hora:"))}</strong><span>${escapeHtml(timeText)}</span></div>
     ${
       deliverySummary
-        ? `<div class="receipt-divider"></div><p class="receipt-note-block"><strong>DOMICILIO:</strong> ${escapeHtml(deliverySummary)}</p>`
+        ? `<div class="receipt-divider"></div><p class="receipt-note-block"><strong>${escapeHtml(appUiText("DOMICILIO:"))}</strong> ${escapeHtml(deliverySummary)}</p>`
         : ""
     }
     <div class="receipt-divider"></div>
@@ -7133,7 +7157,7 @@ function renderPrintTicket(order) {
           (item) => `
             <div class="receipt-item">
               <strong>${itemQuantity(item)} x ${escapeHtml(itemReportName(item))}</strong>
-              ${item.note ? `<div class="receipt-note">NOTA: ${escapeHtml(normalizeNoteText(item.note))}</div>` : ""}
+              ${item.note ? `<div class="receipt-note">${escapeHtml(appUiText("NOTA:"))} ${escapeHtml(normalizeNoteText(item.note))}</div>` : ""}
             </div>
           `
         )
@@ -7141,11 +7165,11 @@ function renderPrintTicket(order) {
     </div>
     ${
       order.notes
-        ? `<div class="receipt-divider"></div><p class="receipt-note-block"><strong>NOTAS:</strong> ${escapeHtml(normalizeNoteText(order.notes))}</p>`
+        ? `<div class="receipt-divider"></div><p class="receipt-note-block"><strong>${escapeHtml(appUiText("NOTAS:"))}</strong> ${escapeHtml(normalizeNoteText(order.notes))}</p>`
         : ""
     }
     <div class="receipt-divider"></div>
-    <p class="receipt-total">FIN DEL TICKET</p>
+    <p class="receipt-total">${escapeHtml(appUiText("FIN DEL TICKET"))}</p>
   `;
 }
 
@@ -7180,52 +7204,52 @@ function wrapReceiptText(text, maxLength = 31) {
 
 function buildTicketPdfLines(order, maxLineLength) {
   const created = new Date(order.createdAt);
-  const dateText = created.toLocaleDateString("es-US");
-  const timeText = created.toLocaleTimeString("es-US", { hour: "2-digit", minute: "2-digit" });
+  const dateText = created.toLocaleDateString(appUiLocale());
+  const timeText = created.toLocaleTimeString(appUiLocale(), { hour: "2-digit", minute: "2-digit" });
   const orderType = normalizeOrderType(order.type);
-  const orderTypeText = orderTypeLabel(orderType);
+  const orderTypeText = appUiText(orderTypeLabel(orderType));
   const deliverySummary = formatDeliverySummary(order.delivery);
   const divider = "-".repeat(Math.min(31, Math.max(18, maxLineLength)));
   const lines = [
     pdfSafeText(businessName),
-    `COCINA ${formatTicket(order.ticketNumber)}`,
+    `${appUiText("COCINA")} ${formatTicket(order.ticketNumber)}`,
     divider,
-    "TIPO DE PEDIDO",
+    appUiText("TIPO DE PEDIDO"),
     orderTypeText.toUpperCase(),
     divider,
-    `Cliente: ${order.customer || "Sin mesa/cliente"}`,
-    `Pago: ${paymentMethodLabel(order.paymentMethod)}`,
-    `Tomo pedido: ${order.server || "No indicado"}`,
-`Cajero: ${
+    `${appUiText("Mesa/Cliente:")} ${order.customer || appUiText("Sin mesa/cliente")}`,
+    `${appUiText("Pago:")} ${appUiText(paymentMethodLabel(order.paymentMethod))}`,
+    `${appUiText("Tomo pedido:")} ${order.server || appUiText("No indicado")}`,
+`${appUiText("Cajero:")} ${
   String(
     order.cashier ||
     currentCashierName() ||
     ""
-  ).trim() || "No indicado"
+  ).trim() || appUiText("No indicado")
 }`,
-`Fecha: ${dateText}`,
-    `Hora: ${timeText}`,
+`${appUiText("Fecha:")} ${dateText}`,
+    `${appUiText("Hora:")} ${timeText}`,
     divider,
   ];
 
   if (deliverySummary) {
-    wrapReceiptText(`DOMICILIO: ${deliverySummary}`, maxLineLength).forEach((line) => lines.push(line));
+    wrapReceiptText(`${appUiText("DOMICILIO:")} ${deliverySummary}`, maxLineLength).forEach((line) => lines.push(line));
     lines.push(divider);
   }
 
   orderItemsList(order).forEach((item) => {
     wrapReceiptText(`${itemQuantity(item)} x ${itemReportName(item)}`, maxLineLength).forEach((line) => lines.push(line));
     if (item.note) {
-      wrapReceiptText(`NOTA: ${normalizeNoteText(item.note)}`, maxLineLength).forEach((line) => lines.push(line));
+      wrapReceiptText(`${appUiText("NOTA:")} ${normalizeNoteText(item.note)}`, maxLineLength).forEach((line) => lines.push(line));
     }
   });
 
   if (order.notes) {
     lines.push(divider);
-    wrapReceiptText(`NOTAS: ${normalizeNoteText(order.notes)}`, maxLineLength).forEach((line) => lines.push(line));
+    wrapReceiptText(`${appUiText("NOTAS:")} ${normalizeNoteText(order.notes)}`, maxLineLength).forEach((line) => lines.push(line));
   }
 
-  lines.push(divider, "FIN DEL TICKET");
+  lines.push(divider, appUiText("FIN DEL TICKET"));
   return lines;
 }
 
@@ -7322,7 +7346,7 @@ function renderTicketHistory() {
     const created = new Date(order.createdAt || 0);
     const createdLabel = Number.isNaN(created.getTime())
       ? orderBusinessDate(order)
-      : created.toLocaleString("es-US", { dateStyle: "short", timeStyle: "short" });
+      : created.toLocaleString(appUiLocale(), { dateStyle: "short", timeStyle: "short" });
     return `
       <article class="ticket-history-card" data-ticket-id="${escapeHtml(order.id)}">
         <div class="ticket-history-card-main">
@@ -7397,7 +7421,7 @@ function renderHistory() {
     .slice(0, 30)
     .map((order) => {
       const created = new Date(order.createdAt);
-      const timeText = created.toLocaleTimeString("es-US", { hour: "2-digit", minute: "2-digit" });
+      const timeText = created.toLocaleTimeString(appUiLocale(), { hour: "2-digit", minute: "2-digit" });
       const itemCount = orderItemsCount(order);
       return `
         <article class="history-item">
@@ -7680,7 +7704,7 @@ async function confirmCloudPeriodClosure(periodType, anchorDate) {
   });
   if (error) {
     if (["42883", "PGRST202"].includes(error.code)) {
-      throw new Error("Ejecuta la migracion V85.02 para confirmar cierres en Supabase.");
+      throw new Error("La confirmacion de cierres aun no esta disponible. Contacta al soporte de la plataforma.");
     }
     throw error;
   }
@@ -7689,70 +7713,70 @@ async function confirmCloudPeriodClosure(periodType, anchorDate) {
 
 function renderPrintDailyClose(report) {
   const printedAt = new Date();
-  const dateText = printedAt.toLocaleDateString("es-US");
-  const timeText = printedAt.toLocaleTimeString("es-US", { hour: "2-digit", minute: "2-digit" });
+  const dateText = printedAt.toLocaleDateString(appUiLocale());
+  const timeText = printedAt.toLocaleTimeString(appUiLocale(), { hour: "2-digit", minute: "2-digit" });
   const ticketRange =
     report.firstTicket && report.lastTicket
       ? `${formatTicket(report.firstTicket)} - ${formatTicket(report.lastTicket)}`
-      : "Sin rango";
+      : appUiText("Sin rango");
 
   elements.printTicket.innerHTML = `
     <div class="receipt-brand">${escapeHtml(businessName)}</div>
-    <div class="receipt-number">CIERRE DIA</div>
+    <div class="receipt-number">${escapeHtml(appUiText("CIERRE DIA"))}</div>
     <div class="receipt-divider"></div>
-    <div class="receipt-row"><strong>Dia:</strong><span>${escapeHtml(report.label)}</span></div>
-    <div class="receipt-row"><strong>Impreso:</strong><span>${escapeHtml(dateText)}</span></div>
-    <div class="receipt-row"><strong>Hora:</strong><span>${escapeHtml(timeText)}</span></div>
-    <div class="receipt-row"><strong>Tickets:</strong><span>${escapeHtml(ticketRange)}</span></div>
+    <div class="receipt-row"><strong>${escapeHtml(appUiText("Dia:"))}</strong><span>${escapeHtml(report.label)}</span></div>
+    <div class="receipt-row"><strong>${escapeHtml(appUiText("Impreso:"))}</strong><span>${escapeHtml(dateText)}</span></div>
+    <div class="receipt-row"><strong>${escapeHtml(appUiText("Hora:"))}</strong><span>${escapeHtml(timeText)}</span></div>
+    <div class="receipt-row"><strong>${escapeHtml(appUiText("Tickets:"))}</strong><span>${escapeHtml(ticketRange)}</span></div>
     <div class="receipt-divider"></div>
-    <div class="receipt-row"><strong>Total caja:</strong><span>${formatMoney(report.total)}</span></div>
-    <div class="receipt-row"><strong>Cant tickets:</strong><span>${report.tickets}</span></div>
-    <div class="receipt-row"><strong>Productos:</strong><span>${report.items}</span></div>
-    <div class="receipt-row"><strong>Promedio:</strong><span>${formatMoney(report.average)}</span></div>
+    <div class="receipt-row"><strong>${escapeHtml(appUiText("Total caja:"))}</strong><span>${formatMoney(report.total)}</span></div>
+    <div class="receipt-row"><strong>${escapeHtml(appUiText("Cant tickets:"))}</strong><span>${report.tickets}</span></div>
+    <div class="receipt-row"><strong>${escapeHtml(appUiText("Productos:"))}</strong><span>${report.items}</span></div>
+    <div class="receipt-row"><strong>${escapeHtml(appUiText("Promedio:"))}</strong><span>${formatMoney(report.average)}</span></div>
     <div class="receipt-divider"></div>
-    <p><strong>TIPO DE PEDIDO</strong></p>
+    <p><strong>${escapeHtml(appUiText("TIPO DE PEDIDO"))}</strong></p>
     <div class="receipt-items">
       ${report.orderTypes
         .map(
           (type) => `
             <div class="receipt-item">
               <strong>${escapeHtml(type.label)}: ${formatMoney(type.total)}</strong>
-              <div>${type.tickets} tickets</div>
+              <div>${type.tickets} ${escapeHtml(appUiText("Tickets"))}</div>
             </div>
           `
         )
         .join("")}
     </div>
     <div class="receipt-divider"></div>
-    <p><strong>METODOS DE PAGO</strong></p>
+    <p><strong>${escapeHtml(appUiText("METODOS DE PAGO"))}</strong></p>
     <div class="receipt-items">
       ${report.paymentMethods
         .map(
           (method) => `
             <div class="receipt-item">
               <strong>${escapeHtml(method.label)}: ${formatMoney(method.total)}</strong>
-              <div>${method.tickets} tickets</div>
+              <div>${method.tickets} ${escapeHtml(appUiText("Tickets"))}</div>
             </div>
           `
         )
         .join("")}
     </div>
     <div class="receipt-divider"></div>
-    <p><strong>TOMARON PEDIDOS</strong></p>
+    <p><strong>${escapeHtml(appUiText("TOMARON PEDIDOS"))}</strong></p>
     <div class="receipt-items">
       ${report.servers
         .map(
           (server) => `
             <div class="receipt-item">
               <strong>${escapeHtml(server.name)}: ${formatMoney(server.total)}</strong>
-              <div>${server.tickets} tickets</div>
+              <div>${server.tickets} ${escapeHtml(appUiText("Tickets"))}</div>
             </div>
           `
         )
         .join("")}
     </div>
     <div class="receipt-divider"></div>
-    <p><strong>PRODUCTOS</strong></p>
+    <p><strong>${escapeHtml(appUiText("PRODUCTOS"))}</strong></p>
     <div class="receipt-items">
       ${report.products
         .map(
@@ -7766,7 +7790,7 @@ function renderPrintDailyClose(report) {
         .join("")}
     </div>
     <div class="receipt-divider"></div>
-    <p class="receipt-total">FIN DEL CIERRE DIA</p>
+    <p class="receipt-total">${escapeHtml(appUiText("FIN DEL CIERRE DIA"))}</p>
   `;
 }
 
@@ -7780,42 +7804,42 @@ async function printDailyClose() {
   const confirmed = await confirmCloudPeriodClosure("day", report.day);
   renderPrintDailyClose(report);
   await printRenderedTicket();
-  showToast(confirmed ? "Cierre diario confirmado en Supabase." : "Cierre diario impreso sin confirmacion en nube.");
+  showToast(confirmed ? "Cierre diario confirmado en la nube." : "Cierre diario impreso sin confirmacion en la nube.");
 }
 
 function renderPrintMonthlyClose(report) {
   const printedAt = new Date();
-  const dateText = printedAt.toLocaleDateString("es-US");
-  const timeText = printedAt.toLocaleTimeString("es-US", { hour: "2-digit", minute: "2-digit" });
+  const dateText = printedAt.toLocaleDateString(appUiLocale());
+  const timeText = printedAt.toLocaleTimeString(appUiLocale(), { hour: "2-digit", minute: "2-digit" });
 
   elements.printTicket.innerHTML = `
     <div class="receipt-brand">${escapeHtml(businessName)}</div>
-    <div class="receipt-number">CIERRE MES</div>
+    <div class="receipt-number">${escapeHtml(appUiText("CIERRE MES"))}</div>
     <div class="receipt-divider"></div>
-    <div class="receipt-row"><strong>Mes:</strong><span>${escapeHtml(report.label)}</span></div>
-    <div class="receipt-row"><strong>Fecha:</strong><span>${escapeHtml(dateText)}</span></div>
-    <div class="receipt-row"><strong>Hora:</strong><span>${escapeHtml(timeText)}</span></div>
+    <div class="receipt-row"><strong>${escapeHtml(appUiText("Mes:"))}</strong><span>${escapeHtml(report.label)}</span></div>
+    <div class="receipt-row"><strong>${escapeHtml(appUiText("Fecha:"))}</strong><span>${escapeHtml(dateText)}</span></div>
+    <div class="receipt-row"><strong>${escapeHtml(appUiText("Hora:"))}</strong><span>${escapeHtml(timeText)}</span></div>
     <div class="receipt-divider"></div>
-    <div class="receipt-row"><strong>Total vendido:</strong><span>${formatMoney(report.total)}</span></div>
-    <div class="receipt-row"><strong>Tickets:</strong><span>${report.tickets}</span></div>
-    <div class="receipt-row"><strong>Productos:</strong><span>${report.items}</span></div>
-    <div class="receipt-row"><strong>Promedio:</strong><span>${formatMoney(report.average)}</span></div>
+    <div class="receipt-row"><strong>${escapeHtml(appUiText("Total vendido:"))}</strong><span>${formatMoney(report.total)}</span></div>
+    <div class="receipt-row"><strong>${escapeHtml(appUiText("Tickets:"))}</strong><span>${report.tickets}</span></div>
+    <div class="receipt-row"><strong>${escapeHtml(appUiText("Productos:"))}</strong><span>${report.items}</span></div>
+    <div class="receipt-row"><strong>${escapeHtml(appUiText("Promedio:"))}</strong><span>${formatMoney(report.average)}</span></div>
     <div class="receipt-divider"></div>
-    <p><strong>DETALLE POR DIA</strong></p>
+    <p><strong>${escapeHtml(appUiText("DETALLE POR DIA"))}</strong></p>
     <div class="receipt-items">
       ${report.days
         .map(
           (day) => `
             <div class="receipt-item">
               <strong>${escapeHtml(formatDayLabel(day.day))}: ${formatMoney(day.total)}</strong>
-              <div>${day.tickets} tickets / ${day.items} productos</div>
+              <div>${day.tickets} ${escapeHtml(appUiText("Tickets"))} / ${day.items} ${escapeHtml(appUiText("Productos"))}</div>
             </div>
           `
         )
         .join("")}
     </div>
     <div class="receipt-divider"></div>
-    <p><strong>PRODUCTOS</strong></p>
+    <p><strong>${escapeHtml(appUiText("PRODUCTOS"))}</strong></p>
     <div class="receipt-items">
       ${report.products
         .map(
@@ -7829,7 +7853,7 @@ function renderPrintMonthlyClose(report) {
         .join("")}
     </div>
     <div class="receipt-divider"></div>
-    <p class="receipt-total">FIN DEL CIERRE</p>
+    <p class="receipt-total">${escapeHtml(appUiText("FIN DEL CIERRE"))}</p>
   `;
 }
 
@@ -7843,27 +7867,27 @@ async function printMonthlyClose() {
   const confirmed = await confirmCloudPeriodClosure("month", `${report.month}-01`);
   renderPrintMonthlyClose(report);
   await printRenderedTicket();
-  showToast(confirmed ? "Cierre mensual confirmado en Supabase." : "Cierre mensual impreso sin confirmacion en nube.");
+  showToast(confirmed ? "Cierre mensual confirmado en la nube." : "Cierre mensual impreso sin confirmacion en la nube.");
 }
 
 function renderPrintAnnualClose(report) {
   const printedAt = new Date();
   elements.printTicket.innerHTML = `
     <div class="receipt-brand">${escapeHtml(businessName)}</div>
-    <div class="receipt-number">CIERRE ANUAL</div>
+    <div class="receipt-number">${escapeHtml(appUiText("CIERRE ANUAL"))}</div>
     <div class="receipt-divider"></div>
-    <div class="receipt-row"><strong>Ano:</strong><span>${escapeHtml(report.year)}</span></div>
-    <div class="receipt-row"><strong>Impreso:</strong><span>${escapeHtml(printedAt.toLocaleString("es-US"))}</span></div>
+    <div class="receipt-row"><strong>${escapeHtml(appUiText("Ano:"))}</strong><span>${escapeHtml(report.year)}</span></div>
+    <div class="receipt-row"><strong>${escapeHtml(appUiText("Impreso:"))}</strong><span>${escapeHtml(printedAt.toLocaleString(appUiLocale()))}</span></div>
     <div class="receipt-divider"></div>
-    <div class="receipt-row"><strong>Total:</strong><span>${formatMoney(report.total)}</span></div>
-    <div class="receipt-row"><strong>Tickets:</strong><span>${report.tickets}</span></div>
-    <div class="receipt-row"><strong>Productos:</strong><span>${report.items}</span></div>
-    <div class="receipt-row"><strong>Promedio:</strong><span>${formatMoney(report.average)}</span></div>
+    <div class="receipt-row"><strong>${escapeHtml(appUiText("Total:"))}</strong><span>${formatMoney(report.total)}</span></div>
+    <div class="receipt-row"><strong>${escapeHtml(appUiText("Tickets:"))}</strong><span>${report.tickets}</span></div>
+    <div class="receipt-row"><strong>${escapeHtml(appUiText("Productos:"))}</strong><span>${report.items}</span></div>
+    <div class="receipt-row"><strong>${escapeHtml(appUiText("Promedio:"))}</strong><span>${formatMoney(report.average)}</span></div>
     <div class="receipt-divider"></div>
-    <p><strong>DETALLE POR MES</strong></p>
-    <div class="receipt-items">${report.months.map((month) => `<div class="receipt-item"><strong>${escapeHtml(formatMonthLabel(month.month))}: ${formatMoney(month.total)}</strong><div>${month.tickets} tickets / ${month.items} productos</div></div>`).join("")}</div>
+    <p><strong>${escapeHtml(appUiText("DETALLE POR MES"))}</strong></p>
+    <div class="receipt-items">${report.months.map((month) => `<div class="receipt-item"><strong>${escapeHtml(formatMonthLabel(month.month))}: ${formatMoney(month.total)}</strong><div>${month.tickets} ${escapeHtml(appUiText("Tickets"))} / ${month.items} ${escapeHtml(appUiText("Productos"))}</div></div>`).join("")}</div>
     <div class="receipt-divider"></div>
-    <p class="receipt-total">FIN DEL CIERRE ANUAL</p>`;
+    <p class="receipt-total">${escapeHtml(appUiText("FIN DEL CIERRE ANUAL"))}</p>`;
 }
 
 async function printAnnualClose() {
@@ -7875,7 +7899,7 @@ async function printAnnualClose() {
   const confirmed = await confirmCloudPeriodClosure("year", `${report.year}-01-01`);
   renderPrintAnnualClose(report);
   await printRenderedTicket();
-  showToast(confirmed ? "Cierre anual confirmado en Supabase." : "Cierre anual impreso sin confirmacion en nube.");
+  showToast(confirmed ? "Cierre anual confirmado en la nube." : "Cierre anual impreso sin confirmacion en la nube.");
 }
 
 function startNewOrder() {
@@ -8387,7 +8411,7 @@ elements.dailyCloseButton.addEventListener(
       elements.dailyCloseDialog.showModal();
 
       showToast(
-        "Cierre mostrado con datos locales. No fue posible verificar Supabase."
+        "Cierre mostrado con datos locales. No fue posible verificar la nube."
       );
 
     } finally {
@@ -8413,7 +8437,7 @@ elements.closeDayInput.addEventListener("change", async () => {
 elements.printDailyCloseButton.addEventListener("click", () => {
   printDailyClose().catch((error) => {
     console.error(error);
-    alert(error.message || "No fue posible confirmar el cierre diario.");
+    alert("No fue posible confirmar el cierre diario.");
   });
 });
 
@@ -8461,7 +8485,7 @@ elements.monthlyCloseButton.addEventListener(
       elements.monthlyCloseDialog.showModal();
 
       showToast(
-        "Cierre mensual mostrado con datos locales. No fue posible verificar Supabase."
+        "Cierre mensual mostrado con datos locales. No fue posible verificar la nube."
       );
 
     } finally {
@@ -8487,7 +8511,7 @@ elements.closeMonthInput.addEventListener("change", async () => {
 elements.printCloseButton.addEventListener("click", () => {
   printMonthlyClose().catch((error) => {
     console.error(error);
-    alert(error.message || "No fue posible confirmar el cierre mensual.");
+    alert("No fue posible confirmar el cierre mensual.");
   });
 });
 
@@ -8505,7 +8529,7 @@ elements.annualCloseButton?.addEventListener("click", async () => {
     console.error("No fue posible verificar la nube antes del cierre anual:", error);
     renderAnnualClose(currentYearKey());
     elements.annualCloseDialog.showModal();
-    showToast("Cierre anual mostrado con datos locales. No fue posible verificar Supabase.");
+    showToast("Cierre anual mostrado con datos locales. No fue posible verificar la nube.");
   } finally {
     elements.annualCloseButton.disabled = false;
   }
@@ -8523,7 +8547,7 @@ elements.closeYearInput?.addEventListener("change", async () => {
 elements.printAnnualCloseButton?.addEventListener("click", () => {
   printAnnualClose().catch((error) => {
     console.error(error);
-    alert(error.message || "No fue posible confirmar el cierre anual.");
+    alert("No fue posible confirmar el cierre anual.");
   });
 });
 function showRestaurantEditSection(sectionName) {
@@ -8641,7 +8665,10 @@ if (elements.businessLogoFileInput) {
       applyBusinessNameToUi();
       showToast("Logo optimizado. Presiona guardar ajustes para subirlo.");
     } catch (error) {
-      alert(error.message || "No se pudo cargar el logo.");
+      const message = String(error?.message || "");
+      alert(/Selecciona una imagen valida|imagen es muy pesada|imagen sigue muy pesada/i.test(message)
+        ? message
+        : "No se pudo cargar el logo.");
       elements.businessLogoFileInput.value = "";
     }
   });
@@ -8655,7 +8682,10 @@ elements.productImageFileInput.addEventListener("change", async () => {
     elements.productImageUrlInput.value = await restaurantImageFileToDataUrl(file);
     showToast("Foto optimizada. Presiona guardar para aplicar.");
   } catch (error) {
-    alert(error.message || "No se pudo cargar la foto.");
+    const message = String(error?.message || "");
+    alert(/Selecciona una imagen valida|imagen es muy pesada|imagen sigue muy pesada/i.test(message)
+      ? message
+      : "No se pudo cargar la foto.");
     elements.productImageFileInput.value = "";
   }
 });

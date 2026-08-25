@@ -110,6 +110,11 @@ const CUSTOMER_TRACKED_ORDER_KEY_PREFIX = "rc_ordera_tracked_customer_order";
 const CUSTOMER_DELIVERY_MARKUP = 1.6714285714;
 const CUSTOMER_I18N = {
   es: {
+    documentTitleSuffix: "Menú del cliente",
+    profileSaved: "Tus datos fueron guardados correctamente.",
+    profileSaveError: "No se pudo guardar el perfil.",
+    notificationsAria: "Notificaciones",
+    profileAria: "Perfil",
     heroEyebrow: "Pedido del cliente",
     languageLabel: "Idioma",
     refreshMenu: "Actualizar menu",
@@ -415,6 +420,11 @@ const CUSTOMER_I18N = {
     imageStillLarge: "La imagen sigue muy pesada. Recorta la foto o baja la calidad.",
   },
   pl: {
+    documentTitleSuffix: "Menu klienta",
+    profileSaved: "Twoje dane zostały zapisane.",
+    profileSaveError: "Nie udało się zapisać profilu.",
+    notificationsAria: "Powiadomienia",
+    profileAria: "Profil",
     heroEyebrow: "Zamowienie klienta",
     languageLabel: "Jezyk",
     refreshMenu: "Odswiez menu",
@@ -707,7 +717,7 @@ const CUSTOMER_I18N = {
     restaurantSender: "Restauracja",
     customerSender: "Klient",
     chatImageAlt: "Obraz wyslany w czacie",
-    chatLoadError: "Nie udalo sie zaladowac czatu. Wykonaj zaktualizowany SQL.",
+    chatLoadError: "Nie udało się załadować czatu. Spróbuj ponownie później.",
     chatFirstOrder: "Najpierw wyslij zamowienie, aby wlaczyc czat.",
     chatNeedMessage: "Napisz wiadomosc albo wybierz obraz.",
     chatSending: "Wysylanie czatu...",
@@ -720,6 +730,11 @@ const CUSTOMER_I18N = {
     imageStillLarge: "Obraz nadal jest za duzy. Przytnij zdjecie albo obniz jakosc.",
   },
   en: {
+    documentTitleSuffix: "Customer menu",
+    profileSaved: "Your details were saved successfully.",
+    profileSaveError: "The profile could not be saved.",
+    notificationsAria: "Notifications",
+    profileAria: "Profile",
     heroEyebrow: "Customer order",
     languageLabel: "Language",
     refreshMenu: "Refresh menu",
@@ -1012,7 +1027,7 @@ const CUSTOMER_I18N = {
     restaurantSender: "Restaurant",
     customerSender: "Customer",
     chatImageAlt: "Image sent in chat",
-    chatLoadError: "Could not load chat. Run the updated SQL.",
+    chatLoadError: "The chat could not be loaded. Please try again later.",
     chatFirstOrder: "Send the order first to activate chat.",
     chatNeedMessage: "Write a message or select an image.",
     chatSending: "Sending chat...",
@@ -1322,7 +1337,14 @@ let customerDescriptionTranslationRenderTimer = null;
 function customerT(key, values = {}) {
   const dictionary = CUSTOMER_I18N[customerLanguage] || CUSTOMER_I18N.es;
   const fallback = CUSTOMER_I18N.es[key] || key;
-  return String(dictionary[key] || fallback).replace(/\{(\w+)\}/g, (_, name) => values[name] ?? "");
+  let template = String(dictionary[key] || fallback);
+  if (customerLanguage === "es" && window.RC_ORDERA_OFFLINE_I18N?.spanishText) {
+    template = window.RC_ORDERA_OFFLINE_I18N.spanishText(template);
+  }
+  if (customerLanguage === "pl" && window.RC_ORDERA_OFFLINE_I18N?.polishText) {
+    template = window.RC_ORDERA_OFFLINE_I18N.polishText(template);
+  }
+  return template.replace(/\{(\w+)\}/g, (_, name) => values[name] ?? "");
 }
 
 function customerReadDescriptionTranslationCache() {
@@ -1461,6 +1483,14 @@ function customerQueueDescriptionTranslation(dish) {
 function customerApplyTranslations() {
   document.documentElement.lang = customerLanguage;
   if (customerElements.languageSelect) customerElements.languageSelect.value = customerLanguage;
+  const manifest = document.querySelector('link[rel="manifest"]');
+  if (manifest) {
+    const manifestName = customerLanguage === "es"
+      ? "cliente-manifest.webmanifest"
+      : `cliente-manifest.${customerLanguage}.webmanifest`;
+    manifest.setAttribute("href", manifestName);
+  }
+  document.title = `${customerNormalizeBusinessName(customerSettings.businessName)} - ${customerT("documentTitleSuffix")}`;
 
   document.querySelectorAll("[data-i18n]").forEach((node) => {
     node.textContent = customerT(node.dataset.i18n);
@@ -1803,7 +1833,7 @@ function customerFriendlyAuthError(error) {
   if (/invalid login credentials/i.test(message)) return customerT("authInvalidCredentials");
   if (/email not confirmed/i.test(message)) return customerT("authEmailConfirm");
   if (/already registered|already exists|user already/i.test(message)) return customerT("authAlreadyRegistered");
-  return message || customerT("authError");
+  return customerT("authError");
 }
 
 function customerSetAuthMessage(message, type = "") {
@@ -2397,7 +2427,7 @@ async function customerSignOut() {
     customerUser = null;
     customerHistoryRows = [];
     customerRenderAccount();
-    window.location.replace("index.html?app=v86.1");
+    window.location.replace("index.html?app=v87.0.0");
   }
 }
 
@@ -3055,7 +3085,7 @@ function customerClearRestaurantSelection(messageKey = "") {
 
   const nextUrl = new URL(window.location.href);
   nextUrl.searchParams.delete("store");
-  nextUrl.searchParams.set("app", "v86.1");
+  nextUrl.searchParams.set("app", "v87.0.0");
   window.history.replaceState({}, "", nextUrl.toString());
 
   customerApplyBusinessName();
@@ -3318,7 +3348,7 @@ async function customerSelectRestaurant(storeId, options = {}) {
   if (options.updateUrl !== false) {
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("store", customerStoreId);
-    nextUrl.searchParams.set("app", "v86.1");
+    nextUrl.searchParams.set("app", "v87.0.0");
     window.history.replaceState({}, "", nextUrl.toString());
   }
 
@@ -3564,7 +3594,7 @@ function customerApplyBusinessName() {
       customerElements.businessLogo.hidden = true;
     }
   }
-  document.title = `${name} - Menu cliente`;
+  document.title = `${name} - ${customerT("documentTitleSuffix")}`;
   const appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
   if (appleTitle) appleTitle.setAttribute("content", name);
   customerRenderRestaurantDirectory();
@@ -4032,7 +4062,7 @@ async function customerCalculateDistanceWithMaps() {
     customerRenderCart();
   } catch (error) {
     customerMapDistance = null;
-    customerSetMapResult(customerT("mapsManual", { error: error.message || customerT("mapsFallback") }), "error");
+    customerSetMapResult(customerT("mapsManual", { error: customerT("mapsFallback") }), "error");
   } finally {
     customerElements.calculateDistanceButton.disabled = false;
   }
@@ -4394,7 +4424,7 @@ async function customerSendChatMessage() {
     customerSetChatStatus(customerT("chatSent"), "ok");
     await customerLoadChatMessages({ silent: true });
   } catch (error) {
-    customerSetChatStatus(error.message || customerT("chatSendError"), "error");
+    customerSetChatStatus(customerT("chatSendError"), "error");
   } finally {
     customerElements.chatSendButton.disabled = false;
   }
@@ -5782,13 +5812,11 @@ if (customerElements.registerNeighborhoodInput) {
   customerRenderProfileDetails();
 
 
-  alert(
-    "Tus datos fueron guardados correctamente."
-  );
+  alert(customerT("profileSaved"));
  }
    catch (error) {
       console.error("Error guardando perfil del cliente:", error);
-      alert("No se pudo guardar el perfil.");
+      alert(customerT("profileSaveError"));
     }
   });
 });

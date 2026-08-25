@@ -1,7 +1,7 @@
 (function () {
   const LANGUAGE_KEY = "rincon_colombiano_app_language";
   const SUPPORTED = {
-    es: "Espanol",
+    es: "Español",
     pl: "Polski",
     en: "English",
   };
@@ -15,6 +15,10 @@
   let translationGeneration = 0;
   let translationServicePausedUntil = 0;
   let translationWarningShownAt = 0;
+  const originalDocumentTitle = document.title;
+  const nativeAlert = window.alert.bind(window);
+  const nativeConfirm = window.confirm.bind(window);
+  const nativePrompt = window.prompt.bind(window);
 
   const dictionary = {
     pl: {
@@ -610,8 +614,10 @@
   };
 
   function initialLanguage() {
+    const fromUrl = String(new URLSearchParams(window.location.search).get("lang") || "").toLowerCase();
     const saved = String(localStorage.getItem(LANGUAGE_KEY) || localStorage.getItem("rincon_colombiano_customer_language") || "").toLowerCase();
     const browser = String(navigator.language || "").toLowerCase();
+    if (SUPPORTED[fromUrl]) return fromUrl;
     if (SUPPORTED[saved]) return saved;
     if (browser.startsWith("pl")) return "pl";
     if (browser.startsWith("en")) return "en";
@@ -774,6 +780,8 @@ if (
 
   function dictionaryTranslation(text, targetLanguage) {
     const clean = normalize(text);
+    const offline = window.RC_ORDERA_OFFLINE_I18N?.translate?.(clean, targetLanguage) || "";
+    if (offline) return offline;
     const direct = dictionary[targetLanguage]?.[clean] || "";
     if (direct) return direct;
     const statusMatch = clean.match(/^Estado actual: (.+)\.$/i);
@@ -847,7 +855,9 @@ if (
   const clean = normalize(text);
 
   if (!clean) return clean;
-  if (targetLanguage === "es") return clean;
+  if (targetLanguage === "es") {
+    return dictionaryTranslation(clean, targetLanguage) || clean;
+  }
 
   // 1. Primero usa nuestro diccionario profesional.
   const direct = dictionaryTranslation(clean, targetLanguage);
@@ -997,10 +1007,7 @@ function setOriginalAttribute(element, attribute) {
 
   const sourceText = state.source;
 
-  const translated =
-    language === "es"
-      ? sourceText
-      : await fetchTranslation(sourceText, language);
+  const translated = await fetchTranslation(sourceText, language);
    if (generation !== translationGeneration) {
   return;
 }
@@ -1045,10 +1052,7 @@ if (!shouldTranslateContent(source)) {
   continue;
 }
 
-    const translated =
-      language === "es"
-        ? state.source
-        : await fetchTranslation(state.source, language);
+    const translated = await fetchTranslation(state.source, language);
 if (generation !== translationGeneration) {
   return;
 }
@@ -1089,6 +1093,9 @@ if (generation !== translationGeneration) {
     translating = true;
     document.documentElement.lang = language;
     try {
+      const translatedTitle = await fetchTranslation(originalDocumentTitle, language);
+      if (translatedTitle) document.title = translatedTitle;
+      updateLocalizedManifest();
       const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
         acceptNode(node) {
           const parent = node.parentElement;
@@ -1245,7 +1252,30 @@ if (customerSelect) {
 });
   }
 
+  function updateLocalizedManifest() {
+    const manifest = document.querySelector('link[rel="manifest"]');
+    if (!manifest) return;
+    const original = manifest.dataset.originalHref || manifest.getAttribute("href") || "manifest.webmanifest";
+    manifest.dataset.originalHref = original;
+    const base = original.replace(/\.(?:es|pl|en)\.webmanifest$/i, ".webmanifest");
+    manifest.setAttribute(
+      "href",
+      language === "es" ? base : base.replace(/\.webmanifest$/i, `.${language}.webmanifest`)
+    );
+  }
+
+  function translateUiMessage(message) {
+    const source = String(message ?? "");
+    return dictionaryTranslation(source, language) || source;
+  }
+
+  window.rcUiText = translateUiMessage;
+  window.alert = (message) => nativeAlert(translateUiMessage(message));
+  window.confirm = (message) => nativeConfirm(translateUiMessage(message));
+  window.prompt = (message, defaultValue) => nativePrompt(translateUiMessage(message), defaultValue);
+
   window.RinconAutoTranslate = {
+    translate: translateUiMessage,
     setLanguage(nextLanguage) {
   const normalizedLanguage = String(
     nextLanguage || ""

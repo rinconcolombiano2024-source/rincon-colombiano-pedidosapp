@@ -728,7 +728,10 @@ function waiterRenderStationOrders(orders = []) {
   waiterElements.stationOrders.innerHTML = orders
     .map((order) => {
       const items = Array.isArray(order.items) ? order.items : [];
-      const time = new Date(order.created_at).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" });
+      const time = new Date(order.created_at).toLocaleTimeString(
+        { es: "es-ES", pl: "pl-PL", en: "en-GB" }[document.documentElement.lang] || "es-ES",
+        { hour: "2-digit", minute: "2-digit" }
+      );
       const label = [order.table_label, order.customer_name].filter(Boolean).join(" - ") || "Pedido";
       const notes = String(order.notes || "").trim().toUpperCase();
       return `<article class="restaurant-station-order" data-order-id="${waiterEscape(order.order_id)}">
@@ -757,7 +760,7 @@ async function waiterLoadStationOrders() {
   });
   if (error) {
     if (Array.isArray(cachedOrders) && cachedOrders.length) waiterRenderStationOrders(cachedOrders);
-    else waiterElements.stationOrders.innerHTML = `<div class="waiter-empty">No fue posible cargar esta estacion. Ejecuta nuevamente la migracion V71.</div>`;
+    else waiterElements.stationOrders.innerHTML = `<div class="waiter-empty">No fue posible cargar esta estacion. Contacta al propietario e intenta nuevamente.</div>`;
     waiterSetStatus("Error de estacion", "error");
     return;
   }
@@ -799,7 +802,7 @@ async function waiterLoadSentOrders() {
     .order("created_at", { ascending: false })
     .limit(30);
   if (error) {
-    waiterElements.sentOrders.innerHTML = `<div class="waiter-empty">No se pudo cargar el seguimiento. Ejecuta la migracion V71 y vuelve a intentar.</div>`;
+    waiterElements.sentOrders.innerHTML = `<div class="waiter-empty">No se pudo cargar el seguimiento. Actualiza e intenta nuevamente.</div>`;
     return;
   }
   const orders = data || [];
@@ -807,7 +810,10 @@ async function waiterLoadSentOrders() {
     ? orders
         .map((order) => {
           const items = Array.isArray(order.order_json?.items) ? order.order_json.items : [];
-          const time = new Date(order.created_at).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" });
+          const time = new Date(order.created_at).toLocaleTimeString(
+            { es: "es-ES", pl: "pl-PL", en: "en-GB" }[document.documentElement.lang] || "es-ES",
+            { hour: "2-digit", minute: "2-digit" }
+          );
           return `<article class="waiter-sent-card"><div><strong>${waiterEscape(order.table_label || order.customer_name || "Pedido")}</strong><span>${waiterEscape(time)}</span></div><strong>${waiterStatusLabel(order.status)}</strong><p>${items.map((item) => `${item.qty || item.quantity || 1} x ${item.name || item.product_name_snapshot || "Producto"}`).join(" | ")}</p><span>${waiterMoney(order.total)}</span></article>`;
         })
         .join("")
@@ -825,7 +831,7 @@ async function waiterLoadSentOrders() {
       <div><span>Promedio</span><strong>${waiterMoney(report.average_ticket)}</strong></div>
       <div><span>Cancelados</span><strong>${Number(report.cancelled_count) || 0}</strong></div>`;
   } else if (waiterElements.dailySummary) {
-    waiterElements.dailySummary.innerHTML = `<p>Ejecuta la migracion V85.02 para ver el cierre diario confirmado.</p>`;
+    waiterElements.dailySummary.innerHTML = `<p>El cierre diario confirmado aun no esta disponible. Contacta al propietario.</p>`;
   }
   await waiterLoadMonthlyReport();
 }
@@ -893,7 +899,7 @@ async function waiterLoadMonthlyReport() {
     p_anchor_date: waiterSelectedMonthAnchor(),
   });
   if (error) {
-    waiterElements.monthlySummary.innerHTML = `<p>Ejecuta la migracion V85.02 para ver el cierre mensual confirmado.</p>`;
+    waiterElements.monthlySummary.innerHTML = `<p>El cierre mensual confirmado aun no esta disponible. Contacta al propietario.</p>`;
     return;
   }
   waiterRenderMonthlyReport(data || {});
@@ -927,7 +933,7 @@ async function waiterCloseDay() {
   });
   waiterElements.dailyCloseButton.disabled = false;
   if (error) {
-    waiterShowToast(["42883", "PGRST202"].includes(error.code) ? "Ejecuta la migracion V85.02 en Supabase." : "No fue posible confirmar el cierre diario.");
+    waiterShowToast(["42883", "PGRST202"].includes(error.code) ? "El cierre confirmado aun no esta disponible. Contacta al propietario." : "No fue posible confirmar el cierre diario.");
     return;
   }
   const closure = Array.isArray(data) ? data[0] : data;
@@ -950,7 +956,7 @@ async function waiterCloseMonth() {
   });
   waiterElements.monthlyCloseButton.disabled = false;
   if (error) {
-    waiterShowToast(["42883", "PGRST202"].includes(error.code) ? "Ejecuta la migracion V85.02 en Supabase." : "No fue posible confirmar el cierre mensual.");
+    waiterShowToast(["42883", "PGRST202"].includes(error.code) ? "El cierre confirmado aun no esta disponible. Contacta al propietario." : "No fue posible confirmar el cierre mensual.");
     return;
   }
   const closure = Array.isArray(data) ? data[0] : data;
@@ -964,7 +970,7 @@ async function waiterLoadShiftStatus() {
     p_restaurant_user_id: waiterStoreId,
   });
   if (error) {
-    waiterElements.shiftStatus.textContent = "Migracion V85.02 pendiente";
+    waiterElements.shiftStatus.textContent = "Registro de jornada no disponible";
     waiterElements.shiftButton.disabled = true;
     return;
   }
@@ -989,7 +995,7 @@ async function waiterToggleShift() {
     p_restaurant_user_id: waiterStoreId,
     p_action: action,
   });
-  if (error) waiterShowToast(["42883", "PGRST202"].includes(error.code) ? "Ejecuta la migracion V85.02 en Supabase." : "No fue posible registrar la jornada.");
+  if (error) waiterShowToast(["42883", "PGRST202"].includes(error.code) ? "El registro de jornada aun no esta disponible. Contacta al propietario." : "No fue posible registrar la jornada.");
   else waiterShowToast(action === "in" ? "Entrada registrada." : "Salida registrada.");
   await waiterLoadShiftStatus();
 }
@@ -1093,7 +1099,7 @@ async function waiterSendOrder() {
       waiterSetMessage(waiterElements.orderMessage, "Un producto ya no esta disponible. Actualiza el menu y revisa el pedido.", "error");
       await waiterLoadMenu();
     } else {
-      waiterSetMessage(waiterElements.orderMessage, "No fue posible enviar el pedido. Revisa la conexion y la migracion V71.", "error");
+      waiterSetMessage(waiterElements.orderMessage, "No fue posible enviar el pedido. Revisa la conexion e intenta nuevamente.", "error");
       console.error(error);
     }
   } finally {
@@ -1166,7 +1172,7 @@ async function waiterAuthorize() {
     waiterElements.app.hidden = true;
     waiterElements.stationBoard.hidden = true;
     waiterElements.accessCard.hidden = false;
-    waiterElements.accessMessage.textContent = "No se pudo verificar el acceso. El propietario debe ejecutar la migracion V71 en Supabase.";
+    waiterElements.accessMessage.textContent = "No se pudo verificar el acceso. Pide al propietario que revise tu autorizacion.";
     waiterSetStatus("Configuracion pendiente", "error");
     return;
   }
@@ -1242,7 +1248,7 @@ async function waiterSignIn(event) {
   waiterSetMessage(waiterElements.authMessage, "Iniciando sesion...");
   const { error } = await waiterClient.auth.signInWithPassword({ email, password });
   if (error) {
-    waiterSetMessage(waiterElements.authMessage, /invalid login/i.test(error.message) ? "Correo o contrasena incorrectos." : error.message, "error");
+    waiterSetMessage(waiterElements.authMessage, /invalid login/i.test(error.message) ? "Correo o contrasena incorrectos." : "No fue posible iniciar sesion. Intenta nuevamente.", "error");
   }
 }
 
@@ -1261,7 +1267,7 @@ async function waiterSignUp() {
     options: { emailRedirectTo: redirectTo.href, data: { requested_role: "restaurant_employee" } },
   });
   if (error) {
-    waiterSetMessage(waiterElements.authMessage, error.message, "error");
+    waiterSetMessage(waiterElements.authMessage, /already registered|already exists/i.test(String(error.message || "")) ? "Ese correo ya tiene una cuenta. Inicia sesion para continuar." : "No fue posible crear la cuenta. Intenta nuevamente.", "error");
     return;
   }
   if (data.session) {
@@ -1281,7 +1287,7 @@ async function waiterSignOut() {
     waiterUser = null;
     waiterMembership = null;
     waiterBusinessContext = null;
-    window.location.replace("index.html?app=v86.1");
+    window.location.replace("index.html?app=v87.0.0");
   }
 }
 
@@ -1316,7 +1322,7 @@ async function waiterInitialize() {
     waiterElements.authCard.hidden = true;
     waiterElements.stationBoard.hidden = true;
     waiterElements.accessCard.hidden = false;
-    waiterElements.accessMessage.textContent = "Supabase no esta configurado o no pudo cargar.";
+    waiterElements.accessMessage.textContent = "La conexion de la app no esta disponible. Revisa internet e intenta nuevamente.";
     waiterSetStatus("Sin conexion", "error");
     return;
   }
@@ -1345,7 +1351,7 @@ waiterElements.authForm.addEventListener("submit", waiterSignIn);
 waiterElements.signUpButton.addEventListener("click", waiterSignUp);
 waiterElements.signOutButton.addEventListener("click", waiterSignOut);
 waiterElements.retryAccessButton.addEventListener("click", waiterActivateAuthorization);
-waiterElements.refreshButton.addEventListener("click", () => waiterLoadMenu().catch((error) => waiterSetMessage(waiterElements.orderMessage, error.message, "error")));
+waiterElements.refreshButton.addEventListener("click", () => waiterLoadMenu().catch(() => waiterSetMessage(waiterElements.orderMessage, "No fue posible actualizar el menu. Intenta nuevamente.", "error")));
 waiterElements.refreshSentButton.addEventListener("click", waiterLoadSentOrders);
 waiterElements.dailyCloseButton.addEventListener("click", waiterCloseDay);
 waiterElements.monthlyCloseButton?.addEventListener("click", waiterCloseMonth);
@@ -1635,6 +1641,6 @@ waiterInitialize().catch((error) => {
   waiterElements.authCard.hidden = true;
   waiterElements.stationBoard.hidden = true;
   waiterElements.accessCard.hidden = false;
-  waiterElements.accessMessage.textContent = "No fue posible iniciar la estacion. Revisa internet y la configuracion de Supabase.";
+  waiterElements.accessMessage.textContent = "No fue posible iniciar la estacion. Revisa internet e intenta nuevamente.";
   waiterSetStatus("Error de conexion", "error");
 });

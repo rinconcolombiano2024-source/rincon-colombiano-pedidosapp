@@ -1,5 +1,5 @@
 const COURIER_VAPID_PUBLIC_KEY = "BJzCszQo4HrAtXYFQBkA_HSiqTjSqPGIa-InDIqgYc1Bqcq3V2Cj4lAuN-HcV0fO1Z95EPNx-qhJU85Rl4nxJxE";
-const COURIER_APP_VERSION = "v86.1";
+const COURIER_APP_VERSION = "v87.0.0";
 const courierParams = new URLSearchParams(window.location.search);
 const COURIER_PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 const COURIER_DOCUMENT_BUCKET = "courier-documents";
@@ -531,10 +531,10 @@ function courierSupabaseConfig() {
 function courierConnectionMessage() {
   const config = courierSupabaseConfig();
   if (!config.url || !config.anonKey) {
-    return "Falta configurar la conexion de Supabase para usar colaboradores.";
+    return "La conexion de colaboradores aun no esta disponible.";
   }
   if (!window.supabase?.createClient) {
-    return "No se pudo cargar la conexion de Supabase. Revisa internet, actualiza la pagina o intenta de nuevo.";
+    return "No se pudo cargar la conexion de colaboradores. Revisa internet e intenta nuevamente.";
   }
   return "No se pudo iniciar la conexion de colaborador.";
 }
@@ -667,7 +667,9 @@ async function courierHandleFileUpload(fileInput, targetInput, kind, label) {
     );
     courierSetMessage(
       courierElements.profileMessage,
-      error.message || "No se pudo subir el archivo. Revisa internet, el tipo de archivo o los permisos de Storage.",
+      /Primero inicia sesion|archivo es muy pesado|Tipo de archivo no permitido/i.test(String(error?.message || ""))
+        ? String(error.message)
+        : "No se pudo subir el archivo. Revisa internet, el tipo de archivo o los permisos de Storage.",
       "error"
     );
     if (fileInput) fileInput.value = "";
@@ -1082,14 +1084,14 @@ async function courierRenderDeliveryMap(
 function courierFriendlyDeliveryError(error) {
   const message = String(error?.message || "");
   if (/upsert_courier_live_location|delivery_assignment|assign_nearest|function .* does not exist|schema cache/i.test(message)) {
-    return "La asignacion de entregas cercanas aun no esta activa en la nube. Revisa la configuracion de Supabase.";
+    return "La asignacion de entregas cercanas aun no esta disponible. Intenta nuevamente mas tarde.";
   }
   if (/Courier profile is not approved/i.test(message)) return "Tu perfil debe estar aprobado por la administracion antes de recibir pedidos.";
   if (/Invalid location/i.test(message)) return "La ubicacion no es valida. Intenta compartirla de nuevo.";
   if (/not authenticated/i.test(message)) return "Inicia sesion como colaborador.";
   if (/offer is no longer available|assignment transition is not allowed/i.test(message)) return "Este pedido ya cambio de estado o fue aceptado por otro colaborador. Actualiza la lista.";
   if (/not authorized|permission denied/i.test(message)) return "No tienes permiso para realizar esta accion.";
-  return message || "No se pudo actualizar la entrega.";
+  return "No se pudo actualizar la entrega.";
 }
 
 function courierLogError(operation, error, context = {}) {
@@ -1761,7 +1763,7 @@ function courierFriendlyAuthError(error) {
   if (/already registered|already exists|user already/i.test(message)) {
     return "Ese correo ya tiene cuenta. Inicia sesion aqui con ese correo y despues envia la solicitud de colaborador.";
   }
-  return message || "No se pudo completar el acceso.";
+  return "No se pudo completar el acceso.";
 }
 
 function courierSplitName(fullName = "") {
@@ -1965,7 +1967,7 @@ async function courierRefreshPayoutState(action = "status") {
   });
   if (error) {
     console.error("No fue posible verificar la cuenta de pagos:", error);
-    courierSetMessage(courierElements.profileMessage, "No fue posible verificar la cuenta de pagos. Revisa la configuracion de Supabase.", "error");
+    courierSetMessage(courierElements.profileMessage, "No fue posible verificar la cuenta de pagos. Intenta nuevamente o contacta al soporte.", "error");
     courierRenderPayoutState();
     return false;
   }
@@ -2142,7 +2144,7 @@ async function courierSaveProfile() {
       "ok"
     );
   } catch (error) {
-    courierSetMessage(courierElements.profileMessage, error.message || "No se pudo guardar la solicitud.", "error");
+    courierSetMessage(courierElements.profileMessage, "No se pudo guardar la solicitud.", "error");
   }
 }
 async function courierLoadAvailability() {

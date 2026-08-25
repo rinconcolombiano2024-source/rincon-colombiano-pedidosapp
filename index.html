@@ -13,7 +13,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="app-icon-192.png" />
-    <link rel="stylesheet" href="styles.css?v=86.1.0" />
+    <link rel="stylesheet" href="styles.css?v=87.0.0" />
   </head>
   <body class="auth-checking">
     <section class="auth-screen" id="authScreen" hidden>
@@ -27,7 +27,7 @@
         <label class="app-language-inline">
           <span>Idioma</span>
           <select id="autoLanguageSelect">
-            <option value="es">Espanol</option>
+            <option value="es">Español</option>
             <option value="pl">Polski</option>
             <option value="en">English</option>
           </select>
@@ -67,7 +67,7 @@
           </div>
           <label>
             Correo electronico
-            <input id="authEmail" type="email" autocomplete="email" placeholder="correo@ejemplo.com" />
+            <input id="authEmail" type="email" autocomplete="email" placeholder="name@example.com" />
           </label>
           <label>
             Contrasena
@@ -180,7 +180,7 @@
           <div>
             <p class="eyebrow">Atencion al cliente</p>
             <strong id="mainRestaurantStatusText">Comprobando estado...</strong>
-            <span id="mainRestaurantStatusDetail">El estado se confirma con Supabase.</span>
+            <span id="mainRestaurantStatusDetail">El estado se confirma en la nube.</span>
           </div>
         </div>
         <label class="restaurant-schedule-toggle" for="restaurantScheduleModeInput">
@@ -1027,7 +1027,7 @@
     <p>
       <strong>
         Antes de borrar el menú se creará automáticamente un respaldo
-        de seguridad en Supabase.
+        de seguridad en la nube.
       </strong>
     </p>
 
@@ -1106,8 +1106,9 @@
     <datalist id="restaurantRegionOptions"></datalist>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4"></script>
-    <script src="supabase-config.js?v=86.1.0"></script>
-    <script src="auto-translate.js?v=86.1.0"></script>
-    <script src="app.js?v=86.1.0"></script>
+    <script src="supabase-config.js?v=87.0.0"></script>
+    <script src="offline-i18n.js?v=87.0.0"></script>
+    <script src="auto-translate.js?v=87.0.0"></script>
+    <script src="app.js?v=87.0.0"></script>
   </body>
 </html>
