@@ -27,6 +27,9 @@ const waiterElements = {
   searchInput: document.querySelector("#waiterSearchInput"),
   categoryTabs: document.querySelector("#waiterCategoryTabs"),
   menuGrid: document.querySelector("#waiterMenuGrid"),
+  waiterCustomItemForm: document.querySelector("#waiterCustomItemForm"),
+waiterCustomItemName: document.querySelector("#waiterCustomItemName"),
+waiterCustomItemPrice: document.querySelector("#waiterCustomItemPrice"),
   tableInput: document.querySelector("#waiterTableInput"),
   customerInput: document.querySelector("#waiterCustomerInput"),
   orderType: document.querySelector("#waiterOrderType"),
@@ -63,6 +66,7 @@ let waiterOrdersChannel = null;
 let waiterStationPollTimer = null;
 let waiterToastTimer = null;
 let waiterSyncingQueue = false;
+let waiterBusinessContext = null;
 
 function waiterEscape(value) {
   return String(value ?? "")
@@ -594,6 +598,52 @@ function waiterAddProduct(productId, category) {
   );
 
 }
+function waiterAddCustomItem() {
+  const name = String(
+    waiterElements.waiterCustomItemName?.value || ""
+  ).trim();
+
+  const price = Number.parseFloat(
+    waiterElements.waiterCustomItemPrice?.value || "0"
+  );
+
+  if (!name) {
+    waiterShowToast("Escribe el nombre del producto especial.");
+    waiterElements.waiterCustomItemName?.focus();
+    return;
+  }
+
+  if (!Number.isFinite(price) || price <= 0) {
+    waiterShowToast("Escribe un precio valido.");
+    waiterElements.waiterCustomItemPrice?.focus();
+    return;
+  }
+
+  waiterCart.push({
+    cartId: crypto.randomUUID
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random()}`,
+
+    productId: `custom-${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`,
+
+    name: name.toUpperCase(),
+    price: Math.round(price * 100) / 100,
+    qty: 1,
+    note: "",
+    station: "kitchen",
+    custom: true,
+  });
+
+  waiterElements.waiterCustomItemName.value = "";
+  waiterElements.waiterCustomItemPrice.value = "";
+
+  waiterRenderCart();
+  waiterSaveDraft();
+
+  waiterShowToast(`${name.toUpperCase()} agregado al pedido.`);
+}
 async function waiterLoadMenu() {
   if (!waiterClient || !waiterStoreId) return;
   waiterSetStatus(navigator.onLine ? "Actualizando menu..." : "Sin internet", navigator.onLine ? "" : "offline");
@@ -678,7 +728,10 @@ function waiterRenderStationOrders(orders = []) {
   waiterElements.stationOrders.innerHTML = orders
     .map((order) => {
       const items = Array.isArray(order.items) ? order.items : [];
-      const time = new Date(order.created_at).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" });
+      const time = new Date(order.created_at).toLocaleTimeString(
+        { es: "es-ES", pl: "pl-PL", en: "en-GB" }[document.documentElement.lang] || "es-ES",
+        { hour: "2-digit", minute: "2-digit" }
+      );
       const label = [order.table_label, order.customer_name].filter(Boolean).join(" - ") || "Pedido";
       const notes = String(order.notes || "").trim().toUpperCase();
       return `<article class="restaurant-station-order" data-order-id="${waiterEscape(order.order_id)}">
@@ -707,7 +760,7 @@ async function waiterLoadStationOrders() {
   });
   if (error) {
     if (Array.isArray(cachedOrders) && cachedOrders.length) waiterRenderStationOrders(cachedOrders);
-    else waiterElements.stationOrders.innerHTML = `<div class="waiter-empty">No fue posible cargar esta estacion. Ejecuta nuevamente la migracion V71.</div>`;
+    else waiterElements.stationOrders.innerHTML = `<div class="waiter-empty">No fue posible cargar esta estacion. Contacta al propietario e intenta nuevamente.</div>`;
     waiterSetStatus("Error de estacion", "error");
     return;
   }
@@ -736,6 +789,7 @@ async function waiterAdvanceStationOrder(orderId, nextStatus, button) {
 
 async function waiterLoadSentOrders() {
   if (!waiterClient || !waiterUser) return;
+  await waiterRefreshBusinessContext();
   const businessDate = waiterBusinessDateKey();
   const { startAt, endAt } = waiterBusinessDayBounds(businessDate);
   const { data, error } = await waiterClient
@@ -748,7 +802,7 @@ async function waiterLoadSentOrders() {
     .order("created_at", { ascending: false })
     .limit(30);
   if (error) {
-    waiterElements.sentOrders.innerHTML = `<div class="waiter-empty">No se pudo cargar el seguimiento. Ejecuta la migracion V71 y vuelve a intentar.</div>`;
+    waiterElements.sentOrders.innerHTML = `<div class="waiter-empty">No se pudo cargar el seguimiento. Actualiza e intenta nuevamente.</div>`;
     return;
   }
   const orders = data || [];
@@ -756,7 +810,10 @@ async function waiterLoadSentOrders() {
     ? orders
         .map((order) => {
           const items = Array.isArray(order.order_json?.items) ? order.order_json.items : [];
-          const time = new Date(order.created_at).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" });
+          const time = new Date(order.created_at).toLocaleTimeString(
+            { es: "es-ES", pl: "pl-PL", en: "en-GB" }[document.documentElement.lang] || "es-ES",
+            { hour: "2-digit", minute: "2-digit" }
+          );
           return `<article class="waiter-sent-card"><div><strong>${waiterEscape(order.table_label || order.customer_name || "Pedido")}</strong><span>${waiterEscape(time)}</span></div><strong>${waiterStatusLabel(order.status)}</strong><p>${items.map((item) => `${item.qty || item.quantity || 1} x ${item.name || item.product_name_snapshot || "Producto"}`).join(" | ")}</p><span>${waiterMoney(order.total)}</span></article>`;
         })
         .join("")
@@ -774,19 +831,47 @@ async function waiterLoadSentOrders() {
       <div><span>Promedio</span><strong>${waiterMoney(report.average_ticket)}</strong></div>
       <div><span>Cancelados</span><strong>${Number(report.cancelled_count) || 0}</strong></div>`;
   } else if (waiterElements.dailySummary) {
-    waiterElements.dailySummary.innerHTML = `<p>Ejecuta la migracion V85.02 para ver el cierre diario confirmado.</p>`;
+    waiterElements.dailySummary.innerHTML = `<p>El cierre diario confirmado aun no esta disponible. Contacta al propietario.</p>`;
   }
   await waiterLoadMonthlyReport();
 }
 
-function waiterBusinessDateKey(date = new Date()) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+async function waiterRefreshBusinessContext() {
+  if (!waiterClient || !waiterUser || !waiterStoreId || !navigator.onLine) {
+    return waiterBusinessContext;
+  }
+  const { data, error } = await waiterClient.rpc("get_restaurant_business_context", {
+    p_restaurant_user_id: waiterStoreId,
+  });
+  if (error) {
+    if (!["42883", "PGRST202"].includes(error.code)) console.error(error);
+    return waiterBusinessContext;
+  }
+  const context = Array.isArray(data) ? data[0] : data;
+  if (context?.business_date && context?.day_start && context?.day_end) {
+    waiterBusinessContext = {
+      businessDate: String(context.business_date),
+      timezone: String(context.timezone_name || "UTC"),
+      dayStart: String(context.day_start),
+      dayEnd: String(context.day_end),
+    };
+  }
+  return waiterBusinessContext;
+}
+
+function waiterBusinessDateKey(date = null) {
+  if (!date && /^\d{4}-\d{2}-\d{2}$/.test(waiterBusinessContext?.businessDate || "")) {
+    return waiterBusinessContext.businessDate;
+  }
+  const source = date instanceof Date ? date : new Date();
+  const year = source.getFullYear();
+  const month = String(source.getMonth() + 1).padStart(2, "0");
+  const day = String(source.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
-function waiterMonthKey(date = new Date()) {
+function waiterMonthKey(date = null) {
+  if (!date) return waiterBusinessDateKey().slice(0, 7);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
@@ -814,13 +899,20 @@ async function waiterLoadMonthlyReport() {
     p_anchor_date: waiterSelectedMonthAnchor(),
   });
   if (error) {
-    waiterElements.monthlySummary.innerHTML = `<p>Ejecuta la migracion V85.02 para ver el cierre mensual confirmado.</p>`;
+    waiterElements.monthlySummary.innerHTML = `<p>El cierre mensual confirmado aun no esta disponible. Contacta al propietario.</p>`;
     return;
   }
   waiterRenderMonthlyReport(data || {});
 }
 
 function waiterBusinessDayBounds(day) {
+  if (
+    day === waiterBusinessContext?.businessDate &&
+    waiterBusinessContext?.dayStart &&
+    waiterBusinessContext?.dayEnd
+  ) {
+    return { startAt: waiterBusinessContext.dayStart, endAt: waiterBusinessContext.dayEnd };
+  }
   const [year, month, date] = String(day).split("-").map(Number);
   const start = new Date(year, month - 1, date, 0, 0, 0, 0);
   const end = new Date(year, month - 1, date + 1, 0, 0, 0, 0);
@@ -832,6 +924,7 @@ async function waiterCloseDay() {
     waiterShowToast("Necesitas conexion para confirmar el cierre diario.");
     return;
   }
+  await waiterRefreshBusinessContext();
   if (!confirm("Confirmar el cierre de tus pedidos de hoy? El historial del restaurante se conserva.")) return;
   waiterElements.dailyCloseButton.disabled = true;
   const { data, error } = await waiterClient.rpc("close_my_waiter_day", {
@@ -840,7 +933,7 @@ async function waiterCloseDay() {
   });
   waiterElements.dailyCloseButton.disabled = false;
   if (error) {
-    waiterShowToast(["42883", "PGRST202"].includes(error.code) ? "Ejecuta la migracion V85.02 en Supabase." : "No fue posible confirmar el cierre diario.");
+    waiterShowToast(["42883", "PGRST202"].includes(error.code) ? "El cierre confirmado aun no esta disponible. Contacta al propietario." : "No fue posible confirmar el cierre diario.");
     return;
   }
   const closure = Array.isArray(data) ? data[0] : data;
@@ -853,6 +946,7 @@ async function waiterCloseMonth() {
     waiterShowToast("Necesitas conexion para confirmar el cierre mensual.");
     return;
   }
+  await waiterRefreshBusinessContext();
   const month = waiterElements.monthInput?.value || waiterMonthKey();
   if (!confirm(`Confirmar el cierre de tus pedidos de ${month}? El historial del restaurante se conserva.`)) return;
   waiterElements.monthlyCloseButton.disabled = true;
@@ -862,7 +956,7 @@ async function waiterCloseMonth() {
   });
   waiterElements.monthlyCloseButton.disabled = false;
   if (error) {
-    waiterShowToast(["42883", "PGRST202"].includes(error.code) ? "Ejecuta la migracion V85.02 en Supabase." : "No fue posible confirmar el cierre mensual.");
+    waiterShowToast(["42883", "PGRST202"].includes(error.code) ? "El cierre confirmado aun no esta disponible. Contacta al propietario." : "No fue posible confirmar el cierre mensual.");
     return;
   }
   const closure = Array.isArray(data) ? data[0] : data;
@@ -876,7 +970,7 @@ async function waiterLoadShiftStatus() {
     p_restaurant_user_id: waiterStoreId,
   });
   if (error) {
-    waiterElements.shiftStatus.textContent = "Migracion V85.02 pendiente";
+    waiterElements.shiftStatus.textContent = "Registro de jornada no disponible";
     waiterElements.shiftButton.disabled = true;
     return;
   }
@@ -901,7 +995,7 @@ async function waiterToggleShift() {
     p_restaurant_user_id: waiterStoreId,
     p_action: action,
   });
-  if (error) waiterShowToast(["42883", "PGRST202"].includes(error.code) ? "Ejecuta la migracion V85.02 en Supabase." : "No fue posible registrar la jornada.");
+  if (error) waiterShowToast(["42883", "PGRST202"].includes(error.code) ? "El registro de jornada aun no esta disponible. Contacta al propietario." : "No fue posible registrar la jornada.");
   else waiterShowToast(action === "in" ? "Entrada registrada." : "Salida registrada.");
   await waiterLoadShiftStatus();
 }
@@ -915,13 +1009,15 @@ function waiterOrderPayload() {
     p_order_type: waiterElements.orderType.value,
     p_payment_method: waiterElements.paymentMethod.value,
     p_notes: waiterElements.notes.value.trim().toUpperCase(),
-    p_items: waiterCart.map((item) => ({
-      productId: item.productId,
-      name: item.name,
-      qty: item.qty,
-      note: String(item.note || "").trim().toUpperCase(),
-      station: waiterNormalizeProductStation(item.station),
-    })),
+   p_items: waiterCart.map((item) => ({
+  productId: item.productId,
+  name: item.name,
+  price: item.price,
+  qty: item.qty,
+  note: String(item.note || "").trim().toUpperCase(),
+  station: waiterNormalizeProductStation(item.station),
+  custom: item.custom === true,
+})),
   };
 }
 
@@ -990,6 +1086,7 @@ async function waiterSendOrder() {
     await waiterLoadSentOrders();
     waiterSelectView("sent");
   } catch (error) {
+    console.error("ERROR REAL submit_waiter_order:", error);
     const message = String(error?.message || "");
     if (/fetch|network|timeout/i.test(message)) {
       waiterQueueOrder(payload);
@@ -1002,7 +1099,7 @@ async function waiterSendOrder() {
       waiterSetMessage(waiterElements.orderMessage, "Un producto ya no esta disponible. Actualiza el menu y revisa el pedido.", "error");
       await waiterLoadMenu();
     } else {
-      waiterSetMessage(waiterElements.orderMessage, "No fue posible enviar el pedido. Revisa la conexion y la migracion V71.", "error");
+      waiterSetMessage(waiterElements.orderMessage, "No fue posible enviar el pedido. Revisa la conexion e intenta nuevamente.", "error");
       console.error(error);
     }
   } finally {
@@ -1075,7 +1172,7 @@ async function waiterAuthorize() {
     waiterElements.app.hidden = true;
     waiterElements.stationBoard.hidden = true;
     waiterElements.accessCard.hidden = false;
-    waiterElements.accessMessage.textContent = "No se pudo verificar el acceso. El propietario debe ejecutar la migracion V71 en Supabase.";
+    waiterElements.accessMessage.textContent = "No se pudo verificar el acceso. Pide al propietario que revise tu autorizacion.";
     waiterSetStatus("Configuracion pendiente", "error");
     return;
   }
@@ -1151,7 +1248,7 @@ async function waiterSignIn(event) {
   waiterSetMessage(waiterElements.authMessage, "Iniciando sesion...");
   const { error } = await waiterClient.auth.signInWithPassword({ email, password });
   if (error) {
-    waiterSetMessage(waiterElements.authMessage, /invalid login/i.test(error.message) ? "Correo o contrasena incorrectos." : error.message, "error");
+    waiterSetMessage(waiterElements.authMessage, /invalid login/i.test(error.message) ? "Correo o contrasena incorrectos." : "No fue posible iniciar sesion. Intenta nuevamente.", "error");
   }
 }
 
@@ -1170,7 +1267,7 @@ async function waiterSignUp() {
     options: { emailRedirectTo: redirectTo.href, data: { requested_role: "restaurant_employee" } },
   });
   if (error) {
-    waiterSetMessage(waiterElements.authMessage, error.message, "error");
+    waiterSetMessage(waiterElements.authMessage, /already registered|already exists/i.test(String(error.message || "")) ? "Ese correo ya tiene una cuenta. Inicia sesion para continuar." : "No fue posible crear la cuenta. Intenta nuevamente.", "error");
     return;
   }
   if (data.session) {
@@ -1189,12 +1286,14 @@ async function waiterSignOut() {
   } finally {
     waiterUser = null;
     waiterMembership = null;
-    window.location.replace("index.html?app=v85");
+    waiterBusinessContext = null;
+    window.location.replace("index.html?app=v87.0.0");
   }
 }
 
 function waiterRenderLoggedOut() {
   waiterMembership = null;
+  waiterBusinessContext = null;
   waiterElements.authCard.hidden = false;
   waiterElements.accessCard.hidden = true;
   waiterElements.app.hidden = true;
@@ -1223,7 +1322,7 @@ async function waiterInitialize() {
     waiterElements.authCard.hidden = true;
     waiterElements.stationBoard.hidden = true;
     waiterElements.accessCard.hidden = false;
-    waiterElements.accessMessage.textContent = "Supabase no esta configurado o no pudo cargar.";
+    waiterElements.accessMessage.textContent = "La conexion de la app no esta disponible. Revisa internet e intenta nuevamente.";
     waiterSetStatus("Sin conexion", "error");
     return;
   }
@@ -1252,7 +1351,7 @@ waiterElements.authForm.addEventListener("submit", waiterSignIn);
 waiterElements.signUpButton.addEventListener("click", waiterSignUp);
 waiterElements.signOutButton.addEventListener("click", waiterSignOut);
 waiterElements.retryAccessButton.addEventListener("click", waiterActivateAuthorization);
-waiterElements.refreshButton.addEventListener("click", () => waiterLoadMenu().catch((error) => waiterSetMessage(waiterElements.orderMessage, error.message, "error")));
+waiterElements.refreshButton.addEventListener("click", () => waiterLoadMenu().catch(() => waiterSetMessage(waiterElements.orderMessage, "No fue posible actualizar el menu. Intenta nuevamente.", "error")));
 waiterElements.refreshSentButton.addEventListener("click", waiterLoadSentOrders);
 waiterElements.dailyCloseButton.addEventListener("click", waiterCloseDay);
 waiterElements.monthlyCloseButton?.addEventListener("click", waiterCloseMonth);
@@ -1263,6 +1362,10 @@ waiterElements.stationOrders.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-next-status]");
   const card = event.target.closest("[data-order-id]");
   if (button && card) waiterAdvanceStationOrder(card.dataset.orderId, button.dataset.nextStatus, button);
+});
+waiterElements.waiterCustomItemForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  waiterAddCustomItem();
 });
 waiterElements.searchInput.addEventListener("input", waiterRenderMenu);
 waiterElements.categoryTabs.addEventListener("click", (event) => {
@@ -1512,10 +1615,23 @@ document.querySelectorAll("[data-waiter-view]").forEach((button) => button.addEv
 window.addEventListener("online", () => {
   waiterSetStatus("Reconectando...");
   const canTakeOrders = ["waiter", "cashier", "manager"].includes(waiterMembership?.station);
-  if (canTakeOrders) waiterSyncQueue().then(() => waiterLoadMenu()).catch(console.error);
-  else waiterLoadStationOrders().catch(console.error);
+  waiterBusinessContext = null;
+  if (canTakeOrders) {
+    waiterSyncQueue()
+      .then(() => Promise.all([waiterLoadMenu(), waiterLoadSentOrders(), waiterLoadShiftStatus()]))
+      .then(() => waiterStartRealtime())
+      .catch(console.error);
+  } else {
+    Promise.all([waiterLoadStationOrders(), waiterLoadShiftStatus()])
+      .then(() => waiterStartRealtime())
+      .catch(console.error);
+  }
 });
 window.addEventListener("offline", () => waiterSetStatus("Sin internet", "offline"));
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible" || !waiterUser || !waiterMembership || !navigator.onLine) return;
+  waiterAuthorize().catch(console.error);
+});
 window.addEventListener("beforeunload", waiterSaveDraft);
 if ("serviceWorker" in navigator && window.location.protocol.startsWith("http")) navigator.serviceWorker.register("./service-worker.js").catch(() => {});
 
@@ -1525,6 +1641,6 @@ waiterInitialize().catch((error) => {
   waiterElements.authCard.hidden = true;
   waiterElements.stationBoard.hidden = true;
   waiterElements.accessCard.hidden = false;
-  waiterElements.accessMessage.textContent = "No fue posible iniciar la estacion. Revisa internet y la configuracion de Supabase.";
+  waiterElements.accessMessage.textContent = "No fue posible iniciar la estacion. Revisa internet e intenta nuevamente.";
   waiterSetStatus("Error de conexion", "error");
 });

@@ -13,7 +13,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="app-icon-192.png" />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=87.0.0" />
   </head>
   <body class="auth-checking">
     <section class="auth-screen" id="authScreen" hidden>
@@ -27,7 +27,7 @@
         <label class="app-language-inline">
           <span>Idioma</span>
           <select id="autoLanguageSelect">
-            <option value="es">Espanol</option>
+            <option value="es">Español</option>
             <option value="pl">Polski</option>
             <option value="en">English</option>
           </select>
@@ -67,7 +67,7 @@
           </div>
           <label>
             Correo electronico
-            <input id="authEmail" type="email" autocomplete="email" placeholder="correo@ejemplo.com" />
+            <input id="authEmail" type="email" autocomplete="email" placeholder="name@example.com" />
           </label>
           <label>
             Contrasena
@@ -180,7 +180,7 @@
           <div>
             <p class="eyebrow">Atencion al cliente</p>
             <strong id="mainRestaurantStatusText">Comprobando estado...</strong>
-            <span id="mainRestaurantStatusDetail">El estado se confirma con Supabase.</span>
+            <span id="mainRestaurantStatusDetail">El estado se confirma en la nube.</span>
           </div>
         </div>
         <label class="restaurant-schedule-toggle" for="restaurantScheduleModeInput">
@@ -237,7 +237,7 @@
               <h2>Agregar platos</h2>
             </div>
             <div class="header-actions">
-              <button class="close-month-button" id="editMenuButton" type="button">Editar menu</button>
+              <button class="close-month-button" id="editMenuButton" type="button">Editar información</button>
               <button class="icon-button" id="clearOrderButton" type="button" title="Limpiar pedido" aria-label="Limpiar pedido">
                 <span aria-hidden="true">x</span>
               </button>
@@ -421,13 +421,45 @@
         <div class="monthly-dialog-header">
           <div>
             <p class="eyebrow">Administracion</p>
-            <h2>Editar menu</h2>
+            <h2>Editar información</h2>
           </div>
           <button class="icon-button" value="cancel" type="submit" title="Cerrar" aria-label="Cerrar">
             <span aria-hidden="true">x</span>
           </button>
         </div>
+<nav class="restaurant-edit-tabs" aria-label="Secciones de edición del restaurante">
+  <button
+    id="restaurantInfoTabButton"
+    class="restaurant-edit-tab is-active"
+    type="button"
+    data-edit-section="restaurant-info"
+  >
+    Información del restaurante
+  </button>
 
+  <button
+    id="restaurantHoursTabButton"
+    class="restaurant-edit-tab"
+    type="button"
+    data-edit-section="restaurant-hours"
+  >
+    Horarios de atención
+  </button>
+
+  <button
+    id="restaurantMenuTabButton"
+    class="restaurant-edit-tab"
+    type="button"
+    data-edit-section="restaurant-menu"
+  >
+    Editar menú
+  </button>
+</nav>
+       <div
+  id="restaurantInfoSection"
+  class="restaurant-edit-section is-active"
+  data-edit-panel="restaurant-info"
+>
         <section class="settings-card">
           <div>
             <h3>Restaurante y moneda</h3>
@@ -565,7 +597,13 @@
           </div>
           <button id="saveCustomerSettingsButton" type="button">Guardar cliente</button>
         </section>
-
+</div>
+        <div
+  id="restaurantHoursSection"
+  class="restaurant-edit-section"
+  data-edit-panel="restaurant-hours"
+  hidden
+>
         <section class="settings-card restaurant-hours-card">
           <div>
             <h3>Horario de atencion</h3>
@@ -574,7 +612,7 @@
           <div class="restaurant-hours-grid" id="restaurantHoursGrid" aria-label="Horario semanal"></div>
           <button id="saveRestaurantHoursButton" type="button">Guardar horario</button>
         </section>
-
+</div>
         <section class="settings-card restaurant-danger-card">
           <div>
             <h3>Estado del restaurante</h3>
@@ -583,7 +621,12 @@
           <button id="closeRestaurantButton" type="button">Abrir atencion</button>
           <button id="requestRestaurantDeletionButton" type="button">Eliminar restaurante</button>
         </section>
-
+<div
+  id="restaurantMenuSection"
+  class="restaurant-edit-section"
+  data-edit-panel="restaurant-menu"
+  hidden
+>
         <div class="menu-editor-layout">
           <section class="editor-section">
             <h3>Categorias</h3>
@@ -707,10 +750,17 @@
           </section>
         </div>
 
-        <div class="dialog-actions">
-          <button id="resetMenuButton" value="default" type="button">Vaciar menu</button>
-          <button value="cancel" type="submit">Cerrar</button>
-        </div>
+       <div class="dialog-actions">
+  <button id="resetMenuButton" value="default" type="button">
+    Vaciar menu
+  </button>
+</div>
+
+</div>
+
+<div class="dialog-actions">
+  <button value="cancel" type="submit">Cerrar</button>
+</div>
       </form>
     </dialog>
 
@@ -977,7 +1027,7 @@
     <p>
       <strong>
         Antes de borrar el menú se creará automáticamente un respaldo
-        de seguridad en Supabase.
+        de seguridad en la nube.
       </strong>
     </p>
 
@@ -1055,9 +1105,10 @@
     <div class="toast-notice" id="toastNotice" role="status" aria-live="polite" hidden></div>
     <datalist id="restaurantRegionOptions"></datalist>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-config.js"></script>
-    <script src="auto-translate.js"></script>
-    <script src="app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4"></script>
+    <script src="supabase-config.js?v=87.0.0"></script>
+    <script src="offline-i18n.js?v=87.0.0"></script>
+    <script src="auto-translate.js?v=87.0.0"></script>
+    <script src="app.js?v=87.0.0"></script>
   </body>
 </html>

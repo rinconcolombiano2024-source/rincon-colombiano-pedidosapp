@@ -1,7 +1,7 @@
 (function () {
   const LANGUAGE_KEY = "rincon_colombiano_app_language";
   const SUPPORTED = {
-    es: "Espanol",
+    es: "Español",
     pl: "Polski",
     en: "English",
   };
@@ -12,6 +12,13 @@
   let renderTimer = null;
   let translating = false;
   let cache = readCache();
+  let translationGeneration = 0;
+  let translationServicePausedUntil = 0;
+  let translationWarningShownAt = 0;
+  const originalDocumentTitle = document.title;
+  const nativeAlert = window.alert.bind(window);
+  const nativeConfirm = window.confirm.bind(window);
+  const nativePrompt = window.prompt.bind(window);
 
   const dictionary = {
     pl: {
@@ -32,6 +39,7 @@
       "Instalar panel": "Zainstaluj panel",
       "Correo autorizado": "Autoryzowany email",
       "Solicitudes": "Wnioski",
+      "Verifica documentos en el correo y despues cambia el estado aqui.": "Sprawdz dokumenty w wiadomosci e-mail, a nastepnie zmien status tutaj.",
       "Revision de colaboradores": "Weryfikacja kurierow",
       "Restaurante": "Restauracja",
       "Operacion en tiempo real": "Operacje w czasie rzeczywistym",
@@ -101,6 +109,7 @@
       "Despacho": "Wydawanie",
       "Caja": "Kasa",
       "Cliente": "Klient",
+      "Hola,": "Czesc,",
       "Colaborador": "Kurier",
       "Iniciar sesion como restaurante": "Zaloguj jako restauracja",
       "Registrarse como restaurante": "Zarejestruj restauracje",
@@ -325,6 +334,7 @@
       "Instalar panel": "Install panel",
       "Correo autorizado": "Authorized email",
       "Solicitudes": "Applications",
+      "Verifica documentos en el correo y despues cambia el estado aqui.": "Review the documents in the email, then update the status here.",
       "Revision de colaboradores": "Courier review",
       "Restaurante": "Restaurant",
       "Operacion en tiempo real": "Real-time operations",
@@ -394,6 +404,7 @@
       "Despacho": "Dispatch",
       "Caja": "Cashier",
       "Cliente": "Customer",
+      "Hola,": "Hello,",
       "Colaborador": "Courier",
       "Iniciar sesion como restaurante": "Sign in as restaurant",
       "Registrarse como restaurante": "Register restaurant",
@@ -603,8 +614,10 @@
   };
 
   function initialLanguage() {
+    const fromUrl = String(new URLSearchParams(window.location.search).get("lang") || "").toLowerCase();
     const saved = String(localStorage.getItem(LANGUAGE_KEY) || localStorage.getItem("rincon_colombiano_customer_language") || "").toLowerCase();
     const browser = String(navigator.language || "").toLowerCase();
+    if (SUPPORTED[fromUrl]) return fromUrl;
     if (SUPPORTED[saved]) return saved;
     if (browser.startsWith("pl")) return "pl";
     if (browser.startsWith("en")) return "en";
@@ -632,71 +645,143 @@
   function normalize(value) {
     return String(value || "").trim().replace(/\s+/g, " ");
   }
+  function shouldTranslateContent(value) {
+  const text = normalize(value);
 
-  function shouldSkipElement(element) {
-    if (!element || element.nodeType !== Node.ELEMENT_NODE) return false;
-    return Boolean(
-      element.closest(
-        [
-          "script",
-          "style",
-          "input",
-          "textarea",
-          ".print-ticket",
-          ".line-items",
-          ".menu-grid",
-          ".history-list",
-          ".product-list",
-          ".editor-category-list",
-          ".client-order-items",
-          ".client-chat-messages",
-          ".customer-menu-grid",
-          ".customer-cart-items",
-          ".customer-chat-messages",
-          ".customer-restaurant-list",
-          "#authBusinessName",
-          "#appBusinessName",
-          "#customerBusinessName",
-          "[data-no-auto-i18n]",
-        ].join(",")
-      )
-    );
+  if (!text) return false;
+
+  // Solo números, precios, porcentajes, horas, etc.
+  if (/^[\d\s.,:+\-/%€$£złPLNCOP]+$/i.test(text)) {
+    return false;
   }
 
-  function shouldSkipAttributeElement(element) {
-    if (!element || element.nodeType !== Node.ELEMENT_NODE) return false;
-    return Boolean(
-      element.closest(
-        [
-          "script",
-          "style",
-          ".print-ticket",
-          ".line-items",
-          ".menu-grid",
-          ".history-list",
-          ".product-list",
-          ".editor-category-list",
-          ".client-order-items",
-          ".client-chat-messages",
-          ".customer-menu-grid",
-          ".customer-cart-items",
-          ".customer-chat-messages",
-          ".customer-restaurant-list",
-          "#authBusinessName",
-          "#appBusinessName",
-          "#customerBusinessName",
-          "[data-no-auto-i18n]",
-        ].join(",")
-      )
-    );
+  // Correos electrónicos.
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(text)) {
+    return false;
   }
 
+  // URLs.
+  if (/^(https?:\/\/|www\.)/i.test(text)) {
+    return false;
+  }
+
+  // Teléfonos.
+  if (/^\+?[\d\s()\-]{6,}$/.test(text)) {
+    return false;
+  }
+
+  // UUID.
+  if (
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      text
+    )
+  ) {
+    return false;
+  }
+
+  // Códigos, referencias e identificadores técnicos.
+  if (/^[A-Z0-9_-]{4,}$/i.test(text) && /\d/.test(text)) {
+    return false;
+  }
+
+  // Extensiones y nombres de archivo.
+  if (
+    /^[^\s]+\.(jpg|jpeg|png|webp|gif|pdf|doc|docx|xls|xlsx|zip|js|css|html)$/i.test(
+      text
+    )
+  ) {
+    return false;
+  }
+// Fechas numéricas.
+if (
+  /^\d{1,4}[./-]\d{1,2}[./-]\d{1,4}$/.test(text)
+) {
+  return false;
+}
+
+// Horas.
+if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(text)) {
+  return false;
+}
+
+// Coordenadas GPS.
+if (
+  /^-?\d{1,3}\.\d+,\s*-?\d{1,3}\.\d+$/.test(text)
+) {
+  return false;
+}
+
+// Códigos postales polacos.
+if (/^\d{2}-\d{3}$/.test(text)) {
+  return false;
+}
+
+// Números de pedido/ticket simples.
+if (/^#?\d{1,10}$/.test(text)) {
+  return false;
+}
+
+// IBAN.
+if (/^[A-Z]{2}\d{2}[A-Z0-9\s]{10,32}$/i.test(text)) {
+  return false;
+}
+
+// Matrículas/códigos cortos con letras y números.
+if (
+  /^[A-Z0-9]{1,5}[-\s]?[A-Z0-9]{1,5}$/i.test(text) &&
+  /\d/.test(text)
+) {
+  return false;
+}
+  return true;
+}
+
+ function shouldSkipElement(element) {
+  if (!element || element.nodeType !== Node.ELEMENT_NODE) {
+    return false;
+  }
+
+  return Boolean(
+    element.closest(
+      [
+        "script",
+        "style",
+        "noscript",
+        "code",
+        "pre",
+        "textarea",
+        "[contenteditable='true']",
+        "[data-no-auto-i18n]",
+      ].join(",")
+    )
+  );
+}
+ function shouldSkipAttributeElement(element) {
+  if (!element || element.nodeType !== Node.ELEMENT_NODE) {
+    return false;
+  }
+
+  return Boolean(
+    element.closest(
+      [
+        "script",
+        "style",
+        "noscript",
+        "code",
+        "pre",
+        "[data-no-auto-i18n]",
+      ].join(",")
+    )
+  );
+}
   function cacheKey(targetLanguage, text) {
     return `${targetLanguage}|${text}`;
   }
 
   function dictionaryTranslation(text, targetLanguage) {
     const clean = normalize(text);
+    const offline = window.RC_ORDERA_OFFLINE_I18N?.translate?.(clean, targetLanguage) || "";
+    if (offline) return offline;
     const direct = dictionary[targetLanguage]?.[clean] || "";
     if (direct) return direct;
     const statusMatch = clean.match(/^Estado actual: (.+)\.$/i);
@@ -767,74 +852,250 @@
   }
 
   async function fetchTranslation(text, targetLanguage) {
-    const clean = normalize(text);
-    if (!clean || targetLanguage === "es" || clean.length > 220 || !navigator.onLine) return clean;
-    const direct = dictionaryTranslation(clean, targetLanguage);
-    if (direct) return direct;
-    const key = cacheKey(targetLanguage, clean);
-    if (cache[key]) return cache[key];
-    if (!window.RINCON_ENABLE_EXTERNAL_UI_TRANSLATION) return clean;
+  const clean = normalize(text);
 
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=es&tl=${encodeURIComponent(
-      targetLanguage
-    )}&dt=t&q=${encodeURIComponent(clean)}`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error("translation unavailable");
+  if (!clean) return clean;
+  if (targetLanguage === "es") {
+    return dictionaryTranslation(clean, targetLanguage) || clean;
+  }
+
+  // 1. Primero usa nuestro diccionario profesional.
+  const direct = dictionaryTranslation(clean, targetLanguage);
+  if (direct) return direct;
+
+  // 2. Después revisa traducciones ya guardadas.
+  const key = cacheKey(targetLanguage, clean);
+  if (cache[key]) return cache[key];
+
+  // 3. No traducir datos demasiado largos o sin conexión.
+  if (clean.length > 500 || !navigator.onLine) {
+    return clean;
+  }
+
+  // Si el servicio remoto acaba de fallar, conserva el texto original y evita
+  // repetir decenas de solicitudes mientras se recupera la conexion.
+  if (Date.now() < translationServicePausedUntil) {
+    return clean;
+  }
+
+  // 4. Los textos no incluidos en el diccionario se traducen en el servidor.
+  // La clave privada del proveedor nunca se expone en el navegador.
+  try {
+    const config = window.RINCON_SUPABASE || {};
+    const baseUrl = String(config.url || "").replace(/\/+$/, "");
+    const publicKey = String(config.anonKey || "");
+    if (!baseUrl || !publicKey) return clean;
+    const response = await fetch(`${baseUrl}/functions/v1/translate-public-content`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json; charset=utf-8",
+        apikey: publicKey,
+        Authorization: `Bearer ${publicKey}`,
+      },
+      body: JSON.stringify({ text: clean, targetLanguage, sourceLanguage: "es" }),
+    });
+
+    if (!response.ok) {
+      translationServicePausedUntil = Date.now() + (response.status === 429 ? 60_000 : 20_000);
+      return clean;
+    }
+
     const data = await response.json();
-    const translated = normalize((data?.[0] || []).map((part) => part?.[0] || "").join(""));
-    if (translated && translated.toLowerCase() !== clean.toLowerCase()) {
+    const translated = normalize(data?.translatedText || "");
+
+    if (
+      translated &&
+      translated.toLowerCase() !== clean.toLowerCase()
+    ) {
       cache[key] = translated;
       saveCache();
       return translated;
     }
-    return clean;
-  }
-
-  function setOriginalAttribute(element, attribute) {
-    let values = originalAttributes.get(element);
-    if (!values) {
-      values = {};
-      originalAttributes.set(element, values);
-    }
-    const current = element.getAttribute(attribute) || "";
-    const state = values[attribute];
-    if (!state || (normalize(current) !== normalize(state.source) && normalize(current) !== normalize(state.last))) {
-      values[attribute] = { source: current, last: "" };
-    }
-    return values[attribute];
-  }
-
-  async function translateTextNode(node) {
-    const parent = node.parentElement;
-    if (!parent || shouldSkipElement(parent)) return;
-    const clean = normalize(node.nodeValue);
-    if (!clean || /^\d+([:.,]\d+)?$/.test(clean)) return;
-    const state = originalText.get(node);
-    if (!state || (clean !== normalize(state.source) && clean !== normalize(state.last))) {
-      originalText.set(node, { source: node.nodeValue, last: "" });
-    }
-    const latestState = originalText.get(node);
-    const translated = language === "es" ? latestState.source : await fetchTranslation(latestState.source, language);
-    latestState.last = translated;
-    if (node.nodeValue !== translated) node.nodeValue = translated;
-  }
-
-  async function translateAttributes(element) {
-    if (shouldSkipAttributeElement(element)) return;
-    for (const attribute of ["placeholder", "title", "aria-label"]) {
-      if (!element.hasAttribute(attribute)) continue;
-      const state = setOriginalAttribute(element, attribute);
-      const translated = language === "es" ? state.source : await fetchTranslation(state.source, language);
-      state.last = translated;
-      if (element.getAttribute(attribute) !== translated) element.setAttribute(attribute, translated);
+  } catch (error) {
+    const now = Date.now();
+    translationServicePausedUntil = now + 20_000;
+    if (now - translationWarningShownAt > 20_000) {
+      translationWarningShownAt = now;
+      console.warn(
+        "RC ORDERA: traducción automática no disponible; se mantiene la traducción local.",
+        error
+      );
     }
   }
 
-  async function translateTree(root = document.body) {
+  return clean;
+}
+function setOriginalAttribute(element, attribute) {
+  let values = originalAttributes.get(element);
+
+  if (!values) {
+    values = {};
+    originalAttributes.set(element, values);
+  }
+
+  const current = element.getAttribute(attribute) || "";
+  let state = values[attribute];
+
+  if (!state) {
+    state = {
+      source: current,
+      last: "",
+    };
+
+    values[attribute] = state;
+
+    return state;
+  }
+
+  const currentNormalized = normalize(current);
+  const sourceNormalized = normalize(state.source);
+  const lastNormalized = normalize(state.last);
+
+  // Si otra parte de la app modificó realmente el atributo,
+  // guardamos ese nuevo valor como original.
+  if (
+    currentNormalized !== sourceNormalized &&
+    currentNormalized !== lastNormalized
+  ) {
+    state.source = current;
+    state.last = "";
+  }
+
+  return state;
+}
+
+ async function translateTextNode(
+  node,
+  generation = translationGeneration
+) {
+  const parent = node.parentElement;
+
+  if (!parent || shouldSkipElement(parent)) {
+    return;
+  }
+
+  const clean = normalize(node.nodeValue);
+
+  if (!shouldTranslateContent(clean)) {
+    return;
+  }
+
+  let state = originalText.get(node);
+
+  if (!state) {
+    state = {
+      source: node.nodeValue,
+      last: "",
+    };
+
+    originalText.set(node, state);
+  } else {
+    const currentNormalized = normalize(node.nodeValue);
+    const sourceNormalized = normalize(state.source);
+    const lastNormalized = normalize(state.last);
+
+    // Si otra parte de la app cambió realmente el texto,
+    // ese nuevo texto pasa a ser el nuevo original.
+    if (
+      currentNormalized !== sourceNormalized &&
+      currentNormalized !== lastNormalized
+    ) {
+      state.source = node.nodeValue;
+      state.last = "";
+    }
+  }
+
+  const sourceText = state.source;
+
+  const translated = await fetchTranslation(sourceText, language);
+   if (generation !== translationGeneration) {
+  return;
+}
+
+  state.last = translated;
+
+  if (node.nodeValue !== translated) {
+    node.nodeValue = translated;
+  }
+}
+ async function translateAttributes(
+  element,
+  generation = translationGeneration
+) {
+  if (shouldSkipAttributeElement(element)) return;
+
+ const attributes = [
+  "placeholder",
+  "title",
+  "aria-label",
+  "aria-description",
+  "alt",
+];
+
+  const tagName = element.tagName?.toLowerCase();
+  const inputType = String(element.type || "").toLowerCase();
+
+  if (
+    tagName === "input" &&
+    ["button", "submit", "reset"].includes(inputType)
+  ) {
+    attributes.push("value");
+  }
+
+  for (const attribute of attributes) {
+    if (!element.hasAttribute(attribute)) continue;
+
+    const state = setOriginalAttribute(element, attribute);
+    const source = normalize(state.source);
+
+if (!shouldTranslateContent(source)) {
+  continue;
+}
+
+    const translated = await fetchTranslation(state.source, language);
+if (generation !== translationGeneration) {
+  return;
+}
+    state.last = translated;
+
+    if (element.getAttribute(attribute) !== translated) {
+      element.setAttribute(attribute, translated);
+    }
+
+    if (
+      attribute === "value" &&
+      tagName === "input" &&
+      ["button", "submit", "reset"].includes(inputType)
+    ) {
+      element.value = translated;
+    }
+  }
+}
+
+  function elementIsVisible(element) {
+    if (!element || !element.isConnected) return false;
+    const style = window.getComputedStyle(element);
+    if (style.display === "none" || style.visibility === "hidden") return false;
+    const rect = element.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  }
+
+  async function translateInBatches(items, worker, generation, batchSize = 6) {
+    for (let index = 0; index < items.length; index += batchSize) {
+      if (generation !== translationGeneration) return;
+      await Promise.all(items.slice(index, index + batchSize).map((item) => worker(item, generation)));
+    }
+  }
+
+ async function translateTree(root = document.body) {
+  const generation = translationGeneration;
     if (!root || translating) return;
     translating = true;
     document.documentElement.lang = language;
     try {
+      const translatedTitle = await fetchTranslation(originalDocumentTitle, language);
+      if (translatedTitle) document.title = translatedTitle;
+      updateLocalizedManifest();
       const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
         acceptNode(node) {
           const parent = node.parentElement;
@@ -844,9 +1105,50 @@
       });
       const textNodes = [];
       while (walker.nextNode()) textNodes.push(walker.currentNode);
-      for (const node of textNodes) await translateTextNode(node);
-      const elements = root.querySelectorAll ? root.querySelectorAll("[placeholder], [title], [aria-label]") : [];
-      for (const element of elements) await translateAttributes(element);
+      textNodes.sort((left, right) =>
+        Number(elementIsVisible(right.parentElement)) - Number(elementIsVisible(left.parentElement))
+      );
+      const localTextNodes = [];
+      const remoteTextNodes = [];
+      textNodes.forEach((node) => {
+        const source = originalText.get(node)?.source || node.nodeValue;
+        if (language === "es" || dictionaryTranslation(source, language)) localTextNodes.push(node);
+        else remoteTextNodes.push(node);
+      });
+      await translateInBatches(localTextNodes, translateTextNode, generation, 50);
+      await translateInBatches(remoteTextNodes, translateTextNode, generation);
+      
+      const elements = root.querySelectorAll
+  ? root.querySelectorAll(
+      [
+  "[placeholder]",
+  "[title]",
+  "[aria-label]",
+  "[aria-description]",
+  "[alt]",
+  'input[type="button"][value]',
+  'input[type="submit"][value]',
+  'input[type="reset"][value]',
+].join(",")
+    )
+  : [];
+      const attributeElements = [...elements].sort((left, right) =>
+        Number(elementIsVisible(right)) - Number(elementIsVisible(left))
+      );
+      const localAttributeElements = [];
+      const remoteAttributeElements = [];
+      attributeElements.forEach((element) => {
+        const candidates = ["placeholder", "title", "aria-label", "aria-description", "alt", "value"]
+          .map((attribute) => originalAttributes.get(element)?.[attribute]?.source || element.getAttribute(attribute) || "")
+          .filter(Boolean);
+        if (language === "es" || candidates.every((source) => dictionaryTranslation(source, language))) {
+          localAttributeElements.push(element);
+        } else {
+          remoteAttributeElements.push(element);
+        }
+      });
+      await translateInBatches(localAttributeElements, translateAttributes, generation, 30);
+      await translateInBatches(remoteAttributeElements, translateAttributes, generation);
     } catch {
       // Si la traduccion externa falla, se conserva el texto original.
     } finally {
@@ -854,24 +1156,73 @@
     }
   }
 
-  function scheduleTranslate() {
-    if (renderTimer) window.clearTimeout(renderTimer);
-    renderTimer = window.setTimeout(() => translateTree(), 180);
+function scheduleTranslate(delay = 180) {
+  if (renderTimer) {
+    window.clearTimeout(renderTimer);
   }
+
+  renderTimer = window.setTimeout(async () => {
+    renderTimer = null;
+
+    if (translating) {
+      scheduleTranslate(120);
+      return;
+    }
+
+    await translateTree(document.body);
+  }, delay);
+}
 
   function createLanguageControl() {
     const existingSelect = document.querySelector("#autoLanguageSelect");
     if (existingSelect) {
       existingSelect.value = language;
       existingSelect.addEventListener("change", () => {
-        language = existingSelect.value;
-        localStorage.setItem(LANGUAGE_KEY, language);
-        localStorage.setItem("rincon_colombiano_customer_language", language);
-        translateTree();
-      });
+  language = existingSelect.value;
+translationGeneration += 1;
+        
+  localStorage.setItem(LANGUAGE_KEY, language);
+  localStorage.setItem(
+    "rincon_colombiano_customer_language",
+    language
+  );
+
+  document.documentElement.lang = language;
+
+  scheduleTranslate(0);
+});
       return;
     }
-    if (document.querySelector("#customerLanguageSelect")) return;
+    const customerSelect =
+  document.querySelector("#customerLanguageSelect");
+
+if (customerSelect) {
+  customerSelect.value = language;
+
+  customerSelect.addEventListener("change", () => {
+    language = String(
+      customerSelect.value || "es"
+    ).toLowerCase();
+
+    translationGeneration += 1;
+
+    localStorage.setItem(
+      LANGUAGE_KEY,
+      language
+    );
+
+    localStorage.setItem(
+      "rincon_colombiano_customer_language",
+      language
+    );
+
+    document.documentElement.lang = language;
+
+    scheduleTranslate(0);
+  });
+
+  return;
+}
     const label = document.createElement("label");
     label.className = "app-language-floating";
     label.innerHTML = `
@@ -885,21 +1236,87 @@
     document.body.appendChild(label);
     const select = label.querySelector("select");
     select.value = language;
-    select.addEventListener("change", () => {
-      language = select.value;
-      localStorage.setItem(LANGUAGE_KEY, language);
-      localStorage.setItem("rincon_colombiano_customer_language", language);
-      translateTree();
-    });
+   select.addEventListener("change", () => {
+  language = select.value;
+ translationGeneration += 1;
+     
+  localStorage.setItem(LANGUAGE_KEY, language);
+  localStorage.setItem(
+    "rincon_colombiano_customer_language",
+    language
+  );
+
+  document.documentElement.lang = language;
+
+  scheduleTranslate(0);
+});
   }
 
+  function updateLocalizedManifest() {
+    const manifest = document.querySelector('link[rel="manifest"]');
+    if (!manifest) return;
+    const original = manifest.dataset.originalHref || manifest.getAttribute("href") || "manifest.webmanifest";
+    manifest.dataset.originalHref = original;
+    const base = original.replace(/\.(?:es|pl|en)\.webmanifest$/i, ".webmanifest");
+    manifest.setAttribute(
+      "href",
+      language === "es" ? base : base.replace(/\.webmanifest$/i, `.${language}.webmanifest`)
+    );
+  }
+
+  function translateUiMessage(message) {
+    const source = String(message ?? "");
+    return dictionaryTranslation(source, language) || source;
+  }
+
+  window.rcUiText = translateUiMessage;
+  window.alert = (message) => nativeAlert(translateUiMessage(message));
+  window.confirm = (message) => nativeConfirm(translateUiMessage(message));
+  window.prompt = (message, defaultValue) => nativePrompt(translateUiMessage(message), defaultValue);
+
   window.RinconAutoTranslate = {
+    translate: translateUiMessage,
     setLanguage(nextLanguage) {
-      if (!SUPPORTED[nextLanguage]) return;
-      language = nextLanguage;
-      localStorage.setItem(LANGUAGE_KEY, language);
-      scheduleTranslate();
-    },
+  const normalizedLanguage = String(
+    nextLanguage || ""
+  ).toLowerCase();
+
+  if (!SUPPORTED[normalizedLanguage]) {
+    return;
+  }
+
+  language = normalizedLanguage;
+      translationGeneration += 1;
+
+  localStorage.setItem(LANGUAGE_KEY, language);
+  localStorage.setItem(
+    "rincon_colombiano_customer_language",
+    language
+  );
+
+  document.documentElement.lang = language;
+
+  const languageSelect =
+    document.querySelector("#autoLanguageSelect");
+
+  if (
+    languageSelect &&
+    languageSelect.value !== language
+  ) {
+    languageSelect.value = language;
+  }
+      const customerLanguageSelect =
+  document.querySelector("#customerLanguageSelect");
+
+if (
+  customerLanguageSelect &&
+  customerLanguageSelect.value !== language
+) {
+  customerLanguageSelect.value = language;
+}
+
+  scheduleTranslate(0);
+},
   };
 
   if (document.readyState === "loading") {

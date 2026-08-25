@@ -8,10 +8,10 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="manifest" href="mesero-manifest.webmanifest" />
     <link rel="icon" href="app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="app-icon-192.png" />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=87.0.0" />
   </head>
   <body class="waiter-page">
     <header class="waiter-topbar">
@@ -26,7 +26,7 @@
         <label class="app-language-inline waiter-language-select">
           <span>Idioma</span>
           <select id="autoLanguageSelect" aria-label="Idioma">
-            <option value="es">Espanol</option>
+            <option value="es">Español</option>
             <option value="pl">Polski</option>
             <option value="en">English</option>
           </select>
@@ -94,6 +94,30 @@
             </label>
             <div class="waiter-category-tabs" id="waiterCategoryTabs"></div>
             <div class="waiter-menu-grid" id="waiterMenuGrid"></div>
+            <form class="waiter-custom-item" id="waiterCustomItemForm">
+  <label>
+    Producto especial
+    <input
+      id="waiterCustomItemName"
+      type="text"
+      placeholder="Ej: Plato especial"
+      autocomplete="off"
+    />
+  </label>
+
+  <label>
+    Precio
+    <input
+      id="waiterCustomItemPrice"
+      type="number"
+      min="0"
+      step="0.01"
+      placeholder="0.00"
+    />
+  </label>
+
+  <button type="submit">Agregar</button>
+</form>
           </section>
 
           <section class="waiter-panel waiter-order-panel" data-waiter-panel="order">
@@ -185,9 +209,10 @@
     </main>
 
     <div class="toast-notice" id="waiterToast" role="status" aria-live="polite" hidden></div>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-config.js"></script>
-    <script src="auto-translate.js"></script>
-    <script src="mesero.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4"></script>
+    <script src="supabase-config.js?v=87.0.0"></script>
+    <script src="offline-i18n.js?v=87.0.0"></script>
+    <script src="auto-translate.js?v=87.0.0"></script>
+    <script src="mesero.js?v=87.0.0"></script>
   </body>
 </html>

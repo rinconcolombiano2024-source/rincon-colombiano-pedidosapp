@@ -13,7 +13,7 @@
     <link rel="manifest" href="cliente-manifest.webmanifest" />
     <link rel="icon" href="app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="app-icon-192.png" />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=87.0.0" />
   </head>
   <body class="customer-page customer-app-page">
     <main class="customer-shell customer-app-shell">
@@ -30,6 +30,7 @@
         class="customer-notification-button"
         type="button"
         aria-label="Notificaciones"
+        data-i18n-aria-label="notificationsAria"
       >
         <span class="customer-notification-icon">♧</span>
         <span class="customer-notification-badge">2</span>
@@ -40,6 +41,7 @@
         type="button"
         data-customer-view-target="profile"
         aria-label="Perfil"
+        data-i18n-aria-label="profileAria"
       >
         <span id="customerProfileAvatarInitials">C</span>
       </button>
@@ -47,7 +49,7 @@
   </div>
 
   <button class="customer-delivery-location" type="button">
-    <span class="customer-delivery-location-label">
+    <span class="customer-delivery-location-label" data-i18n="deliveryTo">
       Entregar en
     </span>
 
@@ -165,11 +167,11 @@
 
   <div class="customer-home-greeting">
     <h2>
-      Hola, <span id="customerGreetingName">Cliente</span>
+      <span data-i18n="greeting">Hola,</span> <span id="customerGreetingName">Cliente</span>
       <span aria-hidden="true">👋</span>
     </h2>
 
-    <p>¿Qué se te antoja hoy?</p>
+    <p data-i18n="homePrompt">¿Qué se te antoja hoy?</p>
   </div>
 
   <div class="customer-home-search">
@@ -181,6 +183,7 @@
       id="customerHomeSearchInput"
       type="search"
       placeholder="Buscar restaurantes o platos..."
+      data-i18n-placeholder="homeSearchPlaceholder"
       autocomplete="off"
     />
   </div>
@@ -189,14 +192,14 @@
         <section class="customer-categories-section">
 
   <div class="customer-section-title-row">
-    <h2>Categorías</h2>
+    <h2 data-i18n="categoriesTitle">Categorías</h2>
 
     <button
       class="customer-see-all-button"
       type="button"
       id="customerSeeAllCategoriesButton"
     >
-      Ver todas
+      <span data-i18n="showAll">Ver todas</span>
       <span aria-hidden="true">→</span>
     </button>
   </div>
@@ -611,7 +614,7 @@
               </label>
               <label>
                 <span data-i18n="distanceLabel">Distancia aproximada km</span>
-                <input id="customerDistanceInput" type="number" min="0" step="0.1" placeholder="Ej: 3.4" data-i18n-placeholder="distancePlaceholder" inputmode="decimal" />
+                <input id="customerDistanceInput" type="number" min="0" step="0.1" placeholder="Calculada automaticamente" data-i18n-placeholder="distancePlaceholder" inputmode="decimal" readonly aria-readonly="true" />
               </label>
               <button class="customer-map-button" id="customerUseLocationButton" type="button" data-i18n="useLocation">Usar mi ubicacion</button>
               <button class="customer-map-button" id="customerCalculateDistanceButton" type="button" data-i18n="calculateMaps">Calcular con Google Maps</button>
@@ -717,14 +720,14 @@
     Editar perfil
   </button>
 </div>
-          <a class="customer-map-button customer-platform-home-link" href="index.html?app=v85" data-i18n="platformHome">Volver a la pantalla principal</a>
+          <a class="customer-map-button customer-platform-home-link" href="index.html?app=v87.0.0" data-i18n="platformHome">Volver a la pantalla principal</a>
         </section>
 
         <section class="customer-profile-settings">
           <label class="customer-language-label">
             <span data-i18n="languageLabel">Idioma</span>
             <select id="customerLanguageSelect">
-              <option value="es">Espanol</option>
+              <option value="es">Español</option>
               <option value="pl">Polski</option>
               <option value="en">English</option>
             </select>
@@ -803,8 +806,9 @@
 
 </nav>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-config.js"></script>
-    <script src="cliente.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4"></script>
+    <script src="supabase-config.js?v=87.0.0"></script>
+    <script src="offline-i18n.js?v=87.0.0"></script>
+    <script src="cliente.js?v=87.0.0"></script>
   </body>
 </html>
