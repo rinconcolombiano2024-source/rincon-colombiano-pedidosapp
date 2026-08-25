@@ -49,8 +49,8 @@ for (const [htmlFile, jsFile] of pages) {
   check(missing.length === 0, `${jsFile}: selectores inexistentes en ${htmlFile}: ${missing.join(", ")}`);
   check(/auto-translate\.js/.test(html) || /data-i18n=/.test(html), `${htmlFile}: falta el sistema de idiomas`);
   check(/service-worker\.js|register\(\s*["']\.\/service-worker\.js/.test(`${html}\n${script}`), `${htmlFile}: falta registro PWA`);
-  check(/styles\.css\?v=86\.1/.test(html), `${htmlFile}: estilos sin version V86.1`);
-  check(new RegExp(`${jsFile.replace(".", "\\.")}\\?v=86\\.1`).test(html), `${htmlFile}: JavaScript sin version V86.1`);
+  check(/styles\.css\?v=87\.0\.0/.test(html), `${htmlFile}: estilos sin version V87`);
+  check(new RegExp(`${jsFile.replace(".", "\\.")}\\?v=87\\.0\\.0`).test(html), `${htmlFile}: JavaScript sin version V87`);
 }
 
 for (const file of [
@@ -67,7 +67,7 @@ for (const file of pages.map((entry) => entry[1]).concat(["auto-translate.js", "
 }
 
 const serviceWorker = read("service-worker.js");
-check(serviceWorker.includes("rc-ordera-v86-1-platform-core"), "PWA: cache no corresponde a V86.1");
+check(serviceWorker.includes("rc-ordera-v87-translation-core"), "PWA: cache no corresponde a V87");
 check(serviceWorker.includes("caches.delete"), "PWA: no limpia caches antiguos");
 for (const asset of [...serviceWorker.matchAll(/["']\.\/([^"'?]+)["']/g)].map((match) => match[1])) {
   check(fs.existsSync(path.join(ROOT, asset)), `PWA: recurso inexistente: ${asset}`);
@@ -135,7 +135,7 @@ const courierPush = read("supabase/functions/courier-push/index.ts");
 check(checkout.includes("Could not reserve checkout") && checkout.includes('reserveError.code !== "23505"'), "Pagos: falta idempotencia de checkout");
 check(webhook.includes("verifyStripeSignature") && webhook.includes("STRIPE_WEBHOOK_SECRET"), "Pagos: webhook sin firma Stripe");
 check(settlement.includes("restaurantError") && settlement.includes("courierError"), "Pagos: liquidaciones no son independientes");
-check(courierPush.includes("app=v86.1") && !courierPush.includes("app=v84.1"), "Notificaciones: enlace del colaborador usa una version antigua");
+check(courierPush.includes("app=v87.0.0") && !courierPush.includes("app=v84.1"), "Notificaciones: enlace del colaborador usa una version antigua");
 
 const app = read("app.js");
 const waiter = read("mesero.js");
@@ -190,5 +190,5 @@ if (failures.length) {
   console.error(failures.map((failure) => `FAIL: ${failure}`).join("\n"));
   process.exitCode = 1;
 } else {
-  console.log(`RC ORDERA V86.1 static QA: OK (${checkCount} checks)`);
+  console.log(`RC ORDERA V87 static QA: OK (${checkCount} checks)`);
 }

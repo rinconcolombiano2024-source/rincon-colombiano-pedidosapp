@@ -1,4 +1,4 @@
-const CACHE_NAME = "rc-ordera-v86-1-platform-core";
+const CACHE_NAME = "rc-ordera-v87-translation-core";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -12,12 +12,24 @@ const APP_FILES = [
   "./colaborador.js",
   "./mesero.js",
   "./admin.js",
+  "./offline-i18n.js",
   "./auto-translate.js",
   "./supabase-config.js",
   "./manifest.webmanifest",
   "./cliente-manifest.webmanifest",
   "./colaborador-manifest.webmanifest",
   "./admin-manifest.webmanifest",
+  "./manifest.pl.webmanifest",
+  "./manifest.en.webmanifest",
+  "./cliente-manifest.pl.webmanifest",
+  "./cliente-manifest.en.webmanifest",
+  "./colaborador-manifest.pl.webmanifest",
+  "./colaborador-manifest.en.webmanifest",
+  "./admin-manifest.pl.webmanifest",
+  "./admin-manifest.en.webmanifest",
+  "./mesero-manifest.webmanifest",
+  "./mesero-manifest.pl.webmanifest",
+  "./mesero-manifest.en.webmanifest",
   "./app-icon.svg",
   "./app-icon-192.png",
   "./app-icon-512.png",
@@ -77,12 +89,29 @@ self.addEventListener("push", (event) => {
     };
   }
 
-  const title = data.title || "Nuevo domicilio - RC ORDERA";
+  const language = ["es", "pl", "en"].includes(String(data.language || "").toLowerCase())
+    ? String(data.language).toLowerCase()
+    : "es";
+  const fallback = {
+    es: {
+      title: "Nuevo domicilio - RC ORDERA",
+      body: "Hay un nuevo pedido disponible. Abre RC ORDERA para aceptarlo.",
+    },
+    pl: {
+      title: "Nowa dostawa - RC ORDERA",
+      body: "Dostępne jest nowe zamówienie. Otwórz RC ORDERA, aby je przyjąć.",
+    },
+    en: {
+      title: "New delivery - RC ORDERA",
+      body: "A new order is available. Open RC ORDERA to accept it.",
+    },
+  }[language];
+  const title = data.title || fallback.title;
 
   const options = {
     body:
       data.body ||
-      "Hay un nuevo pedido disponible. Abre RC ORDERA para aceptarlo.",
+      fallback.body,
 
     icon: "./app-icon-192.png",
     badge: "./app-icon-192.png",
@@ -96,8 +125,8 @@ self.addEventListener("push", (event) => {
 
     data: {
       url: data.url || (data.assignment_id
-        ? `./colaborador.html?view=offers&assignment=${encodeURIComponent(data.assignment_id)}&app=v86.1`
-        : "./colaborador.html?view=offers&app=v86.1"),
+        ? `./colaborador.html?view=offers&assignment=${encodeURIComponent(data.assignment_id)}&app=v87.0.0&lang=${language}`
+        : `./colaborador.html?view=offers&app=v87.0.0&lang=${language}`),
       assignment_id: data.assignment_id || "",
     },
   };
@@ -112,7 +141,7 @@ self.addEventListener("notificationclick", (event) => {
 
   const targetUrl =
     event.notification.data?.url ||
-    "./colaborador.html?view=offers&app=v86.1";
+    "./colaborador.html?view=offers&app=v87.0.0";
 
   event.waitUntil(
     clients.matchAll({

@@ -50,8 +50,9 @@ having count(*) > 1;
 select c.restaurant_user_id
 from public.restaurant_public_catalogs c
 join public.restaurant_profiles r on r.user_id = c.restaurant_user_id
-where r.active = false
-   or r.deleted_at is not null;
+where c.active = true
+  and (r.active = false or r.deleted_at is not null);
+
 select id, name, public
 from storage.buckets
 where id = 'courier-documents';
