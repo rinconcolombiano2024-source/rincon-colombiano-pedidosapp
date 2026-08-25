@@ -20,6 +20,7 @@ const runtimeFiles = [
   "colaborador.js",
   "mesero.js",
   "admin.js",
+  "offline-i18n.js",
   "auto-translate.js",
   "supabase-config.js",
   "service-worker.js",
@@ -27,6 +28,17 @@ const runtimeFiles = [
   "cliente-manifest.webmanifest",
   "colaborador-manifest.webmanifest",
   "admin-manifest.webmanifest",
+  "manifest.pl.webmanifest",
+  "manifest.en.webmanifest",
+  "cliente-manifest.pl.webmanifest",
+  "cliente-manifest.en.webmanifest",
+  "colaborador-manifest.pl.webmanifest",
+  "colaborador-manifest.en.webmanifest",
+  "admin-manifest.pl.webmanifest",
+  "admin-manifest.en.webmanifest",
+  "mesero-manifest.webmanifest",
+  "mesero-manifest.pl.webmanifest",
+  "mesero-manifest.en.webmanifest",
   "app-icon.svg",
   "app-icon-192.png",
   "app-icon-512.png"
@@ -44,5 +56,5 @@ for (const file of runtimeFiles) {
 rmSync(output, { recursive: true, force: true });
 mkdirSync(output, { recursive: true });
 for (const file of runtimeFiles) cpSync(join(root, file), join(output, file));
-writeFileSync(join(output, "BUILD-METADATA.json"), JSON.stringify({ app: "RC ORDERA", version: "v86" }, null, 2));
+writeFileSync(join(output, "BUILD-METADATA.json"), JSON.stringify({ app: "RC ORDERA", version: "v87.0.0" }, null, 2));
 console.log(`Android web assets prepared: ${runtimeFiles.length} files`);
