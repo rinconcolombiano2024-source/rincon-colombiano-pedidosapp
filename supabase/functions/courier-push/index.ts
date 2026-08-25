@@ -88,14 +88,38 @@ Deno.serve(async (request) => {
     return new Response(JSON.stringify({ error: "Could not load subscriptions", code: error.code }), { status: 500, headers: jsonHeaders });
   }
 
+  const { data: courierProfile } = await supabase
+    .from("courier_profiles")
+    .select("preferred_language")
+    .eq("user_id", record.recipient_user_id)
+    .maybeSingle();
+  const language = ["es", "pl", "en"].includes(String(courierProfile?.preferred_language || "").toLowerCase())
+    ? String(courierProfile?.preferred_language).toLowerCase()
+    : "es";
+  const localizedNotification = {
+    es: {
+      title: "Nuevo domicilio - RC ORDERA",
+      body: "Hay un nuevo pedido disponible. Abre RC ORDERA para aceptarlo.",
+    },
+    pl: {
+      title: "Nowa dostawa - RC ORDERA",
+      body: "Dostępne jest nowe zamówienie. Otwórz RC ORDERA, aby je przyjąć.",
+    },
+    en: {
+      title: "New delivery - RC ORDERA",
+      body: "A new order is available. Open RC ORDERA to accept it.",
+    },
+  }[language];
+
   const pushPayload = JSON.stringify({
-    title: record.title || "Nuevo domicilio - RC ORDERA",
-    body: record.body || "Hay un nuevo pedido disponible.",
+    title: localizedNotification.title,
+    body: localizedNotification.body,
+    language,
     tag: record.reference_id ? `rc-ordera-${record.reference_id}` : "rc-ordera-delivery",
     assignment_id: record.reference_id || "",
     url: String(
       record.payload?.url
-      || `./colaborador.html?view=offers&assignment=${encodeURIComponent(record.reference_id || "")}&app=v86.1`
+      || `./colaborador.html?view=offers&assignment=${encodeURIComponent(record.reference_id || "")}&app=v87.0.0&lang=${language}`
     ),
   });
 
