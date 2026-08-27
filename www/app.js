@@ -4526,36 +4526,172 @@ function restaurantMediaPathSegment(value, fallback = "image") {
 }
 
 async function uploadRestaurantImageDataUrl(dataUrl, scope, itemId) {
-  if (!isInlineRestaurantImage(dataUrl)) return normalizeProductImageUrl(dataUrl);
-  if (!cloudState.client || !cloudState.user || !navigator.onLine) return normalizeProductImageUrl(dataUrl);
+  if (!isInlineRestaurantImage(dataUrl)) {
+    return normalizeProductImageUrl(dataUrl);
+  }
+
+  if (!cloudState.client) {
+    throw new Error("Supabase no está disponible.");
+  }
+
+  if (!navigator.onLine) {
+    throw new Error("Necesitas conexión a internet para subir la foto.");
+  }
+
+  // Refrescar usuario real antes de subir.
+  const {
+    data: authData,
+    error: authError
+  } = await cloudState.client.auth.getUser();
+
+  if (authError) {
+    console.error("RC ORDERA AUTH ERROR", authError);
+    throw authError;
+  }
+
+  const authenticatedUser = authData?.user;
+
+  if (!authenticatedUser?.id) {
+    throw new Error("La sesión no está disponible. Inicia sesión nuevamente.");
+  }
+
+  // Mantener cloudState sincronizado.
+  cloudState.user = authenticatedUser;
 
   const blob = restaurantImageDataUrlToBlob(dataUrl);
-  if (blob.size > 2 * 1024 * 1024) throw new Error("La imagen optimizada supera el limite permitido de 2 MB.");
-  const extension = blob.type === "image/png" ? "png" : blob.type === "image/webp" ? "webp" : "jpg";
-  const fingerprint = hashText(`${blob.type}|${blob.size}|${dataUrl}`);
-  const cleanScope = restaurantMediaPathSegment(scope, "media");
-  const cleanItemId = restaurantMediaPathSegment(itemId, "image");
-  const path = `${cloudState.user.id}/${cleanScope}/${cleanItemId}-${fingerprint}.${extension}`;
 
-  const { error } = await withCloudTimeout(
-    cloudState.client.storage.from(RESTAURANT_MEDIA_BUCKET).upload(path, blob, {
-      cacheControl: "31536000",
-      contentType: blob.type,
-      upsert: true,
-    }),
-    "La foto no pudo terminar de subir a la nube.",
-    30000
+  if (blob.size > 2 * 1024 * 1024) {
+    throw new Error(
+      "La imagen optimizada supera el límite permitido de 2 MB."
+    );
+  }
+
+  const extension =
+    blob.type === "image/png"
+      ? "png"
+      : blob.type === "image/webp"
+        ? "webp"
+        : "jpg";
+
+  const fingerprint = hashText(
+    `${blob.type}|${blob.size}|${dataUrl}`
   );
-  if (error) {
-    if (/bucket|not found|404/i.test(String(error.message || ""))) {
-      throw new Error("El almacenamiento de fotos aun no esta habilitado. Actualiza la nube e intenta nuevamente.");
-    }
+
+  const cleanScope = restaurantMediaPathSegment(
+    scope,
+    "media"
+  );
+
+  const cleanItemId = restaurantMediaPathSegment(
+    itemId,
+    "image"
+  );
+
+  const path =
+    `${authenticatedUser.id}/` +
+    `${cleanScope}/` +
+    `${cleanItemId}-${fingerprint}.${extension}`;
+
+  console.log("RC ORDERA STORAGE UPLOAD START", {
+    bucket: RESTAURANT_MEDIA_BUCKET,
+    path,
+    type: blob.type,
+    size: blob.size,
+    userId: authenticatedUser.id
+  });
+
+  let uploadResult;
+
+  try {
+    uploadResult = await withCloudTimeout(
+      cloudState.client.storage
+        .from(RESTAURANT_MEDIA_BUCKET)
+        .upload(path, blob, {
+          cacheControl: "31536000",
+          contentType: blob.type,
+          upsert: true
+        }),
+      "La foto no pudo terminar de subir a la nube.",
+      30000
+    );
+  } catch (error) {
+    console.error(
+      "RC ORDERA STORAGE UPLOAD TIMEOUT/EXCEPTION",
+      {
+        message: error?.message,
+        name: error?.name,
+        error
+      }
+    );
+
     throw error;
   }
 
-  const { data } = cloudState.client.storage.from(RESTAURANT_MEDIA_BUCKET).getPublicUrl(path);
-  const publicUrl = normalizeProductImageUrl(data?.publicUrl);
-  if (!publicUrl) throw new Error("No fue posible obtener la direccion final de la foto.");
+  const { data: uploadData, error: uploadError } =
+    uploadResult || {};
+
+  if (uploadError) {
+    console.error(
+      "RC ORDERA STORAGE UPLOAD ERROR",
+      {
+        message: uploadError.message,
+        name: uploadError.name,
+        statusCode:
+          uploadError.statusCode ||
+          uploadError.status,
+        error: uploadError
+      }
+    );
+
+    if (
+      /bucket|not found|404/i.test(
+        String(uploadError.message || "")
+      )
+    ) {
+      throw new Error(
+        "El almacenamiento de fotos no está disponible."
+      );
+    }
+
+    throw uploadError;
+  }
+
+  console.log(
+    "RC ORDERA STORAGE UPLOAD OK",
+    uploadData
+  );
+
+  const { data: publicData } =
+    cloudState.client.storage
+      .from(RESTAURANT_MEDIA_BUCKET)
+      .getPublicUrl(path);
+
+  const publicUrl =
+    normalizeProductImageUrl(
+      publicData?.publicUrl
+    );
+
+  if (
+    !publicUrl ||
+    !/^https?:\/\//i.test(publicUrl) ||
+    !publicUrl.includes(
+      "/storage/v1/object/public/restaurant-media/"
+    )
+  ) {
+    console.error(
+      "RC ORDERA INVALID PUBLIC IMAGE URL",
+      {
+        path,
+        publicUrl,
+        publicData
+      }
+    );
+
+    throw new Error(
+      "No fue posible obtener la dirección final de la foto."
+    );
+  }
+
   return publicUrl;
 }
 
