@@ -3,7 +3,7 @@
   "short_name": "RC Estación",
   "id": "./waiter-app-es",
   "description": "Pedidos y operación de estaciones del restaurante.",
-  "start_url": "./mesero.html?app=v87.0.0&lang=es",
+  "start_url": "./mesero.html?app=v89.0.0&lang=es",
   "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],
@@ -16,3 +16,4 @@
     { "src": "app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ]
 }
+

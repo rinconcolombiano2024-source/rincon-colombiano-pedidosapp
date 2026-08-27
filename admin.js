@@ -26,7 +26,7 @@ let adminRecoveringPassword = false;
 let adminInstallPrompt = null;
 
 function adminSupabaseConfig() {
-  const config = window.RINCON_SUPABASE || {};
+  const config = window.RC_ORDERA_SUPABASE || {};
   const rawUrl = String(config.url || "").trim();
   let cleanUrl = rawUrl;
 

@@ -1,4 +1,48 @@
 const STORAGE_KEYS = {
+  nextTicket: "rc_ordera_next_ticket",
+  ticketDate: "rc_ordera_ticket_date",
+  orders: "rc_ordera_orders",
+  menu: "rc_ordera_menu",
+  appLanguage: "rc_ordera_app_language",
+  currencySymbol: "rc_ordera_currency_symbol",
+  currencyPosition: "rc_ordera_currency_position",
+  moneyFormat: "rc_ordera_money_format",
+  receiptWidthMm: "rc_ordera_receipt_width_mm",
+  shiftServerName: "rc_ordera_shift_server_name",
+  settingsPending: "rc_ordera_settings_pending",
+  menuPending: "rc_ordera_menu_pending",
+  menuRevision: "rc_ordera_menu_revision",
+  confirmedMenu: "rc_ordera_confirmed_menu",
+  settingsRevision: "rc_ordera_settings_revision",
+  ticketCounterPending: "rc_ordera_ticket_counter_pending",
+  cloudSession: "rc_ordera_cloud_session",
+  deletedOrders: "rc_ordera_deleted_orders",
+  deliveryFee: "rc_ordera_delivery_fee",
+  restaurantAddress: "rc_ordera_restaurant_address",
+  googleMapsApiKey: "rc_ordera_google_maps_api_key",
+  bankAccount: "rc_ordera_bank_account",
+  bankTransferNote: "rc_ordera_bank_transfer_note",
+  onlinePaymentProvider: "rc_ordera_online_payment_provider",
+  onlinePaymentNote: "rc_ordera_online_payment_note",
+  clientAlarmEnabled: "rc_ordera_client_alarm_enabled",
+  businessName: "rc_ordera_business_name",
+  businessLogoUrl: "rc_ordera_business_logo_url",
+  restaurantActive: "rc_ordera_restaurant_active",
+  legalBusinessName: "rc_ordera_legal_business_name",
+  taxId: "rc_ordera_tax_id",
+  businessPhone: "rc_ordera_business_phone",
+  businessEmail: "rc_ordera_business_email",
+  legalAddress: "rc_ordera_legal_address",
+  deliveryMinimumFee: "rc_ordera_delivery_minimum_fee",
+  currentOrderDraft: "rc_ordera_current_order_draft",
+  restaurantOperationalOpen: "rc_ordera_restaurant_operational_open",
+  restaurantOperationalMode: "rc_ordera_restaurant_operational_mode",
+  restaurantOpeningHours: "rc_ordera_restaurant_opening_hours",
+  restaurantLatitude: "rc_ordera_restaurant_latitude",
+  restaurantLongitude: "rc_ordera_restaurant_longitude",
+};
+
+const LEGACY_STORAGE_KEYS = {
   nextTicket: "rincon_colombiano_next_ticket",
   ticketDate: "rincon_colombiano_ticket_date",
   orders: "rincon_colombiano_orders",
@@ -10,10 +54,6 @@ const STORAGE_KEYS = {
   receiptWidthMm: "rincon_colombiano_receipt_width_mm",
   shiftServerName: "rincon_colombiano_shift_server_name",
   settingsPending: "rincon_colombiano_settings_pending",
-  menuPending: "rc_ordera_menu_pending",
-  menuRevision: "rc_ordera_menu_revision",
-  settingsRevision: "rc_ordera_settings_revision",
-  ticketCounterPending: "rc_ordera_ticket_counter_pending",
   cloudSession: "rincon_colombiano_cloud_session",
   deletedOrders: "rincon_colombiano_deleted_orders",
   deliveryFee: "rincon_colombiano_delivery_fee",
@@ -34,18 +74,32 @@ const STORAGE_KEYS = {
   legalAddress: "rincon_colombiano_legal_address",
   deliveryMinimumFee: "rincon_colombiano_delivery_minimum_fee",
   currentOrderDraft: "rincon_colombiano_current_order_draft",
-  restaurantOperationalOpen: "rc_ordera_restaurant_operational_open",
-  restaurantOperationalMode: "rc_ordera_restaurant_operational_mode",
-  restaurantOpeningHours: "rc_ordera_restaurant_opening_hours",
-  restaurantLatitude: "rc_ordera_restaurant_latitude",
-  restaurantLongitude: "rc_ordera_restaurant_longitude",
 };
+
+function migrateLegacyRestaurantStorage() {
+  try {
+    Object.entries(LEGACY_STORAGE_KEYS).forEach(([name, legacyKey]) => {
+      const nextKey = STORAGE_KEYS[name];
+      if (!nextKey || nextKey === legacyKey) return;
+      const legacyValue = localStorage.getItem(legacyKey);
+      if (localStorage.getItem(nextKey) === null && legacyValue !== null) {
+        localStorage.setItem(nextKey, legacyValue);
+      }
+      if (legacyValue !== null) localStorage.removeItem(legacyKey);
+    });
+  } catch {
+    // La app puede continuar cuando el navegador limita el almacenamiento local.
+  }
+}
+
+migrateLegacyRestaurantStorage();
 
 const DEFAULT_BUSINESS_NAME = "MI RESTAURANTE";
 const DEFAULT_DELIVERY_MINIMUM_FEE = 20;
-const APP_VERSION = "v87.0.0";
+const APP_VERSION = "v89.0.0";
 const PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 const PLATFORM_APP_NAME = "RC ORDERA";
+const RESTAURANT_MEDIA_BUCKET = "restaurant-media";
 function appUiLanguage() {
   const language = String(document.documentElement.lang || localStorage.getItem(STORAGE_KEYS.appLanguage) || "es").toLowerCase();
   return ["es", "pl", "en"].includes(language) ? language : "es";
@@ -56,7 +110,7 @@ function appUiLocale() {
 }
 
 function appUiText(source) {
-  return window.RinconAutoTranslate?.translate?.(source) || window.rcUiText?.(source) || String(source || "");
+  return window.RCOrderaAutoTranslate?.translate?.(source) || window.rcUiText?.(source) || String(source || "");
 }
 const RESTAURANT_WEEK_DAYS = [
   ["monday", "Lunes"],
@@ -438,6 +492,7 @@ let restaurantMapsScriptPromise = null;
 const restaurantPlaceAutocompletes = new Map();
 let restaurantStatusSyncTimer = null;
 let restaurantStatusSyncing = false;
+let menuSaveQueue = Promise.resolve();
 let clientChatKnownMessageIds = new Set();
 let clientChatLoadedOnce = false;
 const cloudState = {
@@ -916,6 +971,84 @@ function menuCatalogsMatch(first, second) {
   return JSON.stringify(normalizeMenuCatalog(first)) === JSON.stringify(normalizeMenuCatalog(second));
 }
 
+function readConfirmedCloudMenu() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.confirmedMenu) || "null");
+    if (!stored || stored.userId !== cloudState.user?.id || !stored.menu) return null;
+    return normalizeMenuCatalog(stored.menu);
+  } catch {
+    return null;
+  }
+}
+
+function storeConfirmedCloudMenu(menu) {
+  if (!cloudState.user?.id) return;
+  localStorage.setItem(STORAGE_KEYS.confirmedMenu, JSON.stringify({
+    userId: cloudState.user.id,
+    menu: normalizeMenuCatalog(menu),
+  }));
+}
+
+function clearConfirmedCloudMenu() {
+  localStorage.removeItem(STORAGE_KEYS.confirmedMenu);
+}
+
+function menuProductEntries(menu) {
+  const entries = new Map();
+  Object.entries(normalizeMenuCatalog(menu)).forEach(([category, products]) => {
+    products.forEach((product, index) => {
+      entries.set(product.id, { category, index, product });
+    });
+  });
+  return entries;
+}
+
+function menuProductEntryMatches(first, second) {
+  if (!first || !second) return first === second;
+  return first.category === second.category
+    && JSON.stringify(first.product) === JSON.stringify(second.product);
+}
+
+function mergeConcurrentMenuChanges(baseMenu, localMenu, remoteMenu) {
+  const base = normalizeMenuCatalog(baseMenu);
+  const local = normalizeMenuCatalog(localMenu);
+  const remote = normalizeMenuCatalog(remoteMenu);
+  const baseEntries = menuProductEntries(base);
+  const localEntries = menuProductEntries(local);
+  const remoteEntries = menuProductEntries(remote);
+
+  const changedLocalIds = new Set();
+  const deletedLocalIds = new Set();
+  baseEntries.forEach((baseEntry, productId) => {
+    const localEntry = localEntries.get(productId);
+    if (!localEntry) deletedLocalIds.add(productId);
+    else if (!menuProductEntryMatches(baseEntry, localEntry)) changedLocalIds.add(productId);
+  });
+  localEntries.forEach((_entry, productId) => {
+    if (!baseEntries.has(productId)) changedLocalIds.add(productId);
+  });
+
+  const mergedEntries = new Map(remoteEntries);
+  deletedLocalIds.forEach((productId) => mergedEntries.delete(productId));
+  changedLocalIds.forEach((productId) => {
+    const localEntry = localEntries.get(productId);
+    if (localEntry) mergedEntries.set(productId, localEntry);
+  });
+
+  const merged = {};
+  const categoryOrder = [...Object.keys(local), ...Object.keys(remote)]
+    .filter((category, index, categories) => categories.indexOf(category) === index);
+  categoryOrder.forEach((category) => {
+    const products = Array.from(mergedEntries.values())
+      .filter((entry) => entry.category === category)
+      .sort((first, second) => first.index - second.index)
+      .map((entry) => entry.product);
+    const localAddedEmptyCategory = Object.hasOwn(local, category) && !Object.hasOwn(base, category);
+    if (products.length || localAddedEmptyCategory) merged[category] = products;
+  });
+  return normalizeMenuCatalog(merged);
+}
+
 function pendingTicketCounter() {
   const value = Number.parseInt(localStorage.getItem(STORAGE_KEYS.ticketCounterPending) || "0", 10);
   return Number.isFinite(value) && value > 0 ? value : 0;
@@ -956,7 +1089,7 @@ function mergeOrders(cloudOrders, localOrders) {
 }
 
 function supabaseConfig() {
-  const config = window.RINCON_SUPABASE || {};
+  const config = window.RC_ORDERA_SUPABASE || {};
   const rawUrl = String(config.url || "").trim();
   let cleanUrl = rawUrl;
 
@@ -1588,6 +1721,7 @@ async function initializeCloud() {
       await loadCloudData();
     } else {
       pendingClientOrders = [];
+      clearConfirmedCloudMenu();
       stopClientOrdersPolling();
       stopClientOrdersRealtime();
       stopClientAlarm();
@@ -1612,36 +1746,27 @@ async function loadCloudData() {
   const localSettingsPending = hasPendingSettings();
 
   try {
-    let { data: settingsRow, error: settingsError } = await cloudState.client
-      .from("app_settings")
-      .select("menu, settings, menu_revision, settings_revision, menu_updated_at, settings_updated_at")
-      .eq("user_id", cloudState.user.id)
-      .maybeSingle();
-
-    if (settingsError && /menu_revision|settings_revision|menu_updated_at|settings_updated_at|column/i.test(String(settingsError.message || ""))) {
-      ({ data: settingsRow, error: settingsError } = await cloudState.client
+    const settingsRequest = (async () => {
+      let response = await cloudState.client
         .from("app_settings")
-        .select("menu, settings")
+        .select("menu, settings, menu_revision, settings_revision, menu_updated_at, settings_updated_at")
         .eq("user_id", cloudState.user.id)
-        .maybeSingle());
-    }
-
-    if (settingsError) throw settingsError;
-
-    const restaurantProfile = restaurantProfileFromUserMetadata();
-    const { data: publicProfileRow, error: publicProfileError } = await cloudState.client
+        .maybeSingle();
+      if (response.error && /menu_revision|settings_revision|menu_updated_at|settings_updated_at|column/i.test(String(response.error.message || ""))) {
+        response = await cloudState.client
+          .from("app_settings")
+          .select("menu, settings")
+          .eq("user_id", cloudState.user.id)
+          .maybeSingle();
+      }
+      return response;
+    })();
+    const profileRequest = cloudState.client
       .from("restaurant_profiles")
       .select("business_name, logo_url, public_address, phone, active, operational_open, operational_mode, opening_hours, latitude, longitude, country_code, city, region, postal_code, timezone, preferred_language, deleted_at")
       .eq("user_id", cloudState.user.id)
       .maybeSingle();
-    if (!publicProfileError && typeof publicProfileRow?.active === "boolean") {
-      restaurantActive = publicProfileRow.active;
-      localStorage.setItem(STORAGE_KEYS.restaurantActive, restaurantActive ? "1" : "0");
-    } else if (publicProfileError) {
-      console.warn("No se pudo leer el estado publico del restaurante.", publicProfileError);
-    }
-
-    const { data: ownerRole, error: ownerRoleError } = await cloudState.client
+    const ownerRoleRequest = cloudState.client
       .from("user_roles")
       .select("status")
       .eq("user_id", cloudState.user.id)
@@ -1649,6 +1774,34 @@ async function loadCloudData() {
       .eq("status", "active")
       .limit(1)
       .maybeSingle();
+    const ordersRequest = cloudState.client
+      .from("orders")
+      .select("order_json")
+      .eq("user_id", cloudState.user.id)
+      .order("created_at", { ascending: false })
+      .limit(5000);
+    const [settingsResponse, profileResponse, ownerRoleResponse, ordersResponse] = await Promise.all([
+      settingsRequest,
+      profileRequest,
+      ownerRoleRequest,
+      ordersRequest,
+    ]);
+    const { data: settingsRow, error: settingsError } = settingsResponse;
+    const { data: publicProfileRow, error: publicProfileError } = profileResponse;
+    const { data: ownerRole, error: ownerRoleError } = ownerRoleResponse;
+    const { data: cloudOrders, error: ordersError } = ordersResponse;
+
+    if (settingsError) throw settingsError;
+    if (ordersError) throw ordersError;
+
+    const restaurantProfile = restaurantProfileFromUserMetadata();
+    if (!publicProfileError && typeof publicProfileRow?.active === "boolean") {
+      restaurantActive = publicProfileRow.active;
+      localStorage.setItem(STORAGE_KEYS.restaurantActive, restaurantActive ? "1" : "0");
+    } else if (publicProfileError) {
+      console.warn("No se pudo leer el estado publico del restaurante.", publicProfileError);
+    }
+
     if (ownerRoleError) console.warn("No se pudo comprobar el rol del restaurante.", ownerRoleError);
 
     const accountType = normalizeTextSetting(cloudState.user?.user_metadata?.account_type).toLowerCase();
@@ -1679,6 +1832,12 @@ async function loadCloudData() {
     } else if (!localMenuPending) {
       menuCatalog = remoteMenu;
       localStorage.setItem(STORAGE_KEYS.menu, JSON.stringify(menuCatalog));
+      storeConfirmedCloudMenu(remoteMenu);
+    }
+    if (!localMenuPending && menuHasInlineRestaurantImages(remoteMenu)) {
+      menuCatalog = remoteMenu;
+      markMenuPending();
+      localMenuPending = true;
     }
 
     if (settingsRow?.menu_revision !== undefined) {
@@ -1707,15 +1866,6 @@ async function loadCloudData() {
       restaurantActive = publicProfileRow.active;
       localStorage.setItem(STORAGE_KEYS.restaurantActive, restaurantActive ? "1" : "0");
     }
-
-    const { data: cloudOrders, error: ordersError } = await cloudState.client
-      .from("orders")
-      .select("order_json")
-      .eq("user_id", cloudState.user.id)
-      .order("created_at", { ascending: false })
-      .limit(5000);
-
-    if (ordersError) throw ordersError;
 
     const normalizedCloudOrders = (cloudOrders || [])
       .map((row) => ({
@@ -1878,6 +2028,13 @@ async function readCurrentCloudSettingsRow() {
 async function saveCloudSettings() {
   if (!cloudState.client || !cloudState.user) return null;
 
+  if (isInlineRestaurantImage(businessLogoUrl) && navigator.onLine) {
+    businessLogoUrl = await uploadRestaurantImageDataUrl(businessLogoUrl, "profile", "logo");
+    localStorage.setItem(STORAGE_KEYS.businessLogoUrl, businessLogoUrl);
+    if (elements.businessLogoUrlInput) elements.businessLogoUrlInput.value = businessLogoUrl;
+    applyBusinessNameToUi();
+  }
+
   const payload = currentSettingsPayload();
   const profile = currentRestaurantRpcProfilePayload();
   const { data: rpcData, error: rpcError } = await cloudState.client.rpc("save_current_restaurant_settings", {
@@ -1926,20 +2083,87 @@ async function saveCloudSettings() {
   return data;
 }
 
+function isMenuRevisionConflict(error) {
+  return /MENU_REVISION_CONFLICT/i.test(String(error?.message || error?.details || ""));
+}
+
+async function verifyPublicMenuProjection(expectedMenu, expectedRevision = null) {
+  const { data, error } = await cloudState.client
+    .from("restaurant_public_catalogs")
+    .select("menu, menu_revision")
+    .eq("restaurant_user_id", cloudState.user.id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) {
+    const projectionError = new Error(appUiText("No se pudo confirmar la publicacion del menu. Intenta nuevamente."));
+    projectionError.code = "PUBLIC_MENU_PROJECTION_MISSING";
+    throw projectionError;
+  }
+  if (!menuCatalogsMatch(data.menu, expectedMenu)) {
+    const projectionError = new Error(appUiText("El menu se guardo, pero no quedo disponible para los clientes."));
+    projectionError.code = "PUBLIC_MENU_PROJECTION_MISMATCH";
+    throw projectionError;
+  }
+  const revision = Number.parseInt(expectedRevision, 10);
+  const publicRevision = Number.parseInt(data.menu_revision, 10);
+  if (Number.isFinite(revision) && revision > 0 && publicRevision !== revision) {
+    const projectionError = new Error(appUiText("La version del menu para clientes no coincide con la version guardada."));
+    projectionError.code = "PUBLIC_MENU_REVISION_MISMATCH";
+    throw projectionError;
+  }
+  return data;
+}
+
+async function confirmSavedCloudMenu(confirmed, fallbackMenu) {
+  const confirmedMenu = normalizeMenuCatalog(confirmed?.menu || fallbackMenu || EMPTY_MENU_CATALOG);
+  if (!confirmed?.menu && !fallbackMenu) throw new Error("La nube no confirmo el menu guardado.");
+  const revision = confirmed?.menuRevision ?? confirmed?.menu_revision;
+  menuCatalog = confirmedMenu;
+  localStorage.setItem(STORAGE_KEYS.menu, JSON.stringify(menuCatalog));
+  storeCloudRevision(STORAGE_KEYS.menuRevision, revision);
+  storeConfirmedCloudMenu(menuCatalog);
+  await verifyPublicMenuProjection(menuCatalog, revision);
+  return { ...(confirmed || {}), menu: menuCatalog, menuRevision: revision };
+}
+
 async function saveCloudMenu() {
   if (!cloudState.client || !cloudState.user) return null;
-  const nextMenu = normalizeMenuCatalog(menuCatalog);
-  const { data: rpcData, error: rpcError } = await cloudState.client.rpc("save_current_restaurant_menu", {
+  const nextMenu = await materializeMenuImagesForCloud(menuCatalog);
+  if (!menuCatalogsMatch(menuCatalog, nextMenu)) {
+    menuCatalog = nextMenu;
+    localStorage.setItem(STORAGE_KEYS.menu, JSON.stringify(menuCatalog));
+    renderMenu();
+    if (elements.menuEditorDialog?.open) renderMenuEditor();
+  }
+  let { data: rpcData, error: rpcError } = await cloudState.client.rpc("save_current_restaurant_menu", {
     p_menu: nextMenu,
     p_expected_revision: storedCloudRevision(STORAGE_KEYS.menuRevision) || null,
   });
+  if (rpcError && isMenuRevisionConflict(rpcError)) {
+    const baseMenu = readConfirmedCloudMenu();
+    if (!baseMenu) {
+      const conflictError = new Error(appUiText("El menu cambio en otro equipo. Actualiza la nube y vuelve a editar para conservar ambos cambios."));
+      conflictError.code = "MENU_CONFLICT_REQUIRES_REFRESH";
+      throw conflictError;
+    }
+    const currentRow = await readCurrentCloudSettingsRow();
+    const remoteMenu = normalizeMenuCatalog(currentRow?.menu || EMPTY_MENU_CATALOG);
+    const mergedMenu = mergeConcurrentMenuChanges(baseMenu, nextMenu, remoteMenu);
+    const remoteRevision = currentRow?.menu_revision;
+    menuCatalog = mergedMenu;
+    localStorage.setItem(STORAGE_KEYS.menu, JSON.stringify(menuCatalog));
+    storeCloudRevision(STORAGE_KEYS.menuRevision, remoteRevision);
+    if (menuCatalogsMatch(mergedMenu, remoteMenu)) {
+      return confirmSavedCloudMenu({ menu: remoteMenu, menu_revision: remoteRevision }, remoteMenu);
+    }
+    ({ data: rpcData, error: rpcError } = await cloudState.client.rpc("save_current_restaurant_menu", {
+      p_menu: mergedMenu,
+      p_expected_revision: remoteRevision ?? null,
+    }));
+  }
   if (!rpcError) {
     const confirmed = Array.isArray(rpcData) ? rpcData[0] : rpcData;
-    if (!confirmed?.menu) throw new Error("La nube no confirmo el menu guardado.");
-    menuCatalog = normalizeMenuCatalog(confirmed.menu);
-    localStorage.setItem(STORAGE_KEYS.menu, JSON.stringify(menuCatalog));
-    storeCloudRevision(STORAGE_KEYS.menuRevision, confirmed.menuRevision ?? confirmed.menu_revision);
-    return confirmed;
+    return confirmSavedCloudMenu(confirmed);
   }
   if (!isMissingRestaurantRpc(rpcError)) throw rpcError;
 
@@ -1953,7 +2177,10 @@ async function saveCloudMenu() {
     p_settings: { ...(currentRow?.settings || {}), ...currentSettingsPayload() },
     p_profile: currentRestaurantRpcProfilePayload(),
   });
-  if (!legacy.error) return Array.isArray(legacy.data) ? legacy.data[0] : legacy.data;
+  if (!legacy.error) {
+    const confirmed = Array.isArray(legacy.data) ? legacy.data[0] : legacy.data;
+    return confirmSavedCloudMenu(confirmed, nextMenu);
+  }
   if (!isMissingRestaurantRpc(legacy.error)) throw legacy.error;
 
   const { data, error } = await cloudState.client.from("app_settings").upsert({
@@ -1963,7 +2190,7 @@ async function saveCloudMenu() {
     updated_at: new Date().toISOString(),
   }).select("menu, settings, updated_at").maybeSingle();
   if (error) throw error;
-  return data;
+  return confirmSavedCloudMenu(data, nextMenu);
 }
 
 async function saveRestaurantPublicProfile() {
@@ -3350,15 +3577,20 @@ async function restaurantImageFileToDataUrl(file) {
     img.src = dataUrl;
   });
 
-  const maxSide = 900;
+  const maxSide = 800;
   const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
   const canvas = document.createElement("canvas");
   canvas.width = Math.max(1, Math.round(image.width * scale));
   canvas.height = Math.max(1, Math.round(image.height * scale));
   const context = canvas.getContext("2d");
   context.drawImage(image, 0, 0, canvas.width, canvas.height);
-  const compressed = canvas.toDataURL("image/jpeg", 0.76);
-  if (compressed.length > 950000) {
+  let quality = 0.8;
+  let compressed = canvas.toDataURL("image/jpeg", quality);
+  while (compressed.length > 420000 && quality > 0.5) {
+    quality -= 0.08;
+    compressed = canvas.toDataURL("image/jpeg", quality);
+  }
+  if (compressed.length > 550000) {
     throw new Error("La imagen sigue muy pesada. Recorta la foto o baja la calidad.");
   }
   return compressed;
@@ -4269,6 +4501,94 @@ function normalizeProductImageUrl(value) {
   return String(value || "").trim();
 }
 
+function isInlineRestaurantImage(value) {
+  return /^data:image\/(?:jpeg|png|webp);base64,/i.test(normalizeProductImageUrl(value));
+}
+
+function restaurantImageDataUrlToBlob(value) {
+  const dataUrl = normalizeProductImageUrl(value);
+  const match = dataUrl.match(/^data:(image\/(?:jpeg|png|webp));base64,([\s\S]+)$/i);
+  if (!match) throw new Error("La imagen preparada no tiene un formato valido.");
+  const binary = window.atob(match[2]);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return new Blob([bytes], { type: match[1].toLowerCase() });
+}
+
+function restaurantMediaPathSegment(value, fallback = "image") {
+  const clean = String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+  return clean || fallback;
+}
+
+async function uploadRestaurantImageDataUrl(dataUrl, scope, itemId) {
+  if (!isInlineRestaurantImage(dataUrl)) return normalizeProductImageUrl(dataUrl);
+  if (!cloudState.client || !cloudState.user || !navigator.onLine) return normalizeProductImageUrl(dataUrl);
+
+  const blob = restaurantImageDataUrlToBlob(dataUrl);
+  if (blob.size > 2 * 1024 * 1024) throw new Error("La imagen optimizada supera el limite permitido de 2 MB.");
+  const extension = blob.type === "image/png" ? "png" : blob.type === "image/webp" ? "webp" : "jpg";
+  const fingerprint = hashText(`${blob.type}|${blob.size}|${dataUrl}`);
+  const cleanScope = restaurantMediaPathSegment(scope, "media");
+  const cleanItemId = restaurantMediaPathSegment(itemId, "image");
+  const path = `${cloudState.user.id}/${cleanScope}/${cleanItemId}-${fingerprint}.${extension}`;
+
+  const { error } = await withCloudTimeout(
+    cloudState.client.storage.from(RESTAURANT_MEDIA_BUCKET).upload(path, blob, {
+      cacheControl: "31536000",
+      contentType: blob.type,
+      upsert: true,
+    }),
+    "La foto no pudo terminar de subir a la nube.",
+    30000
+  );
+  if (error) {
+    if (/bucket|not found|404/i.test(String(error.message || ""))) {
+      throw new Error("El almacenamiento de fotos aun no esta habilitado. Actualiza la nube e intenta nuevamente.");
+    }
+    throw error;
+  }
+
+  const { data } = cloudState.client.storage.from(RESTAURANT_MEDIA_BUCKET).getPublicUrl(path);
+  const publicUrl = normalizeProductImageUrl(data?.publicUrl);
+  if (!publicUrl) throw new Error("No fue posible obtener la direccion final de la foto.");
+  return publicUrl;
+}
+
+async function materializeMenuImagesForCloud(menu) {
+  const normalized = normalizeMenuCatalog(menu);
+  if (!cloudState.client || !cloudState.user || !navigator.onLine) return normalized;
+
+  const pendingImages = [];
+  Object.entries(normalized).forEach(([category, products]) => {
+    products.forEach((product) => {
+      if (isInlineRestaurantImage(product.imageUrl)) pendingImages.push({ category, product });
+    });
+  });
+
+  for (let index = 0; index < pendingImages.length; index += 3) {
+    const batch = pendingImages.slice(index, index + 3);
+    await Promise.all(batch.map(async ({ category, product }) => {
+      product.imageUrl = await uploadRestaurantImageDataUrl(
+        product.imageUrl,
+        "products",
+        product.id || stableProductId(category, product.name, product.description)
+      );
+    }));
+  }
+  return normalized;
+}
+
+function menuHasInlineRestaurantImages(menu) {
+  return Object.values(normalizeMenuCatalog(menu)).some((products) =>
+    products.some((product) => isInlineRestaurantImage(product.imageUrl))
+  );
+}
+
 function normalizeProductDescription(value) {
   return String(value || "").trim().replace(/\s+/g, " ").slice(0, 260);
 }
@@ -5056,7 +5376,7 @@ async function saveSettingsWhenPossible(options = {}) {
   return { localOnly: true };
 }
 
-async function saveMenuWhenPossible(options = {}) {
+async function saveMenuWhenPossibleNow(options = {}) {
   const { silent = false } = options;
   if (cloudState.user && navigator.onLine) {
     try {
@@ -5079,6 +5399,13 @@ async function saveMenuWhenPossible(options = {}) {
   }
   updateCloudStatus();
   return { localOnly: true };
+}
+
+function saveMenuWhenPossible(options = {}) {
+  const operation = () => saveMenuWhenPossibleNow(options);
+  const queuedOperation = menuSaveQueue.catch(() => {}).then(operation);
+  menuSaveQueue = queuedOperation;
+  return queuedOperation;
 }
 
 function readCurrencySymbol() {
@@ -6407,55 +6734,20 @@ async function deleteCategory() {
 }
 
 async function saveProduct() {
-  const category =
-  elements.productCategorySelect.value;
-
-/*
- * ESPAÑOL
- */
-const name =
-  elements.productNameInput.value.trim();
-
-const description =
-  normalizeProductDescription(
-    elements.productDescriptionInput.value
-  );
-
-/*
- * POLACO
- */
-const namePl =
-  elements.productNamePlInput
-    ? elements.productNamePlInput.value.trim()
+  if (elements.saveProductButton.disabled) return;
+  const category = elements.productCategorySelect.value;
+  const name = elements.productNameInput.value.trim();
+  const description = normalizeProductDescription(elements.productDescriptionInput.value);
+  const namePl = elements.productNamePlInput ? elements.productNamePlInput.value.trim() : "";
+  const descriptionPl = elements.productDescriptionPlInput
+    ? normalizeProductDescription(elements.productDescriptionPlInput.value)
     : "";
-
-const descriptionPl =
-  elements.productDescriptionPlInput
-    ? normalizeProductDescription(
-        elements.productDescriptionPlInput.value
-      )
+  const nameEn = elements.productNameEnInput ? elements.productNameEnInput.value.trim() : "";
+  const descriptionEn = elements.productDescriptionEnInput
+    ? normalizeProductDescription(elements.productDescriptionEnInput.value)
     : "";
-
-/*
- * INGLÉS
- */
-const nameEn =
-  elements.productNameEnInput
-    ? elements.productNameEnInput.value.trim()
-    : "";
-
-const descriptionEn =
-  elements.productDescriptionEnInput
-    ? normalizeProductDescription(
-        elements.productDescriptionEnInput.value
-      )
-    : "";
-
-const price =
-  Number.parseFloat(
-    elements.productPriceInput.value
-  ) || 0;
-  const imageUrl = normalizeProductImageUrl(elements.productImageUrlInput.value);
+  const price = Number.parseFloat(elements.productPriceInput.value) || 0;
+  let imageUrl = normalizeProductImageUrl(elements.productImageUrlInput.value);
   const available = elements.productAvailableInput.checked;
   const station = normalizeProductStation(elements.productStationSelect?.value);
 
@@ -6470,63 +6762,57 @@ const price =
   }
 
   const previousProduct = editingProduct ? (menuCatalog[editingProduct.category] || [])[editingProduct.index] : null;
-  const translations =
-  normalizeProductTranslations(
-    previousProduct || {},
-    name,
-    description
-  );
+  const productId = normalizeProductId(previousProduct?.id || previousProduct?.productId) || createProductId();
+  const menuBeforeSave = normalizeMenuCatalog(menuCatalog);
+  elements.saveProductButton.disabled = true;
 
-/*
- * Los campos principales actuales
- * corresponden al español.
- */
-translations.es = {
-  name,
-  description,
-};
+  try {
+    if (isInlineRestaurantImage(imageUrl) && cloudState.user && navigator.onLine) {
+      updateCloudStatus("Subiendo foto...");
+      imageUrl = await uploadRestaurantImageDataUrl(imageUrl, "products", productId);
+      elements.productImageUrlInput.value = imageUrl;
+    }
 
-translations.pl = {
-  name: namePl,
-  description: descriptionPl,
-};
+    const translations = normalizeProductTranslations(previousProduct || {}, name, description);
+    translations.es = { name, description };
+    translations.pl = { name: namePl, description: descriptionPl };
+    translations.en = { name: nameEn, description: descriptionEn };
 
-translations.en = {
-  name: nameEn,
-  description: descriptionEn,
-};
+    const product = {
+      id: productId,
+      name,
+      description,
+      translations,
+      price,
+      available,
+      imageUrl,
+      station,
+    };
 
-const product = {
-  id:
-    normalizeProductId(
-      previousProduct?.id ||
-      previousProduct?.productId
-    ) ||
-    createProductId(),
-
-  name,
-  description,
-
-  translations,
-
-  price,
-  available,
-  imageUrl,
-  station,
-};
-  const wasEditing = Boolean(editingProduct);
-
-  if (editingProduct) {
-    const oldList = menuCatalog[editingProduct.category] || [];
-    oldList.splice(editingProduct.index, 1);
+    if (editingProduct) {
+      const oldList = menuCatalog[editingProduct.category] || [];
+      oldList.splice(editingProduct.index, 1);
+    }
+    menuCatalog[category].push(product);
+    activeCategory = category;
+    const result = await saveMenuCatalog();
+    clearProductForm();
+    renderMenuEditor();
+    showToast(syncResultMessage("Producto guardado.", result));
+  } catch (error) {
+    console.error("No fue posible guardar el producto:", error);
+    menuCatalog = menuBeforeSave;
+    renderCategories();
+    renderMenu();
+    renderMenuEditor();
+    updateCloudStatus();
+    const message = String(error?.message || "");
+    alert(/almacenamiento de fotos|foto|imagen|direccion final/i.test(message)
+      ? message
+      : "No fue posible guardar el producto. Los datos del formulario se conservaron para reintentar.");
+  } finally {
+    elements.saveProductButton.disabled = false;
   }
-
-  menuCatalog[category].push(product);
-  activeCategory = category;
-  const result = await saveMenuCatalog();
-  clearProductForm();
-  renderMenuEditor();
-  showToast(syncResultMessage("Producto guardado.", result));
 }
 
 function editProduct(index) {
@@ -8661,7 +8947,6 @@ if (elements.businessLogoFileInput) {
     try {
       businessLogoUrl = await restaurantImageFileToDataUrl(file);
       elements.businessLogoUrlInput.value = businessLogoUrl;
-      localStorage.setItem(STORAGE_KEYS.businessLogoUrl, businessLogoUrl);
       applyBusinessNameToUi();
       showToast("Logo optimizado. Presiona guardar ajustes para subirlo.");
     } catch (error) {
@@ -8776,3 +9061,4 @@ initializeCloud().catch((error) => {
   const friendlyMessage = navigator.onLine ? setCloudError(error) : "Sin internet. Puedes continuar con los datos guardados.";
   elements.authMessage.textContent = friendlyMessage;
 });
+

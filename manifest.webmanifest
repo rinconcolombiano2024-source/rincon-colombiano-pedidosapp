@@ -3,7 +3,7 @@
   "short_name": "RC Restaurante",
   "id": "./restaurant-app",
   "description": "Pedidos, tickets internos, menú, personal, historial y cierres del restaurante.",
-  "start_url": "./index.html?app=v87.0.0",
+  "start_url": "./index.html?app=v89.0.0",
   "scope": ".",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],
@@ -32,3 +32,4 @@
     }
   ]
 }
+
