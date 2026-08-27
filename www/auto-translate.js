@@ -1328,7 +1328,60 @@ if (
     createLanguageControl();
     translateTree();
   }
+let translateScheduled = false;
+const pendingTranslateRoots = new Set();
 
-  const observer = new MutationObserver(scheduleTranslate);
-  observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
-})();
+function scheduleTranslateRoot(root) {
+  if (!root) return;
+
+  const element =
+    root.nodeType === Node.ELEMENT_NODE
+      ? root
+      : root.parentElement;
+
+  if (!element) return;
+
+  pendingTranslateRoots.add(element);
+
+  if (translateScheduled) return;
+
+  translateScheduled = true;
+
+  requestAnimationFrame(() => {
+    translateScheduled = false;
+
+    const roots = Array.from(pendingTranslateRoots);
+    pendingTranslateRoots.clear();
+
+    for (const rootElement of roots) {
+      try {
+        translateTree(rootElement);
+      } catch (error) {
+        console.error("RC ORDERA TRANSLATE ERROR", error);
+      }
+    }
+  });
+}
+
+const observer = new MutationObserver((mutations) => {
+  for (const mutation of mutations) {
+    if (mutation.type === "characterData") {
+      scheduleTranslateRoot(mutation.target);
+      continue;
+    }
+
+    for (const node of mutation.addedNodes) {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        scheduleTranslateRoot(node);
+      } else if (node.nodeType === Node.TEXT_NODE) {
+        scheduleTranslateRoot(node.parentElement);
+      }
+    }
+  }
+});
+
+observer.observe(document.documentElement, {
+  childList: true,
+  subtree: true,
+  characterData: true
+});
