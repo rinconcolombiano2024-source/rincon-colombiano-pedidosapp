@@ -3,7 +3,7 @@
   "short_name": "RC Stanowisko",
   "id": "./waiter-app-pl",
   "description": "Zamówienia i obsługa stanowisk restauracji.",
-  "start_url": "./mesero.html?app=v87.0.0&lang=pl",
+  "start_url": "./mesero.html?app=v89.0.0&lang=pl",
   "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],
@@ -16,3 +16,4 @@
     { "src": "app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ]
 }
+

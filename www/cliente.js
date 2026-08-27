@@ -53,6 +53,7 @@ const customerElements = {
   favoriteRestaurantButton: document.querySelector("#customerFavoriteRestaurantButton"),
   tableLabel: document.querySelector("#customerTableLabel"),
   topLocation: document.querySelector("#customerTopLocation"),
+  greeting: document.querySelector("#customerGreeting"),
   greetingName: document.querySelector("#customerGreetingName"),
   profileAvatarInitials:
   document.querySelector("#customerProfileAvatarInitials"),
@@ -123,7 +124,7 @@ const CUSTOMER_I18N = {
     heroSubtitle: "Escanea, elige y envia tu pedido.",
     warning: "App de prueba: si algo sale diferente, el restaurante confirmara el pedido y cualquier ajuste antes de prepararlo.",
     testEnvironment: "Entorno de prueba",
-    greeting: "Hola,",
+    greeting: "Hola",
     defaultCustomerName: "Cliente",
     deliveryTo: "Entregar en",
     homePrompt: "¿Que se te antoja hoy?",
@@ -433,7 +434,7 @@ const CUSTOMER_I18N = {
     heroSubtitle: "Zeskanuj, wybierz i wyslij zamowienie.",
     warning: "Aplikacja testowa: jesli cos bedzie nie tak, restauracja potwierdzi zamowienie i korekty przed przygotowaniem.",
     testEnvironment: "Srodowisko testowe",
-    greeting: "Czesc,",
+    greeting: "Cześć",
     defaultCustomerName: "Klient",
     deliveryTo: "Dostawa pod adres",
     homePrompt: "Na co masz dzisiaj ochote?",
@@ -743,7 +744,7 @@ const CUSTOMER_I18N = {
     heroSubtitle: "Scan, choose, and send your order.",
     warning: "Test app: if something is different, the restaurant will confirm the order and any adjustment before preparing it.",
     testEnvironment: "Test environment",
-    greeting: "Hello,",
+    greeting: "Hello",
     defaultCustomerName: "Customer",
     deliveryTo: "Deliver to",
     homePrompt: "What would you like today?",
@@ -1480,6 +1481,30 @@ function customerQueueDescriptionTranslation(dish) {
   customerQueueMenuTextTranslation(dish?.description || "");
 }
 
+function customerRenderGreeting(fullName = customerResolvedProfileName) {
+  const firstName = customerNormalizeText(fullName).split(/\s+/)[0] || "";
+  if (customerElements.greeting) {
+    customerElements.greeting.textContent = firstName ? `${customerT("greeting")}, ` : customerT("greeting");
+  }
+  if (customerElements.greetingName) {
+    customerElements.greetingName.textContent = firstName;
+    customerElements.greetingName.hidden = !firstName;
+  }
+}
+
+function customerResetResolvedIdentity(userId = "") {
+  customerIdentityUserId = String(userId || "");
+  customerResolvedProfileName = "";
+  customerProfileLoaded = false;
+  customerRenderGreeting("");
+  if (customerElements.profileAvatarInitials) customerElements.profileAvatarInitials.textContent = "C";
+}
+
+function customerAdoptIdentityUser(user) {
+  const nextUserId = String(user?.id || "");
+  if (nextUserId !== customerIdentityUserId) customerResetResolvedIdentity(nextUserId);
+}
+
 function customerApplyTranslations() {
   document.documentElement.lang = customerLanguage;
   if (customerElements.languageSelect) customerElements.languageSelect.value = customerLanguage;
@@ -1507,12 +1532,7 @@ function customerApplyTranslations() {
     const category = String(button.dataset.category || "");
     if (label && categoryLabels[category]) label.textContent = categoryLabels[category];
   });
-  if (
-    customerElements.greetingName &&
-    ["Cliente", "Klient", "Customer"].includes(customerElements.greetingName.textContent.trim())
-  ) {
-    customerElements.greetingName.textContent = customerT("defaultCustomerName");
-  }
+  customerRenderGreeting();
 }
 
 function customerSetLanguage(language) {
@@ -1557,6 +1577,9 @@ function customerPaymentMethodText(value) {
 let customerClient = null;
 let customerAuthInitialized = false;
 let customerUser = null;
+let customerIdentityUserId = "";
+let customerResolvedProfileName = "";
+let customerProfileLoaded = false;
 let customerRecoveringPassword = false;
 let customerHistoryRows = [];
 let customerRestaurants = [];
@@ -1595,6 +1618,7 @@ let customerStatusTimer = null;
 let customerTrackingRealtimeChannel = null;
 let customerTrackingRealtimeSignature = "";
 let customerTrackingRefreshTimer = null;
+let customerTrackingRealtimeRetryTimer = null;
 let customerTrackingRpcAvailable = null;
 let customerChatTimer = null;
 let customerKnownChatMessageIds = new Set();
@@ -1602,9 +1626,14 @@ let customerChatLoadedOnce = false;
 let customerMenuRealtimeChannel = null;
 let customerMenuRealtimeStoreId = "";
 let customerMenuRealtimeTimer = null;
+let customerMenuRealtimeRetryTimer = null;
 let customerDirectoryRealtimeChannel = null;
 let customerDirectoryRealtimeTimer = null;
 let customerDirectoryPollTimer = null;
+let customerDirectoryRealtimeRetryTimer = null;
+let customerDirectoryLoadPromise = null;
+let customerMenuFetchPromise = null;
+let customerMenuFetchStoreId = "";
 let customerRestaurantFavorite = false;
 let customerCurrentView = customerStoreId ? "store" : "home";
 let customerPaymentReturnHandled = false;
@@ -1782,7 +1811,7 @@ function customerRoundMoney(value) {
 }
 
 function customerSupabaseConfig() {
-  const config = window.RINCON_SUPABASE || {};
+  const config = window.RC_ORDERA_SUPABASE || {};
   const rawUrl = String(config.url || "").trim();
   let cleanUrl = rawUrl;
 
@@ -1985,10 +2014,8 @@ function customerApplyProfileFields(
 
   };
 
-if (customerElements.greetingName) {
-  customerElements.greetingName.textContent =
-    fullName.split(/\s+/)[0] || customerT("defaultCustomerName");
-}
+  if (fullName) customerResolvedProfileName = fullName;
+  customerRenderGreeting();
   if (customerElements.profileAvatarInitials) {
 
   const nameParts =
@@ -2136,6 +2163,7 @@ function customerEnsureClient() {
 }
 
 function customerRenderAccount() {
+  customerAdoptIdentityUser(customerUser);
   const email = customerUser?.email || "";
   if (customerElements.accountSummary) {
     customerElements.accountSummary.removeAttribute("data-i18n");
@@ -2149,7 +2177,7 @@ function customerRenderAccount() {
   if (customerElements.sendButton) customerElements.sendButton.disabled = customerCart.length === 0;
   if (customerUser && !customerRecoveringPassword) customerCloseAuthDialog();
 
-  if (customerUser) {
+  if (customerUser && !customerProfileLoaded) {
     customerApplyProfileFields(customerProfileFromMetadata());
     if (!customerElements.nameInput.value.trim()) {
       const fallbackName = String(email.split("@")[0] || "").trim();
@@ -2425,9 +2453,10 @@ async function customerSignOut() {
     customerStopOrderTrackingRealtime();
     customerTrackedOrder = null;
     customerUser = null;
+    customerResetResolvedIdentity();
     customerHistoryRows = [];
     customerRenderAccount();
-    window.location.replace("index.html?app=v87.0.0");
+    window.location.replace("index.html?app=v89.0.0");
   }
 }
 
@@ -2517,11 +2546,13 @@ async function customerEnsureIdentity() {
 
 async function customerLoadProfile() {
   if (!customerClient || !customerUser) return;
+  const requestedUserId = customerUser.id;
   const { data, error } = await customerClient
     .from("customer_profiles")
     .select("full_name, phone, default_address, language")
-    .eq("user_id", customerUser.id)
+    .eq("user_id", requestedUserId)
     .maybeSingle();
+  if (customerUser?.id !== requestedUserId) return;
   if (error || !data) {
     const metadataProfile = customerProfileFromMetadata();
     customerApplyProfileFields(metadataProfile);
@@ -2530,6 +2561,7 @@ async function customerLoadProfile() {
     }
     return;
   }
+  customerProfileLoaded = true;
   if (data.language && CUSTOMER_I18N[data.language]) customerSetLanguage(data.language);
   customerApplyProfileFields(
   data,
@@ -2637,6 +2669,10 @@ async function customerSaveProfile() {
   if (authData?.user) {
     customerUser = authData.user;
   }
+
+  customerResolvedProfileName = profile.full_name;
+  customerProfileLoaded = true;
+  customerRenderGreeting();
 
 
   return profile;
@@ -2966,6 +3002,10 @@ function customerIsMissingRpc(error) {
 }
 
 function customerStopDirectoryRealtime() {
+  if (customerDirectoryRealtimeRetryTimer) {
+    window.clearTimeout(customerDirectoryRealtimeRetryTimer);
+    customerDirectoryRealtimeRetryTimer = null;
+  }
   if (customerDirectoryRealtimeTimer) {
     window.clearTimeout(customerDirectoryRealtimeTimer);
     customerDirectoryRealtimeTimer = null;
@@ -3000,21 +3040,30 @@ function customerStartDirectoryRealtime() {
   if (customerRegistrationRegion.countryCode) {
     changeFilter.filter = `country_code=eq.${customerRegistrationRegion.countryCode}`;
   }
-  customerDirectoryRealtimeChannel = customerClient
+  const channel = customerClient
     .channel(`public-restaurant-directory-v86-1-${customerRegistrationRegion.countryCode || "all"}`)
     .on(
       "postgres_changes",
       changeFilter,
       customerScheduleDirectoryRefresh
-    )
-    .subscribe((status) => {
-      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-        window.setTimeout(() => {
-          customerStopDirectoryRealtime();
-          customerStartDirectoryRealtime();
-        }, 2000);
-      }
-    });
+    );
+  customerDirectoryRealtimeChannel = channel;
+  channel.subscribe((status) => {
+    if (channel !== customerDirectoryRealtimeChannel) return;
+    if (status === "SUBSCRIBED") {
+      customerScheduleDirectoryRefresh();
+      return;
+    }
+    if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+      customerDirectoryRealtimeChannel = null;
+      if (customerClient?.removeChannel) customerClient.removeChannel(channel).catch(() => {});
+      if (customerDirectoryRealtimeRetryTimer) window.clearTimeout(customerDirectoryRealtimeRetryTimer);
+      customerDirectoryRealtimeRetryTimer = window.setTimeout(() => {
+        customerDirectoryRealtimeRetryTimer = null;
+        if (window.navigator.onLine) customerStartDirectoryRealtime();
+      }, 2000);
+    }
+  });
 }
 
 function customerRestaurantDedupeKey(restaurant) {
@@ -3085,7 +3134,7 @@ function customerClearRestaurantSelection(messageKey = "") {
 
   const nextUrl = new URL(window.location.href);
   nextUrl.searchParams.delete("store");
-  nextUrl.searchParams.set("app", "v87.0.0");
+  nextUrl.searchParams.set("app", "v89.0.0");
   window.history.replaceState({}, "", nextUrl.toString());
 
   customerApplyBusinessName();
@@ -3278,7 +3327,15 @@ return `
   customerRenderSelectedRestaurantDetails();
 }
 
-async function customerLoadRestaurantDirectory(options = {}) {
+function customerLoadRestaurantDirectory(options = {}) {
+  if (customerDirectoryLoadPromise) return customerDirectoryLoadPromise;
+  customerDirectoryLoadPromise = customerLoadRestaurantDirectoryNow(options).finally(() => {
+    customerDirectoryLoadPromise = null;
+  });
+  return customerDirectoryLoadPromise;
+}
+
+async function customerLoadRestaurantDirectoryNow(options = {}) {
   const { silent = false } = options;
   const client = customerEnsureClient();
   if (!client || !customerElements.restaurantList) return;
@@ -3348,7 +3405,7 @@ async function customerSelectRestaurant(storeId, options = {}) {
   if (options.updateUrl !== false) {
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("store", customerStoreId);
-    nextUrl.searchParams.set("app", "v87.0.0");
+    nextUrl.searchParams.set("app", "v89.0.0");
     window.history.replaceState({}, "", nextUrl.toString());
   }
 
@@ -3363,7 +3420,19 @@ async function customerSelectRestaurant(storeId, options = {}) {
   }
 }
 
-async function customerFetchPublicMenu(storeId) {
+function customerFetchPublicMenu(storeId) {
+  if (customerMenuFetchPromise && customerMenuFetchStoreId === storeId) return customerMenuFetchPromise;
+  customerMenuFetchStoreId = storeId;
+  customerMenuFetchPromise = customerFetchPublicMenuNow(storeId).finally(() => {
+    if (customerMenuFetchStoreId === storeId) {
+      customerMenuFetchPromise = null;
+      customerMenuFetchStoreId = "";
+    }
+  });
+  return customerMenuFetchPromise;
+}
+
+async function customerFetchPublicMenuNow(storeId) {
   const { data: rpcData, error: rpcError } = await customerClient.rpc("get_public_restaurant_menu", {
     p_user_id: storeId,
   });
@@ -3393,6 +3462,10 @@ async function customerFetchPublicMenu(storeId) {
 }
 
 function customerStopMenuRealtime() {
+  if (customerMenuRealtimeRetryTimer) {
+    window.clearTimeout(customerMenuRealtimeRetryTimer);
+    customerMenuRealtimeRetryTimer = null;
+  }
   if (customerMenuRealtimeTimer) {
     window.clearTimeout(customerMenuRealtimeTimer);
     customerMenuRealtimeTimer = null;
@@ -3431,7 +3504,7 @@ function customerStartMenuRealtime() {
   customerStopMenuRealtime();
   const storeId = customerStoreId;
   customerMenuRealtimeStoreId = storeId;
-  customerMenuRealtimeChannel = customerClient
+  const channel = customerClient
     .channel(`public-menu-${storeId}`)
     .on(
       "postgres_changes",
@@ -3460,13 +3533,29 @@ function customerStartMenuRealtime() {
         await customerLoadRestaurantDirectory({ silent: true });
         if (storeId === customerStoreId) customerScheduleMenuRealtimeRefetch();
       }
-    )
-    .subscribe((status) => {
-      if (storeId !== customerStoreId) return;
-      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-        customerSetStatus(customerT("menuRealtimeError"), "error");
-      }
-    });
+    );
+  customerMenuRealtimeChannel = channel;
+  channel.subscribe((status) => {
+    if (storeId !== customerStoreId || channel !== customerMenuRealtimeChannel) return;
+    if (status === "SUBSCRIBED") {
+      customerScheduleMenuRealtimeRefetch();
+      return;
+    }
+    if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+      customerMenuRealtimeChannel = null;
+      customerMenuRealtimeStoreId = "";
+      if (customerClient?.removeChannel) customerClient.removeChannel(channel).catch(() => {});
+      customerSetStatus(customerT("menuRealtimeError"), "error");
+      if (customerMenuRealtimeRetryTimer) window.clearTimeout(customerMenuRealtimeRetryTimer);
+      customerMenuRealtimeRetryTimer = window.setTimeout(() => {
+        customerMenuRealtimeRetryTimer = null;
+        if (storeId === customerStoreId && window.navigator.onLine) {
+          customerStartMenuRealtime();
+          customerRefreshMenu().catch(() => {});
+        }
+      }, 2000);
+    }
+  });
 }
 
 function customerMenuProductCount(menu = customerMenu) {
@@ -4704,6 +4793,10 @@ function customerRenderCourierTracking(row = null) {
 }
 
 function customerStopOrderTrackingRealtime() {
+  if (customerTrackingRealtimeRetryTimer) {
+    window.clearTimeout(customerTrackingRealtimeRetryTimer);
+    customerTrackingRealtimeRetryTimer = null;
+  }
   if (customerTrackingRefreshTimer) {
     window.clearTimeout(customerTrackingRefreshTimer);
     customerTrackingRefreshTimer = null;
@@ -4743,9 +4836,22 @@ function customerStartOrderTrackingRealtime(row = {}) {
       customerScheduleTrackingRefresh
     );
   }
-  customerTrackingRealtimeChannel = channel.subscribe((status) => {
+  customerTrackingRealtimeChannel = channel;
+  channel.subscribe((status) => {
+    if (channel !== customerTrackingRealtimeChannel || signature !== customerTrackingRealtimeSignature) return;
+    if (status === "SUBSCRIBED") {
+      customerScheduleTrackingRefresh();
+      return;
+    }
     if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-      customerStopOrderTrackingRealtime();
+      customerTrackingRealtimeChannel = null;
+      customerTrackingRealtimeSignature = "";
+      if (customerClient?.removeChannel) customerClient.removeChannel(channel).catch(() => {});
+      if (customerTrackingRealtimeRetryTimer) window.clearTimeout(customerTrackingRealtimeRetryTimer);
+      customerTrackingRealtimeRetryTimer = window.setTimeout(() => {
+        customerTrackingRealtimeRetryTimer = null;
+        if (customerTrackedOrder?.id && window.navigator.onLine) customerPollOrderStatus().catch(() => {});
+      }, 2000);
     }
   });
 }
@@ -5799,12 +5905,8 @@ if (customerElements.registerNeighborhoodInput) {
   await customerSaveProfile();
 
 
-  if (customerElements.greetingName) {
-
-    customerElements.greetingName.textContent =
-      newName.split(/\s+/)[0] || customerT("defaultCustomerName");
-
-  }
+  customerResolvedProfileName = newName;
+  customerRenderGreeting();
 
 
   customerRenderLocationSummary();
@@ -5834,9 +5936,13 @@ window.addEventListener("online", () => {
 
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState !== "visible" || !window.navigator.onLine) return;
+  customerStartDirectoryRealtime();
   customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
   if (customerTrackedOrder) customerPollOrderStatus().catch(() => {});
-  if (customerStoreId) customerRefreshMenu().catch(() => {});
+  if (customerStoreId) {
+    customerStartMenuRealtime();
+    customerRefreshMenu().catch(() => {});
+  }
 });
 
 window.addEventListener("offline", () => {
@@ -5869,3 +5975,4 @@ customerLoadMenu().catch(() => {
 if (customerParams.get("auth") === "login" || customerParams.get("auth") === "register") {
   window.setTimeout(() => customerOpenAuthDialog(customerParams.get("auth")), 250);
 }
+

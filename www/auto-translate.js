@@ -881,7 +881,7 @@ if (
   // 4. Los textos no incluidos en el diccionario se traducen en el servidor.
   // La clave privada del proveedor nunca se expone en el navegador.
   try {
-    const config = window.RINCON_SUPABASE || {};
+    const config = window.RC_ORDERA_SUPABASE || {};
     const baseUrl = String(config.url || "").replace(/\/+$/, "");
     const publicKey = String(config.anonKey || "");
     if (!baseUrl || !publicKey) return clean;
@@ -1274,7 +1274,7 @@ if (customerSelect) {
   window.confirm = (message) => nativeConfirm(translateUiMessage(message));
   window.prompt = (message, defaultValue) => nativePrompt(translateUiMessage(message), defaultValue);
 
-  window.RinconAutoTranslate = {
+  window.RCOrderaAutoTranslate = {
     translate: translateUiMessage,
     setLanguage(nextLanguage) {
   const normalizedLanguage = String(

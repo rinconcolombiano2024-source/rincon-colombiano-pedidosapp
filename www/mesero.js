@@ -78,7 +78,7 @@ function waiterEscape(value) {
 }
 
 function waiterConfig() {
-  const config = window.RINCON_SUPABASE || {};
+  const config = window.RC_ORDERA_SUPABASE || {};
   return {
     url: String(config.url || "").replace(/\/+$/, "").replace(/\/rest\/v1$/i, ""),
     anonKey: String(config.anonKey || "").trim(),
@@ -1287,7 +1287,7 @@ async function waiterSignOut() {
     waiterUser = null;
     waiterMembership = null;
     waiterBusinessContext = null;
-    window.location.replace("index.html?app=v87.0.0");
+    window.location.replace("index.html?app=v89.0.0");
   }
 }
 
@@ -1644,3 +1644,4 @@ waiterInitialize().catch((error) => {
   waiterElements.accessMessage.textContent = "No fue posible iniciar la estacion. Revisa internet e intenta nuevamente.";
   waiterSetStatus("Error de conexion", "error");
 });
+

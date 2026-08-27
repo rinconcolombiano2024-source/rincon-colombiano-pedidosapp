@@ -1,5 +1,5 @@
 const COURIER_VAPID_PUBLIC_KEY = "BJzCszQo4HrAtXYFQBkA_HSiqTjSqPGIa-InDIqgYc1Bqcq3V2Cj4lAuN-HcV0fO1Z95EPNx-qhJU85Rl4nxJxE";
-const COURIER_APP_VERSION = "v87.0.0";
+const COURIER_APP_VERSION = "v89.0.0";
 const courierParams = new URLSearchParams(window.location.search);
 const COURIER_PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 const COURIER_DOCUMENT_BUCKET = "courier-documents";
@@ -218,7 +218,7 @@ function courierRenderRegionOptions(countryCode, selectedRegion = "") {
 function courierGoogleMapsApiKey() {
   return courierNormalizeText(
     window.RINCON_GOOGLE_MAPS_API_KEY
-      || window.RINCON_SUPABASE?.googleMapsApiKey
+      || window.RC_ORDERA_SUPABASE?.googleMapsApiKey
       || localStorage.getItem(COURIER_GOOGLE_MAPS_KEY_STORAGE)
   );
 }
@@ -511,7 +511,7 @@ function courierInputValue(input) {
 }
 
 function courierSupabaseConfig() {
-  const config = window.RINCON_SUPABASE || {};
+  const config = window.RC_ORDERA_SUPABASE || {};
   const rawUrl = String(config.url || "").trim();
   let cleanUrl = rawUrl;
 
@@ -3025,3 +3025,4 @@ courierRenderRegionOptions(courierRegistrationRegion.countryCode, courierRegistr
 courierRenderVehicleRequirements();
 courierSetView(courierCurrentView, { instant: true });
 courierInitialize();
+
