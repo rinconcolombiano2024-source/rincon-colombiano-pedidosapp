@@ -2913,10 +2913,22 @@ function stopClientAlarm() {
 
 function startClientOrdersPolling() {
   stopClientOrdersPolling();
+
   if (!canUseCustomerModule()) return;
+
+  // Si Realtime está activo, no duplicar trabajo con polling.
+  if (clientOrdersChannel) return;
+
+  // Polling solo como respaldo.
   clientOrdersTimer = window.setInterval(() => {
-    refreshClientOrders({ silent: true }).catch(() => {});
-  }, 20000);
+    if (
+      document.visibilityState === "visible" &&
+      navigator.onLine &&
+      !clientOrdersChannel
+    ) {
+      refreshClientOrders({ silent: true }).catch(() => {});
+    }
+  }, 60000);
 }
 
 function stopClientOrdersPolling() {
