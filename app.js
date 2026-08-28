@@ -1217,44 +1217,101 @@ function mergeConcurrentSettingsChanges(
   localSettings,
   remoteSettings
 ) {
-  const base =
-    baseSettings && typeof baseSettings === "object"
-      ? baseSettings
+  const isMergeableObject = (value) =>
+    value &&
+    typeof value === "object" &&
+    !Array.isArray(value);
+
+  const mergeObjectChanges = (
+    baseObject,
+    localObject,
+    remoteObject
+  ) => {
+    const base = isMergeableObject(baseObject)
+      ? baseObject
       : {};
 
-  const local =
-    localSettings && typeof localSettings === "object"
-      ? localSettings
+    const local = isMergeableObject(localObject)
+      ? localObject
       : {};
 
-  const remote =
-    remoteSettings && typeof remoteSettings === "object"
-      ? remoteSettings
+    const remote = isMergeableObject(remoteObject)
+      ? remoteObject
       : {};
 
-  const merged = structuredClone(remote);
+    const merged =
+      structuredClone(remote);
 
-  const keys = new Set([
-    ...Object.keys(base),
-    ...Object.keys(local),
-  ]);
+    const keys = new Set([
+      ...Object.keys(base),
+      ...Object.keys(local),
+    ]);
 
-  keys.forEach((key) => {
-    const baseValue = base[key];
-    const localValue = local[key];
+    keys.forEach((key) => {
+      const baseHas =
+        Object.prototype.hasOwnProperty.call(
+          base,
+          key
+        );
 
-    if (!settingsValuesMatch(baseValue, localValue)) {
+      const localHas =
+        Object.prototype.hasOwnProperty.call(
+          local,
+          key
+        );
+
+      const baseValue =
+        base[key];
+
+      const localValue =
+        local[key];
+
+      const remoteValue =
+        remote[key];
+
       if (
-        Object.prototype.hasOwnProperty.call(local, key)
+        settingsValuesMatch(
+          baseValue,
+          localValue
+        )
       ) {
-        merged[key] = structuredClone(localValue);
-      } else {
-        delete merged[key];
+        return;
       }
-    }
-  });
 
-  return merged;
+      if (!localHas) {
+        delete merged[key];
+        return;
+      }
+
+      if (
+        isMergeableObject(localValue) &&
+        (
+          isMergeableObject(baseValue) ||
+          !baseHas
+        )
+      ) {
+        merged[key] =
+          mergeObjectChanges(
+            baseValue,
+            localValue,
+            remoteValue
+          );
+
+        return;
+      }
+
+      merged[key] =
+        structuredClone(localValue);
+    });
+
+    return merged;
+  };
+
+  return mergeObjectChanges(
+    baseSettings,
+    localSettings,
+    remoteSettings
+  );
 }
 function menuProductEntryMatches(first, second) {
   if (!first || !second) return first === second;
@@ -3648,6 +3705,11 @@ async function refreshCentralCloudState(options = {}) {
 
 if (centralSyncInProgress) {
   centralSyncRefreshPending = true;
+
+  centralSyncRequestedScopes.settings ||= settings;
+  centralSyncRequestedScopes.profile ||= profile;
+  centralSyncRequestedScopes.orders ||= orders;
+
   return false;
 }
 
