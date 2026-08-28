@@ -6764,9 +6764,11 @@ async function saveMenuWhenPossibleNow(options = {}) {
         "No fue posible confirmar el menu en nube a tiempo."
       );
 
-      clearMenuPending(
-        menuPendingToken
-      );
+if (menuPendingToken) {
+  clearMenuPending(
+    menuPendingToken
+  );
+}
       updateCloudStatus("Sincronizado");
       return { synced: true };
     } catch (error) {
