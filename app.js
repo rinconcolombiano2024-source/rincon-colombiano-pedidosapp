@@ -3704,13 +3704,17 @@ if (
   saveOrders({
     immediate: true
   });
+}if (settings || profile) {
+  renderCurrencySettings();
+  renderRestaurantStatus();
+  updateRestaurantStatusSync();
 }
-    renderCurrencySettings();
-    renderRestaurantStatus();
-    renderHistory();
 
-    updateRestaurantStatusSync();
-    updateCloudStatus();
+if (orders) {
+  renderHistory();
+}
+
+updateCloudStatus();
 
     return true;
   } catch (error) {
