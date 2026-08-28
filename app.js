@@ -2112,14 +2112,13 @@ async function saveCloudSettings() {
     applyBusinessNameToUi();
   }
 
-  const payload = currentSettingsPayload();
-  const profile = currentRestaurantRpcProfilePayload();
-  const { data: rpcData, error: rpcError } = await cloudState.client.rpc("save_current_restaurant_settings", {
-    p_settings: payload,
-    p_profile: profile,
-    p_expected_revision: storedCloudRevision(STORAGE_KEYS.settingsRevision) || null,
-  });
-
+ const payload = currentSettingsPayload();
+const profile = currentRestaurantRpcProfilePayload();
+const { data: rpcData, error: rpcError } = await cloudState.client.rpc("save_current_restaurant_settings", {
+  p_settings: payload,
+  p_profile: profile,
+  p_expected_revision: storedCloudRevision(STORAGE_KEYS.settingsRevision) || null,
+});
   if (!rpcError) {
     const confirmed = Array.isArray(rpcData) ? rpcData[0] : rpcData;
     if (!confirmed?.settings || !confirmed?.profile) {
