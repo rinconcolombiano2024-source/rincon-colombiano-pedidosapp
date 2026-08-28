@@ -9408,7 +9408,11 @@ async function cancelCurrentOrder() {
       cancellationReason: "Cancelado por el restaurante",
       syncStatus: cloudState.user && navigator.onLine ? "synced" : "pending",
     });
-    savedOrders = mergeOrders([cancelledOrder], savedOrders);
+    savedOrders = savedOrders.map((order) =>
+  order.id === cancelledOrderId
+    ? cancelledOrder
+    : order
+);
     saveOrders({ immediate: true });
 
     if (cloudState.user && navigator.onLine) {
