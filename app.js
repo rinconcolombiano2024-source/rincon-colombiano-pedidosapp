@@ -498,6 +498,8 @@ let centralSyncChannel = null;
 let centralSyncStatus = "idle";
 let centralSyncTimer = null;
 let centralSyncInProgress = false;
+let centralRealtimeReconnectTimer = null;
+let clientOrdersRealtimeReconnectTimer = null;
 let clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;
 let clientOrdersRefreshInFlight = null;
 let clientOrdersRefreshPending = false;
@@ -3149,6 +3151,11 @@ function stopCentralRealtime() {
     centralSyncTimer = null;
   }
 
+  if (centralRealtimeReconnectTimer) {
+    clearTimeout(centralRealtimeReconnectTimer);
+    centralRealtimeReconnectTimer = null;
+  }
+
   const channel = centralSyncChannel;
 
   centralSyncChannel = null;
@@ -3405,6 +3412,34 @@ async function refreshCentralCloudState() {
     centralSyncInProgress = false;
   }
 }
+function scheduleCentralRealtimeReconnect() {
+  if (
+    centralRealtimeReconnectTimer ||
+    !navigator.onLine ||
+    !cloudState.client ||
+    !cloudState.user
+  ) {
+    return;
+  }
+
+  centralRealtimeReconnectTimer = setTimeout(() => {
+    centralRealtimeReconnectTimer = null;
+
+    if (
+      !navigator.onLine ||
+      !cloudState.client ||
+      !cloudState.user
+    ) {
+      return;
+    }
+
+    console.info(
+      "Reconectando canal central Realtime..."
+    );
+
+    startCentralRealtime();
+  }, 1500);
+}
 function startCentralRealtime() {
   stopCentralRealtime();
 
@@ -3490,16 +3525,46 @@ function startCentralRealtime() {
     }
 
     if (
-      status === "CHANNEL_ERROR" ||
-      status === "TIMED_OUT" ||
-      status === "CLOSED"
-    ) {
-      console.warn(
-        "Canal central Realtime:",
-        status
-      );
-    }
+  status === "CHANNEL_ERROR" ||
+  status === "TIMED_OUT" ||
+  status === "CLOSED"
+) {
+  console.warn(
+    "Canal central Realtime:",
+    status
+  );
+
+  scheduleCentralRealtimeReconnect();
+}
   });
+}
+function scheduleClientOrdersRealtimeReconnect() {
+  if (
+    clientOrdersRealtimeReconnectTimer ||
+    !navigator.onLine ||
+    !cloudState.client ||
+    !cloudState.user
+  ) {
+    return;
+  }
+
+  clientOrdersRealtimeReconnectTimer = setTimeout(() => {
+    clientOrdersRealtimeReconnectTimer = null;
+
+    if (
+      !navigator.onLine ||
+      !cloudState.client ||
+      !cloudState.user
+    ) {
+      return;
+    }
+
+    console.info(
+      "Reconectando Realtime de pedidos..."
+    );
+
+    startClientOrdersRealtime();
+  }, 1500);
 }
 function startClientOrdersRealtime() {
   stopClientOrdersRealtime();
@@ -3550,9 +3615,15 @@ function startClientOrdersRealtime() {
         }
         return;
       }
-      if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)) {
-        startClientOrdersPolling({ immediate: true });
-      }
+     if (
+  ["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)
+) {
+  startClientOrdersPolling({
+    immediate: true
+  });
+
+  scheduleClientOrdersRealtimeReconnect();
+}
     });
   startClientOrdersPolling();
 }
