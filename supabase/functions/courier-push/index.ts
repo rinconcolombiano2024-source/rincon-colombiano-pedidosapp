@@ -119,7 +119,7 @@ Deno.serve(async (request) => {
     assignment_id: record.reference_id || "",
     url: String(
       record.payload?.url
-      || `./colaborador.html?view=offers&assignment=${encodeURIComponent(record.reference_id || "")}&app=v89.0.0&lang=${language}`
+      || `./colaborador.html?view=offers&assignment=${encodeURIComponent(record.reference_id || "")}&app=v91.0.0&lang=${language}`
     ),
   });
 
