@@ -3445,7 +3445,23 @@ function stopCentralRealtime() {
   }
 }
 
-function scheduleCentralRefresh() {
+let centralSyncRequestedScopes = {
+  settings: false,
+  profile: false,
+  orders: false,
+};
+
+function scheduleCentralRefresh(options = {}) {
+  const {
+    settings = false,
+    profile = false,
+    orders = false,
+  } = options;
+
+  centralSyncRequestedScopes.settings ||= settings;
+  centralSyncRequestedScopes.profile ||= profile;
+  centralSyncRequestedScopes.orders ||= orders;
+
   if (centralSyncTimer) {
     clearTimeout(centralSyncTimer);
   }
@@ -3453,7 +3469,29 @@ function scheduleCentralRefresh() {
   centralSyncTimer = setTimeout(() => {
     centralSyncTimer = null;
 
-    refreshCentralCloudState().catch((error) => {
+    const requestedScopes = {
+      ...centralSyncRequestedScopes,
+    };
+
+    centralSyncRequestedScopes = {
+      settings: false,
+      profile: false,
+      orders: false,
+    };
+
+    if (
+      !requestedScopes.settings &&
+      !requestedScopes.profile &&
+      !requestedScopes.orders
+    ) {
+      requestedScopes.settings = true;
+      requestedScopes.profile = true;
+      requestedScopes.orders = true;
+    }
+
+    refreshCentralCloudState(
+      requestedScopes
+    ).catch((error) => {
       console.error(
         "Error resincronizando el estado central.",
         error
@@ -3461,7 +3499,6 @@ function scheduleCentralRefresh() {
     });
   }, 250);
 }
-
 async function refreshCentralCloudState(options = {}) {
   const {
     settings = true,
