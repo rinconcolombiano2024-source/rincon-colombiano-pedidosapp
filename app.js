@@ -3816,7 +3816,7 @@ function startCentralRealtime() {
 
   centralSyncStatus = "connecting";
 
-  const channel =
+ const channel =
     cloudState.client
       .channel(
         `restaurant-central-${cloudState.user.id}`
@@ -3831,7 +3831,12 @@ function startCentralRealtime() {
           filter:
             `user_id=eq.${cloudState.user.id}`,
         },
-        scheduleCentralRefresh
+        () =>
+          scheduleCentralRefresh({
+            settings: true,
+            profile: false,
+            orders: false,
+          })
       )
 
       .on(
@@ -3843,7 +3848,12 @@ function startCentralRealtime() {
           filter:
             `user_id=eq.${cloudState.user.id}`,
         },
-        scheduleCentralRefresh
+        () =>
+          scheduleCentralRefresh({
+            settings: false,
+            profile: true,
+            orders: false,
+          })
       )
 
       .on(
@@ -3855,7 +3865,12 @@ function startCentralRealtime() {
           filter:
             `user_id=eq.${cloudState.user.id}`,
         },
-        scheduleCentralRefresh
+        () =>
+          scheduleCentralRefresh({
+            settings: false,
+            profile: false,
+            orders: true,
+          })
       )
 
       .on(
@@ -3868,9 +3883,13 @@ function startCentralRealtime() {
           filter:
             `restaurant_user_id=eq.${cloudState.user.id}`,
         },
-        scheduleCentralRefresh
+        () =>
+          scheduleCentralRefresh({
+            settings: true,
+            profile: false,
+            orders: false,
+          })
       );
-
   centralSyncChannel = channel;
 
   channel.subscribe((status) => {
