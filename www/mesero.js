@@ -1287,7 +1287,7 @@ async function waiterSignOut() {
     waiterUser = null;
     waiterMembership = null;
     waiterBusinessContext = null;
-    window.location.replace("index.html?app=v91.0.0");
+    window.location.replace("index.html?app=v91.0.1");
   }
 }
 

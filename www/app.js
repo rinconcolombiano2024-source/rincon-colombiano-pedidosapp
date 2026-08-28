@@ -101,7 +101,7 @@ migrateLegacyRestaurantStorage();
 
 const DEFAULT_BUSINESS_NAME = "MI RESTAURANTE";
 const DEFAULT_DELIVERY_MINIMUM_FEE = 20;
-const APP_VERSION = "v91.0.0";
+const APP_VERSION = "v91.0.1";
 const PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 const PLATFORM_APP_NAME = "RC ORDERA";
 const RESTAURANT_MEDIA_BUCKET = "restaurant-media";
@@ -2016,6 +2016,7 @@ async function loadCloudData() {
     return { ok: false, error, message: friendlyMessage };
   } finally {
     cloudState.loading = false;
+    updateCloudStatus();
   }
 }
 
