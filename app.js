@@ -6634,11 +6634,23 @@ function syncResultMessage(successMessage, result = {}) {
 
 async function saveSettingsWhenPossible(options = {}) {
   const { silent = false } = options;
+
+  const settingsPendingToken =
+    currentSettingsPendingToken();
+
   if (cloudState.user && navigator.onLine) {
     try {
       if (!silent) updateCloudStatus("Guardando nube...");
-      await withCloudTimeout(saveCloudSettings(), "No fue posible confirmar el guardado en nube a tiempo.");
-      clearSettingsPending();
+
+      await withCloudTimeout(
+        saveCloudSettings(),
+        "No fue posible confirmar el guardado en nube a tiempo."
+      );
+
+      clearSettingsPending(
+        settingsPendingToken
+      );
+
       updateCloudStatus("Sincronizado");
       return { synced: true };
     } catch (error) {
@@ -6658,11 +6670,22 @@ async function saveSettingsWhenPossible(options = {}) {
 
 async function saveMenuWhenPossibleNow(options = {}) {
   const { silent = false } = options;
+
+  const menuPendingToken =
+    currentMenuPendingToken();
+
   if (cloudState.user && navigator.onLine) {
     try {
       if (!silent) updateCloudStatus("Guardando menu...");
-      await withCloudTimeout(saveCloudMenu(), "No fue posible confirmar el menu en nube a tiempo.");
-      clearMenuPending();
+
+      await withCloudTimeout(
+        saveCloudMenu(),
+        "No fue posible confirmar el menu en nube a tiempo."
+      );
+
+      clearMenuPending(
+        menuPendingToken
+      );
       updateCloudStatus("Sincronizado");
       return { synced: true };
     } catch (error) {
