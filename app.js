@@ -101,7 +101,7 @@ migrateLegacyRestaurantStorage();
 
 const DEFAULT_BUSINESS_NAME = "MI RESTAURANTE";
 const DEFAULT_DELIVERY_MINIMUM_FEE = 20;
-const APP_VERSION = "v91.0.1";
+const APP_VERSION = "v91.0.2";
 const PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 const PLATFORM_APP_NAME = "RC ORDERA";
 const RESTAURANT_MEDIA_BUCKET = "restaurant-media";
@@ -1659,14 +1659,21 @@ function updateCloudStatus(message = "") {
     return;
   }
 
-  if (pending || hasPendingSettings() || hasPendingMenu() || pendingTicketCounter()) {
-    elements.cloudStatus.textContent = pending ? `Pendiente nube (${pending})` : "Pendiente nube";
-    return;
-  }
-
   if (cloudState.lastError) {
     elements.cloudStatus.textContent = "Revisar nube";
     elements.cloudStatus.title = cloudState.lastError;
+    return;
+  }
+
+  if (pending || hasPendingSettings() || hasPendingMenu() || pendingTicketCounter()) {
+    elements.cloudStatus.textContent = pending ? `Pendiente nube (${pending})` : "Pendiente nube";
+    const details = [];
+    if (pendingOrdersCount()) details.push(`${pendingOrdersCount()} pedido(s)`);
+    if (pendingDeletedOrdersCount()) details.push(`${pendingDeletedOrdersCount()} anulacion(es) antigua(s)`);
+    if (hasPendingSettings()) details.push("ajustes");
+    if (hasPendingMenu()) details.push("menu");
+    if (pendingTicketCounter()) details.push("contador de tickets");
+    elements.cloudStatus.title = `Pendiente de sincronizar: ${details.join(", ")}. Pulsa Actualizar.`;
     return;
   }
 
@@ -4366,9 +4373,17 @@ async function syncPendingData(options = {}) {
     }
 
     for (const orderId of pendingDeletedOrderIds) {
-      await voidCloudOrder(orderId);
-      setOrderSyncStatus(orderId, "synced");
-      clearDeletedOrderId(orderId);
+      try {
+        await voidCloudOrder(orderId);
+        setOrderSyncStatus(orderId, "synced");
+        clearDeletedOrderId(orderId);
+      } catch (error) {
+        if (/order not found|pedido no encontrado/i.test(String(error?.message || ""))) {
+          clearDeletedOrderId(orderId);
+          continue;
+        }
+        throw error;
+      }
     }
 
     for (const order of pendingOrders) {
@@ -4384,6 +4399,7 @@ async function syncPendingData(options = {}) {
     nextTicket = minimumNextTicket;
     saveTicketState();
     saveOrders({ immediate: true });
+    cloudState.lastError = "";
     renderOrder();
     renderHistory();
     updateCloudStatus();
@@ -4391,7 +4407,7 @@ async function syncPendingData(options = {}) {
   } catch (error) {
     console.error(error);
     saveOrders({ immediate: true });
-    updateCloudStatus();
+    setCloudError(error);
     return false;
   } finally {
     cloudState.syncing = false;

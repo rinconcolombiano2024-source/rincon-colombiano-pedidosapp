@@ -3,7 +3,7 @@
   "short_name": "RC Restauracja",
   "id": "./restaurant-app-pl",
   "description": "Zamówienia, bony wewnętrzne, menu, personel, historia i zamknięcia restauracji.",
-  "start_url": "./index.html?app=v91.0.1&lang=pl",
+  "start_url": "./index.html?app=v91.0.2&lang=pl",
   "scope": ".",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],
