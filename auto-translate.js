@@ -1386,3 +1386,4 @@ observer.observe(document.documentElement, {
   subtree: true,
   characterData: true
 });
+})();
