@@ -13,8 +13,8 @@ const STORAGE_KEYS = {
   menuPending: "rc_ordera_menu_pending",
   menuRevision: "rc_ordera_menu_revision",
   confirmedMenu: "rc_ordera_confirmed_menu",
-  settingsRevision: "rc_ordera_settings_revision",
-  ticketCounterPending: "rc_ordera_ticket_counter_pending",
+confirmedSettings: "rc_ordera_confirmed_settings",
+settingsRevision: "rc_ordera_settings_revision",
   cloudSession: "rc_ordera_cloud_session",
   deletedOrders: "rc_ordera_deleted_orders",
   deliveryFee: "rc_ordera_delivery_fee",
@@ -1111,7 +1111,90 @@ function menuProductEntries(menu) {
   });
   return entries;
 }
+function readConfirmedCloudSettings() {
+  try {
+    const stored = JSON.parse(
+      localStorage.getItem(STORAGE_KEYS.confirmedSettings) || "null"
+    );
 
+    if (
+      !stored ||
+      stored.userId !== cloudState.user?.id ||
+      !stored.settings
+    ) {
+      return null;
+    }
+
+    return structuredClone(stored.settings);
+  } catch {
+    return null;
+  }
+}
+
+function storeConfirmedCloudSettings(settings) {
+  if (!cloudState.user?.id || !settings) return;
+
+  localStorage.setItem(
+    STORAGE_KEYS.confirmedSettings,
+    JSON.stringify({
+      userId: cloudState.user.id,
+      settings: structuredClone(settings),
+    })
+  );
+}
+
+function clearConfirmedCloudSettings() {
+  localStorage.removeItem(STORAGE_KEYS.confirmedSettings);
+}
+
+function settingsValuesMatch(first, second) {
+  return JSON.stringify(first) === JSON.stringify(second);
+}
+
+function mergeConcurrentSettingsChanges(
+  baseSettings,
+  localSettings,
+  remoteSettings
+) {
+  const base =
+    baseSettings && typeof baseSettings === "object"
+      ? baseSettings
+      : {};
+
+  const local =
+    localSettings && typeof localSettings === "object"
+      ? localSettings
+      : {};
+
+  const remote =
+    remoteSettings && typeof remoteSettings === "object"
+      ? remoteSettings
+      : {};
+
+  const merged = structuredClone(remote);
+
+  const keys = new Set([
+    ...Object.keys(base),
+    ...Object.keys(local),
+  ]);
+
+  keys.forEach((key) => {
+    const baseValue = base[key];
+    const localValue = local[key];
+
+    if (!settingsValuesMatch(baseValue, localValue)) {
+      if (
+        Object.prototype.hasOwnProperty.call(local, key)
+      ) {
+        merged[key] = structuredClone(localValue);
+      } else {
+        delete merged[key];
+      }
+    }
+  });
+
+  return merged;
+}
 function menuProductEntryMatches(first, second) {
   if (!first || !second) return first === second;
   return first.category === second.category
@@ -1839,6 +1922,7 @@ async function initializeCloud() {
       cloudState.schemaVersion = null;
       pendingClientOrders = [];
       clearConfirmedCloudMenu();
+      clearConfirmedCloudSettings();
       stopClientOrdersPolling();
       stopClientOrdersRealtime();
       stopClientAlarm();
@@ -1948,16 +2032,32 @@ async function loadCloudData() {
       localMenuPending = true;
     }
 
-    if (settingsRow?.menu_revision !== undefined) {
-      storeCloudRevision(STORAGE_KEYS.menuRevision, settingsRow.menu_revision);
-    }
-    if (settingsRow?.settings_revision !== undefined) {
-      storeCloudRevision(STORAGE_KEYS.settingsRevision, settingsRow.settings_revision);
-    }
+    if (
+  settingsRow?.menu_revision !== undefined &&
+  !localMenuPending
+) {
+  storeCloudRevision(
+    STORAGE_KEYS.menuRevision,
+    settingsRow.menu_revision
+  );
+}
 
+if (
+  settingsRow?.settings_revision !== undefined &&
+  !localSettingsPending
+) {
+  storeCloudRevision(
+    STORAGE_KEYS.settingsRevision,
+    settingsRow.settings_revision
+  );
+}
     if (settingsRow && !localSettingsPending) {
-      applySettingsPayload(settingsRow.settings || {});
-    }
+  applySettingsPayload(settingsRow.settings || {});
+
+  storeConfirmedCloudSettings(
+    settingsRow.settings || {}
+  );
+}
     applyRestaurantProfile(restaurantProfile, { onlyIfEmpty: Boolean(settingsRow) });
     applyPublicRestaurantProfileFallback(publicProfileRow || {}, { onlyIfEmpty: true });
 
@@ -2110,47 +2210,45 @@ async function readCurrentCloudSettingsRow() {
 }
 
 async function saveCloudSettings() {
-  if (!cloudState.client || !cloudState.user) return null;
+  if (!cloudState.client || !cloudState.user) {
+    return null;
+  }
 
-  if (isInlineRestaurantImage(businessLogoUrl) && navigator.onLine) {
-    businessLogoUrl = await uploadRestaurantImageDataUrl(businessLogoUrl, "profile", "logo");
-    localStorage.setItem(STORAGE_KEYS.businessLogoUrl, businessLogoUrl);
-    if (elements.businessLogoUrlInput) elements.businessLogoUrlInput.value = businessLogoUrl;
+  if (
+    isInlineRestaurantImage(businessLogoUrl) &&
+    navigator.onLine
+  ) {
+    businessLogoUrl = await uploadRestaurantImageDataUrl(
+      businessLogoUrl,
+      "profile",
+      "logo"
+    );
+
+    localStorage.setItem(
+      STORAGE_KEYS.businessLogoUrl,
+      businessLogoUrl
+    );
+
+    if (elements.businessLogoUrlInput) {
+      elements.businessLogoUrlInput.value =
+        businessLogoUrl;
+    }
+
     applyBusinessNameToUi();
   }
-const payload = currentSettingsPayload();
-const profile = currentRestaurantRpcProfilePayload();
 
-let expectedRevision = storedCloudRevision(STORAGE_KEYS.settingsRevision) || null;
+  let payload = currentSettingsPayload();
+  let profile = currentRestaurantRpcProfilePayload();
 
-let { data: rpcData, error: rpcError } = await cloudState.client.rpc(
-  "save_current_restaurant_settings",
-  {
-    p_settings: payload,
-    p_profile: profile,
-    p_expected_revision: expectedRevision,
-  }
-);
+  let expectedRevision =
+    storedCloudRevision(
+      STORAGE_KEYS.settingsRevision
+    ) || null;
 
-if (rpcError && /SETTINGS_REVISION_CONFLICT/i.test(
-  String(rpcError?.message || rpcError?.details || "")
-)) {
-  const latestRow = await readCurrentCloudSettingsRow();
-
-  if (!latestRow) {
-    throw rpcError;
-  }
-
-  expectedRevision = Number(latestRow.settings_revision) || null;
-
-  if (expectedRevision !== null) {
-    storeCloudRevision(
-      STORAGE_KEYS.settingsRevision,
-      expectedRevision
-    );
-  }
-
-  const retry = await cloudState.client.rpc(
+  let {
+    data: rpcData,
+    error: rpcError,
+  } = await cloudState.client.rpc(
     "save_current_restaurant_settings",
     {
       p_settings: payload,
@@ -2159,24 +2257,121 @@ if (rpcError && /SETTINGS_REVISION_CONFLICT/i.test(
     }
   );
 
-  rpcData = retry.data;
-  rpcError = retry.error;
-}
-  if (!rpcError) {
-    const confirmed = Array.isArray(rpcData) ? rpcData[0] : rpcData;
-    if (!confirmed?.settings || !confirmed?.profile) {
-      throw new Error("La nube no devolvio la confirmacion completa de los ajustes.");
+  if (
+    rpcError &&
+    /SETTINGS_REVISION_CONFLICT/i.test(
+      String(
+        rpcError?.message ||
+        rpcError?.details ||
+        ""
+      )
+    )
+  ) {
+    const latestRow =
+      await readCurrentCloudSettingsRow();
+
+    if (!latestRow?.settings) {
+      throw rpcError;
     }
-    applySettingsPayload(confirmed.settings);
-    applyPublicRestaurantProfileFallback(confirmed.profile);
-    storeCloudRevision(STORAGE_KEYS.settingsRevision, confirmed.settingsRevision ?? confirmed.settings_revision);
+
+    const baseSettings =
+      readConfirmedCloudSettings();
+
+    if (!baseSettings) {
+      const conflictError = new Error(
+        "No existe una versión base confirmada para combinar los ajustes de forma segura."
+      );
+
+      conflictError.code =
+        "SETTINGS_SAFE_MERGE_REQUIRED";
+
+      throw conflictError;
+    }
+
+    payload =
+      mergeConcurrentSettingsChanges(
+        baseSettings,
+        payload,
+        latestRow.settings
+      );
+
+    applySettingsPayload(payload);
+
+    profile =
+      currentRestaurantRpcProfilePayload();
+
+    expectedRevision =
+      Number(
+        latestRow.settings_revision
+      ) || null;
+
+    const retry =
+      await cloudState.client.rpc(
+        "save_current_restaurant_settings",
+        {
+          p_settings: payload,
+          p_profile: profile,
+          p_expected_revision:
+            expectedRevision,
+        }
+      );
+
+    rpcData = retry.data;
+    rpcError = retry.error;
+  }
+
+  if (!rpcError) {
+    const confirmed =
+      Array.isArray(rpcData)
+        ? rpcData[0]
+        : rpcData;
+
+    if (
+      !confirmed?.settings ||
+      !confirmed?.profile
+    ) {
+      throw new Error(
+        "La nube no devolvio la confirmacion completa de los ajustes."
+      );
+    }
+
+    applySettingsPayload(
+      confirmed.settings
+    );
+
+    applyPublicRestaurantProfileFallback(
+      confirmed.profile
+    );
+
+    const confirmedRevision =
+      confirmed.settingsRevision ??
+      confirmed.settings_revision;
+
+    storeCloudRevision(
+      STORAGE_KEYS.settingsRevision,
+      confirmedRevision
+    );
+
+    storeConfirmedCloudSettings(
+      confirmed.settings
+    );
+
     return confirmed;
   }
+
   if (isMissingRestaurantRpc(rpcError)) {
-    const schemaError = new Error(appUiText("La base de datos necesita la migracion V91 antes de guardar ajustes."));
-    schemaError.code = "RC_ORDERA_SCHEMA_OUTDATED";
+    const schemaError = new Error(
+      appUiText(
+        "La base de datos necesita la migracion V91 antes de guardar ajustes."
+      )
+    );
+
+    schemaError.code =
+      "RC_ORDERA_SCHEMA_OUTDATED";
+
     throw schemaError;
   }
+
   throw rpcError;
 }
 
@@ -3347,28 +3542,33 @@ if (
       }
     }
 
-    /*
-     * PERFIL / HORARIO / ABIERTO-CERRADO
-     */
-    if (profileRow) {
-      applyPublicRestaurantProfileFallback(
-        profileRow
-      );
+  /*
+ * PERFIL / HORARIO / ABIERTO-CERRADO
+ *
+ * Si este dispositivo tiene ajustes pendientes,
+ * no permitimos que una actualización remota
+ * pise esos valores antes de resolver el conflicto.
+ */
+if (
+  profileRow &&
+  !hasPendingSettings()
+) {
+  applyPublicRestaurantProfileFallback(
+    profileRow
+  );
 
-      if (
-        typeof profileRow.active ===
-        "boolean"
-      ) {
-        restaurantActive =
-          profileRow.active;
+  if (
+    typeof profileRow.active === "boolean"
+  ) {
+    restaurantActive =
+      profileRow.active;
 
-        localStorage.setItem(
-          STORAGE_KEYS.restaurantActive,
-          restaurantActive ? "1" : "0"
-        );
-      }
-    }
-
+    localStorage.setItem(
+      STORAGE_KEYS.restaurantActive,
+      restaurantActive ? "1" : "0"
+    );
+  }
+}
     /*
      * PEDIDOS INTERNOS
      *
