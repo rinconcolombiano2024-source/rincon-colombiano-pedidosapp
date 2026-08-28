@@ -1,0 +1,63 @@
+RC ORDERA V71 - MESEROS, CAJA CENTRAL E IMPRESION
+
+1. ACTIVAR EN SUPABASE
+
+- Abre Supabase > SQL Editor > New query.
+- Copia TODO el contenido de:
+  MIGRACION-FASE1-V71-MESEROS-ESTACIONES.sql
+- Pulsa Run una sola vez.
+- La migracion es incremental: no elimina tablas, pedidos ni reportes.
+- Tambien repara de forma segura el cierre/eliminacion logica del restaurante.
+
+2. PUBLICAR LA APP
+
+- Sube a GitHub/Vercel todos los archivos de esta carpeta.
+- No cambies supabase-config.js.
+- La version de cache es v71; al abrir la app pulsa Actualizar si el dispositivo conserva una version anterior.
+
+3. AUTORIZAR PERSONAL Y ESTACION
+
+- El propietario inicia sesion en el panel del restaurante.
+- Pulsa Estaciones.
+- Copia el enlace de la estacion y envialo al telefono del empleado.
+- El empleado crea una cuenta con su correo y confirma el correo si Supabase lo solicita.
+- El propietario escribe ese mismo correo, el nombre visible, elige Mesero, Caja, Cocina, Empaque, Despacho o Encargado y pulsa Autorizar personal.
+- El empleado inicia sesion desde el enlace. La sesion del mesero es independiente de la caja central.
+- Si se cambia la estacion de una persona, el permiso anterior se desactiva para evitar accesos ambiguos.
+
+4. TOMAR E IMPRIMIR UN PEDIDO
+
+- El mesero elige productos, mesa/cliente, tipo de pedido, pago y notas.
+- Pulsa Enviar a caja y cocina.
+- Supabase valida nuevamente productos, disponibilidad, cantidades y precios.
+- La caja recibe el pedido en tiempo real, muestra una alarma y lo identifica con el nombre del mesero.
+- En la caja pulsa Aceptar e imprimir.
+- La caja asigna el consecutivo, guarda el pedido y abre la impresion de cocina.
+- La alarma se detiene cuando ya no hay pedidos pendientes.
+- Cocina marca En preparacion y Listo.
+- Empaque marca Empacado.
+- Despacho marca Despachado y Entregado.
+- Cada cambio aparece en tiempo real en las demas estaciones y actualiza el estado visible para el cliente cuando corresponde.
+
+5. IMPRESORA
+
+- El ticket usa el ancho configurado por el restaurante y minimiza el espacio blanco final.
+- El navegador abre el dialogo del sistema para evitar impresiones duplicadas.
+- El corte automatico depende de la impresora termica y su controlador ESC/POS. Activa Auto cut o Corte automatico en las preferencias de la impresora.
+
+6. SIN INTERNET
+
+- El mesero conserva el pedido pendiente en el telefono.
+- Al recuperar conexion, la estacion intenta sincronizarlo con el mismo identificador para evitar duplicados.
+- La caja mantiene una consulta de respaldo ademas de Realtime.
+
+7. ELIMINAR RESTAURANTE
+
+- El propietario escribe ELIMINAR en la confirmacion.
+- El restaurante queda inactivo y desaparece del cliente en tiempo real.
+- Los meseros dejan de poder entrar a esa estacion.
+- Pedidos y reportes historicos se conservan por seguridad y trazabilidad.
+
+LIMITACION DE VALIDACION
+
+El codigo y las pantallas se validaron localmente. La prueba real entre dos dispositivos requiere ejecutar la migracion V71 en el proyecto Supabase y publicar estos archivos.

@@ -1,0 +1,78 @@
+RC ORDERA v66 - CONFIGURACION CORRECTA DE SUPABASE
+
+1. CONEXION DE LA APP
+
+Archivo: supabase-config.js
+
+La URL debe terminar en .supabase.co.
+No debe incluir /rest/v1/ ni signos de interrogacion.
+
+La clave permitida en la app es Publishable key:
+sb_publishable_...
+
+Nunca colocar en la app:
+- sb_secret_...
+- service_role
+- contrasena de la base de datos
+
+2. EJECUTAR LA REPARACION V66
+
+Supabase > SQL Editor > New query.
+
+Abrir MIGRACION-FASE1-V66-REPARAR-NUBE.sql.
+Copiar todo, pegar y pulsar Run.
+
+Al final deben aparecer seis comprobaciones con estado OK.
+
+3. AUTENTICACION
+
+Supabase > Authentication > Providers > Email:
+- Email activado.
+- Permitir nuevos registros activado.
+- Confirmar correo activado para produccion.
+
+Supabase > Authentication > URL Configuration:
+
+Site URL:
+https://rincon-colombiano-pedidosapp.vercel.app
+
+Redirect URLs:
+https://rincon-colombiano-pedidosapp.vercel.app/**
+
+Si se usa otro dominio de produccion, agregarlo tambien.
+
+4. REALTIME DEL MENU
+
+Database > Publications o Realtime:
+- La tabla public.app_settings debe estar dentro de supabase_realtime.
+
+La migracion V66 intenta configurarlo automaticamente.
+
+5. ARCHIVOS DE COLABORADORES
+
+Storage:
+- Debe existir el bucket privado courier-documents.
+- Los archivos deben guardarse dentro de una carpeta con el ID del usuario.
+- Las politicas deben permitir al colaborador manejar solo sus archivos.
+- El administrador autorizado puede leerlos para revision.
+
+Estas reglas estan incluidas en supabase-schema.sql y en la migracion V58.
+
+6. SEGURIDAD
+
+Mantener RLS activado.
+No desactivar RLS para solucionar errores.
+No usar la clave secreta en el navegador.
+Cada restaurante guarda datos usando su propio user_id.
+
+7. DESPUES DE EJECUTAR V66
+
+- Abrir la app del restaurante.
+- Cerrar sesion e iniciar sesion nuevamente.
+- Pulsar Actualizar.
+- El indicador debe cambiar a Sincronizado.
+- Editar un producto y guardarlo.
+- Abrir el perfil de cliente y comprobar el cambio.
+
+Si aparece Revisar nube, tocar Actualizar y revisar el mensaje mostrado.
+La app conserva localmente el pedido y los cambios pendientes.

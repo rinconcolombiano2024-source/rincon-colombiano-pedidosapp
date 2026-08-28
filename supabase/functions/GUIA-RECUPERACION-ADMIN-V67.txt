@@ -1,0 +1,84 @@
+RC ORDERA v67 - RECUPERACION DEL ADMINISTRADOR
+
+CORREO AUTORIZADO
+
+Jhon Jarolt Mendez
+pedidosapprinconcolombiano@gmail.com
+
+1. VERIFICAR LA CUENTA Y EL ROL
+
+En Supabase:
+SQL Editor > New query.
+
+Abrir MIGRACION-FASE1-V67-VERIFICAR-ADMIN.sql.
+Copiar todo, pegar y pulsar Run.
+
+Resultado correcto:
+- cuenta_auth: CUENTA_EXISTE
+- confirmacion: CORREO_CONFIRMADO
+- rol_administrador: ADMIN_ACTIVO
+
+Si aparece CUENTA_NO_EXISTE:
+La cuenta no esta registrada en el proyecto Supabase conectado a RC ORDERA.
+Revisar Authentication > Users.
+
+Si aparece CORREO_SIN_CONFIRMAR:
+El correo existe pero todavia no fue confirmado.
+
+2. CONFIGURAR LAS URL
+
+Authentication > URL Configuration
+
+Site URL:
+https://rincon-colombiano-pedidosapp.vercel.app
+
+Redirect URLs:
+https://rincon-colombiano-pedidosapp.vercel.app/**
+
+3. REVISAR EL ENVIO DEL CORREO
+
+Authentication > Logs o Audit Logs.
+
+Solicitar Recuperar contrasena una sola vez desde admin.html.
+Buscar el evento user_recovery_requested y revisar si Supabase muestra error.
+
+El correo integrado de Supabase es solo para pruebas:
+- Tiene un limite muy bajo.
+- Puede aceptar solamente destinatarios que pertenecen al equipo del proyecto.
+- No garantiza la entrega.
+
+Para produccion se debe configurar un proveedor SMTP propio en Supabase.
+
+4. PROBAR DESPUES DE DESPLEGAR V67
+
+Abrir:
+https://rincon-colombiano-pedidosapp.vercel.app/admin.html
+
+Escribir:
+pedidosapprinconcolombiano@gmail.com
+
+Pulsar Recuperar contrasena una sola vez.
+
+La app ahora mostrara si:
+- Supabase acepto la solicitud.
+- Se alcanzo el limite de correos.
+- El destinatario no esta autorizado.
+- La URL de redireccion no esta permitida.
+- No hay conexion.
+
+5. CORREO RECIBIDO
+
+Abrir el enlace del correo.
+Debe regresar a admin.html?recovery=1.
+Escribir la nueva contrasena y guardarla.
+El enlace solo sirve mientras la sesion de recuperacion sea valida.
+
+6. IMPORTANTE
+
+La migracion V67:
+- No cambia la contrasena.
+- No confirma el correo artificialmente.
+- No modifica Auth.
+- No cambia policies RLS.
+- No borra datos.
+- Solo activa el rol platform_admin si la cuenta exacta ya existe.

@@ -1,0 +1,31 @@
+FASE 7 / v58 - COLABORADORES, ARCHIVOS Y APROBACION
+
+Cambios incluidos:
+
+1. Correos de verificacion
+- Restaurante, cliente y colaborador tienen boton para reenviar correo de verificacion.
+- Si el correo no llega, revisar en Supabase:
+  Authentication -> Emails / SMTP.
+- Revisar tambien bandeja de entrada, spam, promociones y limites del plan gratuito.
+- Para produccion conviene configurar SMTP propio del restaurante/plataforma.
+
+2. Archivos de colaborador
+- El colaborador puede subir documento de identidad, foto, selfie, licencia, seguro y permiso de trabajo.
+- Los archivos se guardan en Supabase Storage en el bucket privado courier-documents.
+- En telefono el selector permite usar camara o archivos guardados, segun el sistema operativo.
+- Si Storage no esta migrado, la app mostrara error al subir.
+
+3. Aprobacion de colaborador
+- En la app del restaurante aparece el boton Colaboradores.
+- Desde esa ventana se pueden revisar solicitudes, abrir documentos y aprobar o rechazar.
+- Al aprobar, el rol platform_courier queda activo y el colaborador puede marcar disponibilidad.
+- La app no permite aprobar desde la ventana si faltan documentos minimos.
+
+4. Supabase obligatorio
+- Ejecutar en Supabase SQL Editor:
+  MIGRACION-FASE7-V58-COLABORADORES-ARCHIVOS-APROBACION.sql
+- Sin esta migracion no funcionaran la subida de archivos ni la aprobacion desde restaurante.
+
+5. Cache
+- Cache actualizado a rincon-colombiano-v58.
+- Si una tablet o telefono no muestra cambios, cerrar la app instalada, borrar cache o reinstalar desde la URL publicada.

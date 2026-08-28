@@ -1,0 +1,61 @@
+VERSION v63 - COLABORADOR CERCANO, IDIOMAS Y LIMPIEZA VISUAL
+
+1. Ejecutar en Supabase
+
+Abre Supabase > SQL Editor y ejecuta:
+
+MIGRACION-FASE10-V63-COLABORADOR-CERCANO.sql
+
+Esto agrega:
+- courier_live_locations
+- delivery_assignments
+- assigned_courier_user_id y courier_assignment_status en customer_orders
+- funciones para guardar ubicacion del colaborador
+- funcion para buscar el colaborador aprobado y disponible mas cercano
+- funcion para que el colaborador vea pedidos ofrecidos
+- funcion para avanzar estados de entrega
+
+Si prefieres, tambien puedes ejecutar el supabase-schema.sql completo actualizado.
+
+2. Condiciones para que el colaborador cercano funcione
+
+- El colaborador debe registrarse.
+- La administracion debe aprobarlo en admin.html.
+- El colaborador debe iniciar sesion en colaborador.html.
+- El colaborador debe compartir ubicacion.
+- El colaborador debe activar disponibilidad.
+- El restaurante debe guardar su ubicacion real en:
+  Editar menu > Pedidos cliente > Usar ubicacion actual
+- El pedido del cliente debe ser tipo Domicilio.
+- Al aceptar el pedido desde Pedidos cliente, la app busca el colaborador mas cercano.
+
+3. Flujo de entrega
+
+Restaurante acepta domicilio
+-> se crea oferta al colaborador mas cercano
+-> colaborador ve pedido disponible
+-> colaborador acepta o rechaza
+-> colaborador marca:
+   Llegue al restaurante
+   Pedido recogido
+   Llegue al cliente
+   Pedido entregado
+-> el cliente ve el estado actualizado segun el pedido avance.
+
+4. Idiomas
+
+- Cliente: mantiene selector Espanol / Polski / English y traduce interfaz y descripciones de platos.
+- Restaurante, colaborador y administracion: se agrego traductor de interfaz por diccionario.
+- No se traducen tickets, nombres de platos, historiales, pedidos ni textos escritos por usuarios para no alterar datos reales.
+
+5. Archivos
+
+- La subida de documentos del colaborador sigue usando Storage de Supabase.
+- Despues de subir archivo, el navegador puede mostrar "ningun archivo seleccionado"; eso es normal.
+- La app ahora deja visible debajo el estado "archivo subido" o "sin archivo subido".
+
+6. Importante
+
+No usar service_role ni secret key en el navegador.
+El correo administrador unico de plataforma sigue siendo:
+pedidosapprinconcolombiano@gmail.com

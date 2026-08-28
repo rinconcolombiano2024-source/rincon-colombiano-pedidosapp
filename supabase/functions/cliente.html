@@ -1,0 +1,815 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>RC ORDERA - Cliente</title>
+    <meta name="theme-color" content="#1f8f4d" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="RC ORDERA" />
+    <meta name="format-detection" content="telephone=no" />
+    <link rel="manifest" href="cliente-manifest.webmanifest" />
+    <link rel="icon" href="app-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="app-icon-192.png" />
+    <link rel="stylesheet" href="styles.css?v=91.0.0" />
+  </head>
+  <body class="customer-page customer-app-page">
+    <main class="customer-shell customer-app-shell">
+    <header class="customer-app-header customer-client-header">
+
+  <div class="customer-client-topbar">
+    <div class="customer-client-logo">
+      <span class="customer-client-logo-rc">RC</span>
+      <span class="customer-client-logo-ordera">ORDERA</span>
+    </div>
+
+    <div class="customer-client-header-actions">
+      <button
+        class="customer-notification-button"
+        type="button"
+        aria-label="Notificaciones"
+        data-i18n-aria-label="notificationsAria"
+      >
+        <span class="customer-notification-icon">♧</span>
+        <span class="customer-notification-badge">2</span>
+      </button>
+
+      <button
+        class="customer-profile-avatar"
+        type="button"
+        data-customer-view-target="profile"
+        aria-label="Perfil"
+        data-i18n-aria-label="profileAria"
+      >
+        <span id="customerProfileAvatarInitials">C</span>
+      </button>
+    </div>
+  </div>
+
+  <button class="customer-delivery-location" type="button">
+    <span class="customer-delivery-location-label" data-i18n="deliveryTo">
+      Entregar en
+    </span>
+
+    <span class="customer-delivery-location-row">
+      <span class="customer-location-pin">●</span>
+
+      <strong
+        id="customerTopLocation"
+        data-i18n="locationNotSet"
+      >
+        Agrega una dirección al hacer tu pedido
+      </strong>
+
+      <span class="customer-location-chevron">⌄</span>
+    </span>
+  </button>
+
+</header>
+
+      <dialog id="customerAuthDialog" class="auth-dialog">
+        <form method="dialog" class="customer-auth-modal" id="customerAuthModalForm" data-mode="login">
+          <div class="monthly-dialog-header">
+            <div>
+              <p class="eyebrow" data-i18n="accountTitle">Mi cuenta</p>
+              <h2 id="customerAuthTitle" data-i18n="signIn">Iniciar sesion</h2>
+            </div>
+            <button class="icon-button" id="customerAuthCloseButton" type="button" title="Cerrar" aria-label="Cerrar">
+              <span aria-hidden="true">x</span>
+            </button>
+          </div>
+          <div id="customerAuthDialogBody">
+
+      <div class="customer-auth-fields" id="customerAuthFields">
+        <label>
+          <span data-i18n="emailLabel">Correo electronico</span>
+          <input id="customerAuthEmail" type="email" placeholder="correo@ejemplo.com" data-i18n-placeholder="emailPlaceholder" autocomplete="email" />
+        </label>
+        <label>
+          <span data-i18n="passwordLabel">Contrasena</span>
+          <input id="customerAuthPassword" type="password" placeholder="Minimo 6 caracteres" data-i18n-placeholder="passwordPlaceholder" autocomplete="current-password" />
+        </label>
+        <label class="customer-register-field">
+          <span data-i18n="registerNameLabel">Nombre completo para registro</span>
+          <input id="customerRegisterNameInput" type="text" placeholder="Nombre y apellido" data-i18n-placeholder="registerNamePlaceholder" autocomplete="name" />
+        </label>
+        <label>
+          <span data-i18n="registerPhoneLabel">Telefono</span>
+          <input id="customerRegisterPhoneInput" type="tel" placeholder="Numero de contacto" data-i18n-placeholder="phonePlaceholder" autocomplete="tel" />
+        </label>
+        <label>
+          <span data-i18n="registerCountryLabel">Pais</span>
+          <select id="customerRegisterCountryInput" autocomplete="country">
+            <option value="" data-i18n="countrySelectPlaceholder">Selecciona un pais</option>
+            <option value="CO">Colombia</option>
+            <option value="PL">Polonia</option>
+          </select>
+        </label>
+        <label>
+          <span data-i18n="registerRegionLabel">Departamento / voivodato</span>
+          <select id="customerRegisterRegionInput" autocomplete="address-level1" disabled>
+            <option value="" data-i18n="regionSelectCountryFirst">Primero selecciona un pais</option>
+          </select>
+        </label>
+        <label>
+          <span data-i18n="registerCityLabel">Localidad</span>
+          <input id="customerRegisterCityInput" type="text" placeholder="Ciudad, municipio, pueblo, corregimiento o vereda" data-i18n-placeholder="cityPlaceholder" autocomplete="address-level2" />
+        </label>
+        <label>
+          <span data-i18n="registerAddressLabel">Direccion</span>
+          <input id="customerRegisterAddressInput" type="text" placeholder="Calle, numero, apartamento" data-i18n-placeholder="addressPlaceholder" autocomplete="street-address" />
+        </label>
+        <label>
+          <span data-i18n="registerNeighborhoodLabel">Barrio / sector</span>
+          <input id="customerRegisterNeighborhoodInput" type="text" placeholder="Barrio, sector o referencia local" data-i18n-placeholder="registerNeighborhoodPlaceholder" autocomplete="address-level3" />
+        </label>
+        <label>
+          <span data-i18n="registerPostalCodeLabel">Codigo postal</span>
+          <input id="customerRegisterPostalCodeInput" type="text" placeholder="Codigo postal (opcional)" data-i18n-placeholder="postalCodePlaceholder" autocomplete="postal-code" />
+        </label>
+        <label>
+          <span data-i18n="registerReferenceLabel">Referencia</span>
+          <input id="customerRegisterReferenceInput" type="text" placeholder="Piso, timbre, instrucciones" data-i18n-placeholder="referencePlaceholder" autocomplete="off" />
+        </label>
+        <label class="customer-legal-checkbox">
+          <input id="customerPrivacyConsentInput" type="checkbox" />
+          <span data-i18n="privacyConsent">Acepto el tratamiento de mis datos para gestionar pedidos, historial, entrega, chat y cookies tecnicas necesarias.</span>
+        </label>
+        <div class="customer-auth-actions">
+          <button class="customer-map-button" id="customerSignInButton" type="button" data-i18n="signIn">Iniciar sesion</button>
+          <button class="customer-map-button" id="customerSignUpButton" type="button" data-i18n="signUp">Crear cuenta cliente</button>
+          <button class="customer-map-button" id="customerResetPasswordButton" type="button" data-i18n="resetPassword">Recuperar contrasena</button>
+          <button class="customer-map-button" id="customerResendVerificationButton" type="button" data-i18n="resendVerification">Reenviar verificacion</button>
+        </div>
+        <div class="password-recovery-panel" id="customerPasswordRecoveryPanel" hidden>
+          <label>
+            <span data-i18n="newPasswordLabel">Nueva contrasena</span>
+            <input id="customerNewPasswordInput" type="password" autocomplete="new-password" placeholder="Minimo 6 caracteres" data-i18n-placeholder="passwordPlaceholder" />
+          </label>
+          <div class="customer-auth-actions">
+            <button class="customer-map-button" id="customerUpdatePasswordButton" type="button" data-i18n="updatePassword">Guardar nueva contrasena</button>
+            <button class="customer-map-button" id="customerCancelRecoveryButton" type="button" data-i18n="cancel">Cancelar</button>
+          </div>
+        </div>
+      </div>
+      <p class="customer-map-result" id="customerAuthMessage" hidden></p>
+</div>
+
+</form>
+</dialog>
+            
+</div>
+      
+      <section class="customer-view" data-customer-view="home">
+<div class="customer-home-intro">
+
+  <div class="customer-home-greeting">
+    <h2>
+      <span id="customerGreeting" data-i18n="greeting">Hola</span><span id="customerGreetingName" hidden></span>
+      <span aria-hidden="true">👋</span>
+    </h2>
+
+    <p data-i18n="homePrompt">¿Qué se te antoja hoy?</p>
+  </div>
+
+  <div class="customer-home-search">
+    <span class="customer-home-search-icon" aria-hidden="true">
+      &#128269;
+    </span>
+
+    <input
+      id="customerHomeSearchInput"
+      type="search"
+      placeholder="Buscar restaurantes o platos..."
+      data-i18n-placeholder="homeSearchPlaceholder"
+      autocomplete="off"
+    />
+  </div>
+
+</div>
+        <section class="customer-categories-section">
+
+  <div class="customer-section-title-row">
+    <h2 data-i18n="categoriesTitle">Categorías</h2>
+
+    <button
+      class="customer-see-all-button"
+      type="button"
+      id="customerSeeAllCategoriesButton"
+    >
+      <span data-i18n="showAll">Ver todas</span>
+      <span aria-hidden="true">→</span>
+    </button>
+  </div>
+
+  <div class="customer-category-scroll">
+
+    
+  <button class="customer-category-card active" type="button" data-category="all">
+  <span class="customer-category-icon">🍽️</span>
+  <span class="customer-category-name">Todos</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="colombiana">
+  <span class="customer-category-icon">🇨🇴</span>
+  <span class="customer-category-name">Colombiana</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="polaca">
+  <span class="customer-category-icon">🇵🇱</span>
+  <span class="customer-category-name">Polaca</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="mexicana">
+  <span class="customer-category-icon">🌮</span>
+  <span class="customer-category-name">Mexicana</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="italiana">
+  <span class="customer-category-icon">🍝</span>
+  <span class="customer-category-name">Italiana</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="pizza">
+  <span class="customer-category-icon">🍕</span>
+  <span class="customer-category-name">Pizza</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="hamburguesas">
+  <span class="customer-category-icon">🍔</span>
+  <span class="customer-category-name">Hamburguesas</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="americana">
+  <span class="customer-category-icon">🍟</span>
+  <span class="customer-category-name">Americana</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="pollo">
+  <span class="customer-category-icon">🍗</span>
+  <span class="customer-category-name">Pollo</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="parrilla">
+  <span class="customer-category-icon">🥩</span>
+  <span class="customer-category-name">Parrilla</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="bbq">
+  <span class="customer-category-icon">🔥</span>
+  <span class="customer-category-name">BBQ</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="mariscos">
+  <span class="customer-category-icon">🦐</span>
+  <span class="customer-category-name">Mariscos</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="pescados">
+  <span class="customer-category-icon">🐟</span>
+  <span class="customer-category-name">Pescados</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="sushi">
+  <span class="customer-category-icon">🍣</span>
+  <span class="customer-category-name">Sushi</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="japonesa">
+  <span class="customer-category-icon">🍱</span>
+  <span class="customer-category-name">Japonesa</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="china">
+  <span class="customer-category-icon">🥡</span>
+  <span class="customer-category-name">China</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="coreana">
+  <span class="customer-category-icon">🍲</span>
+  <span class="customer-category-name">Coreana</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="tailandesa">
+  <span class="customer-category-icon">🍜</span>
+  <span class="customer-category-name">Tailandesa</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="vietnamita">
+  <span class="customer-category-icon">🥢</span>
+  <span class="customer-category-name">Vietnamita</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="india">
+  <span class="customer-category-icon">🍛</span>
+  <span class="customer-category-name">India</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="arabe">
+  <span class="customer-category-icon">🧆</span>
+  <span class="customer-category-name">Árabe</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="turca">
+  <span class="customer-category-icon">🥙</span>
+  <span class="customer-category-name">Turca</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="griega">
+  <span class="customer-category-icon">🫓</span>
+  <span class="customer-category-name">Griega</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="mediterranea">
+  <span class="customer-category-icon">🫒</span>
+  <span class="customer-category-name">Mediterránea</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="espanola">
+  <span class="customer-category-icon">🥘</span>
+  <span class="customer-category-name">Española</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="francesa">
+  <span class="customer-category-icon">🥐</span>
+  <span class="customer-category-name">Francesa</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="peruana">
+  <span class="customer-category-icon">🇵🇪</span>
+  <span class="customer-category-name">Peruana</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="venezolana">
+  <span class="customer-category-icon">🇻🇪</span>
+  <span class="customer-category-name">Venezolana</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="brasilena">
+  <span class="customer-category-icon">🇧🇷</span>
+  <span class="customer-category-name">Brasileña</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="argentina">
+  <span class="customer-category-icon">🇦🇷</span>
+  <span class="customer-category-name">Argentina</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="latina">
+  <span class="customer-category-icon">🌎</span>
+  <span class="customer-category-name">Latina</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="africana">
+  <span class="customer-category-icon">🌍</span>
+  <span class="customer-category-name">Africana</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="caribena">
+  <span class="customer-category-icon">🏝️</span>
+  <span class="customer-category-name">Caribeña</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="vegetariana">
+  <span class="customer-category-icon">🥗</span>
+  <span class="customer-category-name">Vegetariana</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="vegana">
+  <span class="customer-category-icon">🌱</span>
+  <span class="customer-category-name">Vegana</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="saludable">
+  <span class="customer-category-icon">🥑</span>
+  <span class="customer-category-name">Saludable</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="ensaladas">
+  <span class="customer-category-icon">🥗</span>
+  <span class="customer-category-name">Ensaladas</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="sopas">
+  <span class="customer-category-icon">🍲</span>
+  <span class="customer-category-name">Sopas</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="desayunos">
+  <span class="customer-category-icon">🍳</span>
+  <span class="customer-category-name">Desayunos</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="brunch">
+  <span class="customer-category-icon">🥞</span>
+  <span class="customer-category-name">Brunch</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="sandwiches">
+  <span class="customer-category-icon">🥪</span>
+  <span class="customer-category-name">Sándwiches</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="hotdogs">
+  <span class="customer-category-icon">🌭</span>
+  <span class="customer-category-name">Hot Dogs</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="empanadas">
+  <span class="customer-category-icon">🥟</span>
+  <span class="customer-category-name">Empanadas</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="comida-rapida">
+  <span class="customer-category-icon">🍟</span>
+  <span class="customer-category-name">Comida rápida</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="street-food">
+  <span class="customer-category-icon">🌯</span>
+  <span class="customer-category-name">Street Food</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="panaderia">
+  <span class="customer-category-icon">🥖</span>
+  <span class="customer-category-name">Panadería</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="cafeteria">
+  <span class="customer-category-icon">☕</span>
+  <span class="customer-category-name">Cafetería</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="postres">
+  <span class="customer-category-icon">🍰</span>
+  <span class="customer-category-name">Postres</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="helados">
+  <span class="customer-category-icon">🍨</span>
+  <span class="customer-category-name">Helados</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="dulces">
+  <span class="customer-category-icon">🍩</span>
+  <span class="customer-category-name">Dulces</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="bebidas">
+  <span class="customer-category-icon">🥤</span>
+  <span class="customer-category-name">Bebidas</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="jugos">
+  <span class="customer-category-icon">🧃</span>
+  <span class="customer-category-name">Jugos</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="comida-casera">
+  <span class="customer-category-icon">🍛</span>
+  <span class="customer-category-name">Casera</span>
+</button>
+
+<button class="customer-category-card" type="button" data-category="familiar">
+  <span class="customer-category-icon">👨‍👩‍👧‍👦</span>
+  <span class="customer-category-name">Familiar</span>
+</button>
+    <button
+  class="customer-category-card"
+  type="button"
+  data-category="other"
+>
+  <span class="customer-category-icon">➕</span>
+  <span class="customer-category-name">Otras</span>
+</button>
+  </div>
+
+</section>
+        <section class="customer-restaurant-panel" id="customerRestaurantPanel" aria-label="Elegir restaurante" data-i18n-aria-label="restaurantPanelAria">
+         <div class="customer-section-title-row customer-restaurants-heading">
+  <div>
+    <h2 id="customerRestaurantTitle">Restaurantes cerca de ti</h2>
+    <p id="customerSelectedRestaurantText">
+      Descubre lugares disponibles para pedir ahora.
+    </p>
+  </div>
+
+  <button
+    class="customer-icon-action"
+    id="customerRefreshRestaurantsButton"
+    type="button"
+    title="Actualizar restaurantes"
+    aria-label="Actualizar restaurantes"
+  >
+    <span aria-hidden="true">&#8635;</span>
+  </button>
+</div>
+          
+  <div class="customer-restaurant-search">
+            <label>
+              <span data-i18n="restaurantSearchLabel">Buscar restaurante</span>
+              <input id="customerRestaurantSearchInput" type="search" placeholder="Nombre, ciudad o direccion" data-i18n-placeholder="restaurantSearchPlaceholder" autocomplete="off" />
+            </label>
+          </div>
+          <div class="customer-restaurant-list" id="customerRestaurantList"></div>
+        </section>
+      </section>
+
+      <section class="customer-view" data-customer-view="store" hidden>
+        <section class="customer-store-header" id="customerSelectedRestaurantPanel">
+          <button class="customer-back-button" id="customerBackToRestaurantsButton" type="button" data-i18n="backToRestaurants">Volver</button>
+          <div class="customer-store-identity">
+            <img class="brand-logo customer-brand-logo" id="customerBusinessLogo" alt="Logo del restaurante" hidden />
+            <div>
+              <div class="customer-store-title-row">
+                <h2 id="customerBusinessName">Restaurante</h2>
+                <span class="customer-open-badge" id="customerSelectedRestaurantStatus" data-i18n="restaurantOpen">Abierto</span>
+              </div>
+              <p id="customerTableLabel" data-i18n="heroSubtitle">Escanea, elige y envia tu pedido.</p>
+            </div>
+          </div>
+          <p class="customer-store-description" id="customerSelectedRestaurantDescription" hidden></p>
+          <div class="customer-store-meta">
+            <span id="customerSelectedRestaurantAddress"></span>
+            <span id="customerSelectedRestaurantDelivery" data-i18n="deliveryCalculatedAtCheckout">Domicilio calculado con tu direccion</span>
+          </div>
+          <button class="customer-icon-action customer-store-refresh" id="customerRefreshMenuButton" type="button" title="Actualizar menu" aria-label="Actualizar menu" data-i18n-aria-label="refreshMenu">
+            <span aria-hidden="true">&#8635;</span>
+          </button>
+          <button class="customer-icon-action customer-store-favorite" id="customerFavoriteRestaurantButton" type="button" title="Guardar restaurante favorito" aria-label="Guardar restaurante favorito" aria-pressed="false" data-i18n-aria-label="favoriteRestaurant">
+            <span aria-hidden="true">&#9825;</span>
+          </button>
+        </section>
+
+        <section class="customer-status" id="customerStatus" role="status" data-i18n="loadingMenu">Cargando menu...</section>
+
+        <section class="customer-menu-layout">
+          <section class="customer-menu-panel" aria-label="Menu del restaurante" data-i18n-aria-label="menuPanelAria">
+            <div class="customer-menu-search">
+              <label>
+                <span data-i18n="searchLabel">Buscar producto</span>
+                <input id="customerMenuSearchInput" type="search" placeholder="Ej: bandeja paisa" data-i18n-placeholder="searchPlaceholder" autocomplete="off" />
+              </label>
+              <button class="customer-map-button" id="customerMenuSearchClearButton" type="button" hidden data-i18n="searchClear">Limpiar</button>
+            </div>
+            <div class="customer-tabs" id="customerCategoryTabs"></div>
+            <div class="customer-menu-grid" id="customerMenuGrid"></div>
+          </section>
+
+          <aside class="customer-cart-panel" aria-label="Pedido del cliente" data-i18n-aria-label="cartPanelAria">
+            <div class="customer-cart-heading">
+              <h2 data-i18n="yourOrder">Tu pedido</h2>
+              <button class="customer-icon-action" id="customerNotifyButton" type="button" title="Activar notificaciones" aria-label="Activar notificaciones" data-i18n-aria-label="enableNotifications">
+                <span aria-hidden="true">!</span>
+              </button>
+            </div>
+
+            <label>
+              <span data-i18n="orderTypeLabel">Tipo de pedido</span>
+              <select id="customerOrderType">
+                <option value="Comer en el punto" data-i18n="eatHere">Comer en el punto</option>
+                <option value="Recoger en el punto" data-i18n="pickup">Para llevar / recoger en el punto</option>
+                <option value="Domicilio" data-i18n="delivery">Envio a domicilio</option>
+              </select>
+            </label>
+
+            <label>
+              <span data-i18n="nameLabel">Nombre</span>
+              <input id="customerNameInput" type="text" placeholder="Tu nombre" data-i18n-placeholder="namePlaceholder" autocomplete="name" />
+            </label>
+
+            <label>
+              <span data-i18n="tableLabel">Mesa / ubicacion</span>
+              <input id="customerTableInput" type="text" placeholder="Mesa, punto de entrega o ubicacion" data-i18n-placeholder="tablePlaceholder" autocomplete="off" />
+            </label>
+
+            <label>
+              <span data-i18n="paymentMethodLabel">Metodo de pago</span>
+              <select id="customerPaymentMethod">
+                <option value="Efectivo" data-i18n="cash">Efectivo</option>
+                <option value="Transferencia" data-i18n="transfer">Transferencia</option>
+                <option value="Datafono" data-i18n="cardTerminal">Datafono / tarjeta al recibir</option>
+                <option id="customerOnlinePaymentOption" value="Online" data-i18n="onlinePayment" hidden disabled>Pago en linea</option>
+              </select>
+            </label>
+
+            <div class="customer-delivery-fields" id="customerDeliveryFields" hidden>
+              <label>
+                <span data-i18n="phoneLabel">Telefono</span>
+                <input id="customerPhoneInput" type="tel" placeholder="Numero de contacto" data-i18n-placeholder="phonePlaceholder" autocomplete="tel" />
+              </label>
+              <label>
+                <span data-i18n="addressLabel">Direccion completa</span>
+                <input id="customerAddressInput" type="text" placeholder="Calle, numero, apartamento" data-i18n-placeholder="addressPlaceholder" autocomplete="street-address" />
+              </label>
+              <label>
+                <span data-i18n="neighborhoodLabel">Barrio / ciudad</span>
+                <input id="customerNeighborhoodInput" type="text" placeholder="Barrio o ciudad" data-i18n-placeholder="neighborhoodPlaceholder" autocomplete="address-level2" />
+              </label>
+              <label>
+                <span data-i18n="referenceLabel">Referencia</span>
+                <input id="customerReferenceInput" type="text" placeholder="Piso, timbre, instrucciones" data-i18n-placeholder="referencePlaceholder" autocomplete="off" />
+              </label>
+              <label>
+                <span data-i18n="distanceLabel">Distancia aproximada km</span>
+                <input id="customerDistanceInput" type="number" min="0" step="0.1" placeholder="Calculada automaticamente" data-i18n-placeholder="distancePlaceholder" inputmode="decimal" readonly aria-readonly="true" />
+              </label>
+              <button class="customer-map-button" id="customerUseLocationButton" type="button" data-i18n="useLocation">Usar mi ubicacion</button>
+              <button class="customer-map-button" id="customerCalculateDistanceButton" type="button" data-i18n="calculateMaps">Calcular con Google Maps</button>
+              <p class="customer-map-result" id="customerMapResult" hidden></p>
+              <p class="customer-delivery-help" data-i18n="deliveryHelp">Domicilio: minimo configurado por el restaurante; si la distancia supera ese valor, se calcula por tramos.</p>
+            </div>
+
+            <div class="customer-cart-items" id="customerCartItems"></div>
+
+            <label>
+              <span data-i18n="kitchenNotesLabel">Notas para cocina</span>
+              <textarea id="customerOrderNotes" rows="3" placeholder="Ej: sin cebolla, salsa aparte..." data-i18n-placeholder="kitchenNotesPlaceholder"></textarea>
+            </label>
+
+            <div class="customer-cart-total">
+              <span data-i18n="estimatedTotal">Total estimado</span>
+              <strong id="customerCartTotal">$0.00</strong>
+            </div>
+
+            <div class="customer-delivery-fee" id="customerDeliveryFeeRow" hidden>
+              <span data-i18n="estimatedDelivery">Domicilio estimado</span>
+              <strong id="customerDeliveryFeeLabel">$0.00</strong>
+            </div>
+
+            <button class="customer-submit-button" id="sendCustomerOrderButton" type="button" data-i18n="sendOrder">Enviar pedido</button>
+          </aside>
+        </section>
+      </section>
+
+      <section class="customer-view" data-customer-view="orders" hidden>
+        <div class="customer-view-heading">
+          <p class="eyebrow" data-i18n="ordersEyebrow">Seguimiento</p>
+          <h2 data-i18n="navOrders">Pedidos</h2>
+        </div>
+        <section class="customer-active-order-panel">
+          <h3 data-i18n="activeOrderTitle">Pedido activo</h3>
+          <section class="customer-status customer-tracking-status" id="customerTrackingStatus" role="status" hidden></section>
+          <section class="customer-courier-tracking" id="customerCourierTracking" aria-live="polite" hidden></section>
+          <ol class="customer-order-timeline" id="customerOrderTimeline" aria-label="Progreso del pedido" data-i18n-aria-label="orderTimelineLabel" hidden></ol>
+          <div class="customer-payment-box" id="customerPaymentBox" hidden></div>
+          <button class="customer-submit-button customer-confirm-delivery-button" id="customerConfirmDeliveryButton" type="button" hidden data-i18n="confirmDelivery">Confirmar que recibi el pedido</button>
+          <section class="customer-chat-panel" id="customerChatPanel" hidden>
+            <h3 data-i18n="chatTitle">Chat con el restaurante</h3>
+            <div class="customer-chat-messages" id="customerChatMessages"></div>
+            <label>
+              <span data-i18n="chatMessageLabel">Mensaje</span>
+              <textarea id="customerChatInput" rows="2" placeholder="Escribe aqui. Puedes enviar comprobante de transferencia." data-i18n-placeholder="chatPlaceholder"></textarea>
+            </label>
+            <label>
+              <span data-i18n="imageLabel">Imagen</span>
+              <input id="customerChatImageInput" type="file" accept="image/*" />
+            </label>
+            <button class="customer-map-button" id="customerSendChatButton" type="button" data-i18n="sendChat">Enviar chat</button>
+            <p class="customer-map-result" id="customerChatStatus" hidden></p>
+          </section>
+          <div class="customer-empty" id="customerNoActiveOrder" data-i18n="noActiveOrder">No tienes un pedido activo.</div>
+        </section>
+
+        <section class="customer-history-panel customer-history-page" aria-label="Historial del cliente" data-i18n-aria-label="historyPanelAria">
+          <div class="customer-history-head">
+            <h3 data-i18n="historyTitle">Historial de pedidos</h3>
+            <button class="customer-icon-action" id="customerRefreshHistoryButton" type="button" title="Actualizar pedidos" aria-label="Actualizar pedidos" data-i18n-aria-label="refreshHistory">
+              <span aria-hidden="true">&#8635;</span>
+            </button>
+          </div>
+          <div class="customer-history-list" id="customerHistoryList"></div>
+        </section>
+      </section>
+
+      <section class="customer-view" data-customer-view="reservations" hidden>
+        <div class="customer-view-heading">
+          <p class="eyebrow" data-i18n="reservationsEyebrow">Tus mesas</p>
+          <h2 data-i18n="navReservations">Reservas</h2>
+        </div>
+        <div class="customer-empty customer-empty-page" data-i18n="reservationsEmpty">No tienes reservas registradas.</div>
+      </section>
+
+      <section class="customer-view" data-customer-view="profile" hidden>
+        <div class="customer-view-heading">
+          <p class="eyebrow" data-i18n="profileEyebrow">Cuenta y preferencias</p>
+          <h2 data-i18n="navProfile">Perfil</h2>
+        </div>
+        <section class="customer-account-panel" aria-label="Cuenta del cliente" data-i18n-aria-label="accountPanelAria">
+          <div class="customer-account-head">
+            <div>
+              <h3 data-i18n="accountTitle">Mi cuenta</h3>
+              <p id="customerAccountSummary" data-i18n="accountGuest">Inicia sesion o crea una cuenta para enviar pedidos y ver tu historial.</p>
+            </div>
+            <div class="customer-account-actions" id="customerAccountActions">
+              <button class="customer-map-button" id="customerOpenSignInButton" type="button" data-i18n="signIn">Iniciar sesion</button>
+              <button class="customer-map-button" id="customerOpenSignUpButton" type="button" data-i18n="signUp">Crear cuenta cliente</button>
+            </div>
+            <button class="customer-map-button customer-sign-out-button" id="customerSignOutButton" type="button" hidden data-i18n="signOut">Cerrar sesion</button>
+          </div>
+          <div class="customer-profile-details" id="customerProfileDetails"></div>
+
+          <div class="customer-profile-edit-actions" id="customerProfileEditActions" hidden>
+  <button
+    class="customer-map-button"
+    id="customerEditProfileButton"
+    type="button"
+  >
+    Editar perfil
+  </button>
+</div>
+          <a class="customer-map-button customer-platform-home-link" href="index.html?app=v91.0.0" data-i18n="platformHome">Volver a la pantalla principal</a>
+        </section>
+
+        <section class="customer-profile-settings">
+          <label class="customer-language-label">
+            <span data-i18n="languageLabel">Idioma</span>
+            <select id="customerLanguageSelect">
+              <option value="es">Español</option>
+              <option value="pl">Polski</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+          <details class="customer-legal-notice">
+            <summary data-i18n="privacySummary">Privacidad y datos</summary>
+            <p data-i18n="legalNotice">
+              Usamos los datos que escribes para crear tu cuenta, preparar el pedido, entregarlo, guardar historial y responder por chat. La app puede usar almacenamiento local/cookies tecnicas para mantener sesion, idioma, carrito y funcionamiento.
+            </p>
+          </details>
+        </section>
+      </section>
+    </main>
+
+    <nav
+  class="customer-bottom-nav"
+  aria-label="Navegacion del cliente"
+  data-i18n-aria-label="customerNavigationAria"
+>
+
+  <button
+    class="customer-bottom-nav-item active"
+    type="button"
+    data-customer-view-target="home"
+    aria-current="page"
+  >
+    <span class="customer-bottom-nav-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24">
+        <path d="M3 10.5 12 3l9 7.5v9a1.5 1.5 0 0 1-1.5 1.5H15v-6H9v6H4.5A1.5 1.5 0 0 1 3 19.5z"/>
+      </svg>
+    </span>
+    <span data-i18n="navHome">Inicio</span>
+  </button>
+
+  <button
+    class="customer-bottom-nav-item"
+    type="button"
+    data-customer-view-target="orders"
+  >
+    <span class="customer-bottom-nav-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24">
+        <path d="M6 3h12a2 2 0 0 1 2 2v16l-3-2-3 2-2-2-2 2-3-2-3 2V5a2 2 0 0 1 2-2z"/>
+        <path d="M8 8h8M8 12h8"/>
+      </svg>
+    </span>
+    <span data-i18n="navOrders">Pedidos</span>
+  </button>
+
+  <button
+    class="customer-bottom-nav-item"
+    type="button"
+    data-customer-view-target="reservations"
+  >
+    <span class="customer-bottom-nav-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24">
+        <rect x="3" y="5" width="18" height="16" rx="2"/>
+        <path d="M8 3v4M16 3v4M3 10h18"/>
+      </svg>
+    </span>
+    <span data-i18n="navReservations">Reservas</span>
+  </button>
+
+  <button
+    class="customer-bottom-nav-item"
+    type="button"
+    data-customer-view-target="profile"
+  >
+    <span class="customer-bottom-nav-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24">
+        <circle cx="12" cy="8" r="4"/>
+        <path d="M4 21a8 8 0 0 1 16 0"/>
+      </svg>
+    </span>
+    <span data-i18n="navProfile">Cuenta</span>
+  </button>
+
+</nav>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4"></script>
+    <script src="supabase-config.js?v=91.0.0"></script>
+    <script src="offline-i18n.js?v=91.0.0"></script>
+    <script src="cliente.js?v=91.0.0"></script>
+  </body>
+</html>
+

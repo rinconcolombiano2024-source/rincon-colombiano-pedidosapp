@@ -1,0 +1,22 @@
+FASE 6 / v57 - CORREO, RECUPERACION Y PANTALLA INICIAL
+
+Cambios incluidos:
+
+1. Correo de verificacion
+- Los mensajes ahora indican claramente que el correo de verificacion es de RINCON COLOMBIANO PEDIDOS.
+- Aplica para restaurante, cliente y colaborador.
+
+2. Recuperacion de contrasena
+- Restaurante conserva el flujo existente de Supabase.
+- Cliente ahora tiene boton Recuperar contrasena.
+- Colaborador ahora tiene boton Recuperar contrasena.
+- Al abrir el enlace del correo, la app muestra el panel para escribir nueva contrasena.
+
+3. Pantalla inicial
+- La pantalla antes de iniciar sesion ahora tiene bandera de Colombia hecha en CSS.
+- Mejora visual con colores de Colombia: amarillo, azul, rojo y verde de marca.
+- Mejor estructura movil para evitar textos o tarjetas sobrepuestas.
+- Nombre de instalacion PWA actualizado a RINCON COLOMBIANO PEDIDOS.
+
+4. Cache
+- Cache actualizado a rincon-colombiano-v57 para que telefonos/tablets reciban la nueva version.
