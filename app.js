@@ -3266,28 +3266,33 @@ async function refreshCentralCloudState() {
     const profileRow = profileResponse.data;
 
     /*
-     * REVISIONES
-     */
-    if (
-      settingsRow?.settings_revision !==
-      undefined
-    ) {
-      storeCloudRevision(
-        STORAGE_KEYS.settingsRevision,
-        settingsRow.settings_revision
-      );
-    }
+ * REVISIONES
+ *
+ * Nunca avanzamos la revisión local mientras
+ * exista un cambio local pendiente.
+ *
+ * La revisión guardada representa la última
+ * versión que este dispositivo confirmó realmente.
+ */
+if (
+  settingsRow?.settings_revision !== undefined &&
+  !hasPendingSettings()
+) {
+  storeCloudRevision(
+    STORAGE_KEYS.settingsRevision,
+    settingsRow.settings_revision
+  );
+}
 
-    if (
-      settingsRow?.menu_revision !==
-      undefined
-    ) {
-      storeCloudRevision(
-        STORAGE_KEYS.menuRevision,
-        settingsRow.menu_revision
-      );
-    }
-
+if (
+  settingsRow?.menu_revision !== undefined &&
+  !hasPendingMenu()
+) {
+  storeCloudRevision(
+    STORAGE_KEYS.menuRevision,
+    settingsRow.menu_revision
+  );
+}
     /*
      * AJUSTES
      *
