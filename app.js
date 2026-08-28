@@ -2111,14 +2111,50 @@ async function saveCloudSettings() {
     if (elements.businessLogoUrlInput) elements.businessLogoUrlInput.value = businessLogoUrl;
     applyBusinessNameToUi();
   }
-
- const payload = currentSettingsPayload();
+const payload = currentSettingsPayload();
 const profile = currentRestaurantRpcProfilePayload();
-const { data: rpcData, error: rpcError } = await cloudState.client.rpc("save_current_restaurant_settings", {
-  p_settings: payload,
-  p_profile: profile,
-  p_expected_revision: storedCloudRevision(STORAGE_KEYS.settingsRevision) || null,
-});
+
+let expectedRevision = storedCloudRevision(STORAGE_KEYS.settingsRevision) || null;
+
+let { data: rpcData, error: rpcError } = await cloudState.client.rpc(
+  "save_current_restaurant_settings",
+  {
+    p_settings: payload,
+    p_profile: profile,
+    p_expected_revision: expectedRevision,
+  }
+);
+
+if (rpcError && /SETTINGS_REVISION_CONFLICT/i.test(
+  String(rpcError?.message || rpcError?.details || "")
+)) {
+  const latestRow = await readCurrentCloudSettingsRow();
+
+  if (!latestRow) {
+    throw rpcError;
+  }
+
+  expectedRevision = Number(latestRow.settings_revision) || null;
+
+  if (expectedRevision !== null) {
+    storeCloudRevision(
+      STORAGE_KEYS.settingsRevision,
+      expectedRevision
+    );
+  }
+
+  const retry = await cloudState.client.rpc(
+    "save_current_restaurant_settings",
+    {
+      p_settings: payload,
+      p_profile: profile,
+      p_expected_revision: expectedRevision,
+    }
+  );
+
+  rpcData = retry.data;
+  rpcError = retry.error;
+}
   if (!rpcError) {
     const confirmed = Array.isArray(rpcData) ? rpcData[0] : rpcData;
     if (!confirmed?.settings || !confirmed?.profile) {
