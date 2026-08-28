@@ -3665,45 +3665,46 @@ if (
      * Conservamos pedidos locales pendientes
      * y adoptamos los confirmados de Supabase.
      */
-    const deletedIds =
-      readDeletedOrderIds();
+    if (orders) {
+  const deletedIds =
+    readDeletedOrderIds();
 
-    const localPending =
-      savedOrders.filter(
-        (order) =>
-          needsCloudSync(order) &&
-          !deletedIds.includes(order.id)
-      );
-
-    const cloudOrders =
-      (ordersResponse.data || [])
-        .map((row) => ({
-          ...row.order_json,
-          type: normalizeOrderType(
-            row.order_json?.type
-          ),
-          businessDate:
-            orderBusinessDate(
-              row.order_json
-            ),
-          syncStatus: "synced",
-        }))
-        .filter(
-          (order) =>
-            !deletedIds.includes(
-              order.id
-            )
-        );
-
-    savedOrders = mergeOrders(
-      cloudOrders,
-      localPending
+  const localPending =
+    savedOrders.filter(
+      (order) =>
+        needsCloudSync(order) &&
+        !deletedIds.includes(order.id)
     );
 
-    saveOrders({
-      immediate: true
-    });
+  const cloudOrders =
+    (ordersResponse.data || [])
+      .map((row) => ({
+        ...row.order_json,
+        type: normalizeOrderType(
+          row.order_json?.type
+        ),
+        businessDate:
+          orderBusinessDate(
+            row.order_json
+          ),
+        syncStatus: "synced",
+      }))
+      .filter(
+        (order) =>
+          !deletedIds.includes(
+            order.id
+          )
+      );
 
+  savedOrders = mergeOrders(
+    cloudOrders,
+    localPending
+  );
+
+  saveOrders({
+    immediate: true
+  });
+}
     renderCurrencySettings();
     renderRestaurantStatus();
     renderHistory();
