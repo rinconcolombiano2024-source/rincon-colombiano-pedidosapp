@@ -1588,6 +1588,7 @@ let customerRestaurantCategoryFilter = "all";
 let customerMenu = CUSTOMER_DEFAULT_MENU;
 let customerActiveCategory = "";
 let customerSearchQuery = "";
+let customerMenuSearchTimer = null;
 let customerCart = [];
 let customerSettings = {
   businessName: "RC ORDERA",
@@ -1619,6 +1620,7 @@ let customerTrackingRealtimeChannel = null;
 let customerTrackingRealtimeSignature = "";
 let customerTrackingRefreshTimer = null;
 let customerTrackingRealtimeRetryTimer = null;
+let customerTrackingRealtimeStatus = "idle";
 let customerTrackingRpcAvailable = null;
 let customerChatTimer = null;
 let customerKnownChatMessageIds = new Set();
@@ -1631,6 +1633,7 @@ let customerDirectoryRealtimeChannel = null;
 let customerDirectoryRealtimeTimer = null;
 let customerDirectoryPollTimer = null;
 let customerDirectoryRealtimeRetryTimer = null;
+let customerDirectoryRealtimeStatus = "idle";
 let customerDirectoryLoadPromise = null;
 let customerMenuFetchPromise = null;
 let customerMenuFetchStoreId = "";
@@ -2456,7 +2459,7 @@ async function customerSignOut() {
     customerResetResolvedIdentity();
     customerHistoryRows = [];
     customerRenderAccount();
-    window.location.replace("index.html?app=v89.0.0");
+    window.location.replace("index.html?app=v91.0.1");
   }
 }
 
@@ -3016,6 +3019,7 @@ function customerStopDirectoryRealtime() {
   }
   const channel = customerDirectoryRealtimeChannel;
   customerDirectoryRealtimeChannel = null;
+  customerDirectoryRealtimeStatus = "idle";
   if (channel && customerClient?.removeChannel) customerClient.removeChannel(channel).catch(() => {});
 }
 
@@ -3030,12 +3034,13 @@ function customerScheduleDirectoryRefresh() {
 function customerStartDirectoryRealtime() {
   if (!customerDirectoryPollTimer) {
     customerDirectoryPollTimer = window.setInterval(() => {
-      if (document.visibilityState === "visible" && window.navigator.onLine) {
+      if (customerDirectoryRealtimeStatus !== "SUBSCRIBED" && document.visibilityState === "visible" && window.navigator.onLine) {
         customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
       }
     }, 15000);
   }
   if (!customerClient?.channel || customerDirectoryRealtimeChannel) return;
+  customerDirectoryRealtimeStatus = "connecting";
   const changeFilter = { event: "*", schema: "public", table: "restaurant_profiles" };
   if (customerRegistrationRegion.countryCode) {
     changeFilter.filter = `country_code=eq.${customerRegistrationRegion.countryCode}`;
@@ -3050,7 +3055,12 @@ function customerStartDirectoryRealtime() {
   customerDirectoryRealtimeChannel = channel;
   channel.subscribe((status) => {
     if (channel !== customerDirectoryRealtimeChannel) return;
+    customerDirectoryRealtimeStatus = status;
     if (status === "SUBSCRIBED") {
+      if (customerDirectoryPollTimer) {
+        window.clearInterval(customerDirectoryPollTimer);
+        customerDirectoryPollTimer = null;
+      }
       customerScheduleDirectoryRefresh();
       return;
     }
@@ -3134,7 +3144,7 @@ function customerClearRestaurantSelection(messageKey = "") {
 
   const nextUrl = new URL(window.location.href);
   nextUrl.searchParams.delete("store");
-  nextUrl.searchParams.set("app", "v89.0.0");
+  nextUrl.searchParams.set("app", "v91.0.1");
   window.history.replaceState({}, "", nextUrl.toString());
 
   customerApplyBusinessName();
@@ -3405,7 +3415,7 @@ async function customerSelectRestaurant(storeId, options = {}) {
   if (options.updateUrl !== false) {
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("store", customerStoreId);
-    nextUrl.searchParams.set("app", "v89.0.0");
+    nextUrl.searchParams.set("app", "v91.0.1");
     window.history.replaceState({}, "", nextUrl.toString());
   }
 
@@ -4805,6 +4815,7 @@ function customerStopOrderTrackingRealtime() {
   const channel = customerTrackingRealtimeChannel;
   customerTrackingRealtimeChannel = null;
   customerTrackingRealtimeSignature = "";
+  customerTrackingRealtimeStatus = "idle";
   if (channel && customerClient?.removeChannel) customerClient.removeChannel(channel).catch(() => {});
 }
 
@@ -4838,8 +4849,10 @@ function customerStartOrderTrackingRealtime(row = {}) {
     );
   }
   customerTrackingRealtimeChannel = channel;
+  customerTrackingRealtimeStatus = "connecting";
   channel.subscribe((status) => {
     if (channel !== customerTrackingRealtimeChannel || signature !== customerTrackingRealtimeSignature) return;
+    customerTrackingRealtimeStatus = status;
     if (status === "SUBSCRIBED") {
       customerScheduleTrackingRefresh();
       return;
@@ -4936,7 +4949,7 @@ function customerStartStatusTracking(orderId, publicToken, paymentMethod, paymen
   customerRenderOrderTimeline([]);
   customerPollOrderStatus().catch(() => {});
   customerStatusTimer = window.setInterval(() => {
-    customerPollOrderStatus().catch(() => {});
+    if (customerTrackingRealtimeStatus !== "SUBSCRIBED") customerPollOrderStatus().catch(() => {});
   }, 8000);
   customerStartChat(orderId, publicToken);
 }
@@ -5406,18 +5419,31 @@ async function customerSendOrder() {
 customerElements.categoryTabs.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-category]");
   if (!button) return;
+  if (customerMenuSearchTimer) {
+    window.clearTimeout(customerMenuSearchTimer);
+    customerMenuSearchTimer = null;
+  }
   customerActiveCategory = button.dataset.category;
   customerApplyMenuSearch("");
 });
 
 if (customerElements.menuSearchInput) {
   customerElements.menuSearchInput.addEventListener("input", () => {
-    customerApplyMenuSearch(customerElements.menuSearchInput.value);
+    if (customerMenuSearchTimer) window.clearTimeout(customerMenuSearchTimer);
+    const value = customerElements.menuSearchInput.value;
+    customerMenuSearchTimer = window.setTimeout(() => {
+      customerMenuSearchTimer = null;
+      customerApplyMenuSearch(value);
+    }, 120);
   });
 }
 
 if (customerElements.menuSearchClearButton) {
   customerElements.menuSearchClearButton.addEventListener("click", () => {
+    if (customerMenuSearchTimer) {
+      window.clearTimeout(customerMenuSearchTimer);
+      customerMenuSearchTimer = null;
+    }
     customerApplyMenuSearch("");
     if (customerElements.menuSearchInput) customerElements.menuSearchInput.focus();
   });

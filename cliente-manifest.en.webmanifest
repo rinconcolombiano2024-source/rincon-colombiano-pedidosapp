@@ -3,7 +3,7 @@
   "short_name": "RC Customer",
   "id": "./customer-app-en",
   "description": "Your favorite food, close to you.",
-  "start_url": "./cliente.html?app=v89.0.0&lang=en",
+  "start_url": "./cliente.html?app=v91.0.1&lang=en",
   "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],

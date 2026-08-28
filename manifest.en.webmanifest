@@ -3,7 +3,7 @@
   "short_name": "RC Restaurant",
   "id": "./restaurant-app-en",
   "description": "Restaurant orders, internal tickets, menu, staff, history, and closing reports.",
-  "start_url": "./index.html?app=v89.0.0&lang=en",
+  "start_url": "./index.html?app=v91.0.1&lang=en",
   "scope": ".",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],

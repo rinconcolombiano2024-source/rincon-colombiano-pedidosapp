@@ -3,7 +3,7 @@
   "short_name": "RC Kurier",
   "id": "./courier-app-pl",
   "description": "Dostawy i śledzenie dla kurierów RC ORDERA.",
-  "start_url": "./colaborador.html?app=v89.0.0&lang=pl",
+  "start_url": "./colaborador.html?app=v91.0.1&lang=pl",
   "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],

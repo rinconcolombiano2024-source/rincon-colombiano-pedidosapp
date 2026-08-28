@@ -1,5 +1,5 @@
 const COURIER_VAPID_PUBLIC_KEY = "BJzCszQo4HrAtXYFQBkA_HSiqTjSqPGIa-InDIqgYc1Bqcq3V2Cj4lAuN-HcV0fO1Z95EPNx-qhJU85Rl4nxJxE";
-const COURIER_APP_VERSION = "v89.0.0";
+const COURIER_APP_VERSION = "v91.0.1";
 const courierParams = new URLSearchParams(window.location.search);
 const COURIER_PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 const COURIER_DOCUMENT_BUCKET = "courier-documents";
