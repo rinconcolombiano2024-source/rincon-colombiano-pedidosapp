@@ -2005,7 +2005,6 @@ async function loadCloudData() {
   const localPendingOrders = localOrdersBeforeLoad.filter(
     (order) => needsCloudSync(order) && !localDeletedOrderIds.includes(order.id)
   );
-  const localSettingsPending = hasPendingSettings();
 
   try {
     await ensureMinimumDatabaseVersion();
@@ -2047,54 +2046,141 @@ async function loadCloudData() {
     if (settingsError) throw settingsError;
     if (ordersError) throw ordersError;
 
-    const restaurantProfile = restaurantProfileFromUserMetadata();
-    if (!publicProfileError && typeof publicProfileRow?.active === "boolean") {
-      restaurantActive = publicProfileRow.active;
-      localStorage.setItem(STORAGE_KEYS.restaurantActive, restaurantActive ? "1" : "0");
-    } else if (publicProfileError) {
-      console.warn("No se pudo leer el estado publico del restaurante.", publicProfileError);
-    }
+  const restaurantProfile =
+  restaurantProfileFromUserMetadata();
 
-    if (ownerRoleError) console.warn("No se pudo comprobar el rol del restaurante.", ownerRoleError);
+if (publicProfileError) {
+  console.warn(
+    "No se pudo leer el estado publico del restaurante.",
+    publicProfileError
+  );
+}
 
-    const accountType = normalizeTextSetting(cloudState.user?.user_metadata?.account_type).toLowerCase();
-    if (!publicProfileRow && !ownerRole && accountType !== "restaurant") {
-      const accessMessage = "Esta cuenta no tiene un restaurante registrado. Entra desde Cliente o completa el registro de restaurante.";
-      elements.authMessage.textContent = accessMessage;
-      await cloudState.client.auth.signOut();
-      return { ok: false, reason: "not-restaurant", message: accessMessage };
-    }
+if (ownerRoleError) {
+  console.warn(
+    "No se pudo comprobar el rol del restaurante.",
+    ownerRoleError
+  );
+}
 
-    if (hasRestaurantOwnerRegistration(restaurantProfile, settingsRow)) {
-      await ensureRestaurantOwnerIdentity(restaurantProfile);
-    }
+const accountType = normalizeTextSetting(
+  cloudState.user?.user_metadata?.account_type
+).toLowerCase();
 
-    const remoteMenu = normalizeMenuCatalog(settingsRow?.menu || EMPTY_MENU_CATALOG);
-    const legacyPendingCouldContainMenu = localSettingsPending && !hasPendingMenu();
-    if (legacyPendingCouldContainMenu && !menuCatalogsMatch(menuCatalog, remoteMenu) && menuProductCount(menuCatalog) > 0) {
-      markMenuPending();
-    }
-    let localMenuPending = hasPendingMenu();
+if (
+  !publicProfileRow &&
+  !ownerRole &&
+  accountType !== "restaurant"
+) {
+  const accessMessage =
+    "Esta cuenta no tiene un restaurante registrado. Entra desde Cliente o completa el registro de restaurante.";
 
-    if (localMenuPending && menuProductCount(menuCatalog) === 0 && menuProductCount(remoteMenu) > 0) {
-      menuCatalog = remoteMenu;
-      saveMenuCache();
-      clearMenuPending();
-      localMenuPending = false;
-      showToast("El menu valido de la nube fue protegido. No se reemplazo por un menu local vacio.");
-    } else if (!localMenuPending) {
-      menuCatalog = remoteMenu;
-      saveMenuCache();
-      storeConfirmedCloudMenu(remoteMenu);
-    }
-    if (!localMenuPending && menuHasInlineRestaurantImages(remoteMenu)) {
-      menuCatalog = remoteMenu;
-      markMenuPending();
-      localMenuPending = true;
-    }
+  elements.authMessage.textContent =
+    accessMessage;
 
-    if (
-  settingsRow?.menu_revision !== undefined &&
+  await cloudState.client.auth.signOut();
+
+  return {
+    ok: false,
+    reason: "not-restaurant",
+    message: accessMessage,
+  };
+}
+
+if (
+  hasRestaurantOwnerRegistration(
+    restaurantProfile,
+    settingsRow
+  )
+) {
+  await ensureRestaurantOwnerIdentity(
+    restaurantProfile
+  );
+}
+
+/*
+ * Importante:
+ * comprobar el pendiente DESPUES de las esperas anteriores.
+ * Así protegemos cambios hechos mientras cargaba la nube.
+ */
+const localSettingsPending =
+  hasPendingSettings();
+
+if (
+  !localSettingsPending &&
+  typeof publicProfileRow?.active === "boolean"
+) {
+  restaurantActive =
+    publicProfileRow.active;
+
+  localStorage.setItem(
+    STORAGE_KEYS.restaurantActive,
+    restaurantActive ? "1" : "0"
+  );
+}
+
+const remoteMenu =
+  normalizeMenuCatalog(
+    settingsRow?.menu ||
+      EMPTY_MENU_CATALOG
+  );
+
+const legacyPendingCouldContainMenu =
+  localSettingsPending &&
+  !hasPendingMenu();
+
+if (
+  legacyPendingCouldContainMenu &&
+  !menuCatalogsMatch(
+    menuCatalog,
+    remoteMenu
+  ) &&
+  menuProductCount(menuCatalog) > 0
+) {
+  markMenuPending();
+}
+
+let localMenuPending =
+  hasPendingMenu();
+
+if (
+  localMenuPending &&
+  menuProductCount(menuCatalog) === 0 &&
+  menuProductCount(remoteMenu) > 0
+) {
+  menuCatalog = remoteMenu;
+
+  saveMenuCache();
+  clearMenuPending();
+
+  localMenuPending = false;
+
+  showToast(
+    "El menu valido de la nube fue protegido. No se reemplazo por un menu local vacio."
+  );
+} else if (!localMenuPending) {
+  menuCatalog = remoteMenu;
+
+  saveMenuCache();
+  storeConfirmedCloudMenu(
+    remoteMenu
+  );
+}
+
+if (
+  !localMenuPending &&
+  menuHasInlineRestaurantImages(
+    remoteMenu
+  )
+) {
+  menuCatalog = remoteMenu;
+  markMenuPending();
+  localMenuPending = true;
+}
+
+if (
+  settingsRow?.menu_revision !==
+    undefined &&
   !localMenuPending
 ) {
   storeCloudRevision(
@@ -2104,7 +2190,8 @@ async function loadCloudData() {
 }
 
 if (
-  settingsRow?.settings_revision !== undefined &&
+  settingsRow?.settings_revision !==
+    undefined &&
   !localSettingsPending
 ) {
   storeCloudRevision(
@@ -2112,30 +2199,76 @@ if (
     settingsRow.settings_revision
   );
 }
-    if (settingsRow && !localSettingsPending) {
-  applySettingsPayload(settingsRow.settings || {});
+
+if (
+  settingsRow &&
+  !localSettingsPending
+) {
+  applySettingsPayload(
+    settingsRow.settings || {}
+  );
 
   storeConfirmedCloudSettings(
     settingsRow.settings || {}
   );
 }
-    applyRestaurantProfile(restaurantProfile, { onlyIfEmpty: Boolean(settingsRow) });
-    applyPublicRestaurantProfileFallback(publicProfileRow || {}, { onlyIfEmpty: true });
 
-    if (!settingsRow || localSettingsPending) {
-      await saveCloudSettings();
-      clearSettingsPending();
+/*
+ * Si existen ajustes locales pendientes,
+ * no permitimos que perfiles antiguos de nube
+ * sobrescriban estado, horarios ni apertura local.
+ */
+if (!localSettingsPending) {
+  applyRestaurantProfile(
+    restaurantProfile,
+    {
+      onlyIfEmpty:
+        Boolean(settingsRow),
     }
-    if (localMenuPending || (!settingsRow && menuProductCount(menuCatalog) > 0)) {
-      await saveCloudMenu();
-      clearMenuPending();
-    }
+  );
 
-    if (typeof publicProfileRow?.active === "boolean") {
-      restaurantActive = publicProfileRow.active;
-      localStorage.setItem(STORAGE_KEYS.restaurantActive, restaurantActive ? "1" : "0");
+  applyPublicRestaurantProfileFallback(
+    publicProfileRow || {},
+    {
+      onlyIfEmpty: true,
     }
+  );
+}
 
+if (
+  !settingsRow ||
+  localSettingsPending
+) {
+  const settingsTokenToClear =
+    currentSettingsPendingToken();
+
+  await saveCloudSettings();
+
+  if (settingsTokenToClear) {
+    clearSettingsPending(
+      settingsTokenToClear
+    );
+  }
+}
+
+if (
+  localMenuPending ||
+  (
+    !settingsRow &&
+    menuProductCount(menuCatalog) > 0
+  )
+) {
+  const menuTokenToClear =
+    currentMenuPendingToken();
+
+  await saveCloudMenu();
+
+  if (menuTokenToClear) {
+    clearMenuPending(
+      menuTokenToClear
+    );
+  }
+}
     const normalizedCloudOrders = (cloudOrders || [])
       .map((row) => ({
         ...row.order_json,
@@ -4801,23 +4934,48 @@ function updateQrPreview() {
 
 async function syncMenuBeforeQr() {
   if (!cloudState.user) return false;
+
   if (!navigator.onLine) {
-    alert("Para que el QR muestre el menu real actualizado, conecta internet y vuelve a abrir el QR.");
+    alert(
+      "Para que el QR muestre el menu real actualizado, conecta internet y vuelve a abrir el QR."
+    );
     return false;
   }
 
+  const settingsPendingToken =
+    currentSettingsPendingToken();
+
+  const menuPendingToken =
+    currentMenuPendingToken();
+
   try {
-    if (hasPendingSettings()) await saveCloudSettings();
+    if (settingsPendingToken) {
+      await saveCloudSettings();
+
+      clearSettingsPending(
+        settingsPendingToken
+      );
+    }
+
     await saveCloudMenu();
-    clearSettingsPending();
-    clearMenuPending();
+
+    if (menuPendingToken) {
+      clearMenuPending(
+        menuPendingToken
+      );
+    }
+
     updateCloudStatus();
     return true;
   } catch (error) {
     console.error(error);
     markMenuPending();
     updateCloudStatus();
-    alert("No pude subir el menu actual a la nube. El QR podria mostrar un menu viejo hasta que vuelva a sincronizar.");
+
+    alert(
+      "No pude subir el menu actual a la nube. El QR podria mostrar un menu viejo hasta que vuelva a sincronizar."
+    );
+
     return false;
   }
 }
