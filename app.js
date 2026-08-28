@@ -498,6 +498,7 @@ let centralSyncChannel = null;
 let centralSyncStatus = "idle";
 let centralSyncTimer = null;
 let centralSyncInProgress = false;
+let centralSyncRefreshPending = false;
 let centralRealtimeReconnectTimer = null;
 let clientOrdersRealtimeReconnectTimer = null;
 let clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;
@@ -3407,13 +3408,20 @@ function scheduleCentralRefresh() {
 
 async function refreshCentralCloudState() {
   if (
-    !cloudState.client ||
-    !cloudState.user ||
-    !navigator.onLine ||
-    centralSyncInProgress
-  ) {
-    return false;
-  }
+  !cloudState.client ||
+  !cloudState.user ||
+  !navigator.onLine
+) {
+  return false;
+}
+
+if (centralSyncInProgress) {
+  centralSyncRefreshPending = true;
+  return false;
+}
+
+centralSyncInProgress = true;
+centralSyncRefreshPending = false;
 
   centralSyncInProgress = true;
 
@@ -3638,8 +3646,18 @@ if (
 
     return false;
   } finally {
-    centralSyncInProgress = false;
+  centralSyncInProgress = false;
+
+  if (
+    centralSyncRefreshPending &&
+    cloudState.client &&
+    cloudState.user &&
+    navigator.onLine
+  ) {
+    centralSyncRefreshPending = false;
+    scheduleCentralRefresh();
   }
+}
 }
 function scheduleCentralRealtimeReconnect() {
   if (
@@ -8269,94 +8287,263 @@ function renderOrder() {
   saveCurrentOrderDraft();
 }
 
-async function upsertCurrentOrder() {
+async function upsertCurrentOrder(options = {}) {
+  const {
+    cloudTimeoutMs = 5000,
+  } = options;
+
   rollOverDayIfNeeded();
   syncFormToOrder();
+
   if (!String(currentOrder.cashier || "").trim()) {
-  currentOrder.cashier =
-    currentCashierName() || "Caja";
-}
+    currentOrder.cashier =
+      currentCashierName() || "Caja";
+  }
 
   if (!currentOrder.items.length) {
-    alert("Agrega al menos un producto antes de guardar.");
+    alert(
+      "Agrega al menos un producto antes de guardar."
+    );
     return false;
   }
 
   const now = new Date().toISOString();
-  const canTryCloud = Boolean(cloudState.user && navigator.onLine);
 
+  const canTryCloud = Boolean(
+    cloudState.user &&
+    navigator.onLine
+  );
+
+  /*
+   * 1. EL PEDIDO SE GUARDA LOCALMENTE PRIMERO.
+   *
+   * La caja nunca debe depender de Internet
+   * para conservar un pedido.
+   */
   if (!currentOrder.saved) {
-    currentOrder.id = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
-    currentOrder.syncStatus = shouldQueueForCloud() ? "pending" : "local";
+    currentOrder.id =
+      crypto.randomUUID
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random()}`;
 
+    currentOrder.syncStatus =
+      shouldQueueForCloud()
+        ? "pending"
+        : "local";
+
+    /*
+     * Intentamos conseguir ticket de nube,
+     * pero con tiempo máximo.
+     */
     if (canTryCloud) {
       try {
-        currentOrder.ticketNumber = await claimCloudTicket();
-        nextTicket = currentOrder.ticketNumber + 1;
+        currentOrder.ticketNumber =
+          await withCloudTimeout(
+            claimCloudTicket(),
+            "La nube tardó demasiado en asignar el ticket.",
+            2500
+          );
+
+        nextTicket =
+          Number(currentOrder.ticketNumber) + 1;
       } catch (error) {
-        console.error(error);
-        currentOrder.ticketNumber = nextTicket;
+        console.warn(
+          "No se pudo obtener ticket de nube a tiempo. Se usará ticket local.",
+          error
+        );
+
+        currentOrder.ticketNumber =
+          nextTicket;
+
         nextTicket += 1;
-        currentOrder.syncStatus = shouldQueueForCloud() ? "pending" : "local";
-        updateCloudStatus();
+
+        currentOrder.syncStatus =
+          shouldQueueForCloud()
+            ? "pending"
+            : "local";
       }
     } else {
-      currentOrder.ticketNumber = nextTicket;
+      currentOrder.ticketNumber =
+        nextTicket;
+
       nextTicket += 1;
     }
-    saveTicketState();
+
     currentOrder.createdAt = now;
     currentOrder.updatedAt = now;
     currentOrder.businessDate = todayKey;
     currentOrder.saved = true;
-    savedOrders.unshift(structuredCloneOrder(currentOrder));
+
+    savedOrders.unshift(
+      structuredCloneOrder(currentOrder)
+    );
   } else {
     currentOrder.updatedAt = now;
-    if (shouldQueueForCloud()) currentOrder.syncStatus = "pending";
-    const index = savedOrders.findIndex((order) => order.id === currentOrder.id);
-    if (index >= 0) savedOrders[index] = structuredCloneOrder(currentOrder);
+
+    if (shouldQueueForCloud()) {
+      currentOrder.syncStatus = "pending";
+    }
+
+    const index =
+      savedOrders.findIndex(
+        (order) =>
+          order.id === currentOrder.id
+      );
+
+    if (index >= 0) {
+      savedOrders[index] =
+        structuredCloneOrder(currentOrder);
+    }
   }
 
+  /*
+   * 2. PERSISTENCIA LOCAL INMEDIATA.
+   *
+   * Antes de cualquier segunda llamada
+   * a Internet el pedido ya queda protegido.
+   */
+  saveTicketState();
+
+  saveOrders({
+    immediate: true,
+  });
+
+  saveCurrentOrderDraft();
+
+  renderOrder();
+  renderHistory();
+
+  /*
+   * 3. INTENTO DE SINCRONIZACIÓN.
+   *
+   * La nube tiene un límite de tiempo.
+   * Si tarda demasiado, el pedido queda
+   * pendiente y la caja continúa trabajando.
+   */
   if (canTryCloud) {
     try {
-      await saveCloudOrder(currentOrder);
-      currentOrder.syncStatus = "synced";
-      setOrderSyncStatus(currentOrder.id, "synced");
-      await advanceCloudTicketCounter(Math.max(nextTicket, Number(currentOrder.ticketNumber) + 1));
+      await withCloudTimeout(
+        saveCloudOrder(currentOrder),
+        "La nube tardó demasiado en guardar el pedido.",
+        cloudTimeoutMs
+      );
+
+      currentOrder.syncStatus =
+        "synced";
+
+      setOrderSyncStatus(
+        currentOrder.id,
+        "synced"
+      );
+
+      saveOrders({
+        immediate: true,
+      });
+
+      /*
+       * El contador no debe bloquear
+       * Guardar ni Imprimir.
+       */
+      withCloudTimeout(
+        advanceCloudTicketCounter(
+          Math.max(
+            nextTicket,
+            Number(
+              currentOrder.ticketNumber
+            ) + 1
+          )
+        ),
+        "El contador de tickets tardó demasiado.",
+        3000
+      ).catch((error) => {
+        console.warn(
+          "El contador se sincronizará después.",
+          error
+        );
+
+        queueTicketCounter(
+          Math.max(
+            nextTicket,
+            Number(
+              currentOrder.ticketNumber
+            ) + 1
+          )
+        );
+      });
+
       updateCloudStatus();
     } catch (error) {
-      console.error(error);
-      currentOrder.syncStatus = shouldQueueForCloud() ? "pending" : "local";
-      setOrderSyncStatus(currentOrder.id, currentOrder.syncStatus);
+      console.warn(
+        "Pedido guardado localmente; sincronización pendiente.",
+        error
+      );
+
+      currentOrder.syncStatus =
+        shouldQueueForCloud()
+          ? "pending"
+          : "local";
+
+      setOrderSyncStatus(
+        currentOrder.id,
+        currentOrder.syncStatus
+      );
+
+      saveOrders({
+        immediate: true,
+      });
+
       updateCloudStatus();
     }
   } else if (shouldQueueForCloud()) {
-    currentOrder.syncStatus = "pending";
-    setOrderSyncStatus(currentOrder.id, "pending");
+    currentOrder.syncStatus =
+      "pending";
+
+    setOrderSyncStatus(
+      currentOrder.id,
+      "pending"
+    );
+
+    saveOrders({
+      immediate: true,
+    });
+
     updateCloudStatus();
   }
 
-  saveOrders();
-  saveTicketState();
-  renderOrder();
-  renderHistory();
-  if (elements.dailyCloseDialog.open) {
-    renderDailyClose(elements.closeDayInput.value || todayKey);
+  if (elements.dailyCloseDialog?.open) {
+    renderDailyClose(
+      elements.closeDayInput.value ||
+      todayKey
+    );
   }
-  if (elements.monthlyCloseDialog.open) {
-    renderMonthlyClose(elements.closeMonthInput.value || currentMonthKey());
+
+  if (elements.monthlyCloseDialog?.open) {
+    renderMonthlyClose(
+      elements.closeMonthInput.value ||
+      currentMonthKey()
+    );
   }
+
   if (elements.annualCloseDialog?.open) {
-    renderAnnualClose(elements.closeYearInput.value || currentYearKey());
+    renderAnnualClose(
+      elements.closeYearInput.value ||
+      currentYearKey()
+    );
   }
+
   return true;
 }
-
 function structuredCloneOrder(order) {
   return JSON.parse(JSON.stringify(order));
 }
 async function printCurrentOrder() {
-  if (!(await upsertCurrentOrder())) return;
+  if (
+  !(await upsertCurrentOrder({
+    cloudTimeoutMs: 2500,
+  }))
+) {
+  return;
+}
 
   const orderToPrint = structuredCloneOrder(currentOrder);
   const printedTicketNumber = currentOrder.ticketNumber;
