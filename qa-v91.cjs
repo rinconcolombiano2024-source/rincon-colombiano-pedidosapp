@@ -33,9 +33,10 @@ check(app.includes("requestIdleCallback(persistMenuCatalogCache"), "cache del me
 check(app.includes("menuSearchTimer = window.setTimeout"), "busqueda del restaurante con debounce");
 check(courier.includes('courierDeliveryRealtimeStatus === "SUBSCRIBED"'), "seguimiento de colaborador sin sondeo duplicado");
 check(/finally\s*\{\s*cloudState\.loading\s*=\s*false;\s*updateCloudStatus\(\);\s*\}/s.test(app), "estado de nube siempre finaliza");
+check(app.includes("anulacion(es) antigua(s)") && app.includes("order not found"), "cola antigua no queda pendiente para siempre");
 
 if (failures.length) {
   failures.forEach((failure) => console.error(`FAIL: ${failure}`));
   process.exit(1);
 }
-console.log("RC ORDERA V91 QA: 23 comprobaciones aprobadas.");
+console.log("RC ORDERA V91 QA: 24 comprobaciones aprobadas.");
