@@ -736,7 +736,11 @@ function orderBusinessDate(order) {
 }
 
 function todaysOrders() {
-  return savedOrders.filter((order) => orderBusinessDate(order) === todayKey);
+  return savedOrders.filter(
+    (order) =>
+      orderBusinessDate(order) === todayKey &&
+      !isCancelledSavedOrder(order)
+  );
 }
 
 function ordersForDay(day) {
