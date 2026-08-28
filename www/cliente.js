@@ -3411,10 +3411,11 @@ async function customerSelectRestaurant(storeId, options = {}) {
 
   customerApplyMenuSearch("");
   customerRenderRestaurantDirectory();
+  customerSetStatus(customerT("refreshingMenu"), "");
+  customerSetView("store");
   await customerLoadMenu({ skipDirectory: true });
   await customerLoadFavoriteRestaurant();
   customerRenderSelectedRestaurantDetails();
-  customerSetView("store");
   if (customerSelectedRestaurant()?.operationalOpen !== true) {
     customerSetStatus(customerT("restaurantClosedBrowse"), "error");
   }
@@ -5407,8 +5408,6 @@ customerElements.categoryTabs.addEventListener("click", (event) => {
   if (!button) return;
   customerActiveCategory = button.dataset.category;
   customerApplyMenuSearch("");
-  customerRenderCategories();
-  customerRenderMenu();
 });
 
 if (customerElements.menuSearchInput) {

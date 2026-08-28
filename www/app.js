@@ -42,6 +42,11 @@ const STORAGE_KEYS = {
   restaurantLongitude: "rc_ordera_restaurant_longitude",
 };
 
+const LOCAL_ORDER_CACHE_LIMIT = 250;
+const CLIENT_ORDERS_POLL_MIN_MS = 15_000;
+const CLIENT_ORDERS_POLL_MAX_MS = 120_000;
+const MINIMUM_DATABASE_SCHEMA_VERSION = 91;
+
 const LEGACY_STORAGE_KEYS = {
   nextTicket: "rincon_colombiano_next_ticket",
   ticketDate: "rincon_colombiano_ticket_date",
@@ -448,6 +453,7 @@ let restaurantBusinessContext = null;
 let todayKey = currentBusinessDate();
 let nextTicket = initializeDailyTicket();
 let savedOrders = readOrders();
+let cloudClosureReports = new Map();
 let shiftServerName = readShiftServerName();
 let currentOrder = readCurrentOrderDraft();
 let thermalPrinterPort = null;
@@ -485,6 +491,13 @@ let pendingClientOrders = [];
 let clientDeliveryTrackingByOrderId = new Map();
 let clientOrdersTimer = null;
 let clientOrdersChannel = null;
+let clientOrdersRealtimeStatus = "idle";
+let clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;
+let clientOrdersRefreshInFlight = null;
+let clientOrdersRefreshPending = false;
+let clientOrdersTrackingInFlight = null;
+let orderCachePersistHandle = null;
+let orderCachePersistMode = "";
 let clientAlarmTimer = null;
 let clientAlarmAudioContext = null;
 let clientAlarmEnabled = readClientAlarmEnabled();
@@ -506,7 +519,30 @@ const cloudState = {
   recoveringPassword: false,
   lastError: "",
   moduleWarning: "",
+  schemaVersion: null,
 };
+
+async function ensureMinimumDatabaseVersion() {
+  if (Number(cloudState.schemaVersion) >= MINIMUM_DATABASE_SCHEMA_VERSION) {
+    return cloudState.schemaVersion;
+  }
+  const { data, error } = await cloudState.client.rpc("get_rc_ordera_schema_version");
+  if (error) {
+    const schemaError = new Error(appUiText("La base de datos necesita la migracion V91 antes de continuar."));
+    schemaError.code = "RC_ORDERA_SCHEMA_OUTDATED";
+    schemaError.cause = error;
+    throw schemaError;
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  const version = Number(row?.schema_version ?? row);
+  if (!Number.isFinite(version) || version < MINIMUM_DATABASE_SCHEMA_VERSION) {
+    const schemaError = new Error(appUiText("La version de la base de datos es anterior a V91."));
+    schemaError.code = "RC_ORDERA_SCHEMA_OUTDATED";
+    throw schemaError;
+  }
+  cloudState.schemaVersion = version;
+  return version;
+}
 
 async function refreshRestaurantBusinessContext(options = {}) {
   const { force = false } = options;
@@ -669,7 +705,7 @@ function readOrders() {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEYS.orders) || "[]");
     return Array.isArray(parsed)
-      ? parsed.map((order) =>
+      ? parsed.slice(0, LOCAL_ORDER_CACHE_LIMIT).map((order) =>
           normalizeOrderNotes({
             ...order,
             type: normalizeOrderType(order.type),
@@ -696,7 +732,7 @@ function todaysOrders() {
 }
 
 function ordersForDay(day) {
-  return savedOrders.filter((order) => orderBusinessDate(order) === day);
+  return savedOrders.filter((order) => orderBusinessDate(order) === day && !isCancelledSavedOrder(order));
 }
 
 function currentMonthKey(date = null) {
@@ -721,7 +757,7 @@ function formatDayLabel(day) {
 }
 
 function ordersForMonth(month) {
-  return savedOrders.filter((order) => orderBusinessDate(order).startsWith(`${month}-`));
+  return savedOrders.filter((order) => orderBusinessDate(order).startsWith(`${month}-`) && !isCancelledSavedOrder(order));
 }
 
 function currentYearKey(date = null) {
@@ -729,10 +765,42 @@ function currentYearKey(date = null) {
 }
 
 function ordersForYear(year) {
-  return savedOrders.filter((order) => orderBusinessDate(order).startsWith(`${year}-`));
+  return savedOrders.filter((order) => orderBusinessDate(order).startsWith(`${year}-`) && !isCancelledSavedOrder(order));
+}
+
+function isCancelledSavedOrder(order) {
+  return String(order?.canonicalStatus || order?.status || "").toLowerCase() === "cancelled";
+}
+
+function closureReportCacheKey(periodType, periodValue) {
+  return `${String(periodType || "").toLowerCase()}:${String(periodValue || "")}`;
+}
+
+function normalizedCloudClosureReport(periodType, periodValue) {
+  const report = cloudClosureReports.get(closureReportCacheKey(periodType, periodValue));
+  if (!report) return null;
+  const number = (value) => Number(value) || 0;
+  return {
+    ...report,
+    tickets: number(report.tickets),
+    items: number(report.items),
+    total: number(report.total),
+    average: number(report.average),
+    firstTicket: report.firstTicket ? number(report.firstTicket) : null,
+    lastTicket: report.lastTicket ? number(report.lastTicket) : null,
+    cancelled: number(report.cancelled),
+    days: (report.days || []).map((row) => ({ ...row, tickets: number(row.tickets), items: number(row.items), total: number(row.total) })),
+    months: (report.months || []).map((row) => ({ ...row, tickets: number(row.tickets), items: number(row.items), total: number(row.total) })),
+    products: (report.products || []).map((row) => ({ ...row, qty: number(row.qty), total: number(row.total) })),
+    orderTypes: (report.orderTypes || []).map((row) => ({ label: orderTypeLabel(normalizeOrderType(row.name)), tickets: number(row.count), total: number(row.total) })),
+    paymentMethods: (report.paymentMethods || []).map((row) => ({ label: paymentMethodLabel(row.name), tickets: number(row.count), total: number(row.total) })),
+    servers: (report.servers || []).map((row) => ({ name: row.name || "No indicado", tickets: number(row.count), total: number(row.total) })),
+  };
 }
 
 function buildDailyClose(day) {
+  const cloudReport = normalizedCloudClosureReport("day", day);
+  if (cloudReport) return { ...cloudReport, day, label: formatDayLabel(day) };
   const dayOrders = ordersForDay(day);
   const products = new Map();
   const orderTypes = new Map();
@@ -789,6 +857,8 @@ function buildDailyClose(day) {
 }
 
 function buildMonthlyClose(month) {
+  const cloudReport = normalizedCloudClosureReport("month", month);
+  if (cloudReport) return { ...cloudReport, month, label: formatMonthLabel(month) };
   const monthOrders = ordersForMonth(month);
   const days = new Map();
   const products = new Map();
@@ -828,8 +898,37 @@ function buildMonthlyClose(month) {
   };
 }
 
-function saveOrders() {
-  localStorage.setItem(STORAGE_KEYS.orders, JSON.stringify(savedOrders.slice(0, 5000)));
+function persistOrdersCache() {
+  orderCachePersistHandle = null;
+  orderCachePersistMode = "";
+  localStorage.setItem(
+    STORAGE_KEYS.orders,
+    JSON.stringify(savedOrders.slice(0, LOCAL_ORDER_CACHE_LIMIT))
+  );
+}
+
+function saveOrders(options = {}) {
+  const { immediate = false } = options;
+  if (immediate) {
+    if (orderCachePersistHandle !== null) {
+      if (orderCachePersistMode === "idle" && window.cancelIdleCallback) {
+        window.cancelIdleCallback(orderCachePersistHandle);
+      } else {
+        window.clearTimeout(orderCachePersistHandle);
+      }
+    }
+    persistOrdersCache();
+    return;
+  }
+
+  if (orderCachePersistHandle !== null) return;
+  if (window.requestIdleCallback) {
+    orderCachePersistMode = "idle";
+    orderCachePersistHandle = window.requestIdleCallback(persistOrdersCache, { timeout: 1200 });
+  } else {
+    orderCachePersistMode = "timeout";
+    orderCachePersistHandle = window.setTimeout(persistOrdersCache, 120);
+  }
 }
 
 function hasKnownCloudSession() {
@@ -899,6 +998,8 @@ function hasPendingSettings() {
 }
 
 function buildAnnualClose(year) {
+  const cloudReport = normalizedCloudClosureReport("year", String(year));
+  if (cloudReport) return { ...cloudReport, year: String(year) };
   const yearOrders = ordersForYear(year);
   const months = new Map();
   const products = new Map();
@@ -1720,6 +1821,7 @@ async function initializeCloud() {
     if (cloudState.user) {
       await loadCloudData();
     } else {
+      cloudState.schemaVersion = null;
       pendingClientOrders = [];
       clearConfirmedCloudMenu();
       stopClientOrdersPolling();
@@ -1746,21 +1848,12 @@ async function loadCloudData() {
   const localSettingsPending = hasPendingSettings();
 
   try {
-    const settingsRequest = (async () => {
-      let response = await cloudState.client
-        .from("app_settings")
-        .select("menu, settings, menu_revision, settings_revision, menu_updated_at, settings_updated_at")
-        .eq("user_id", cloudState.user.id)
-        .maybeSingle();
-      if (response.error && /menu_revision|settings_revision|menu_updated_at|settings_updated_at|column/i.test(String(response.error.message || ""))) {
-        response = await cloudState.client
-          .from("app_settings")
-          .select("menu, settings")
-          .eq("user_id", cloudState.user.id)
-          .maybeSingle();
-      }
-      return response;
-    })();
+    await ensureMinimumDatabaseVersion();
+    const settingsRequest = cloudState.client
+      .from("app_settings")
+      .select("menu, settings, menu_revision, settings_revision, menu_updated_at, settings_updated_at")
+      .eq("user_id", cloudState.user.id)
+      .maybeSingle();
     const profileRequest = cloudState.client
       .from("restaurant_profiles")
       .select("business_name, logo_url, public_address, phone, active, operational_open, operational_mode, opening_hours, latitude, longitude, country_code, city, region, postal_code, timezone, preferred_language, deleted_at")
@@ -1779,7 +1872,7 @@ async function loadCloudData() {
       .select("order_json")
       .eq("user_id", cloudState.user.id)
       .order("created_at", { ascending: false })
-      .limit(5000);
+      .limit(LOCAL_ORDER_CACHE_LIMIT);
     const [settingsResponse, profileResponse, ownerRoleResponse, ordersResponse] = await Promise.all([
       settingsRequest,
       profileRequest,
@@ -1906,7 +1999,6 @@ async function loadCloudData() {
       console.warn("El modulo de pedidos de clientes necesita revision.", moduleError);
       setCloudError(moduleError, { moduleOnly: true });
     }
-    startClientOrdersPolling();
     startClientOrdersRealtime();
     updateRestaurantStatusSync();
     if (restaurantOperationalMode === "schedule") {
@@ -1952,37 +2044,19 @@ function closureReportRange(periodType, periodValue) {
 
 async function loadCloudOrdersForReport(periodType, periodValue) {
   if (!cloudState.client || !cloudState.user || !navigator.onLine) return 0;
-  const range = closureReportRange(periodType, periodValue);
-  const pageSize = 1000;
-  const rows = [];
-
-  for (let page = 0; page < 200; page += 1) {
-    const from = page * pageSize;
-    const { data, error } = await cloudState.client
-      .from("orders")
-      .select("order_json,business_date")
-      .eq("user_id", cloudState.user.id)
-      .gte("business_date", range.start)
-      .lt("business_date", range.end)
-      .order("business_date", { ascending: false })
-      .range(from, from + pageSize - 1);
-    if (error) throw error;
-    rows.push(...(data || []));
-    if ((data || []).length < pageSize) break;
-    if (page === 199) throw new Error("El periodo contiene demasiados pedidos para generar el cierre en este dispositivo.");
+  closureReportRange(periodType, periodValue);
+  await ensureMinimumDatabaseVersion();
+  const { data, error } = await cloudState.client.rpc("get_restaurant_closure_report", {
+    p_period_type: periodType,
+    p_period_value: String(periodValue || ""),
+  });
+  if (error) throw error;
+  const report = Array.isArray(data) ? data[0] : data;
+  if (!report || typeof report !== "object") {
+    throw new Error("La nube no devolvio un cierre valido.");
   }
-
-  const cloudOrders = rows
-    .map((row) => ({
-      ...row.order_json,
-      type: normalizeOrderType(row.order_json?.type),
-      businessDate: row.business_date || orderBusinessDate(row.order_json),
-      syncStatus: "synced",
-    }))
-    .filter((order) => order?.id && !localDeletedOrderIds.includes(order.id));
-  savedOrders = mergeOrders(cloudOrders, savedOrders);
-  saveOrders();
-  return cloudOrders.length;
+  cloudClosureReports.set(closureReportCacheKey(periodType, periodValue), report);
+  return Number(report.tickets) || 0;
 }
 
 function currentRestaurantRpcProfilePayload() {
@@ -2009,18 +2083,11 @@ function currentRestaurantRpcProfilePayload() {
 }
 
 async function readCurrentCloudSettingsRow() {
-  let response = await cloudState.client
+  const response = await cloudState.client
     .from("app_settings")
     .select("menu, settings, menu_revision, settings_revision")
     .eq("user_id", cloudState.user.id)
     .maybeSingle();
-  if (response.error && /menu_revision|settings_revision|column/i.test(String(response.error.message || ""))) {
-    response = await cloudState.client
-      .from("app_settings")
-      .select("menu, settings")
-      .eq("user_id", cloudState.user.id)
-      .maybeSingle();
-  }
   if (response.error) throw response.error;
   return response.data || null;
 }
@@ -2053,34 +2120,12 @@ async function saveCloudSettings() {
     storeCloudRevision(STORAGE_KEYS.settingsRevision, confirmed.settingsRevision ?? confirmed.settings_revision);
     return confirmed;
   }
-  if (!isMissingRestaurantRpc(rpcError)) throw rpcError;
-
-  const currentRow = await readCurrentCloudSettingsRow();
-  const remoteMenu = normalizeMenuCatalog(currentRow?.menu || EMPTY_MENU_CATALOG);
-  const mergedSettings = { ...(currentRow?.settings || {}), ...payload };
-  const legacy = await cloudState.client.rpc("save_current_restaurant_state", {
-    p_menu: remoteMenu,
-    p_settings: mergedSettings,
-    p_profile: profile,
-  });
-  if (!legacy.error) {
-    const confirmed = Array.isArray(legacy.data) ? legacy.data[0] : legacy.data;
-    if (confirmed?.settings) applySettingsPayload(confirmed.settings);
-    if (confirmed?.profile) applyPublicRestaurantProfileFallback(confirmed.profile);
-    return confirmed;
+  if (isMissingRestaurantRpc(rpcError)) {
+    const schemaError = new Error(appUiText("La base de datos necesita la migracion V91 antes de guardar ajustes."));
+    schemaError.code = "RC_ORDERA_SCHEMA_OUTDATED";
+    throw schemaError;
   }
-  if (!isMissingRestaurantRpc(legacy.error)) throw legacy.error;
-
-  const { data, error } = await cloudState.client.from("app_settings").upsert({
-    user_id: cloudState.user.id,
-    menu: remoteMenu,
-    settings: mergedSettings,
-    updated_at: new Date().toISOString(),
-  }).select("menu, settings, updated_at").maybeSingle();
-  if (error) throw error;
-  if (data?.settings) applySettingsPayload(data.settings);
-  await saveRestaurantPublicProfile();
-  return data;
+  throw rpcError;
 }
 
 function isMenuRevisionConflict(error) {
@@ -2122,7 +2167,14 @@ async function confirmSavedCloudMenu(confirmed, fallbackMenu) {
   localStorage.setItem(STORAGE_KEYS.menu, JSON.stringify(menuCatalog));
   storeCloudRevision(STORAGE_KEYS.menuRevision, revision);
   storeConfirmedCloudMenu(menuCatalog);
-  await verifyPublicMenuProjection(menuCatalog, revision);
+  queueMicrotask(() => {
+    verifyPublicMenuProjection(menuCatalog, revision).catch((error) => {
+      console.error("No fue posible confirmar el catalogo publico en segundo plano.", error);
+      markMenuPending();
+      updateCloudStatus("Menu pendiente de verificacion");
+      showToast(appUiText("El menu se guardo, pero la publicacion para clientes necesita reintento."));
+    });
+  });
   return { ...(confirmed || {}), menu: menuCatalog, menuRevision: revision };
 }
 
@@ -2165,32 +2217,12 @@ async function saveCloudMenu() {
     const confirmed = Array.isArray(rpcData) ? rpcData[0] : rpcData;
     return confirmSavedCloudMenu(confirmed);
   }
-  if (!isMissingRestaurantRpc(rpcError)) throw rpcError;
-
-  const currentRow = await readCurrentCloudSettingsRow();
-  const remoteMenu = normalizeMenuCatalog(currentRow?.menu || EMPTY_MENU_CATALOG);
-  if (menuProductCount(remoteMenu) > 0 && menuProductCount(nextMenu) === 0) {
-    throw new Error("El menu de la nube tiene productos y no puede vaciarse mediante una sincronizacion normal.");
+  if (isMissingRestaurantRpc(rpcError)) {
+    const schemaError = new Error(appUiText("La base de datos necesita la migracion V91 antes de guardar el menu."));
+    schemaError.code = "RC_ORDERA_SCHEMA_OUTDATED";
+    throw schemaError;
   }
-  const legacy = await cloudState.client.rpc("save_current_restaurant_state", {
-    p_menu: nextMenu,
-    p_settings: { ...(currentRow?.settings || {}), ...currentSettingsPayload() },
-    p_profile: currentRestaurantRpcProfilePayload(),
-  });
-  if (!legacy.error) {
-    const confirmed = Array.isArray(legacy.data) ? legacy.data[0] : legacy.data;
-    return confirmSavedCloudMenu(confirmed, nextMenu);
-  }
-  if (!isMissingRestaurantRpc(legacy.error)) throw legacy.error;
-
-  const { data, error } = await cloudState.client.from("app_settings").upsert({
-    user_id: cloudState.user.id,
-    menu: nextMenu,
-    settings: { ...(currentRow?.settings || {}), ...currentSettingsPayload() },
-    updated_at: new Date().toISOString(),
-  }).select("menu, settings, updated_at").maybeSingle();
-  if (error) throw error;
-  return confirmSavedCloudMenu(data, nextMenu);
+  throw rpcError;
 }
 
 async function saveRestaurantPublicProfile() {
@@ -2684,15 +2716,12 @@ async function saveCloudOrder(order) {
   }
 }
 
-async function deleteCloudOrder(orderId) {
+async function voidCloudOrder(orderId, reason = "Cancelado por el restaurante") {
   if (!cloudState.client || !cloudState.user || !orderId) return;
-
-  const { error } = await cloudState.client
-    .from("orders")
-    .delete()
-    .eq("id", orderId)
-    .eq("user_id", cloudState.user.id);
-
+  const { error } = await cloudState.client.rpc("void_restaurant_order", {
+    p_order_id: orderId,
+    p_reason: reason,
+  });
   if (error) throw error;
 }
 
@@ -2911,43 +2940,164 @@ function stopClientAlarm() {
   }
 }
 
-function startClientOrdersPolling() {
+function startClientOrdersPolling(options = {}) {
+  const { immediate = false } = options;
   stopClientOrdersPolling();
+  if (!canUseCustomerModule() || clientOrdersRealtimeStatus === "SUBSCRIBED") return;
 
-  if (!canUseCustomerModule()) return;
+  const poll = async () => {
+    clientOrdersTimer = null;
+    if (!canUseCustomerModule() || clientOrdersRealtimeStatus === "SUBSCRIBED") return;
 
-  // Si Realtime está activo, no duplicar trabajo con polling.
-  if (clientOrdersChannel) return;
-
-  // Polling solo como respaldo.
-  clientOrdersTimer = window.setInterval(() => {
-    if (
-      document.visibilityState === "visible" &&
-      navigator.onLine &&
-      !clientOrdersChannel
-    ) {
-      refreshClientOrders({ silent: true }).catch(() => {});
+    if (document.visibilityState === "visible" && navigator.onLine) {
+      try {
+        await refreshClientOrders({ silent: true });
+        clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;
+      } catch (error) {
+        console.error("No fue posible actualizar los pedidos mediante el respaldo temporal.", error);
+        clientOrdersPollingDelay = Math.min(
+          clientOrdersPollingDelay * 2,
+          CLIENT_ORDERS_POLL_MAX_MS
+        );
+      }
     }
-  }, 60000);
+
+    if (clientOrdersRealtimeStatus !== "SUBSCRIBED") {
+      clientOrdersTimer = window.setTimeout(poll, clientOrdersPollingDelay);
+    }
+  };
+
+  clientOrdersTimer = window.setTimeout(poll, immediate ? 0 : clientOrdersPollingDelay);
 }
 
 function stopClientOrdersPolling() {
   if (clientOrdersTimer) {
-    window.clearInterval(clientOrdersTimer);
+    window.clearTimeout(clientOrdersTimer);
     clientOrdersTimer = null;
   }
 }
 
 function stopClientOrdersRealtime() {
   if (clientOrdersChannel && cloudState.client?.removeChannel) {
-    cloudState.client.removeChannel(clientOrdersChannel).catch(() => {});
+    cloudState.client.removeChannel(clientOrdersChannel).catch((error) => {
+      console.warn("No fue posible cerrar inmediatamente el canal de pedidos.", error);
+    });
   }
   clientOrdersChannel = null;
+  clientOrdersRealtimeStatus = "idle";
+}
+
+function activeClientOrderStatus(status) {
+  return ["pending", "accepted", "sent"].includes(String(status || "").toLowerCase());
+}
+
+function mergeRealtimeClientOrder(row) {
+  const existing = pendingClientOrders.find((order) => order.id === row?.id) || null;
+  return {
+    ...(existing || {}),
+    ...(row || {}),
+    messages: existing?.messages || [],
+    chatLoaded: existing?.chatLoaded === true,
+    unreadMessages: Number(existing?.unreadMessages) || 0,
+    deliveryTracking:
+      clientDeliveryTrackingByOrderId.get(String(row?.id || "")) ||
+      existing?.deliveryTracking ||
+      null,
+  };
+}
+
+function notifyRealtimeClientOrder(order, wasKnown) {
+  if (wasKnown || order?.status !== "pending") return;
+  const isWaiterOrder = order.source === "waiter" || order.order_json?.source === "waiter";
+  showToast(isWaiterOrder ? "Pedido de mesero nuevo." : "Pedido recibido.");
+  showRestaurantNotification(
+    isWaiterOrder ? "Pedido de mesero nuevo" : "Pedido nuevo",
+    "Hay un pedido pendiente esperando aceptacion e impresion."
+  );
+  syncClientAlarm();
+}
+
+function handleClientOrderRealtimePayload(payload) {
+  const row = payload?.new || payload?.old || {};
+  const orderId = String(row.id || "");
+  if (!orderId) {
+    clientOrdersRefreshPending = true;
+    return;
+  }
+
+  const existingIndex = pendingClientOrders.findIndex((order) => order.id === orderId);
+  const wasKnown = existingIndex >= 0;
+  if (payload.eventType === "DELETE" || !activeClientOrderStatus(row.status)) {
+    if (wasKnown) pendingClientOrders.splice(existingIndex, 1);
+    updateClientOrdersBadge();
+    renderClientOrderPatch(orderId);
+    syncClientAlarm();
+    return;
+  }
+
+  const merged = mergeRealtimeClientOrder(row);
+  if (wasKnown) {
+    pendingClientOrders[existingIndex] = merged;
+  } else {
+    pendingClientOrders.unshift(merged);
+  }
+  pendingClientOrders.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+  updateClientOrdersBadge();
+  renderClientOrderPatch(orderId);
+  notifyRealtimeClientOrder(merged, wasKnown);
+}
+
+function handleDeliveryAssignmentRealtimePayload(payload) {
+  const assignment = payload?.new || payload?.old || {};
+  const orderId = String(assignment.customer_order_id || "");
+  const index = pendingClientOrders.findIndex((order) => order.id === orderId);
+  if (index < 0) return;
+
+  const order = pendingClientOrders[index];
+  const tracking = {
+    ...(order.deliveryTracking || {}),
+    courier_lat: assignment.courier_lat ?? order.deliveryTracking?.courier_lat,
+    courier_lng: assignment.courier_lng ?? order.deliveryTracking?.courier_lng,
+    courier_location_updated_at: assignment.updated_at || order.deliveryTracking?.courier_location_updated_at,
+    estimated_pickup_at: assignment.estimated_pickup_at || order.deliveryTracking?.estimated_pickup_at,
+    estimated_delivery_at: assignment.estimated_delivery_at || order.deliveryTracking?.estimated_delivery_at,
+  };
+  pendingClientOrders[index] = {
+    ...order,
+    assigned_courier_user_id: assignment.courier_user_id || order.assigned_courier_user_id,
+    courier_assignment_status: assignment.status || order.courier_assignment_status,
+    deliveryTracking: tracking,
+  };
+  clientDeliveryTrackingByOrderId.set(orderId, tracking);
+  renderClientOrderPatch(orderId);
+}
+
+function handleClientMessageRealtimePayload(payload) {
+  if (payload?.eventType !== "INSERT") return;
+  const message = payload.new || {};
+  const orderId = String(message.order_id || "");
+  const index = pendingClientOrders.findIndex((order) => order.id === orderId);
+  if (index < 0) return;
+
+  const order = pendingClientOrders[index];
+  if (order.chatLoaded) {
+    const known = new Set((order.messages || []).map((entry) => entry.id));
+    if (!known.has(message.id)) order.messages = [...(order.messages || []), message];
+  } else {
+    order.unreadMessages = (Number(order.unreadMessages) || 0) + 1;
+  }
+  pendingClientOrders[index] = { ...order };
+  renderClientOrderPatch(orderId);
+  if (message.sender === "customer") {
+    showToast("Nuevo mensaje de cliente en chat.");
+    showRestaurantNotification("Mensaje de cliente", "Hay una respuesta o comprobante en un pedido.");
+  }
 }
 
 function startClientOrdersRealtime() {
   stopClientOrdersRealtime();
   if (!canUseCustomerModule()) return;
+  clientOrdersRealtimeStatus = "connecting";
   clientOrdersChannel = cloudState.client
     .channel(`restaurant-incoming-orders-${cloudState.user.id}`)
     .on(
@@ -2958,33 +3108,91 @@ function startClientOrdersRealtime() {
         table: "customer_orders",
         filter: `user_id=eq.${cloudState.user.id}`,
       },
-      () => refreshClientOrders({ silent: true }).catch(() => {})
+      handleClientOrderRealtimePayload
     )
     .on(
       "postgres_changes",
       {
-        event: "UPDATE",
+        event: "*",
         schema: "public",
-        table: "courier_live_locations",
+        table: "delivery_assignments",
+        filter: `restaurant_user_id=eq.${cloudState.user.id}`,
       },
-      () => refreshClientOrders({ silent: true }).catch(() => {})
+      handleDeliveryAssignmentRealtimePayload
     )
-    .subscribe();
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "customer_order_messages",
+        filter: `user_id=eq.${cloudState.user.id}`,
+      },
+      handleClientMessageRealtimePayload
+    )
+    .subscribe((status) => {
+      const previousStatus = clientOrdersRealtimeStatus;
+      clientOrdersRealtimeStatus = status;
+      if (status === "SUBSCRIBED") {
+        stopClientOrdersPolling();
+        clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;
+        if (previousStatus !== "SUBSCRIBED") {
+          refreshClientOrders({ silent: true }).catch((error) => {
+            console.error("No fue posible resincronizar los pedidos al reconectar Realtime.", error);
+          });
+        }
+        return;
+      }
+      if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)) {
+        startClientOrdersPolling({ immediate: true });
+      }
+    });
+  startClientOrdersPolling();
 }
 
 async function loadCurrentRestaurantDeliveryTracking() {
   if (!cloudState.client || !cloudState.user || !navigator.onLine) return new Map();
-  const { data, error } = await cloudState.client.rpc("get_current_restaurant_delivery_tracking");
-  if (error) {
-    if (!/PGRST202|could not find the function|42883/i.test(`${error.code || ""} ${error.message || ""}`)) {
-      console.error("No se pudo actualizar el seguimiento de domicilios:", error.code || error.message);
+  if (clientOrdersTrackingInFlight) return clientOrdersTrackingInFlight;
+  clientOrdersTrackingInFlight = (async () => {
+    const { data, error } = await cloudState.client.rpc("get_current_restaurant_delivery_tracking");
+    if (error) {
+      if (!/PGRST202|could not find the function|42883/i.test(`${error.code || ""} ${error.message || ""}`)) {
+        console.error("No se pudo actualizar el seguimiento de domicilios:", error.code || error.message);
+      }
+      return new Map();
     }
-    return new Map();
+    return new Map((Array.isArray(data) ? data : []).map((row) => [String(row.customer_order_id), row]));
+  })();
+  try {
+    return await clientOrdersTrackingInFlight;
+  } finally {
+    clientOrdersTrackingInFlight = null;
   }
-  return new Map((Array.isArray(data) ? data : []).map((row) => [String(row.customer_order_id), row]));
 }
 
 async function refreshClientOrders(options = {}) {
+  if (clientOrdersRefreshInFlight) {
+    clientOrdersRefreshPending = true;
+    return clientOrdersRefreshInFlight;
+  }
+
+  clientOrdersRefreshInFlight = performClientOrdersRefresh(options);
+  try {
+    return await clientOrdersRefreshInFlight;
+  } finally {
+    clientOrdersRefreshInFlight = null;
+    if (clientOrdersRefreshPending) {
+      clientOrdersRefreshPending = false;
+      queueMicrotask(() => {
+        refreshClientOrders({ silent: true }).catch((error) => {
+          console.error("No fue posible completar la actualizacion pendiente de pedidos.", error);
+        });
+      });
+    }
+  }
+}
+
+async function performClientOrdersRefresh(options = {}) {
   const { silent = false } = options;
   const previousIds = new Set(pendingClientOrders.filter((order) => order.status === "pending").map((order) => order.id));
   if (!canUseCustomerModule()) {
@@ -3003,23 +3211,19 @@ async function refreshClientOrders(options = {}) {
     return;
   }
 
-  let { data, error } = await cloudState.client
+  const previousById = new Map(pendingClientOrders.map((order) => [String(order.id), order]));
+  const ordersRequest = cloudState.client
     .from("customer_orders")
     .select("id, status, table_label, customer_name, order_type, order_json, total, created_at, assigned_courier_user_id, courier_assignment_status, source, created_by_user_id, server_name, station_status, payment_method, payment_status, payment_provider")
     .eq("user_id", cloudState.user.id)
     .in("status", ["pending", "accepted", "sent"])
     .order("created_at", { ascending: false })
     .limit(100);
-
-  if (error && /source|created_by_user_id|server_name|column/i.test(String(error.message || ""))) {
-    ({ data, error } = await cloudState.client
-      .from("customer_orders")
-      .select("id, status, table_label, customer_name, order_type, order_json, total, created_at, assigned_courier_user_id, courier_assignment_status")
-      .eq("user_id", cloudState.user.id)
-      .in("status", ["pending", "accepted", "sent"])
-      .order("created_at", { ascending: false })
-      .limit(100));
-  }
+  const [ordersResponse, tracking] = await Promise.all([
+    ordersRequest,
+    loadCurrentRestaurantDeliveryTracking(),
+  ]);
+  const { data, error } = ordersResponse;
 
   if (error) {
     if (!silent || elements.clientOrdersDialog.open) {
@@ -3029,15 +3233,17 @@ async function refreshClientOrders(options = {}) {
   }
 
   const orders = data || [];
-  clientDeliveryTrackingByOrderId = await loadCurrentRestaurantDeliveryTracking();
-  pendingClientOrders = await Promise.all(
-    orders.map(async (order) => ({
+  clientDeliveryTrackingByOrderId = tracking;
+  pendingClientOrders = orders.map((order) => {
+    const previous = previousById.get(String(order.id));
+    return {
       ...order,
       deliveryTracking: clientDeliveryTrackingByOrderId.get(String(order.id)) || null,
-      messages: await loadRestaurantChatMessages(order.id),
-    }))
-  );
-  notifyNewClientChatMessages(pendingClientOrders);
+      messages: previous?.messages || [],
+      chatLoaded: previous?.chatLoaded === true,
+      unreadMessages: Number(previous?.unreadMessages) || 0,
+    };
+  });
   const newOrdersCount = pendingClientOrders.filter((order) => order.status === "pending" && !previousIds.has(order.id)).length;
   updateClientOrdersBadge();
   renderClientOrders();
@@ -3185,30 +3391,47 @@ async function loadRestaurantChatMessages(orderId) {
   const { data, error } = await cloudState.client.rpc("get_restaurant_order_messages", {
     p_order_id: orderId,
   });
-  if (error) return [];
+  if (error) throw error;
   return Array.isArray(data) ? data : [];
 }
 
-function notifyNewClientChatMessages(orders) {
-  const messages = orders.flatMap((order) => order.messages || []);
-  const hasNewCustomerMessage = messages.some(
-    (message) => message.sender === "customer" && clientChatLoadedOnce && !clientChatKnownMessageIds.has(message.id)
-  );
-  clientChatKnownMessageIds = new Set(messages.map((message) => message.id));
-  clientChatLoadedOnce = true;
-  if (hasNewCustomerMessage) {
-    showToast("Nuevo mensaje de cliente en chat.");
-    showRestaurantNotification("Mensaje de cliente", "Hay una respuesta o comprobante en un pedido.");
+async function loadAndOpenRestaurantChat(orderId) {
+  const index = pendingClientOrders.findIndex((order) => order.id === orderId);
+  if (index < 0) return;
+  const current = pendingClientOrders[index];
+  if (current.chatLoaded) return;
+
+  try {
+    const messages = await loadRestaurantChatMessages(orderId);
+    pendingClientOrders[index] = {
+      ...current,
+      messages,
+      chatLoaded: true,
+      unreadMessages: 0,
+    };
+    renderClientOrderPatch(orderId);
+  } catch (error) {
+    console.error("No fue posible abrir el chat del pedido.", error);
+    showToast("No fue posible abrir el chat. Revisa la conexion e intenta nuevamente.");
   }
 }
 
 function clientChatImageHtml(message) {
   const image = String(message?.image_data_url || "");
-  if (!image.startsWith("data:image/")) return "";
+  if (!image.startsWith("data:image/") && !/^https:\/\//i.test(image)) return "";
   return `<a href="${escapeHtml(image)}" target="_blank" rel="noopener"><img src="${escapeHtml(image)}" alt="Imagen enviada en chat" loading="lazy" /></a>`;
 }
 
 function renderClientChat(order) {
+  if (!order.chatLoaded) {
+    const unread = Number(order.unreadMessages) || 0;
+    return `
+      <section class="client-chat-box is-collapsed">
+        <strong>Chat / soporte${unread ? ` (${unread} nuevo${unread === 1 ? "" : "s"})` : ""}</strong>
+        <button type="button" data-action="load-client-chat">Abrir chat</button>
+      </section>
+    `;
+  }
   const messages = Array.isArray(order.messages) ? order.messages : [];
   return `
     <section class="client-chat-box">
@@ -3237,31 +3460,22 @@ function renderClientChat(order) {
   `;
 }
 
-function renderClientOrders() {
-  if (!elements.clientOrdersList) return;
-  renderRestaurantDashboard();
-  if (!pendingClientOrders.length) {
-    elements.clientOrdersList.innerHTML = `<div class="monthly-empty">No hay pedidos recibidos hoy.</div>`;
-    return;
-  }
+function clientOrderCardHtml(order) {
+  const created = new Date(order.created_at);
+  const timeText = Number.isNaN(created.getTime())
+    ? ""
+    : created.toLocaleTimeString(appUiLocale(), { hour: "2-digit", minute: "2-digit" });
+  const items = clientOrderItems(order);
+  const customerLabel = [order.table_label, order.customer_name].filter(Boolean).join(" - ") || "Cliente QR";
+  const paymentMethod = paymentMethodLabel(order.payment_method || order.order_json?.paymentMethod);
+  const paymentStatus = paymentStatusLabel(order.payment_status || order.order_json?.paymentStatus);
+  const deliverySummary = formatDeliverySummary(order.order_json?.delivery);
+  const isWaiterOrder = order.source === "waiter" || order.order_json?.source === "waiter";
+  const sourceLabel = isWaiterOrder
+    ? `Mesero: ${order.server_name || order.order_json?.serverName || "Personal autorizado"}`
+    : "Pedido de cliente";
 
-  elements.clientOrdersList.innerHTML = pendingClientOrders
-    .map((order) => {
-      const created = new Date(order.created_at);
-      const timeText = Number.isNaN(created.getTime())
-        ? ""
-        : created.toLocaleTimeString(appUiLocale(), { hour: "2-digit", minute: "2-digit" });
-      const items = clientOrderItems(order);
-      const customerLabel = [order.table_label, order.customer_name].filter(Boolean).join(" - ") || "Cliente QR";
-      const paymentMethod = paymentMethodLabel(order.payment_method || order.order_json?.paymentMethod);
-      const paymentStatus = paymentStatusLabel(order.payment_status || order.order_json?.paymentStatus);
-      const deliverySummary = formatDeliverySummary(order.order_json?.delivery);
-      const isWaiterOrder = order.source === "waiter" || order.order_json?.source === "waiter";
-      const sourceLabel = isWaiterOrder
-        ? `Mesero: ${order.server_name || order.order_json?.serverName || "Personal autorizado"}`
-        : "Pedido de cliente";
-
-      return `
+  return `
         <article class="client-order-card" data-client-order-id="${escapeHtml(order.id)}">
           <div class="client-order-head">
             <div>
@@ -3294,11 +3508,57 @@ function renderClientOrders() {
           ${clientOrderCourierHtml(order)}
           ${renderClientChat(order)}
           ${clientOrderActionsHtml(order)}
-        </article>
-      `;
-    })
-    .join("");
+        </article>`;
+}
+
+function renderClientOrderPatch(orderId) {
+  if (!elements.clientOrdersList) return;
   renderRestaurantDashboard();
+  if (!elements.clientOrdersDialog?.open) return;
+
+  const existingCard = Array.from(elements.clientOrdersList.querySelectorAll(".client-order-card"))
+    .find((card) => card.dataset.clientOrderId === String(orderId));
+  const order = pendingClientOrders.find((entry) => entry.id === orderId);
+  if (!order) {
+    existingCard?.remove();
+    if (!pendingClientOrders.length) {
+      elements.clientOrdersList.innerHTML = `<div class="monthly-empty">No hay pedidos recibidos hoy.</div>`;
+    }
+    return;
+  }
+
+  const activeElement = document.activeElement;
+  const activeWasInside = Boolean(existingCard && activeElement && existingCard.contains(activeElement));
+  const activeAction = activeWasInside ? activeElement.dataset?.action || "" : "";
+  const chatDraft = existingCard?.querySelector('[data-action="restaurant-chat-input"]')?.value || "";
+  const listScrollTop = elements.clientOrdersList.scrollTop;
+  const template = document.createElement("template");
+  template.innerHTML = clientOrderCardHtml(order).trim();
+  const nextCard = template.content.firstElementChild;
+
+  if (existingCard) {
+    existingCard.replaceWith(nextCard);
+  } else {
+    elements.clientOrdersList.querySelector(".monthly-empty")?.remove();
+    elements.clientOrdersList.prepend(nextCard);
+  }
+
+  const nextChatInput = nextCard.querySelector('[data-action="restaurant-chat-input"]');
+  if (nextChatInput && chatDraft) nextChatInput.value = chatDraft;
+  if (activeWasInside && activeAction) {
+    nextCard.querySelector(`[data-action="${activeAction}"]`)?.focus({ preventScroll: true });
+  }
+  elements.clientOrdersList.scrollTop = listScrollTop;
+}
+
+function renderClientOrders() {
+  if (!elements.clientOrdersList) return;
+  renderRestaurantDashboard();
+  if (!pendingClientOrders.length) {
+    elements.clientOrdersList.innerHTML = `<div class="monthly-empty">No hay pedidos recibidos hoy.</div>`;
+    return;
+  }
+  elements.clientOrdersList.innerHTML = pendingClientOrders.map(clientOrderCardHtml).join("");
 }
 
 function friendlyCourierAssignmentError(error) {
@@ -3636,7 +3896,17 @@ async function sendRestaurantChatMessage(orderId, card) {
     if (textarea) textarea.value = "";
     if (fileInput) fileInput.value = "";
     showToast("Mensaje enviado al cliente.");
-    await refreshClientOrders({ silent: true });
+    const messages = await loadRestaurantChatMessages(orderId);
+    const index = pendingClientOrders.findIndex((order) => order.id === orderId);
+    if (index >= 0) {
+      pendingClientOrders[index] = {
+        ...pendingClientOrders[index],
+        messages,
+        chatLoaded: true,
+        unreadMessages: 0,
+      };
+      renderClientOrderPatch(orderId);
+    }
   } catch (error) {
     alert("No se pudo enviar el mensaje.");
   } finally {
@@ -4049,7 +4319,7 @@ async function openClientOrdersDialog() {
     return;
   }
   elements.clientOrdersDialog.showModal();
-  elements.clientOrdersList.innerHTML = `<div class="monthly-empty">Cargando pedidos recibidos...</div>`;
+  renderClientOrders();
   try {
     await refreshClientOrders();
   } catch (error) {
@@ -4093,14 +4363,14 @@ async function syncPendingData(options = {}) {
     }
 
     for (const orderId of pendingDeletedOrderIds) {
-      await deleteCloudOrder(orderId);
+      await voidCloudOrder(orderId);
+      setOrderSyncStatus(orderId, "synced");
       clearDeletedOrderId(orderId);
     }
 
     for (const order of pendingOrders) {
       await saveCloudOrder(order);
       setOrderSyncStatus(order.id, "synced");
-      saveOrders();
     }
 
     const highestLocalTicketToday = savedOrders
@@ -4110,14 +4380,14 @@ async function syncPendingData(options = {}) {
     await advanceCloudTicketCounter(minimumNextTicket);
     nextTicket = minimumNextTicket;
     saveTicketState();
-    saveOrders();
+    saveOrders({ immediate: true });
     renderOrder();
     renderHistory();
     updateCloudStatus();
     return true;
   } catch (error) {
     console.error(error);
-    saveOrders();
+    saveOrders({ immediate: true });
     updateCloudStatus();
     return false;
   } finally {
@@ -4543,11 +4813,11 @@ async function uploadRestaurantImageDataUrl(dataUrl, scope, itemId) {
   }
 
   if (!cloudState.client) {
-    throw new Error("Supabase no está disponible.");
+    throw new Error(appUiText("Supabase no está disponible."));
   }
 
   if (!navigator.onLine) {
-    throw new Error("Necesitas conexión a internet para subir la foto.");
+    throw new Error(appUiText("Necesitas conexión a internet para subir la foto."));
   }
 
   // Refrescar usuario real antes de subir.
@@ -4564,7 +4834,7 @@ async function uploadRestaurantImageDataUrl(dataUrl, scope, itemId) {
   const authenticatedUser = authData?.user;
 
   if (!authenticatedUser?.id) {
-    throw new Error("La sesión no está disponible. Inicia sesión nuevamente.");
+    throw new Error(appUiText("La sesión no está disponible. Inicia sesión nuevamente."));
   }
 
   // Mantener cloudState sincronizado.
@@ -4574,7 +4844,7 @@ async function uploadRestaurantImageDataUrl(dataUrl, scope, itemId) {
 
   if (blob.size > 2 * 1024 * 1024) {
     throw new Error(
-      "La imagen optimizada supera el límite permitido de 2 MB."
+      appUiText("La imagen optimizada supera el límite permitido de 2 MB.")
     );
   }
 
@@ -4661,7 +4931,7 @@ async function uploadRestaurantImageDataUrl(dataUrl, scope, itemId) {
       )
     ) {
       throw new Error(
-        "El almacenamiento de fotos no está disponible."
+        appUiText("El almacenamiento de fotos no está disponible.")
       );
     }
 
@@ -4700,7 +4970,7 @@ async function uploadRestaurantImageDataUrl(dataUrl, scope, itemId) {
     );
 
     throw new Error(
-      "No fue posible obtener la dirección final de la foto."
+      appUiText("No fue posible obtener la dirección final de la foto.")
     );
   }
 
@@ -7254,7 +7524,6 @@ function renderOrder() {
   elements.correctOrderButton.disabled = currentOrder.items.length === 0 && !currentOrder.saved;
   elements.cancelOrderButton.disabled = currentOrder.items.length === 0 && !currentOrder.saved;
   saveCurrentOrderDraft();
-  renderRestaurantDashboard();
 }
 
 async function upsertCurrentOrder() {
@@ -7844,6 +8113,7 @@ async function updateTicketPaymentStatus(orderId, status) {
 }
 
 function renderHistory() {
+  renderRestaurantDashboard();
   const ordersForToday = todaysOrders();
 
   if (!ordersForToday.length) {
@@ -8382,7 +8652,7 @@ async function cancelCurrentOrder() {
 
   const ticketLabel = currentOrder.ticketNumber ? formatTicket(currentOrder.ticketNumber) : "sin guardar";
   const shouldCancel = confirm(
-    `Cancelar/eliminar el pedido ${ticketLabel}? Esto lo quitara del historial y de los cierres.`
+    `Cancelar el pedido ${ticketLabel}? Se conservara en el historial como anulado.`
   );
   if (!shouldCancel) return;
 
@@ -8390,15 +8660,25 @@ async function cancelCurrentOrder() {
   const wasSaved = Boolean(currentOrder.saved && cancelledOrderId);
 
   if (wasSaved) {
-    savedOrders = savedOrders.filter((order) => order.id !== cancelledOrderId);
-    saveOrders();
+    const cancelledAt = new Date().toISOString();
+    const cancelledOrder = normalizeCurrentOrderDraft({
+      ...structuredCloneOrder(currentOrder),
+      status: "cancelled",
+      canonicalStatus: "cancelled",
+      cancelledAt,
+      cancellationReason: "Cancelado por el restaurante",
+      syncStatus: cloudState.user && navigator.onLine ? "synced" : "pending",
+    });
+    savedOrders = mergeOrders([cancelledOrder], savedOrders);
+    saveOrders({ immediate: true });
 
     if (cloudState.user && navigator.onLine) {
       try {
-        await deleteCloudOrder(cancelledOrderId);
+        await voidCloudOrder(cancelledOrderId, cancelledOrder.cancellationReason);
         clearDeletedOrderId(cancelledOrderId);
       } catch (error) {
         console.error(error);
+        setOrderSyncStatus(cancelledOrderId, "pending");
         queueDeletedOrderId(cancelledOrderId);
       }
     } else if (shouldQueueForCloud()) {
@@ -8417,7 +8697,7 @@ async function cancelCurrentOrder() {
     renderMonthlyClose(elements.closeMonthInput.value || currentMonthKey());
   }
   updateCloudStatus();
-  showToast(wasSaved ? `Pedido ${ticketLabel} cancelado/eliminado.` : "Pedido nuevo cancelado.");
+  showToast(wasSaved ? `Pedido ${ticketLabel} cancelado y conservado en el historial.` : "Pedido nuevo cancelado.");
 }
 
 function openItemNote(itemId) {
@@ -8499,8 +8779,6 @@ elements.categoryTabs.addEventListener("click", (event) => {
   if (!resolvedCategory) return;
   activeCategory = resolvedCategory;
   applyMenuSearch("");
-  renderCategories();
-  renderMenu();
 });
 
 if (elements.menuSearchInput) {
@@ -8705,23 +8983,35 @@ elements.clientOrdersList.addEventListener("click", (event) => {
   if (button.dataset.action === "assign-nearest-courier") assignNearestCourierForOrder(card.dataset.clientOrderId);
   if (button.dataset.action === "sent-client-order") markClientOrderSent(card.dataset.clientOrderId);
   if (button.dataset.action === "delivered-client-order") markClientOrderDelivered(card.dataset.clientOrderId);
+  if (button.dataset.action === "load-client-chat") loadAndOpenRestaurantChat(card.dataset.clientOrderId);
   if (button.dataset.action === "send-client-message") sendRestaurantChatMessage(card.dataset.clientOrderId, card);
 });
 
 elements.saveOrderButton.addEventListener("click", async () => {
-  if (!(await upsertCurrentOrder())) return;
+  const button = elements.saveOrderButton;
+  const previousLabel = button.textContent;
+  button.disabled = true;
+  button.textContent = appUiText("Guardando...");
+  updateCloudStatus(appUiText("Guardando pedido..."));
+  try {
+    if (!(await upsertCurrentOrder())) return;
 
-  const savedTicketNumber = currentOrder.ticketNumber;
+    const savedTicketNumber = currentOrder.ticketNumber;
 
-  const syncMessage = needsCloudSync(currentOrder)
-    ? " Guardado localmente; se subira cuando vuelva internet."
-    : "";
+    const syncMessage = needsCloudSync(currentOrder)
+      ? " Guardado localmente; se subira cuando vuelva internet."
+      : "";
 
-  startNewOrder();
+    startNewOrder();
 
-  showToast(
-    `Pedido ${formatTicket(savedTicketNumber)} guardado.${syncMessage} Nuevo ticket listo.`
-  );
+    showToast(
+      `Pedido ${formatTicket(savedTicketNumber)} guardado.${syncMessage} Nuevo ticket listo.`
+    );
+  } finally {
+    button.textContent = previousLabel;
+    button.disabled = currentOrder.items.length === 0;
+    updateCloudStatus();
+  }
 });
 
 elements.printOrderButton.addEventListener("click", printCurrentOrder);
@@ -8814,7 +9104,6 @@ elements.dailyCloseButton.addEventListener(
           allowWhileLoading: true,
         });
 
-        await loadCloudData();
         await loadCloudOrdersForReport("day", todayKey);
 
       }
@@ -8894,7 +9183,6 @@ elements.monthlyCloseButton.addEventListener(
           allowWhileLoading: true,
         });
 
-        await loadCloudData();
         await loadCloudOrdersForReport("month", currentMonthKey());
 
       }
@@ -8954,7 +9242,6 @@ elements.annualCloseButton?.addEventListener("click", async () => {
   try {
     if (cloudState.client && cloudState.user && navigator.onLine) {
       await syncPendingData({ silent: true, allowWhileLoading: true });
-      await loadCloudData();
       await loadCloudOrdersForReport("year", currentYearKey());
     }
     renderAnnualClose(currentYearKey());
@@ -9158,6 +9445,8 @@ window.addEventListener("appinstalled", () => {
 window.addEventListener("beforeunload", () => {
   syncFormToOrder();
   saveCurrentOrderDraft();
+  saveOrders({ immediate: true });
+  stopClientOrdersPolling();
   stopClientOrdersRealtime();
   stopRestaurantStatusSync();
 });
@@ -9174,6 +9463,8 @@ window.addEventListener("online", async () => {
       await initializeCloud();
     }
     await syncPendingData();
+    await refreshClientOrders({ silent: true });
+    if (!clientOrdersChannel) startClientOrdersRealtime();
     updateRestaurantStatusSync();
     await syncRestaurantOperationalStatus({ silent: true });
   } catch (error) {

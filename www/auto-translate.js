@@ -1328,7 +1328,8 @@ if (
     createLanguageControl();
     translateTree();
   }
-let translateScheduled = false;
+
+ let translateScheduled = false;
 const pendingTranslateRoots = new Set();
 
 function scheduleTranslateRoot(root) {
@@ -1385,3 +1386,4 @@ observer.observe(document.documentElement, {
   subtree: true,
   characterData: true
 });
+})();

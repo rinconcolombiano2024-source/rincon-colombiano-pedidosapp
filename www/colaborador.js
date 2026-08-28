@@ -421,12 +421,16 @@ let courierAssignments = [];
 let courierHistory = [];
 let courierActiveAssignmentId = "";
 let courierOffersTimer = null;
+let courierOffersPollingDelay = 15_000;
+let courierOffersLoadInFlight = null;
+let courierOffersLoadPending = false;
 let courierAlarmContext = null;
 let courierAlarmTimer = null;
 let courierAlarmArmed = false;
 let courierCurrentView = "profile";
 let courierApprovalChannel = null;
 let courierDeliveryChannel = null;
+let courierDeliveryRealtimeStatus = "idle";
 let courierLocationWatchId = null;
 let courierLastLocationWriteAt = 0;
 let courierResumePromise = null;
@@ -1611,6 +1615,27 @@ function courierSyncOfferAlarm() {
 }
 
 async function courierLoadDeliveryOffers(options = {}) {
+  if (courierOffersLoadInFlight) {
+    courierOffersLoadPending = true;
+    return courierOffersLoadInFlight;
+  }
+  courierOffersLoadInFlight = courierLoadDeliveryOffersNow(options);
+  try {
+    return await courierOffersLoadInFlight;
+  } finally {
+    courierOffersLoadInFlight = null;
+    if (courierOffersLoadPending) {
+      courierOffersLoadPending = false;
+      queueMicrotask(() => {
+        courierLoadDeliveryOffers({ silent: true }).catch((error) => {
+          courierLogError("coalesced_delivery_reload", error);
+        });
+      });
+    }
+  }
+}
+
+async function courierLoadDeliveryOffersNow(options = {}) {
   const { silent = false } = options;
   const client = courierEnsureClient();
   if (!client || !courierUser || courierProfile?.status !== "approved") {
@@ -1660,28 +1685,50 @@ courierRender();
 
 function courierSyncOffersPolling() {
   const shouldPoll = Boolean(courierUser && courierProfile?.status === "approved");
-  if (!shouldPoll && courierOffersTimer) {
-    window.clearInterval(courierOffersTimer);
+  if (!shouldPoll || courierDeliveryRealtimeStatus === "SUBSCRIBED") {
+    courierStopOffersPolling();
+    return;
+  }
+  if (courierOffersTimer) return;
+
+  const poll = async () => {
     courierOffersTimer = null;
-  }
-  if (shouldPoll && !courierOffersTimer) {
-    courierOffersTimer = window.setInterval(() => {
-      courierLoadDeliveryOffers({ silent: true }).catch(() => {});
-      if (courierAvailable && courierLastLocation) courierPersistLiveLocation(true).catch(() => {});
-    }, 15000);
-  }
+    if (!courierUser || courierProfile?.status !== "approved" || courierDeliveryRealtimeStatus === "SUBSCRIBED") return;
+    try {
+      await courierLoadDeliveryOffers({ silent: true });
+      if (courierAvailable && courierLastLocation) await courierPersistLiveLocation(true);
+      courierOffersPollingDelay = 15_000;
+    } catch (error) {
+      courierLogError("delivery_poll_fallback", error);
+      courierOffersPollingDelay = Math.min(courierOffersPollingDelay * 2, 120_000);
+    }
+    if (courierDeliveryRealtimeStatus !== "SUBSCRIBED") {
+      courierOffersTimer = window.setTimeout(poll, courierOffersPollingDelay);
+    }
+  };
+  courierOffersTimer = window.setTimeout(poll, courierOffersPollingDelay);
+}
+
+function courierStopOffersPolling() {
+  if (!courierOffersTimer) return;
+  window.clearTimeout(courierOffersTimer);
+  courierOffersTimer = null;
 }
 
 function courierStopDeliveryRealtime() {
   const channel = courierDeliveryChannel;
   courierDeliveryChannel = null;
-  if (channel && courierClient?.removeChannel) courierClient.removeChannel(channel).catch(() => {});
+  courierDeliveryRealtimeStatus = "idle";
+  if (channel && courierClient?.removeChannel) {
+    courierClient.removeChannel(channel).catch((error) => courierLogError("close_delivery_realtime", error));
+  }
 }
 
 function courierStartDeliveryRealtime() {
   if (!courierClient?.channel || !courierUser || courierProfile?.status !== "approved") return;
   if (courierDeliveryChannel) return;
 
+  courierDeliveryRealtimeStatus = "connecting";
   courierDeliveryChannel = courierClient
     .channel(`courier-deliveries-${courierUser.id}`)
     .on(
@@ -1692,12 +1739,36 @@ function courierStartDeliveryRealtime() {
         table: "delivery_assignments",
         filter: `courier_user_id=eq.${courierUser.id}`,
       },
-      () => {
-        courierLoadDeliveryOffers({ silent: true }).catch((error) => courierLogError("realtime_delivery_reload", error));
-        courierLoadHistory().catch((error) => courierLogError("realtime_history_reload", error));
+      (payload) => {
+        const assignment = payload?.new || payload?.old || {};
+        const assignmentId = String(assignment.id || "");
+        const index = courierAssignments.findIndex((entry) => entry.assignment_id === assignmentId);
+        if (index >= 0 && assignment.status) {
+          courierAssignments[index] = { ...courierAssignments[index], status: assignment.status, updated_at: assignment.updated_at };
+          courierRenderDeliveryOffers();
+          courierRender();
+          courierSyncOfferAlarm();
+        } else {
+          courierLoadDeliveryOffers({ silent: true }).catch((error) => courierLogError("realtime_delivery_reload", error));
+        }
+        if (["delivered", "cancelled", "rejected", "expired"].includes(assignment.status)) {
+          courierLoadHistory().catch((error) => courierLogError("realtime_history_reload", error));
+        }
       }
     )
-    .subscribe();
+    .subscribe((status) => {
+      courierDeliveryRealtimeStatus = status;
+      if (status === "SUBSCRIBED") {
+        courierStopOffersPolling();
+        courierOffersPollingDelay = 15_000;
+        courierLoadDeliveryOffers({ silent: true }).catch((error) => courierLogError("realtime_delivery_resync", error));
+        return;
+      }
+      if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)) {
+        courierSyncOffersPolling();
+      }
+    });
+  courierSyncOffersPolling();
 }
 
 async function courierConfirmDeliveryPayment(assignment) {
