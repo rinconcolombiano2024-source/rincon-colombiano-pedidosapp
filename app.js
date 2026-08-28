@@ -494,6 +494,10 @@ let clientDeliveryTrackingByOrderId = new Map();
 let clientOrdersTimer = null;
 let clientOrdersChannel = null;
 let clientOrdersRealtimeStatus = "idle";
+let centralSyncChannel = null;
+let centralSyncStatus = "idle";
+let centralSyncTimer = null;
+let centralSyncInProgress = false;
 let clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;
 let clientOrdersRefreshInFlight = null;
 let clientOrdersRefreshPending = false;
@@ -2009,7 +2013,8 @@ async function loadCloudData() {
       setCloudError(moduleError, { moduleOnly: true });
     }
     startClientOrdersRealtime();
-    updateRestaurantStatusSync();
+startCentralRealtime();
+updateRestaurantStatusSync();
     if (restaurantOperationalMode === "schedule") {
       await syncRestaurantOperationalStatus({ silent: true });
     }
@@ -3138,7 +3143,364 @@ function handleClientMessageRealtimePayload(payload) {
     showRestaurantNotification("Mensaje de cliente", "Hay una respuesta o comprobante en un pedido.");
   }
 }
+function stopCentralRealtime() {
+  if (centralSyncTimer) {
+    clearTimeout(centralSyncTimer);
+    centralSyncTimer = null;
+  }
 
+  const channel = centralSyncChannel;
+
+  centralSyncChannel = null;
+  centralSyncStatus = "idle";
+
+  if (channel && cloudState.client?.removeChannel) {
+    cloudState.client
+      .removeChannel(channel)
+      .catch((error) => {
+        console.warn(
+          "No se pudo cerrar el canal central de sincronización.",
+          error
+        );
+      });
+  }
+}
+
+function scheduleCentralRefresh() {
+  if (centralSyncTimer) {
+    clearTimeout(centralSyncTimer);
+  }
+
+  centralSyncTimer = setTimeout(() => {
+    centralSyncTimer = null;
+
+    refreshCentralCloudState().catch((error) => {
+      console.error(
+        "Error resincronizando el estado central.",
+        error
+      );
+    });
+  }, 250);
+}
+
+async function refreshCentralCloudState() {
+  if (
+    !cloudState.client ||
+    !cloudState.user ||
+    !navigator.onLine ||
+    centralSyncInProgress
+  ) {
+    return false;
+  }
+
+  centralSyncInProgress = true;
+
+  try {
+    const [
+      settingsResponse,
+      profileResponse,
+      ordersResponse,
+    ] = await Promise.all([
+      cloudState.client
+        .from("app_settings")
+        .select(
+          "menu, settings, menu_revision, settings_revision, menu_updated_at, settings_updated_at"
+        )
+        .eq("user_id", cloudState.user.id)
+        .maybeSingle(),
+
+      cloudState.client
+        .from("restaurant_profiles")
+        .select(
+          "business_name, logo_url, public_address, phone, active, operational_open, operational_mode, opening_hours, latitude, longitude, country_code, city, region, postal_code, timezone, preferred_language, deleted_at"
+        )
+        .eq("user_id", cloudState.user.id)
+        .maybeSingle(),
+
+      cloudState.client
+        .from("orders")
+        .select("order_json")
+        .eq("user_id", cloudState.user.id)
+        .order("created_at", {
+          ascending: false
+        })
+        .limit(LOCAL_ORDER_CACHE_LIMIT),
+    ]);
+
+    if (settingsResponse.error) {
+      throw settingsResponse.error;
+    }
+
+    if (profileResponse.error) {
+      throw profileResponse.error;
+    }
+
+    if (ordersResponse.error) {
+      throw ordersResponse.error;
+    }
+
+    const settingsRow = settingsResponse.data;
+    const profileRow = profileResponse.data;
+
+    /*
+     * REVISIONES
+     */
+    if (
+      settingsRow?.settings_revision !==
+      undefined
+    ) {
+      storeCloudRevision(
+        STORAGE_KEYS.settingsRevision,
+        settingsRow.settings_revision
+      );
+    }
+
+    if (
+      settingsRow?.menu_revision !==
+      undefined
+    ) {
+      storeCloudRevision(
+        STORAGE_KEYS.menuRevision,
+        settingsRow.menu_revision
+      );
+    }
+
+    /*
+     * AJUSTES
+     *
+     * Si existe un cambio local pendiente,
+     * no lo pisamos.
+     */
+    if (
+      settingsRow?.settings &&
+      !hasPendingSettings()
+    ) {
+      applySettingsPayload(
+        settingsRow.settings
+      );
+    }
+
+    /*
+     * MENÚ
+     */
+    if (
+      settingsRow?.menu &&
+      !hasPendingMenu()
+    ) {
+      const remoteMenu =
+        normalizeMenuCatalog(
+          settingsRow.menu
+        );
+
+      if (
+        !menuCatalogsMatch(
+          menuCatalog,
+          remoteMenu
+        )
+      ) {
+        menuCatalog = remoteMenu;
+
+        saveMenuCache({
+          immediate: true
+        });
+
+        storeConfirmedCloudMenu(
+          remoteMenu
+        );
+
+        renderCategories();
+        renderMenu();
+
+        if (
+          elements.menuEditorDialog?.open
+        ) {
+          renderMenuEditor();
+        }
+      }
+    }
+
+    /*
+     * PERFIL / HORARIO / ABIERTO-CERRADO
+     */
+    if (profileRow) {
+      applyPublicRestaurantProfileFallback(
+        profileRow
+      );
+
+      if (
+        typeof profileRow.active ===
+        "boolean"
+      ) {
+        restaurantActive =
+          profileRow.active;
+
+        localStorage.setItem(
+          STORAGE_KEYS.restaurantActive,
+          restaurantActive ? "1" : "0"
+        );
+      }
+    }
+
+    /*
+     * PEDIDOS INTERNOS
+     *
+     * Conservamos pedidos locales pendientes
+     * y adoptamos los confirmados de Supabase.
+     */
+    const deletedIds =
+      readDeletedOrderIds();
+
+    const localPending =
+      savedOrders.filter(
+        (order) =>
+          needsCloudSync(order) &&
+          !deletedIds.includes(order.id)
+      );
+
+    const cloudOrders =
+      (ordersResponse.data || [])
+        .map((row) => ({
+          ...row.order_json,
+          type: normalizeOrderType(
+            row.order_json?.type
+          ),
+          businessDate:
+            orderBusinessDate(
+              row.order_json
+            ),
+          syncStatus: "synced",
+        }))
+        .filter(
+          (order) =>
+            !deletedIds.includes(
+              order.id
+            )
+        );
+
+    savedOrders = mergeOrders(
+      cloudOrders,
+      localPending
+    );
+
+    saveOrders({
+      immediate: true
+    });
+
+    renderCurrencySettings();
+    renderRestaurantStatus();
+    renderHistory();
+
+    updateRestaurantStatusSync();
+    updateCloudStatus();
+
+    return true;
+  } catch (error) {
+    console.error(
+      "Fallo de sincronización central.",
+      error
+    );
+
+    return false;
+  } finally {
+    centralSyncInProgress = false;
+  }
+}
+function startCentralRealtime() {
+  stopCentralRealtime();
+
+  if (
+    !cloudState.client ||
+    !cloudState.user ||
+    !cloudState.client.channel
+  ) {
+    return;
+  }
+
+  centralSyncStatus = "connecting";
+
+  const channel =
+    cloudState.client
+      .channel(
+        `restaurant-central-${cloudState.user.id}`
+      )
+
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "app_settings",
+          filter:
+            `user_id=eq.${cloudState.user.id}`,
+        },
+        scheduleCentralRefresh
+      )
+
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "restaurant_profiles",
+          filter:
+            `user_id=eq.${cloudState.user.id}`,
+        },
+        scheduleCentralRefresh
+      )
+
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "orders",
+          filter:
+            `user_id=eq.${cloudState.user.id}`,
+        },
+        scheduleCentralRefresh
+      )
+
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table:
+            "restaurant_public_catalogs",
+          filter:
+            `restaurant_user_id=eq.${cloudState.user.id}`,
+        },
+        scheduleCentralRefresh
+      );
+
+  centralSyncChannel = channel;
+
+  channel.subscribe((status) => {
+    if (
+      channel !== centralSyncChannel
+    ) {
+      return;
+    }
+
+    centralSyncStatus = status;
+
+    if (status === "SUBSCRIBED") {
+      scheduleCentralRefresh();
+      return;
+    }
+
+    if (
+      status === "CHANNEL_ERROR" ||
+      status === "TIMED_OUT" ||
+      status === "CLOSED"
+    ) {
+      console.warn(
+        "Canal central Realtime:",
+        status
+      );
+    }
+  });
+}
 function startClientOrdersRealtime() {
   stopClientOrdersRealtime();
   if (!canUseCustomerModule()) return;
@@ -9541,8 +9903,10 @@ window.addEventListener("beforeunload", () => {
   syncFormToOrder();
   saveCurrentOrderDraft();
   saveOrders({ immediate: true });
+
   stopClientOrdersPolling();
   stopClientOrdersRealtime();
+  stopCentralRealtime();
   stopRestaurantStatusSync();
 });
 
@@ -9550,28 +9914,136 @@ window.addEventListener("beforeunload", () => {
 window.addEventListener("offline", () => {
   renderCloudState();
 });
-
 window.addEventListener("online", async () => {
   updateCloudStatus("Conectando...");
+
   try {
     if (cloudState.configured && !cloudState.client) {
       await initializeCloud();
     }
+
+    if (!cloudState.client || !cloudState.user) {
+      updateCloudStatus();
+      return;
+    }
+
+    /*
+     * 1. Primero enviamos todo lo que quedó pendiente offline.
+     */
     await syncPendingData();
-    await refreshClientOrders({ silent: true });
-    if (!clientOrdersChannel) startClientOrdersRealtime();
+
+    /*
+     * 2. Después volvemos a leer la verdad actual de Supabase.
+     *    Ajustes + perfil + menú + pedidos internos.
+     */
+    await refreshCentralCloudState();
+
+    /*
+     * 3. Resincronizamos pedidos provenientes del cliente.
+     */
+    await refreshClientOrders({
+      silent: true
+    });
+
+    /*
+     * 4. Si Realtime se perdió durante la desconexión,
+     *    reconstruimos los canales.
+     */
+    if (!centralSyncChannel) {
+      startCentralRealtime();
+    }
+
+    if (!clientOrdersChannel) {
+      startClientOrdersRealtime();
+    }
+
+    /*
+     * 5. Actualizamos el estado operativo.
+     */
     updateRestaurantStatusSync();
-    await syncRestaurantOperationalStatus({ silent: true });
+
+    await syncRestaurantOperationalStatus({
+      silent: true
+    });
+
+    updateCloudStatus();
   } catch (error) {
-    console.error(error);
+    console.error(
+      "Error recuperando sincronización después de volver Internet.",
+      error
+    );
+
     updateCloudStatus();
   }
 });
+document.addEventListener("visibilitychange", async () => {
+  if (document.visibilityState !== "visible") {
+    return;
+  }
 
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") {
+  if (
+    !navigator.onLine ||
+    !cloudState.client ||
+    !cloudState.user
+  ) {
     updateRestaurantStatusSync();
-    syncRestaurantOperationalStatus({ silent: true });
+    return;
+  }
+
+  try {
+    /*
+     * 1. Primero intentamos subir cualquier cambio
+     *    que haya quedado pendiente.
+     */
+    await syncPendingData({
+      silent: true
+    });
+
+    /*
+     * 2. Recuperamos la versión actual de:
+     *    - ajustes
+     *    - menú
+     *    - perfil
+     *    - pedidos internos
+     */
+    await refreshCentralCloudState();
+
+    /*
+     * 3. Actualizamos pedidos QR / cliente.
+     */
+    await refreshClientOrders({
+      silent: true
+    });
+
+    /*
+     * 4. Recuperamos Realtime si el navegador
+     *    suspendió los sockets estando en segundo plano.
+     */
+    if (!centralSyncChannel) {
+      startCentralRealtime();
+    }
+
+    if (!clientOrdersChannel) {
+      startClientOrdersRealtime();
+    }
+
+    /*
+     * 5. Actualizamos abierto/cerrado.
+     */
+    updateRestaurantStatusSync();
+
+    await syncRestaurantOperationalStatus({
+      silent: true
+    });
+
+    updateCloudStatus();
+  } catch (error) {
+    console.error(
+      "Error resincronizando la app al volver al primer plano.",
+      error
+    );
+
+    updateCloudStatus();
   }
 });
 
