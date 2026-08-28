@@ -3494,14 +3494,18 @@ if (
      * Si existe un cambio local pendiente,
      * no lo pisamos.
      */
-    if (
-      settingsRow?.settings &&
-      !hasPendingSettings()
-    ) {
-      applySettingsPayload(
-        settingsRow.settings
-      );
-    }
+   if (
+  settingsRow?.settings &&
+  !hasPendingSettings()
+) {
+  applySettingsPayload(
+    settingsRow.settings
+  );
+
+  storeConfirmedCloudSettings(
+    settingsRow.settings
+  );
+}
 
     /*
      * MENÚ
