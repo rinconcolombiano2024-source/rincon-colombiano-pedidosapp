@@ -3030,13 +3030,29 @@ function stopClientOrdersPolling() {
 }
 
 function stopClientOrdersRealtime() {
-  if (clientOrdersChannel && cloudState.client?.removeChannel) {
-    cloudState.client.removeChannel(clientOrdersChannel).catch((error) => {
-      console.warn("No fue posible cerrar inmediatamente el canal de pedidos.", error);
-    });
+  if (clientOrdersRealtimeReconnectTimer) {
+    clearTimeout(
+      clientOrdersRealtimeReconnectTimer
+    );
+
+    clientOrdersRealtimeReconnectTimer = null;
   }
+
+  const channel = clientOrdersChannel;
+
   clientOrdersChannel = null;
   clientOrdersRealtimeStatus = "idle";
+
+  if (channel && cloudState.client?.removeChannel) {
+    cloudState.client
+      .removeChannel(channel)
+      .catch((error) => {
+        console.warn(
+          "No fue posible cerrar inmediatamente el canal de pedidos.",
+          error
+        );
+      });
+  }
 }
 
 function activeClientOrderStatus(status) {
