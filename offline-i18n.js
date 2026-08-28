@@ -471,6 +471,8 @@
     ["schema.v91MenuRequired", "La base de datos necesita la migracion V91 antes de guardar el menu.", "Baza danych wymaga migracji V91 przed zapisaniem menu.", "The database requires migration V91 before saving the menu."],
     ["schema.v91Outdated", "La version de la base de datos es anterior a V91.", "Wersja bazy danych jest starsza niż V91.", "The database version is older than V91."],
     ["menu.publicationRetryV91", "El menu se guardo, pero la publicacion para clientes necesita reintento.", "Menu zapisano, ale publikację dla klientów trzeba ponowić.", "The menu was saved, but publishing it to customers must be retried."],
+    ["menu.verificationPendingV91", "Menu pendiente de verificacion", "Menu oczekuje na weryfikację", "Menu verification pending"],
+    ["close.invalidCloudReportV91", "La nube no devolvio un cierre valido.", "Chmura nie zwróciła prawidłowego raportu zamknięcia.", "The cloud did not return a valid closing report."],
     ["common.savingV91", "Guardando...", "Zapisywanie...", "Saving..."],
     ["orders.savingV91", "Guardando pedido...", "Zapisywanie zamówienia...", "Saving order..."],
     ["image.finalUrlMissing", "No fue posible obtener la direccion final de la foto.", "Nie udało się uzyskać końcowego adresu zdjęcia.", "The final photo URL could not be obtained."],
@@ -1014,6 +1016,13 @@
       es: (ticket) => `¿Cancelar o eliminar el pedido ${ticket}? Se quitará del historial y de los cierres.`,
       pl: (ticket) => `Anulować lub usunąć zamówienie ${ticket}? Zostanie usunięte z historii i zamknięć.`,
       en: (ticket) => `Cancel or remove order ${ticket}? It will be removed from history and closing reports.`,
+    },
+    {
+      key: "order.cancelPreserveConfirmV91",
+      source: /^Cancelar el pedido (.+?)\? Se conservara en el historial como anulado\.$/i,
+      es: (ticket) => `¿Cancelar el pedido ${ticket}? Se conservará en el historial como anulado.`,
+      pl: (ticket) => `Anulować zamówienie ${ticket}? Zostanie zachowane w historii jako anulowane.`,
+      en: (ticket) => `Cancel order ${ticket}? It will remain in the history as cancelled.`,
     },
     {
       key: "team.authorizing",

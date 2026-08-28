@@ -1,4 +1,4 @@
-const CACHE_NAME = "rc-ordera-v89-stable-media-core";
+const CACHE_NAME = "rc-ordera-v91-performance-core";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -61,20 +61,30 @@ self.addEventListener("fetch", (event) => {
   const isCriticalCode = ["script", "style", "worker", "manifest"].includes(event.request.destination);
   if (!isDocument && !isCriticalCode) return;
 
+  const updateCache = fetch(event.request).then(async (response) => {
+    if (response && response.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      await cache.put(event.request, response.clone());
+    }
+    return response;
+  });
+
+  if (isCriticalCode) {
+    event.waitUntil(updateCache.catch(() => undefined));
+    event.respondWith(
+      caches.match(event.request, { ignoreSearch: true }).then((cached) => cached || updateCache)
+    );
+    return;
+  }
+
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-        return response;
-      })
-      .catch(async () => {
-        const cachedRequest = await caches.match(event.request, { ignoreSearch: true });
-        if (cachedRequest) return cachedRequest;
-        const pageName = requestUrl.pathname.split("/").pop() || "index.html";
-        const pageFallbacks = new Set(["index.html", "cliente.html", "colaborador.html", "mesero.html", "admin.html"]);
-        return caches.match(pageFallbacks.has(pageName) ? `./${pageName}` : "./index.html");
-      })
+    updateCache.catch(async () => {
+      const cachedRequest = await caches.match(event.request, { ignoreSearch: true });
+      if (cachedRequest) return cachedRequest;
+      const pageName = requestUrl.pathname.split("/").pop() || "index.html";
+      const pageFallbacks = new Set(["index.html", "cliente.html", "colaborador.html", "mesero.html", "admin.html"]);
+      return caches.match(pageFallbacks.has(pageName) ? `./${pageName}` : "./index.html");
+    })
   );
 });
 self.addEventListener("push", (event) => {
@@ -125,8 +135,8 @@ self.addEventListener("push", (event) => {
 
     data: {
       url: data.url || (data.assignment_id
-        ? `./colaborador.html?view=offers&assignment=${encodeURIComponent(data.assignment_id)}&app=v89.0.0&lang=${language}`
-        : `./colaborador.html?view=offers&app=v89.0.0&lang=${language}`),
+        ? `./colaborador.html?view=offers&assignment=${encodeURIComponent(data.assignment_id)}&app=v91.0.0&lang=${language}`
+        : `./colaborador.html?view=offers&app=v91.0.0&lang=${language}`),
       assignment_id: data.assignment_id || "",
     },
   };
@@ -141,7 +151,7 @@ self.addEventListener("notificationclick", (event) => {
 
   const targetUrl =
     event.notification.data?.url ||
-    "./colaborador.html?view=offers&app=v89.0.0";
+    "./colaborador.html?view=offers&app=v91.0.0";
 
   event.waitUntil(
     clients.matchAll({
