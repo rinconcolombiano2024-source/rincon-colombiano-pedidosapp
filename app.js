@@ -500,6 +500,7 @@ let centralSyncStatus = "idle";
 let centralSyncTimer = null;
 let centralSyncInProgress = false;
 let centralSyncRefreshPending = false;
+let pendingDataSyncRequested = false;
 let centralRealtimeReconnectTimer = null;
 let clientOrdersRealtimeReconnectTimer = null;
 let clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;
@@ -5055,11 +5056,22 @@ async function openClientOrdersDialog() {
 
 async function syncPendingData(options = {}) {
   const { silent = false, allowWhileLoading = false } = options;
-  if (!cloudState.client || !cloudState.user || cloudState.syncing || !navigator.onLine) {
-    updateCloudStatus();
-    return false;
-  }
-  if (cloudState.loading && !allowWhileLoading) return false;
+ if (!cloudState.client || !cloudState.user || !navigator.onLine) {
+  updateCloudStatus();
+  return false;
+}
+
+if (cloudState.syncing) {
+  pendingDataSyncRequested = true;
+  return false;
+}
+
+if (cloudState.loading && !allowWhileLoading) {
+  pendingDataSyncRequested = true;
+  return false;
+}
+
+pendingDataSyncRequested = false;
 
   const pendingDeletedOrderIds = readDeletedOrderIds();
   const pendingOrders = savedOrders.filter((order) => needsCloudSync(order) && !pendingDeletedOrderIds.includes(order.id));
@@ -5126,8 +5138,28 @@ async function syncPendingData(options = {}) {
     setCloudError(error);
     return false;
   } finally {
-    cloudState.syncing = false;
+  cloudState.syncing = false;
+
+  if (
+    pendingDataSyncRequested &&
+    cloudState.client &&
+    cloudState.user &&
+    navigator.onLine
+  ) {
+    pendingDataSyncRequested = false;
+
+    queueMicrotask(() => {
+      syncPendingData({
+        silent: true,
+      }).catch((error) => {
+        console.error(
+          "No fue posible completar la sincronizacion pendiente.",
+          error
+        );
+      });
+    });
   }
+}
 }
 
 async function signInWithEmail() {
