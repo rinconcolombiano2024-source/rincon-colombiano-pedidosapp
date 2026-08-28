@@ -8666,19 +8666,61 @@ function thermalTicketText() {
     .trim();
   return `${text}\n\n\n`;
 }
-
 async function printWithThermalPrinter() {
   if (!thermalPrinterPort?.writable) return false;
+
   const writer = thermalPrinterPort.writable.getWriter();
+
+  const writeWithTimeout = (data, timeoutMs = 2500) =>
+    Promise.race([
+      writer.write(data),
+      new Promise((_, reject) =>
+        window.setTimeout(
+          () => reject(new Error("La impresora no respondio a tiempo.")),
+          timeoutMs
+        )
+      ),
+    ]);
+
   try {
     const encoder = new TextEncoder();
-    await writer.write(new Uint8Array([0x1b, 0x40]));
-    await writer.write(encoder.encode(thermalTicketText()));
-    await writer.write(new Uint8Array([0x1d, 0x56, 0x00]));
-    setThermalPrinterStatus("Ticket impreso y orden de corte enviada.", "ok");
+
+    await writeWithTimeout(
+      new Uint8Array([0x1b, 0x40])
+    );
+
+    await writeWithTimeout(
+      encoder.encode(thermalTicketText())
+    );
+
+    await writeWithTimeout(
+      new Uint8Array([0x1d, 0x56, 0x00])
+    );
+
+    setThermalPrinterStatus(
+      "Ticket impreso y orden de corte enviada.",
+      "ok"
+    );
+
     return true;
+  } catch (error) {
+    console.warn(
+      "La impresora termica dejo de responder.",
+      error
+    );
+
+    setThermalPrinterStatus(
+      "La impresora no respondio. Se usara la impresion del sistema.",
+      "error"
+    );
+
+    throw error;
   } finally {
-    writer.releaseLock();
+    try {
+      writer.releaseLock();
+    } catch {
+      // El puerto puede haberse desconectado.
+    }
   }
 }
 
