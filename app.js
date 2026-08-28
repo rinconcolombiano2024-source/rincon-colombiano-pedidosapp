@@ -1009,7 +1009,9 @@ function pendingDeletedOrdersCount() {
 }
 
 function hasPendingSettings() {
-  return localStorage.getItem(STORAGE_KEYS.settingsPending) === "1";
+  return Boolean(
+    localStorage.getItem(STORAGE_KEYS.settingsPending)
+  );
 }
 
 function buildAnnualClose(year) {
@@ -1047,25 +1049,77 @@ function buildAnnualClose(year) {
     products: Array.from(products.values()).sort((a, b) => b.qty - a.qty || b.total - a.total),
   };
 }
-
 function markSettingsPending() {
-  if (cloudState.configured) localStorage.setItem(STORAGE_KEYS.settingsPending, "1");
+  if (!cloudState.configured) return null;
+
+  const token = `${Date.now()}-${Math.random()}`;
+
+  localStorage.setItem(
+    STORAGE_KEYS.settingsPending,
+    token
+  );
+
+  return token;
 }
 
-function clearSettingsPending() {
-  localStorage.removeItem(STORAGE_KEYS.settingsPending);
+function currentSettingsPendingToken() {
+  return localStorage.getItem(
+    STORAGE_KEYS.settingsPending
+  );
 }
 
+function clearSettingsPending(expectedToken = null) {
+  if (
+    expectedToken &&
+    currentSettingsPendingToken() !== expectedToken
+  ) {
+    return false;
+  }
+
+  localStorage.removeItem(
+    STORAGE_KEYS.settingsPending
+  );
+
+  return true;
+}
 function hasPendingMenu() {
-  return localStorage.getItem(STORAGE_KEYS.menuPending) === "1";
+  return Boolean(
+    localStorage.getItem(STORAGE_KEYS.menuPending)
+  );
 }
 
 function markMenuPending() {
-  if (cloudState.configured) localStorage.setItem(STORAGE_KEYS.menuPending, "1");
+  if (!cloudState.configured) return null;
+
+  const token = `${Date.now()}-${Math.random()}`;
+
+  localStorage.setItem(
+    STORAGE_KEYS.menuPending,
+    token
+  );
+
+  return token;
 }
 
-function clearMenuPending() {
-  localStorage.removeItem(STORAGE_KEYS.menuPending);
+function currentMenuPendingToken() {
+  return localStorage.getItem(
+    STORAGE_KEYS.menuPending
+  );
+}
+
+function clearMenuPending(expectedToken = null) {
+  if (
+    expectedToken &&
+    currentMenuPendingToken() !== expectedToken
+  ) {
+    return false;
+  }
+
+  localStorage.removeItem(
+    STORAGE_KEYS.menuPending
+  );
+
+  return true;
 }
 
 function storedCloudRevision(key) {
@@ -5075,8 +5129,16 @@ pendingDataSyncRequested = false;
 
   const pendingDeletedOrderIds = readDeletedOrderIds();
   const pendingOrders = savedOrders.filter((order) => needsCloudSync(order) && !pendingDeletedOrderIds.includes(order.id));
-  const shouldSyncSettings = hasPendingSettings();
-  const shouldSyncMenu = hasPendingMenu();
+  const settingsPendingToken =
+  currentSettingsPendingToken();
+
+const shouldSyncSettings =
+  Boolean(settingsPendingToken);
+  const menuPendingToken =
+  currentMenuPendingToken();
+
+const shouldSyncMenu =
+  Boolean(menuPendingToken);
   const shouldSyncTicketCounter = pendingTicketCounter();
   if (!pendingOrders.length && !pendingDeletedOrderIds.length && !shouldSyncSettings && !shouldSyncMenu && !shouldSyncTicketCounter) {
     updateCloudStatus();
@@ -5088,13 +5150,19 @@ pendingDataSyncRequested = false;
 
   try {
     if (shouldSyncSettings) {
-      await saveCloudSettings();
-      clearSettingsPending();
-    }
+  await saveCloudSettings();
+
+  clearSettingsPending(
+    settingsPendingToken
+  );
+}
     if (shouldSyncMenu) {
-      await saveCloudMenu();
-      clearMenuPending();
-    }
+  await saveCloudMenu();
+
+  clearMenuPending(
+    menuPendingToken
+  );
+}
     if (shouldSyncTicketCounter) {
       await setCloudNextTicket(shouldSyncTicketCounter);
       clearPendingTicketCounter();
