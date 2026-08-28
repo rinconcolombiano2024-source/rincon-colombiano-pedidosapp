@@ -1,6 +1,7 @@
 const STORAGE_KEYS = {
   nextTicket: "rc_ordera_next_ticket",
   ticketDate: "rc_ordera_ticket_date",
+  ticketCounterPending: "rc_ordera_ticket_counter_pending",
   orders: "rc_ordera_orders",
   menu: "rc_ordera_menu",
   appLanguage: "rc_ordera_app_language",
