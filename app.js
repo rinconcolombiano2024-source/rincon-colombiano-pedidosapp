@@ -6726,9 +6726,11 @@ async function saveSettingsWhenPossible(options = {}) {
         "No fue posible confirmar el guardado en nube a tiempo."
       );
 
-      clearSettingsPending(
-        settingsPendingToken
-      );
+     if (settingsPendingToken) {
+  clearSettingsPending(
+    settingsPendingToken
+  );
+}
 
       updateCloudStatus("Sincronizado");
       return { synced: true };
