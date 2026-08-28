@@ -101,7 +101,7 @@ migrateLegacyRestaurantStorage();
 
 const DEFAULT_BUSINESS_NAME = "MI RESTAURANTE";
 const DEFAULT_DELIVERY_MINIMUM_FEE = 20;
-const APP_VERSION = "v89.0.0";
+const APP_VERSION = "v91.0.0";
 const PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 const PLATFORM_APP_NAME = "RC ORDERA";
 const RESTAURANT_MEDIA_BUCKET = "restaurant-media";
@@ -449,6 +449,8 @@ confirmMenuClearButton: document.querySelector("#confirmMenuClearButton"),
 let menuCatalog = readMenuCatalog();
 let activeCategory = Object.keys(menuCatalog)[0];
 let menuSearchQuery = "";
+let menuSearchTimer = null;
+let menuCachePersistHandle = null;
 let restaurantBusinessContext = null;
 let todayKey = currentBusinessDate();
 let nextTicket = initializeDailyTicket();
@@ -1918,13 +1920,13 @@ async function loadCloudData() {
 
     if (localMenuPending && menuProductCount(menuCatalog) === 0 && menuProductCount(remoteMenu) > 0) {
       menuCatalog = remoteMenu;
-      localStorage.setItem(STORAGE_KEYS.menu, JSON.stringify(menuCatalog));
+      saveMenuCache();
       clearMenuPending();
       localMenuPending = false;
       showToast("El menu valido de la nube fue protegido. No se reemplazo por un menu local vacio.");
     } else if (!localMenuPending) {
       menuCatalog = remoteMenu;
-      localStorage.setItem(STORAGE_KEYS.menu, JSON.stringify(menuCatalog));
+      saveMenuCache();
       storeConfirmedCloudMenu(remoteMenu);
     }
     if (!localMenuPending && menuHasInlineRestaurantImages(remoteMenu)) {
@@ -2164,7 +2166,7 @@ async function confirmSavedCloudMenu(confirmed, fallbackMenu) {
   if (!confirmed?.menu && !fallbackMenu) throw new Error("La nube no confirmo el menu guardado.");
   const revision = confirmed?.menuRevision ?? confirmed?.menu_revision;
   menuCatalog = confirmedMenu;
-  localStorage.setItem(STORAGE_KEYS.menu, JSON.stringify(menuCatalog));
+  saveMenuCache();
   storeCloudRevision(STORAGE_KEYS.menuRevision, revision);
   storeConfirmedCloudMenu(menuCatalog);
   queueMicrotask(() => {
@@ -2183,7 +2185,7 @@ async function saveCloudMenu() {
   const nextMenu = await materializeMenuImagesForCloud(menuCatalog);
   if (!menuCatalogsMatch(menuCatalog, nextMenu)) {
     menuCatalog = nextMenu;
-    localStorage.setItem(STORAGE_KEYS.menu, JSON.stringify(menuCatalog));
+    saveMenuCache();
     renderMenu();
     if (elements.menuEditorDialog?.open) renderMenuEditor();
   }
@@ -2203,7 +2205,7 @@ async function saveCloudMenu() {
     const mergedMenu = mergeConcurrentMenuChanges(baseMenu, nextMenu, remoteMenu);
     const remoteRevision = currentRow?.menu_revision;
     menuCatalog = mergedMenu;
-    localStorage.setItem(STORAGE_KEYS.menu, JSON.stringify(menuCatalog));
+    saveMenuCache();
     storeCloudRevision(STORAGE_KEYS.menuRevision, remoteRevision);
     if (menuCatalogsMatch(mergedMenu, remoteMenu)) {
       return confirmSavedCloudMenu({ menu: remoteMenu, menu_revision: remoteRevision }, remoteMenu);
@@ -5749,9 +5751,36 @@ function normalizeMenuCatalog(menu) {
 
   return normalized;
 }
+function persistMenuCatalogCache() {
+  if (menuCachePersistHandle) {
+    if (window.cancelIdleCallback) window.cancelIdleCallback(menuCachePersistHandle);
+    else window.clearTimeout(menuCachePersistHandle);
+  }
+  menuCachePersistHandle = null;
+  try {
+    localStorage.setItem(STORAGE_KEYS.menu, JSON.stringify(menuCatalog));
+  } catch (error) {
+    console.error("No fue posible actualizar el cache local del menu:", error);
+  }
+}
+
+function saveMenuCache(options = {}) {
+  const immediate = options.immediate === true || !navigator.onLine;
+  if (immediate) {
+    persistMenuCatalogCache();
+    return;
+  }
+  if (menuCachePersistHandle) return;
+  if (window.requestIdleCallback) {
+    menuCachePersistHandle = window.requestIdleCallback(persistMenuCatalogCache, { timeout: 1000 });
+  } else {
+    menuCachePersistHandle = window.setTimeout(persistMenuCatalogCache, 30);
+  }
+}
+
 function saveMenuCatalog() {
   menuCatalog = normalizeMenuCatalog(menuCatalog);
-  localStorage.setItem(STORAGE_KEYS.menu, JSON.stringify(menuCatalog));
+  saveMenuCache();
 
   if (!menuCatalog[activeCategory]) {
     activeCategory = Object.keys(menuCatalog)[0] || "";
@@ -7410,7 +7439,7 @@ async function clearMenuSecurely() {
     }
 
     menuCatalog = EMPTY_MENU_CATALOG;
-    localStorage.setItem(STORAGE_KEYS.menu, JSON.stringify(menuCatalog));
+    saveMenuCache({ immediate: true });
     clearMenuPending();
     storeCloudRevision(STORAGE_KEYS.menuRevision, confirmed.menuRevision ?? confirmed.menu_revision);
     activeCategory = "";
@@ -8777,18 +8806,31 @@ elements.categoryTabs.addEventListener("click", (event) => {
   if (!button) return;
   const resolvedCategory = menuCatalog[button.dataset.category] ? button.dataset.category : findCategoryByName(button.dataset.category);
   if (!resolvedCategory) return;
+  if (menuSearchTimer) {
+    window.clearTimeout(menuSearchTimer);
+    menuSearchTimer = null;
+  }
   activeCategory = resolvedCategory;
   applyMenuSearch("");
 });
 
 if (elements.menuSearchInput) {
   elements.menuSearchInput.addEventListener("input", () => {
-    applyMenuSearch(elements.menuSearchInput.value);
+    if (menuSearchTimer) window.clearTimeout(menuSearchTimer);
+    const value = elements.menuSearchInput.value;
+    menuSearchTimer = window.setTimeout(() => {
+      menuSearchTimer = null;
+      applyMenuSearch(value);
+    }, 120);
   });
 }
 
 if (elements.menuSearchClearButton) {
   elements.menuSearchClearButton.addEventListener("click", () => {
+    if (menuSearchTimer) {
+      window.clearTimeout(menuSearchTimer);
+      menuSearchTimer = null;
+    }
     applyMenuSearch("");
     if (elements.menuSearchInput) elements.menuSearchInput.focus();
   });
@@ -9443,6 +9485,7 @@ window.addEventListener("appinstalled", () => {
 });
 
 window.addEventListener("beforeunload", () => {
+  saveMenuCache({ immediate: true });
   syncFormToOrder();
   saveCurrentOrderDraft();
   saveOrders({ immediate: true });
