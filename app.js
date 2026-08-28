@@ -3462,7 +3462,12 @@ function scheduleCentralRefresh() {
   }, 250);
 }
 
-async function refreshCentralCloudState() {
+async function refreshCentralCloudState(options = {}) {
+  const {
+    settings = true,
+    profile = true,
+    orders = true,
+  } = options;
   if (
   !cloudState.client ||
   !cloudState.user ||
@@ -3479,39 +3484,52 @@ if (centralSyncInProgress) {
 centralSyncInProgress = true;
 centralSyncRefreshPending = false;
 
-  centralSyncInProgress = true;
-
   try {
     const [
-      settingsResponse,
-      profileResponse,
-      ordersResponse,
-    ] = await Promise.all([
-      cloudState.client
+  settingsResponse,
+  profileResponse,
+  ordersResponse,
+] = await Promise.all([
+  settings
+    ? cloudState.client
         .from("app_settings")
         .select(
           "menu, settings, menu_revision, settings_revision, menu_updated_at, settings_updated_at"
         )
         .eq("user_id", cloudState.user.id)
-        .maybeSingle(),
+        .maybeSingle()
+    : Promise.resolve({
+        data: null,
+        error: null,
+      }),
 
-      cloudState.client
+  profile
+    ? cloudState.client
         .from("restaurant_profiles")
         .select(
           "business_name, logo_url, public_address, phone, active, operational_open, operational_mode, opening_hours, latitude, longitude, country_code, city, region, postal_code, timezone, preferred_language, deleted_at"
         )
         .eq("user_id", cloudState.user.id)
-        .maybeSingle(),
+        .maybeSingle()
+    : Promise.resolve({
+        data: null,
+        error: null,
+      }),
 
-      cloudState.client
+  orders
+    ? cloudState.client
         .from("orders")
         .select("order_json")
         .eq("user_id", cloudState.user.id)
         .order("created_at", {
-          ascending: false
+          ascending: false,
         })
-        .limit(LOCAL_ORDER_CACHE_LIMIT),
-    ]);
+        .limit(LOCAL_ORDER_CACHE_LIMIT)
+    : Promise.resolve({
+        data: [],
+        error: null,
+      }),
+]);
 
     if (settingsResponse.error) {
       throw settingsResponse.error;
