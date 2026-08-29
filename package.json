@@ -1,6 +1,6 @@
 {
   "name": "rc-ordera",
-  "version": "91.0.2",
+  "version": "91.0.3",
   "private": true,
   "description": "RC ORDERA multi-restaurante",
   "scripts": {
@@ -9,7 +9,7 @@
     "android:prepare-web": "node scripts/prepare-capacitor.mjs",
     "android:add": "npm run android:prepare-web && npx cap add android",
     "android:sync": "npm run android:prepare-web && npx cap sync android",
-    "android:open": "npx cap open android"
+    "android:open": "npm run android:sync && npx cap open android"
   },
   "dependencies": {
     "@capacitor/android": "8.5.0",

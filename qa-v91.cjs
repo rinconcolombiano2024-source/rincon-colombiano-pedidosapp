@@ -28,7 +28,15 @@ check(migration.includes("update_delivery_assignment_status"), "estado de entreg
 check(!/drop\s+table/i.test(migration), "migracion sin DROP TABLE");
 check(!/disable\s+row\s+level\s+security/i.test(migration), "migracion no desactiva RLS");
 check(migration.includes("notify pgrst, 'reload schema'"), "recarga de esquema PostgREST");
-check(sw.includes("event.waitUntil(updateCache"), "actualizacion PWA en segundo plano");
+const criticalCodeStart = sw.indexOf("if (isCriticalCode)");
+const criticalCodeEnd = sw.indexOf("const updateCache", criticalCodeStart);
+const criticalCodeBlock = criticalCodeStart >= 0 && criticalCodeEnd > criticalCodeStart
+  ? sw.slice(criticalCodeStart, criticalCodeEnd)
+  : "";
+check(criticalCodeBlock.includes("fetch(event.request)"), "PWA intenta primero la red para codigo critico");
+check(criticalCodeBlock.includes("cache.put(event.request, responseClone)"), "PWA actualiza cache con respuesta valida");
+check(criticalCodeBlock.includes("caches.match(event.request)"), "PWA usa cache cuando falla la red");
+check(criticalCodeBlock.includes('status: 503'), "PWA responde 503 sin red ni cache");
 check(app.includes("requestIdleCallback(persistMenuCatalogCache"), "cache del menu fuera del hilo principal");
 check(app.includes("menuSearchTimer = window.setTimeout"), "busqueda del restaurante con debounce");
 check(courier.includes('courierDeliveryRealtimeStatus === "SUBSCRIBED"'), "seguimiento de colaborador sin sondeo duplicado");
@@ -39,4 +47,4 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`FAIL: ${failure}`));
   process.exit(1);
 }
-console.log("RC ORDERA V91 QA: 24 comprobaciones aprobadas.");
+console.log("RC ORDERA V91.0.3 QA: comprobaciones aprobadas.");
