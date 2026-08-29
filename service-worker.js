@@ -65,6 +65,10 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     fetch(event.request)
       .then((response) => {
+        if (!response || !response.ok) {
+          throw new Error(`HTTP ${response ? response.status : "unknown"}`);
+        }
+
         const responseClone = response.clone();
 
         event.waitUntil(
@@ -75,7 +79,18 @@ self.addEventListener("fetch", (event) => {
 
         return response;
       })
-      .catch(() => caches.match(event.request))
+      .catch(async () => {
+        const cachedResponse = await caches.match(event.request);
+
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+
+        return new Response("Recurso no disponible sin conexión.", {
+          status: 503,
+          statusText: "Service Unavailable",
+        });
+      })
   );
 
   return;
