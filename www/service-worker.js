@@ -1,4 +1,4 @@
-const CACHE_NAME = "rc-ordera-v91-0-2-performance-core";
+const CACHE_NAME = "rc-ordera-v91-0-3-performance-core";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -61,22 +61,47 @@ self.addEventListener("fetch", (event) => {
   const isCriticalCode = ["script", "style", "worker", "manifest"].includes(event.request.destination);
   if (!isDocument && !isCriticalCode) return;
 
-  const updateCache = fetch(event.request).then(async (response) => {
-    if (response && response.ok) {
-      const cache = await caches.open(CACHE_NAME);
-      await cache.put(event.request, response.clone());
-    }
-    return response;
-  });
+ if (isCriticalCode) {
+  event.respondWith(
+    fetch(event.request)
+      .then((response) => {
+        if (!response || !response.ok) {
+          throw new Error(`HTTP ${response ? response.status : "unknown"}`);
+        }
 
-  if (isCriticalCode) {
-    event.waitUntil(updateCache.catch(() => undefined));
-    event.respondWith(
-      caches.match(event.request, { ignoreSearch: true }).then((cached) => cached || updateCache)
-    );
-    return;
+        const responseClone = response.clone();
+
+        event.waitUntil(
+          caches.open(CACHE_NAME).then((cache) => {
+            return cache.put(event.request, responseClone);
+          })
+        );
+
+        return response;
+      })
+      .catch(async () => {
+        const cachedResponse = await caches.match(event.request);
+
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+
+        return new Response("Recurso no disponible sin conexión.", {
+          status: 503,
+          statusText: "Service Unavailable",
+        });
+      })
+  );
+
+  return;
+}
+const updateCache = fetch(event.request).then(async (response) => {
+  if (response && response.ok) {
+    const cache = await caches.open(CACHE_NAME);
+    await cache.put(event.request, response.clone());
   }
-
+  return response;
+});
   event.respondWith(
     updateCache.catch(async () => {
       const cachedRequest = await caches.match(event.request, { ignoreSearch: true });
@@ -135,8 +160,8 @@ self.addEventListener("push", (event) => {
 
     data: {
       url: data.url || (data.assignment_id
-        ? `./colaborador.html?view=offers&assignment=${encodeURIComponent(data.assignment_id)}&app=v91.0.2&lang=${language}`
-        : `./colaborador.html?view=offers&app=v91.0.2&lang=${language}`),
+        ? `./colaborador.html?view=offers&assignment=${encodeURIComponent(data.assignment_id)}&app=v91.0.3&lang=${language}`
+        : `./colaborador.html?view=offers&app=v91.0.3&lang=${language}`),
       assignment_id: data.assignment_id || "",
     },
   };
@@ -151,7 +176,7 @@ self.addEventListener("notificationclick", (event) => {
 
   const targetUrl =
     event.notification.data?.url ||
-    "./colaborador.html?view=offers&app=v91.0.2";
+    "./colaborador.html?view=offers&app=v91.0.3";
 
   event.waitUntil(
     clients.matchAll({

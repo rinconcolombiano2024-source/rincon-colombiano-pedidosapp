@@ -814,7 +814,7 @@ async function waiterLoadSentOrders() {
             { es: "es-ES", pl: "pl-PL", en: "en-GB" }[document.documentElement.lang] || "es-ES",
             { hour: "2-digit", minute: "2-digit" }
           );
-          return `<article class="waiter-sent-card"><div><strong>${waiterEscape(order.table_label || order.customer_name || "Pedido")}</strong><span>${waiterEscape(time)}</span></div><strong>${waiterStatusLabel(order.status)}</strong><p>${items.map((item) => `${item.qty || item.quantity || 1} x ${item.name || item.product_name_snapshot || "Producto"}`).join(" | ")}</p><span>${waiterMoney(order.total)}</span></article>`;
+          return `<article class="waiter-sent-card"><div><strong>${waiterEscape(order.table_label || order.customer_name || "Pedido")}</strong><span>${waiterEscape(time)}</span></div><strong>${waiterStatusLabel(order.status)}</strong><p>${items.map((item) => waiterEscape(`${item.qty || item.quantity || 1} x ${item.name || item.product_name_snapshot || "Producto"}`)).join(" | ")}</p><span>${waiterMoney(order.total)}</span></article>`;
         })
         .join("")
     : `<div class="waiter-empty">Aun no has enviado pedidos hoy.</div>`;
@@ -1287,7 +1287,7 @@ async function waiterSignOut() {
     waiterUser = null;
     waiterMembership = null;
     waiterBusinessContext = null;
-    window.location.replace("index.html?app=v91.0.2");
+    window.location.replace("index.html?app=v91.0.3");
   }
 }
 
