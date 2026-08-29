@@ -145,8 +145,8 @@ self.addEventListener("push", (event) => {
 
     data: {
       url: data.url || (data.assignment_id
-        ? `./colaborador.html?view=offers&assignment=${encodeURIComponent(data.assignment_id)}&app=v91.0.2&lang=${language}`
-        : `./colaborador.html?view=offers&app=v91.0.2&lang=${language}`),
+        ? `./colaborador.html?view=offers&assignment=${encodeURIComponent(data.assignment_id)}&app=v91.0.3&lang=${language}`
+        : `./colaborador.html?view=offers&app=v91.0.3&lang=${language}`),
       assignment_id: data.assignment_id || "",
     },
   };
@@ -161,7 +161,7 @@ self.addEventListener("notificationclick", (event) => {
 
   const targetUrl =
     event.notification.data?.url ||
-    "./colaborador.html?view=offers&app=v91.0.2";
+    "./colaborador.html?view=offers&app=v91.0.3";
 
   event.waitUntil(
     clients.matchAll({
