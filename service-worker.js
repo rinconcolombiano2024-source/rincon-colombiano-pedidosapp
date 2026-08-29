@@ -1,4 +1,4 @@
-const CACHE_NAME = "rc-ordera-v91-0-2-performance-core";
+const CACHE_NAME = "rc-ordera-v91-0-3-performance-core";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -61,22 +61,32 @@ self.addEventListener("fetch", (event) => {
   const isCriticalCode = ["script", "style", "worker", "manifest"].includes(event.request.destination);
   if (!isDocument && !isCriticalCode) return;
 
-  const updateCache = fetch(event.request).then(async (response) => {
-    if (response && response.ok) {
-      const cache = await caches.open(CACHE_NAME);
-      await cache.put(event.request, response.clone());
-    }
-    return response;
-  });
+ if (isCriticalCode) {
+  event.respondWith(
+    fetch(event.request)
+      .then((response) => {
+        const responseClone = response.clone();
 
-  if (isCriticalCode) {
-    event.waitUntil(updateCache.catch(() => undefined));
-    event.respondWith(
-      caches.match(event.request, { ignoreSearch: true }).then((cached) => cached || updateCache)
-    );
-    return;
+        event.waitUntil(
+          caches.open(CACHE_NAME).then((cache) => {
+            return cache.put(event.request, responseClone);
+          })
+        );
+
+        return response;
+      })
+      .catch(() => caches.match(event.request))
+  );
+
+  return;
+}
+const updateCache = fetch(event.request).then(async (response) => {
+  if (response && response.ok) {
+    const cache = await caches.open(CACHE_NAME);
+    await cache.put(event.request, response.clone());
   }
-
+  return response;
+});
   event.respondWith(
     updateCache.catch(async () => {
       const cachedRequest = await caches.match(event.request, { ignoreSearch: true });
