@@ -3,7 +3,7 @@
   "short_name": "RC Station",
   "id": "./waiter-app-en",
   "description": "Restaurant station orders and operations.",
-  "start_url": "./mesero.html?app=v91.0.2&lang=en",
+  "start_url": "./mesero.html?app=v91.0.3&lang=en",
   "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],

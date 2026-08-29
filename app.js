@@ -102,7 +102,7 @@ migrateLegacyRestaurantStorage();
 
 const DEFAULT_BUSINESS_NAME = "MI RESTAURANTE";
 const DEFAULT_DELIVERY_MINIMUM_FEE = 20;
-const APP_VERSION = "v91.0.2";
+const APP_VERSION = "v91.0.3";
 const PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 const PLATFORM_APP_NAME = "RC ORDERA";
 const RESTAURANT_MEDIA_BUCKET = "restaurant-media";
@@ -2530,7 +2530,7 @@ async function saveCloudSettings() {
 
     if (!baseSettings) {
       const conflictError = new Error(
-        "No existe una versión base confirmada para combinar los ajustes de forma segura."
+        appUiText("No existe una versión base confirmada para combinar los ajustes de forma segura.")
       );
 
       conflictError.code =
@@ -9103,7 +9103,7 @@ async function printWithThermalPrinter() {
       writer.write(data),
       new Promise((_, reject) =>
         window.setTimeout(
-          () => reject(new Error("La impresora no respondio a tiempo.")),
+          () => reject(new Error(appUiText("La impresora no respondio a tiempo."))),
           timeoutMs
         )
       ),
@@ -9137,7 +9137,7 @@ async function printWithThermalPrinter() {
     );
 
     setThermalPrinterStatus(
-      "La impresora no respondio. Se usara la impresion del sistema.",
+      appUiText("La impresora no respondio. Se usara la impresion del sistema."),
       "error"
     );
 
