@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const output = resolve(root, "www");
+const packageMetadata = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+const appVersion = `v${packageMetadata.version}`;
 if (!output.startsWith(`${root}\\`) && !output.startsWith(`${root}/`)) {
   throw new Error("Invalid Android web output path");
 }
@@ -56,6 +58,11 @@ for (const file of runtimeFiles) {
 rmSync(output, { recursive: true, force: true });
 mkdirSync(output, { recursive: true });
 for (const file of runtimeFiles) cpSync(join(root, file), join(output, file));
-writeFileSync(join(output, "BUILD-METADATA.json"), JSON.stringify({ app: "RC ORDERA", version: "v91.0.2" }, null, 2));
+for (const file of runtimeFiles) {
+  const source = readFileSync(join(root, file));
+  const generated = readFileSync(join(output, file));
+  if (!source.equals(generated)) throw new Error(`Generated runtime mismatch: ${file}`);
+}
+writeFileSync(join(output, "BUILD-METADATA.json"), JSON.stringify({ app: "RC ORDERA", version: appVersion }, null, 2));
 console.log(`Android web assets prepared: ${runtimeFiles.length} files`);
 
