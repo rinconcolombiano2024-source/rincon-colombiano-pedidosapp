@@ -6,6 +6,7 @@
   "scripts": {
     "qa": "node qa-v91.cjs && node qa-i18n-v87.cjs",
     "qa:i18n": "node qa-i18n-v87.cjs",
+    "qa:e2e": "playwright test",
     "android:prepare-web": "node scripts/prepare-capacitor.mjs",
     "android:add": "npm run android:prepare-web && npx cap add android",
     "android:sync": "npm run android:prepare-web && npx cap sync android",
@@ -16,7 +17,8 @@
     "@capacitor/core": "8.5.0"
   },
   "devDependencies": {
-    "@capacitor/cli": "8.5.0"
+    "@capacitor/cli": "8.5.0",
+    "@playwright/test": "1.62.1"
   },
   "engines": {
     "node": ">=22.0.0"
