@@ -18,7 +18,121 @@ create table if not exists public.restaurant_profiles (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+alter table public.restaurant_profiles
+  add column if not exists country_code text not null default '',
+  add column if not exists region text not null default '',
+  add column if not exists deleted_at timestamptz null,
+  add column if not exists operational_mode text not null default 'manual',
+  add column if not exists opening_hours jsonb not null default '{}'::jsonb,
+  add column if not exists timezone text not null default 'Europe/Warsaw',
+  add column if not exists operational_open boolean not null default true;
+do $constraint$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.restaurant_profiles'::regclass
+      and conname = 'restaurant_profiles_operational_mode_check'
+  ) then
+    alter table public.restaurant_profiles
+      add constraint restaurant_profiles_operational_mode_check
+      check (operational_mode in ('manual', 'schedule')) not valid;
+  end if;
+end;
+$constraint$;
+create or replace function public.restaurant_schedule_is_open(
+  p_opening_hours jsonb,
+  p_timezone text,
+  p_at timestamptz
+)
+returns boolean
+language plpgsql
+stable
+set search_path = pg_catalog, public
+as $$
+declare
+  v_timezone text := coalesce(nullif(trim(p_timezone), ''), 'UTC');
+  v_local timestamp without time zone;
+  v_iso_day integer;
+  v_today_key text;
+  v_previous_key text;
+  v_today jsonb;
+  v_previous jsonb;
+  v_today_open time;
+  v_today_close time;
+  v_previous_open time;
+  v_previous_close time;
+  v_current_time time;
+  v_day_keys text[] := array[
+    'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'
+  ];
+begin
+  begin
+    v_local := timezone(v_timezone, coalesce(p_at, now()));
+  exception when invalid_parameter_value then
+    v_local := timezone('UTC', coalesce(p_at, now()));
+  end;
 
+  v_iso_day := extract(isodow from v_local)::integer;
+  v_today_key := v_day_keys[v_iso_day];
+  v_previous_key := v_day_keys[
+    case when v_iso_day = 1 then 7 else v_iso_day - 1 end
+  ];
+
+  v_today := coalesce(p_opening_hours, '{}'::jsonb)->v_today_key;
+  v_previous := coalesce(p_opening_hours, '{}'::jsonb)->v_previous_key;
+  v_current_time := v_local::time;
+
+  if lower(coalesce(v_today->>'enabled', 'false')) in ('true', '1', 'yes')
+     and coalesce(v_today->>'open', '') ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+     and coalesce(v_today->>'close', '') ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$' then
+
+    v_today_open := (v_today->>'open')::time;
+    v_today_close := (v_today->>'close')::time;
+
+    if v_today_open < v_today_close
+       and v_current_time >= v_today_open
+       and v_current_time < v_today_close then
+      return true;
+    end if;
+
+    if v_today_open > v_today_close
+       and v_current_time >= v_today_open then
+      return true;
+    end if;
+  end if;
+
+  if lower(coalesce(v_previous->>'enabled', 'false')) in ('true', '1', 'yes')
+     and coalesce(v_previous->>'open', '') ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+     and coalesce(v_previous->>'close', '') ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$' then
+
+    v_previous_open := (v_previous->>'open')::time;
+    v_previous_close := (v_previous->>'close')::time;
+
+    if v_previous_open > v_previous_close
+       and v_current_time < v_previous_close then
+      return true;
+    end if;
+  end if;
+
+  return false;
+end;
+$$;
+create or replace function public.rc_ordera_jsonb_numeric(
+  p_value jsonb,
+  p_default numeric default 0
+)
+returns numeric
+language sql
+immutable
+set search_path = pg_catalog, public
+as $$
+  select case
+    when trim(both '"' from coalesce(p_value::text, '')) ~ '^-?[0-9]+([.][0-9]+)?$'
+      then trim(both '"' from p_value::text)::numeric
+    else p_default
+  end;
+$$;
 create table if not exists public.orders (
   id uuid primary key,
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -113,6 +227,8 @@ alter table public.customer_orders
 create unique index if not exists customer_orders_restaurant_idempotency_idx
   on public.customer_orders (user_id, idempotency_key)
   where idempotency_key is not null and idempotency_key <> '';
+create index if not exists customer_orders_canonical_created_idx
+  on public.customer_orders (user_id, canonical_status, created_at desc);
 
 create table if not exists public.customer_order_messages (
   id uuid primary key default gen_random_uuid(),
@@ -161,6 +277,90 @@ create table if not exists public.delivery_assignments (
   updated_at timestamptz not null default now(),
   unique (customer_order_id, courier_user_id)
 );
+alter table public.delivery_assignments
+  add column if not exists score numeric(12, 4) null,
+  add column if not exists score_reason jsonb not null default '{}'::jsonb,
+  add column if not exists estimated_pickup_at timestamptz null,
+  add column if not exists estimated_delivery_at timestamptz null,
+  add column if not exists proof_type text not null default '',
+  add column if not exists proof_url text not null default '',
+  add column if not exists delivery_pin_hash text not null default '',
+  add column if not exists delivery_pin_verified boolean not null default false,
+  add column if not exists delivered_lat numeric(10, 7) null,
+  add column if not exists delivered_lng numeric(10, 7) null,
+  add column if not exists delivered_at timestamptz null,
+  add column if not exists distance_total_km numeric(10, 3) not null default 0,
+  add column if not exists courier_earning numeric(12, 2) not null default 0,
+  add column if not exists courier_earning_currency text not null default '';
+create index if not exists delivery_assignments_courier_active_idx
+  on public.delivery_assignments (courier_user_id, status, updated_at desc);
+create table if not exists public.order_status_history (
+  id uuid primary key default gen_random_uuid(),
+  customer_order_id uuid not null references public.customer_orders(id) on delete restrict,
+  previous_status text null,
+  new_status text not null,
+  actor_user_id uuid null references auth.users(id) on delete set null,
+  actor_role text not null default 'system',
+  source text not null default 'database',
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists order_status_history_order_created_idx
+  on public.order_status_history (customer_order_id, created_at asc);
+create table if not exists public.platform_audit_logs (
+  id uuid primary key default gen_random_uuid(),
+  actor_user_id uuid null references auth.users(id) on delete set null,
+  actor_role text not null default 'system',
+  action text not null,
+  entity_type text not null,
+  entity_id uuid null,
+  restaurant_user_id uuid null references auth.users(id) on delete set null,
+  before_data jsonb not null default '{}'::jsonb,
+  after_data jsonb not null default '{}'::jsonb,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists platform_audit_logs_entity_created_idx
+  on public.platform_audit_logs (entity_type, entity_id, created_at desc);
+create table if not exists public.notifications (
+  id uuid primary key default gen_random_uuid(),
+  recipient_user_id uuid not null references auth.users(id) on delete cascade,
+  notification_type text not null,
+  title text not null default '',
+  body text not null default '',
+  reference_type text not null default '',
+  reference_id uuid null,
+  channels jsonb not null default '["in_app"]'::jsonb,
+  payload jsonb not null default '{}'::jsonb,
+  read_at timestamptz null,
+  created_at timestamptz not null default now()
+);
+
+create unique index if not exists notifications_recipient_reference_unique_idx
+  on public.notifications (recipient_user_id, notification_type, reference_type, reference_id)
+  where reference_id is not null;
+
+create index if not exists notifications_recipient_unread_idx
+  on public.notifications (recipient_user_id, created_at desc)
+  where read_at is null;
+create table if not exists public.courier_push_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  endpoint text not null,
+  p256dh text not null,
+  auth_key text not null,
+  user_agent text not null default '',
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, endpoint)
+);
+
+create index if not exists courier_push_subscriptions_active_user_idx
+  on public.courier_push_subscriptions (user_id, active);
+
 create table if not exists public.delivery_quotes (
   id uuid primary key default gen_random_uuid(),
   restaurant_user_id uuid not null references auth.users(id) on delete cascade,
@@ -278,7 +478,10 @@ alter table public.courier_profiles
   add column if not exists identity_document_url text not null default '',
   add column if not exists driver_license_url text not null default '',
   add column if not exists insurance_url text not null default '';
-
+alter table public.courier_profiles
+  add column if not exists max_active_deliveries integer not null default 1,
+  add column if not exists max_batch_detour_km numeric(8, 2) not null default 0,
+  add column if not exists max_batch_delay_minutes integer not null default 0;
 alter table public.customer_orders
   add column if not exists assigned_courier_user_id uuid null references auth.users(id) on delete set null,
   add column if not exists courier_assignment_status text not null default 'unassigned';
@@ -335,10 +538,33 @@ alter table public.customer_orders enable row level security;
 alter table public.customer_order_messages enable row level security;
 alter table public.courier_live_locations enable row level security;
 alter table public.delivery_assignments enable row level security;
+alter table public.order_status_history enable row level security;
+alter table public.platform_audit_logs enable row level security;
+alter table public.notifications enable row level security;
+alter table public.courier_push_subscriptions enable row level security;
 alter table public.user_profiles enable row level security;
 alter table public.user_roles enable row level security;
 alter table public.courier_profiles enable row level security;
 alter table public.account_privacy_requests enable row level security;
+create or replace function public.rc_ordera_is_platform_admin(
+  p_user_id uuid default auth.uid()
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = pg_catalog, public
+as $$
+  select p_user_id is not null and exists (
+    select 1
+    from public.user_roles ur
+    where ur.user_id = p_user_id
+      and ur.role = 'platform_admin'
+      and ur.scope_type = 'platform'
+      and ur.scope_id = '00000000-0000-0000-0000-000000000000'::uuid
+      and ur.status = 'active'
+  );
+$$;
 
 create or replace function public.user_has_active_role(p_role text)
 returns boolean
@@ -932,6 +1158,548 @@ create index if not exists restaurant_staff_member_active_idx
   on public.restaurant_staff_memberships (member_user_id, active, restaurant_user_id);
 
 alter table public.restaurant_staff_memberships enable row level security;
+create or replace function public.rc_ordera_actor_role(
+  p_order_id uuid,
+  p_actor_user_id uuid
+)
+returns text
+language plpgsql
+stable
+security definer
+set search_path = pg_catalog, public
+as $$
+declare
+  v_order public.customer_orders%rowtype;
+  v_station text;
+begin
+  if p_actor_user_id is null then
+    return 'system';
+  end if;
+
+  if public.rc_ordera_is_platform_admin(p_actor_user_id) then
+    return 'platform_admin';
+  end if;
+
+  select co.*
+  into v_order
+  from public.customer_orders co
+  where co.id = p_order_id;
+
+  if not found then
+    return 'authenticated';
+  end if;
+
+  if v_order.customer_user_id = p_actor_user_id then
+    return 'customer';
+  end if;
+
+  if v_order.assigned_courier_user_id = p_actor_user_id then
+    return 'platform_courier';
+  end if;
+
+  if v_order.user_id = p_actor_user_id then
+    return 'restaurant_owner';
+  end if;
+
+  select m.station
+  into v_station
+  from public.restaurant_staff_memberships m
+  where m.restaurant_user_id = v_order.user_id
+    and m.member_user_id = p_actor_user_id
+    and m.active = true
+  order by m.updated_at desc
+  limit 1;
+
+  return coalesce(nullif(v_station, ''), 'authenticated');
+end;
+$$;
+create or replace function public.rc_ordera_derive_order_status(
+  p_status text,
+  p_station_status text,
+  p_courier_status text
+)
+returns text
+language sql
+immutable
+set search_path = pg_catalog, public
+as $$
+  select case
+    when p_status = 'cancelled'
+      or p_station_status = 'cancelled'
+      or p_courier_status = 'cancelled'
+      then 'cancelled'
+
+    when p_status = 'delivered'
+      or p_station_status = 'completed'
+      or p_courier_status = 'delivered'
+      then 'delivered'
+
+    when p_courier_status = 'arrived_customer'
+      then 'courier_arrived_customer'
+
+    when p_courier_status = 'picked_up'
+      then 'on_the_way'
+
+    when p_courier_status = 'arrived_restaurant'
+      then 'courier_arrived_restaurant'
+
+    when p_courier_status = 'accepted'
+      then 'courier_accepted'
+
+    when p_courier_status = 'offered'
+      then 'courier_offered'
+
+    when p_station_status = 'dispatched'
+      or p_status = 'sent'
+      then 'on_the_way'
+
+    when p_station_status = 'packed'
+      then 'ready_for_pickup'
+
+    when p_station_status = 'ready'
+      then 'ready_for_pickup'
+
+    when p_station_status = 'preparing'
+      then 'preparing'
+
+    when p_status = 'accepted'
+      then 'accepted'
+
+    when p_status = 'pending'
+      then 'submitted'
+
+    else 'created'
+  end;
+$$;
+create or replace function public.rc_ordera_prepare_order_status()
+returns trigger
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $$
+begin
+  new.canonical_status := public.rc_ordera_derive_order_status(
+    new.status,
+    new.station_status,
+    new.courier_assignment_status
+  );
+
+  if new.idempotency_key is null or trim(new.idempotency_key) = '' then
+    new.idempotency_key := new.id::text;
+  end if;
+
+  return new;
+end;
+$$;
+
+create or replace function public.rc_ordera_record_order_status()
+returns trigger
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $$
+declare
+  v_previous text := case when tg_op = 'INSERT' then null else old.canonical_status end;
+  v_actor uuid := auth.uid();
+begin
+  if tg_op = 'INSERT' or v_previous is distinct from new.canonical_status then
+    insert into public.order_status_history (
+      customer_order_id,
+      previous_status,
+      new_status,
+      actor_user_id,
+      actor_role,
+      source,
+      metadata
+    )
+    values (
+      new.id,
+      v_previous,
+      new.canonical_status,
+      v_actor,
+      public.rc_ordera_actor_role(new.id, v_actor),
+      case when v_actor is null then 'database' else 'application' end,
+      jsonb_build_object(
+        'legacy_status', new.status,
+        'station_status', new.station_status,
+        'courier_status', new.courier_assignment_status
+      )
+    );
+  end if;
+
+  return new;
+end;
+$$;
+
+create or replace function public.rc_ordera_can_access_order(
+  p_order_id uuid
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = pg_catalog, public
+as $$
+  select auth.uid() is not null and (
+    public.rc_ordera_is_platform_admin(auth.uid())
+    or exists (
+      select 1
+      from public.customer_orders co
+      where co.id = p_order_id
+        and (
+          co.user_id = auth.uid()
+          or co.customer_user_id = auth.uid()
+          or co.assigned_courier_user_id = auth.uid()
+          or exists (
+            select 1
+            from public.restaurant_staff_memberships m
+            where m.restaurant_user_id = co.user_id
+              and m.member_user_id = auth.uid()
+              and m.active = true
+          )
+        )
+    )
+  );
+$$;
+
+create or replace function public.set_courier_availability(
+  p_available boolean
+)
+returns table(
+  available boolean,
+  updated_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $$
+declare
+  v_user_id uuid := auth.uid();
+begin
+  if v_user_id is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  if coalesce(p_available, false) then
+    if not exists (
+      select 1
+      from public.courier_profiles cp
+      join public.user_roles ur
+        on ur.user_id = cp.user_id
+       and ur.role = 'platform_courier'
+       and ur.scope_type = 'platform'
+       and ur.scope_id = '00000000-0000-0000-0000-000000000000'::uuid
+       and ur.status = 'active'
+      where cp.user_id = v_user_id
+        and cp.status = 'approved'
+    ) then
+      raise exception 'Courier profile is not approved';
+    end if;
+
+    update public.courier_live_locations cl
+    set available = true,
+        updated_at = now()
+    where cl.user_id = v_user_id
+      and cl.lat between -90 and 90
+      and cl.lng between -180 and 180;
+
+    if not found then
+      raise exception 'Share a valid location before going online';
+    end if;
+  else
+    update public.courier_live_locations cl
+    set available = false,
+        updated_at = now()
+    where cl.user_id = v_user_id;
+  end if;
+
+  return query
+  select
+    coalesce(cl.available, false),
+    coalesce(cl.updated_at, now())
+  from (select 1) seed
+  left join public.courier_live_locations cl
+    on cl.user_id = v_user_id;
+end;
+$$;
+
+create or replace function public.rc_ordera_delivery_fee_breakdown(
+  p_distance_km numeric,
+  p_minimum_fee numeric,
+  p_extra_fee numeric
+)
+returns jsonb
+language plpgsql
+immutable
+set search_path = pg_catalog, public
+as $$
+declare
+  v_distance numeric := greatest(coalesce(p_distance_km, 0), 0);
+  v_raw numeric := 0;
+  v_base numeric := 0;
+  v_distance_fee numeric := 0;
+  v_before_extra numeric := 0;
+  v_operational numeric := 0;
+  v_extra numeric := greatest(coalesce(p_extra_fee, 0), 0);
+  v_final numeric := 0;
+begin
+  if v_distance <= 0 then
+    return jsonb_build_object(
+      'base', 0,
+      'distance', 0,
+      'operational', 0,
+      'platform', 0,
+      'final', 0
+    );
+  end if;
+
+  v_base := 4.50;
+  v_raw := v_base;
+
+  if v_distance > 1.5 then
+    v_raw := v_raw + (least(v_distance, 6.0) - 1.5) * 1.50;
+  end if;
+
+  if v_distance > 6.0 then
+    v_raw := v_raw + (least(v_distance, 8.0) - 6.0) * 2.50;
+  end if;
+
+  if v_distance > 8.0 then
+    v_raw := v_raw + (v_distance - 8.0) * 3.50;
+  end if;
+
+  v_raw := round(v_raw, 2);
+  v_distance_fee := round(greatest(v_raw - v_base, 0), 2);
+  v_before_extra := round(
+    greatest(
+      greatest(coalesce(p_minimum_fee, 20), 0),
+      v_raw * 1.6714285714
+    ),
+    2
+  );
+  v_operational := round(v_before_extra - v_raw, 2);
+  v_final := round(v_before_extra + v_extra, 2);
+
+  return jsonb_build_object(
+    'base', v_base,
+    'distance', v_distance_fee,
+    'operational', v_operational,
+    'platform', round(v_extra, 2),
+    'final', v_final
+  );
+end;
+$$;
+
+create or replace function public.rc_ordera_notify_delivery_offer()
+returns trigger
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $$
+begin
+  if new.status = 'offered' then
+    insert into public.notifications (
+      recipient_user_id,
+      notification_type,
+      title,
+      body,
+      reference_type,
+      reference_id,
+      channels,
+      payload
+    )
+    values (
+      new.courier_user_id,
+      'courier_assigned',
+      'Nuevo domicilio - RC ORDERA',
+      'Hay un nuevo pedido disponible. Abre RC ORDERA para revisarlo.',
+      'delivery_assignment',
+      new.id,
+      '["in_app","push"]'::jsonb,
+      jsonb_build_object(
+        'assignment_id', new.id,
+        'customer_order_id', new.customer_order_id,
+        'url', './colaborador.html?view=offers'
+      )
+    )
+    on conflict (
+      recipient_user_id,
+      notification_type,
+      reference_type,
+      reference_id
+    )
+    where reference_id is not null
+    do update set
+      payload = excluded.payload,
+      created_at = now(),
+      read_at = null;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists rc_ordera_notify_delivery_offer_trigger
+on public.delivery_assignments;
+
+create trigger rc_ordera_notify_delivery_offer_trigger
+after insert or update of status
+on public.delivery_assignments
+for each row
+when (new.status = 'offered')
+execute function public.rc_ordera_notify_delivery_offer();
+-- ============================================================
+-- V82 - NORMALIZACION DE ESTADO, TRIGGERS Y ACCESO
+-- ============================================================
+
+update public.customer_orders co
+set canonical_status = public.rc_ordera_derive_order_status(
+      co.status,
+      co.station_status,
+      co.courier_assignment_status
+    ),
+    idempotency_key = coalesce(
+      nullif(co.idempotency_key, ''),
+      co.id::text
+    )
+where co.canonical_status is distinct from
+      public.rc_ordera_derive_order_status(
+        co.status,
+        co.station_status,
+        co.courier_assignment_status
+      )
+   or co.idempotency_key is null
+   or co.idempotency_key = '';
+
+alter table public.customer_orders
+  drop constraint if exists customer_orders_canonical_status_check;
+
+alter table public.customer_orders
+  add constraint customer_orders_canonical_status_check
+  check (
+    canonical_status in (
+      'created',
+      'submitted',
+      'restaurant_review',
+      'accepted',
+      'rejected',
+      'preparing',
+      'ready_for_pickup',
+      'courier_searching',
+      'courier_offered',
+      'courier_accepted',
+      'courier_arrived_restaurant',
+      'picked_up',
+      'on_the_way',
+      'courier_arrived_customer',
+      'delivered',
+      'cancelled',
+      'failed',
+      'refunded'
+    )
+  );
+
+drop trigger if exists rc_ordera_prepare_order_status_trigger
+on public.customer_orders;
+
+create trigger rc_ordera_prepare_order_status_trigger
+before insert or update of
+  status,
+  station_status,
+  courier_assignment_status,
+  canonical_status,
+  idempotency_key
+on public.customer_orders
+for each row
+execute function public.rc_ordera_prepare_order_status();
+
+drop trigger if exists rc_ordera_record_order_status_trigger
+on public.customer_orders;
+
+create trigger rc_ordera_record_order_status_trigger
+after insert or update of canonical_status
+on public.customer_orders
+for each row
+execute function public.rc_ordera_record_order_status();
+
+
+drop policy if exists "Authorized users read order status history"
+on public.order_status_history;
+
+create policy "Authorized users read order status history"
+on public.order_status_history
+for select
+to authenticated
+using (
+  public.rc_ordera_can_access_order(customer_order_id)
+);
+
+
+drop policy if exists "Platform admins read audit logs"
+on public.platform_audit_logs;
+
+create policy "Platform admins read audit logs"
+on public.platform_audit_logs
+for select
+to authenticated
+using (
+  public.rc_ordera_is_platform_admin(auth.uid())
+);
+
+
+drop policy if exists "Users read own notifications"
+on public.notifications;
+
+create policy "Users read own notifications"
+on public.notifications
+for select
+to authenticated
+using (
+  recipient_user_id = auth.uid()
+);
+
+
+drop policy if exists "Users update own notifications"
+on public.notifications;
+
+create policy "Users update own notifications"
+on public.notifications
+for update
+to authenticated
+using (
+  recipient_user_id = auth.uid()
+)
+with check (
+  recipient_user_id = auth.uid()
+);
+
+
+drop policy if exists "Couriers manage own push subscriptions"
+on public.courier_push_subscriptions;
+
+create policy "Couriers manage own push subscriptions"
+on public.courier_push_subscriptions
+for all
+to authenticated
+using (
+  user_id = auth.uid()
+)
+with check (
+  user_id = auth.uid()
+  and exists (
+    select 1
+    from public.courier_profiles cp
+    join public.user_roles ur
+      on ur.user_id = cp.user_id
+     and ur.role = 'platform_courier'
+     and ur.scope_type = 'platform'
+     and ur.scope_id =
+       '00000000-0000-0000-0000-000000000000'::uuid
+     and ur.status = 'active'
+    where cp.user_id = auth.uid()
+      and cp.status = 'approved'
+  )
+);
 
 drop policy if exists "Restaurant owners read own staff" on public.restaurant_staff_memberships;
 create policy "Restaurant owners read own staff"
@@ -2853,3 +3621,178 @@ revoke all on function public.is_platform_owner() from public;
 revoke all on function public.is_platform_owner() from anon;
 grant execute on function public.is_platform_owner() to authenticated;
 grant execute on function public.user_can_review_couriers() to authenticated;
+-- ============================================================
+-- RC ORDERA - CIERRE DE SEGURIDAD / REALTIME V82
+-- ============================================================
+
+revoke all on function public.rc_ordera_is_platform_admin(uuid)
+from public, anon;
+
+revoke all on function public.rc_ordera_actor_role(uuid, uuid)
+from public, anon, authenticated;
+
+revoke all on function public.rc_ordera_can_access_order(uuid)
+from public, anon;
+
+revoke all on function public.set_courier_availability(boolean)
+from public, anon;
+
+revoke all on function public.upsert_courier_live_location(
+  boolean, numeric, numeric, integer
+) from public, anon;
+
+revoke all on function public.review_courier_profile(uuid, text)
+from public, anon;
+
+revoke all on function public.update_delivery_assignment_status(uuid, text)
+from public, anon;
+
+revoke all on function public.create_customer_order(
+  uuid, uuid, text, text, text, text, jsonb, numeric
+) from public;
+
+
+grant execute on function public.rc_ordera_is_platform_admin(uuid)
+to authenticated;
+
+grant execute on function public.rc_ordera_can_access_order(uuid)
+to authenticated;
+
+grant execute on function public.set_courier_availability(boolean)
+to authenticated;
+
+grant execute on function public.upsert_courier_live_location(
+  boolean, numeric, numeric, integer
+) to authenticated;
+
+grant execute on function public.review_courier_profile(uuid, text)
+to authenticated;
+
+grant execute on function public.update_delivery_assignment_status(uuid, text)
+to authenticated;
+
+grant execute on function public.create_customer_order(
+  uuid, uuid, text, text, text, text, jsonb, numeric
+) to anon, authenticated;
+
+
+grant select on public.order_status_history
+to authenticated;
+
+grant select on public.platform_audit_logs
+to authenticated;
+
+grant select, update on public.notifications
+to authenticated;
+
+grant select, insert, update, delete
+on public.courier_push_subscriptions
+to authenticated;
+
+
+-- Las escrituras directas quedan bloqueadas.
+-- Deben pasar por las RPC validadas.
+
+revoke insert on public.customer_orders
+from authenticated;
+
+revoke insert, update on public.courier_live_locations
+from authenticated;
+
+revoke insert, update on public.delivery_assignments
+from authenticated;
+
+revoke insert, update, delete on public.order_status_history
+from anon, authenticated;
+
+revoke insert, update, delete on public.platform_audit_logs
+from anon, authenticated;
+
+
+-- ============================================================
+-- REALTIME
+-- ============================================================
+
+do $realtime$
+begin
+  if exists (
+    select 1
+    from pg_publication
+    where pubname = 'supabase_realtime'
+  ) then
+
+    if not exists (
+      select 1
+      from pg_publication_tables
+      where pubname = 'supabase_realtime'
+        and schemaname = 'public'
+        and tablename = 'delivery_assignments'
+    ) then
+      execute
+        'alter publication supabase_realtime add table public.delivery_assignments';
+    end if;
+
+    if not exists (
+      select 1
+      from pg_publication_tables
+      where pubname = 'supabase_realtime'
+        and schemaname = 'public'
+        and tablename = 'notifications'
+    ) then
+      execute
+        'alter publication supabase_realtime add table public.notifications';
+    end if;
+
+    if not exists (
+      select 1
+      from pg_publication_tables
+      where pubname = 'supabase_realtime'
+        and schemaname = 'public'
+        and tablename = 'order_status_history'
+    ) then
+      execute
+        'alter publication supabase_realtime add table public.order_status_history';
+    end if;
+
+  end if;
+end;
+$realtime$;
+
+
+-- ============================================================
+-- VERIFICACION FINAL DEL NUCLEO V82
+-- ============================================================
+
+do $verify$
+begin
+  if to_regprocedure(
+       'public.set_courier_availability(boolean)'
+     ) is null
+
+     or to_regprocedure(
+       'public.update_delivery_assignment_status(uuid,text)'
+     ) is null
+
+     or to_regprocedure(
+       'public.create_customer_order(uuid,uuid,text,text,text,text,jsonb,numeric)'
+     ) is null
+
+     or to_regclass(
+       'public.order_status_history'
+     ) is null
+
+     or to_regclass(
+       'public.courier_push_subscriptions'
+     ) is null
+
+     or to_regclass(
+       'public.notifications'
+     ) is null
+  then
+    raise exception
+      'V82 no pudo completar su contrato de estabilidad.';
+  end if;
+end;
+$verify$;
+
+notify pgrst, 'reload schema';
