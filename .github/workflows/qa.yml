@@ -1,1 +1,51 @@
+name: RC ORDERA QA
 
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install exact dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Check JavaScript syntax
+        run: |
+          node --check app.js
+          node --check cliente.js
+          node --check colaborador.js
+          node --check mesero.js
+          node --check admin.js
+          node --check service-worker.js
+          node --check auto-translate.js
+          node --check offline-i18n.js
+
+      - name: Run static QA
+        run: npm run qa
+
+      - name: Run i18n QA
+        run: npm run qa:i18n
+
+      - name: Prepare Android web runtime
+        run: npm run android:prepare-web
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E smoke tests
+        run: npm run qa:e2e
