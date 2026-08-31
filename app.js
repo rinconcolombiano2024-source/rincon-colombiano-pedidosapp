@@ -2374,11 +2374,12 @@ if (
 }
     const normalizedCloudOrders = (cloudOrders || [])
       .map((row) => ({
-        ...row.order_json,
-        type: normalizeOrderType(row.order_json?.type),
-        businessDate: orderBusinessDate(row.order_json),
-        syncStatus: "synced",
-      }))
+  ...row.order_json,
+  type: normalizeOrderType(row.order_json?.type),
+  businessDate: orderBusinessDate(row.order_json),
+  _syncRevision: Number.parseInt(row.revision, 10) || null,
+  syncStatus: "synced",
+}))
       .filter((order) => !localDeletedOrderIds.includes(order.id));
     savedOrders = mergeOrders(normalizedCloudOrders, localPendingOrders);
     saveOrders();
