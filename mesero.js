@@ -6,6 +6,7 @@ const waiterElements = {
   logo: document.querySelector("#waiterLogo"),
   connectionStatus: document.querySelector("#waiterConnectionStatus"),
   signOutButton: document.querySelector("#waiterSignOutButton"),
+  changeStationButton: document.querySelector("#changeStationButton"),
   authCard: document.querySelector("#waiterAuthCard"),
   authForm: document.querySelector("#waiterAuthForm"),
   email: document.querySelector("#waiterEmail"),
@@ -1148,7 +1149,76 @@ function waiterStartRealtime() {
     .subscribe();
   waiterStationPollTimer = window.setInterval(() => waiterLoadStationOrders().catch(() => {}), 15000);
 }
+function waiterChangeStation() {
+  if (!Array.isArray(waiterMemberships) || waiterMemberships.length === 0) {
+    waiterShowToast("No hay estaciones disponibles.");
+    return;
+  }
 
+  const options = waiterMemberships
+    .map((membership, index) => {
+      const label = waiterStationLabel(membership.station);
+      const selected =
+        membership.station === waiterMembership?.station
+          ? " ← actual"
+          : "";
+
+      return `${index + 1}. ${label}${selected}`;
+    })
+    .join("\n");
+
+  const answer = window.prompt(
+    `Selecciona la estación:\n\n${options}\n\nEscribe el número:`
+  );
+
+  if (answer === null) return;
+
+  const selectedIndex = Number.parseInt(answer, 10) - 1;
+  const selectedMembership = waiterMemberships[selectedIndex];
+
+  if (!selectedMembership) {
+    waiterShowToast("Estación no válida.");
+    return;
+  }
+
+  if (selectedMembership.station === waiterMembership?.station) {
+    return;
+  }
+
+  waiterStopRealtime();
+
+  waiterMembership = selectedMembership;
+
+  window.sessionStorage.setItem(
+    `rc-ordera-station-${waiterStoreId}`,
+    waiterMembership.station
+  );
+
+  const stationLabel = waiterStationLabel(waiterMembership.station);
+  const restaurantName =
+    waiterMembership.business_name || "Restaurante";
+
+  waiterElements.restaurantName.textContent =
+    `${restaurantName} / ${stationLabel}`;
+
+  const canTakeOrders = ["waiter", "cashier", "manager"].includes(
+    waiterMembership.station
+  );
+
+  waiterElements.app.hidden = !canTakeOrders;
+  waiterElements.stationBoard.hidden = canTakeOrders;
+
+  if (canTakeOrders) {
+    waiterLoadMenu().catch(console.error);
+    waiterLoadSentOrders().catch(console.error);
+  } else {
+    waiterLoadStationOrders().catch(console.error);
+  }
+
+  waiterStartRealtime();
+
+  waiterShowToast(`Estación cambiada a ${stationLabel}.`);
+}
 async function waiterAuthorize() {
   if (!waiterClient || !waiterUser || !waiterStoreId) return;
   waiterSetStatus("Verificando autorizacion...");
@@ -1210,10 +1280,14 @@ if (waiterMembership?.station) {
     waiterSetStatus("Sin autorizacion", "error");
     return;
   }
-  waiterElements.authCard.hidden = true;
-  waiterElements.accessCard.hidden = true;
-  waiterElements.signOutButton.hidden = false;
-  waiterElements.shiftBar.hidden = false;
+ waiterElements.authCard.hidden = true;
+waiterElements.accessCard.hidden = true;
+waiterElements.signOutButton.hidden = false;
+
+waiterElements.changeStationButton.hidden =
+  waiterMemberships.length <= 1;
+
+waiterElements.shiftBar.hidden = false;
   const stationLabel = waiterStationLabel(waiterMembership.station);
   const restaurantName = waiterMembership.business_name || "Restaurante";
   waiterElements.restaurantName.textContent = `${restaurantName} / ${stationLabel}`;
@@ -1369,6 +1443,10 @@ async function waiterInitialize() {
 
 waiterElements.authForm.addEventListener("submit", waiterSignIn);
 waiterElements.signUpButton.addEventListener("click", waiterSignUp);
+waiterElements.changeStationButton?.addEventListener(
+  "click",
+  waiterChangeStation
+);
 waiterElements.signOutButton.addEventListener("click", waiterSignOut);
 waiterElements.retryAccessButton.addEventListener("click", waiterActivateAuthorization);
 waiterElements.refreshButton.addEventListener("click", () => waiterLoadMenu().catch(() => waiterSetMessage(waiterElements.orderMessage, "No fue posible actualizar el menu. Intenta nuevamente.", "error")));
