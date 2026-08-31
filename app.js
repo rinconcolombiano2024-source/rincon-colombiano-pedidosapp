@@ -1937,7 +1937,8 @@ function setRestaurantAuthMode(mode = "login") {
   const normalizedMode = mode === "register" ? "register" : "login";
   elements.authForm.dataset.mode = normalizedMode;
   if (elements.restaurantAuthTitle) {
-    elements.restaurantAuthTitle.textContent = normalizedMode === "register" ? "Registrar restaurante" : "Iniciar sesion";
+    const title = normalizedMode === "register" ? "Registrar restaurante" : "Iniciar sesion";
+    elements.restaurantAuthTitle.textContent = window.rcUiText?.(title) || title;
   }
   if (elements.signInButton) elements.signInButton.hidden = normalizedMode === "register";
   if (elements.signUpButton) elements.signUpButton.hidden = normalizedMode !== "register";
@@ -1975,10 +1976,18 @@ function loadSupabaseLibrary() {
   if (!navigator.onLine) return Promise.resolve(false);
 
   return new Promise((resolve) => {
+    let settled = false;
+    const finish = (loaded) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeoutId);
+      resolve(Boolean(loaded));
+    };
+    const timeoutId = window.setTimeout(() => finish(false), 12000);
     const existingScript = document.querySelector("script[data-supabase-loader]");
     if (existingScript) {
-      existingScript.addEventListener("load", () => resolve(Boolean(window.supabase?.createClient)), { once: true });
-      existingScript.addEventListener("error", () => resolve(false), { once: true });
+      existingScript.addEventListener("load", () => finish(window.supabase?.createClient), { once: true });
+      existingScript.addEventListener("error", () => finish(false), { once: true });
       return;
     }
 
@@ -1986,8 +1995,8 @@ function loadSupabaseLibrary() {
     script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4";
     script.async = true;
     script.dataset.supabaseLoader = "true";
-    script.addEventListener("load", () => resolve(Boolean(window.supabase?.createClient)), { once: true });
-    script.addEventListener("error", () => resolve(false), { once: true });
+    script.addEventListener("load", () => finish(window.supabase?.createClient), { once: true });
+    script.addEventListener("error", () => finish(false), { once: true });
     document.head.appendChild(script);
   });
 }
@@ -2019,7 +2028,7 @@ async function initializeCloud() {
     },
   }
 );
-  const { data, error } = await cloudState.client.auth.getSession();
+  const { data, error } = await withCloudTimeout(cloudState.client.auth.getSession());
   if (error) throw error;
   cloudState.user = data.session?.user || null;
   cloudState.authChecked = true;
@@ -2064,7 +2073,7 @@ async function loadCloudData() {
   );
 
   try {
-    await ensureMinimumDatabaseVersion();
+    await withCloudTimeout(ensureMinimumDatabaseVersion());
     const settingsRequest = cloudState.client
       .from("app_settings")
       .select("menu, settings, menu_revision, settings_revision, menu_updated_at, settings_updated_at")
@@ -2089,12 +2098,14 @@ async function loadCloudData() {
       .eq("user_id", cloudState.user.id)
       .order("created_at", { ascending: false })
       .limit(LOCAL_ORDER_CACHE_LIMIT);
-    const [settingsResponse, profileResponse, ownerRoleResponse, ordersResponse] = await Promise.all([
-      settingsRequest,
-      profileRequest,
-      ownerRoleRequest,
-      ordersRequest,
-    ]);
+    const [settingsResponse, profileResponse, ownerRoleResponse, ordersResponse] = await withCloudTimeout(
+      Promise.all([
+        settingsRequest,
+        profileRequest,
+        ownerRoleRequest,
+        ordersRequest,
+      ])
+    );
     const { data: settingsRow, error: settingsError } = settingsResponse;
     const { data: publicProfileRow, error: publicProfileError } = profileResponse;
     const { data: ownerRole, error: ownerRoleError } = ownerRoleResponse;
@@ -3721,7 +3732,7 @@ centralSyncRefreshPending = false;
   settingsResponse,
   profileResponse,
   ordersResponse,
-] = await Promise.all([
+] = await withCloudTimeout(Promise.all([
   settings
     ? cloudState.client
         .from("app_settings")
@@ -3761,7 +3772,7 @@ centralSyncRefreshPending = false;
         data: [],
         error: null,
       }),
-]);
+]));
 
     if (settingsResponse.error) {
       throw settingsResponse.error;
@@ -10288,6 +10299,11 @@ elements.authCountryCodeInput?.addEventListener("change", () => {
   marketplaceAccountState = null;
   renderMarketplaceAccountState();
   prepareRestaurantPlaceAutocomplete().catch(() => {});
+});
+document.querySelector("#autoLanguageSelect")?.addEventListener("change", () => {
+  queueMicrotask(() => {
+    if (elements.restaurantAuthDialog?.open) setRestaurantAuthMode(elements.authForm.dataset.mode);
+  });
 });
 elements.restaurantCountryCodeInput?.addEventListener("change", () => {
   const countryCode = normalizeTextSetting(elements.restaurantCountryCodeInput.value).toUpperCase();
