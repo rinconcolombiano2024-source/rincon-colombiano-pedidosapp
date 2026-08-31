@@ -2094,7 +2094,7 @@ async function loadCloudData() {
       .maybeSingle();
     const ordersRequest = cloudState.client
       .from("orders")
-      .select("order_json")
+      .select("order_json, revision")
       .eq("user_id", cloudState.user.id)
       .order("created_at", { ascending: false })
       .limit(LOCAL_ORDER_CACHE_LIMIT);
@@ -3873,7 +3873,7 @@ centralSyncRefreshPending = false;
   orders
     ? cloudState.client
         .from("orders")
-        .select("order_json")
+        .select("order_json, revision")
         .eq("user_id", cloudState.user.id)
         .order("created_at", {
           ascending: false,
