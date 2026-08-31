@@ -3235,10 +3235,30 @@ async function saveCloudOrder(order) {
     const orderForCloud = structuredCloneOrder(order);
     orderForCloud.syncStatus = "synced";
 
-    const parsedRevision = Number.parseInt(order._syncRevision, 10);
-    const expectedRevision = Number.isFinite(parsedRevision) && parsedRevision > 0
-      ? parsedRevision
-      : null;
+    let parsedRevision = Number.parseInt(order._syncRevision, 10);
+
+if (!Number.isFinite(parsedRevision) || parsedRevision < 1) {
+  const { data: existingRow, error: existingRowError } = await cloudState.client
+    .from("orders")
+    .select("revision")
+    .eq("id", order.id)
+    .eq("user_id", cloudState.user.id)
+    .maybeSingle();
+
+  if (existingRowError) throw existingRowError;
+
+  const remoteRevision = Number.parseInt(existingRow?.revision, 10);
+
+  if (Number.isFinite(remoteRevision) && remoteRevision > 0) {
+    parsedRevision = remoteRevision;
+    applyConfirmedRevision(remoteRevision);
+  }
+}
+
+const expectedRevision =
+  Number.isFinite(parsedRevision) && parsedRevision > 0
+    ? parsedRevision
+    : null;
 
     const { data, error } = await cloudState.client.rpc("save_restaurant_order_atomic", {
       p_id: order.id,
