@@ -131,12 +131,16 @@ test("mesero: una estación renderiza notas y nombres como texto seguro", async 
     user: testUser,
     rpcData: {
       claim_my_restaurant_staff_invitation: null,
-      get_my_restaurant_station: {
-        station: "kitchen",
-        active: true,
-        display_name: "Jhon",
-        business_name: "Restaurante E2E",
-      },
+      get_my_restaurant_stations: [{
+  restaurant_user_id: "store-e2e",
+  member_user_id: testUser.id,
+  station: "kitchen",
+  active: true,
+  display_name: "Jhon",
+  permissions: {},
+  business_name: "Restaurante E2E",
+  logo_url: "",
+}],
       list_my_station_orders: [{
         order_id: "order-e2e",
         table_label: "<img src=x onerror=alert(1)>",
