@@ -1,43 +1,5 @@
 const { test, expect } = require("@playwright/test");
-
-const supabaseMock = `
-(() => {
-  const result = (data = []) => Promise.resolve({ data, error: null });
-  const makeQuery = () => {
-    const query = new Proxy({}, {
-      get(_target, property) {
-        if (property === "then") return result().then.bind(result());
-        if (property === "single" || property === "maybeSingle") {
-          return () => result(null);
-        }
-        return () => query;
-      }
-    });
-    return query;
-  };
-  const channel = {
-    on() { return this; },
-    subscribe() { return this; },
-    unsubscribe() {},
-  };
-  const auth = {
-    getSession: async () => ({ data: { session: null }, error: null }),
-    getUser: async () => ({ data: { user: null }, error: null }),
-    onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
-    signOut: async () => ({ error: null }),
-  };
-  window.supabase = {
-    createClient: () => ({
-      auth,
-      from: () => makeQuery(),
-      rpc: async () => ({ data: null, error: null }),
-      channel: () => channel,
-      removeChannel() {},
-      functions: { invoke: async () => ({ data: null, error: null }) },
-      storage: { from: () => ({ upload: async () => ({ data: null, error: null }) }) },
-    }),
-  };
-})();`;
+const { installSupabaseMock } = require("./support/supabase-mock.cjs");
 
 const screens = [
   { name: "principal", path: "/index.html?app=v91.0.3", selector: ".app-shell" },
@@ -47,17 +9,9 @@ const screens = [
   { name: "administracion", path: "/admin.html?app=v91.0.3&lang=es", selector: ".platform-admin-shell" },
 ];
 
-test.beforeEach(async ({ page }) => {
-  await page.route("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4", (route) => route.fulfill({
-    status: 200,
-    contentType: "text/javascript",
-    body: supabaseMock,
-  }));
-  await page.route("**/*.supabase.co/**", (route) => route.abort());
-});
-
 for (const screen of screens) {
   test(`${screen.name}: inicia sin errores fatales`, async ({ page }) => {
+    await installSupabaseMock(page);
     const pageErrors = [];
     page.on("pageerror", (error) => pageErrors.push(error.message));
 
