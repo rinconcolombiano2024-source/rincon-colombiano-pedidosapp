@@ -5163,23 +5163,27 @@ async function customerLoadMenu(options = {}) {
     return;
   }
 
+  const requestedStoreId = customerStoreId;
   customerStartMenuRealtime();
 
   let data = null;
 
   try {
-  data = await customerFetchPublicMenu(customerStoreId);
+  data = await customerFetchPublicMenu(requestedStoreId);
 } catch (error) {
   console.error("ERROR REAL CARGANDO RESTAURANTE:", error);
-  console.error("STORE ID:", customerStoreId);
+  console.error("STORE ID:", requestedStoreId);
 
+  if (requestedStoreId !== customerStoreId) return;
   customerSetStatus(customerT("menuLoadError"), "error");
   return;
 }
 
+  if (requestedStoreId !== customerStoreId) return;
+
   if (!data) {
     await customerLoadRestaurantDirectory({ silent: true });
-    if (!customerStoreId) return;
+    if (!customerStoreId || requestedStoreId !== customerStoreId) return;
     customerSetStatus(customerT("noMenu"), "error");
     return;
   }
@@ -5214,6 +5218,7 @@ async function customerLoadMenu(options = {}) {
   };
   customerRestoreTrackedOrder();
   await customerHandlePaymentReturn();
+  if (requestedStoreId !== customerStoreId) return;
   customerApplyBusinessName();
   customerRenderSelectedRestaurantDetails();
   customerRenderPaymentMethods();
