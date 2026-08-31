@@ -777,10 +777,11 @@ async function waiterAdvanceStationOrder(orderId, nextStatus, button) {
   if (!orderId || !nextStatus || !waiterClient) return;
   button.disabled = true;
   const { error } = await waiterClient.rpc("update_my_station_order", {
-    p_restaurant_user_id: waiterStoreId,
-    p_order_id: orderId,
-    p_next_station_status: nextStatus,
-  });
+  p_restaurant_user_id: waiterStoreId,
+  p_order_id: orderId,
+  p_next_station_status: nextStatus,
+  p_station: waiterMembership.station,
+});
   if (error) {
     waiterShowToast(/not allowed/i.test(String(error.message || "")) ? "Ese cambio no corresponde a tu estacion." : "No fue posible actualizar el pedido.");
     button.disabled = false;
