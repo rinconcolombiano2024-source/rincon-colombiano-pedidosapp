@@ -4,6 +4,7 @@ const path = require("path");
 const root = __dirname;
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 const app = read("app.js");
+const customer = read("cliente.js");
 const courier = read("colaborador.js");
 const migration = read("MIGRACION-V91-01-RENDIMIENTO-INTEGRIDAD-Y-CIERRES.sql");
 const sw = read("service-worker.js");
@@ -41,6 +42,11 @@ check(app.includes("requestIdleCallback(persistMenuCatalogCache"), "cache del me
 check(app.includes("menuSearchTimer = window.setTimeout"), "busqueda del restaurante con debounce");
 check(courier.includes('courierDeliveryRealtimeStatus === "SUBSCRIBED"'), "seguimiento de colaborador sin sondeo duplicado");
 check(/finally\s*\{\s*cloudState\.loading\s*=\s*false;\s*updateCloudStatus\(\);\s*\}/s.test(app), "estado de nube siempre finaliza");
+check(app.includes("withCloudTimeout(cloudState.client.auth.getSession())"), "sesion de nube con tiempo maximo");
+check(app.includes("await withCloudTimeout(ensureMinimumDatabaseVersion())"), "version de nube con tiempo maximo");
+check(/await withCloudTimeout\(\s*Promise\.all\(\[\s*settingsRequest,/s.test(app), "carga inicial de nube con tiempo maximo");
+check(customer.includes("const requestedStoreId = customerStoreId;"), "menu conserva el restaurante solicitado");
+check(customer.includes("if (requestedStoreId !== customerStoreId) return;"), "respuesta tardia no reemplaza otro menu");
 check(app.includes("anulacion(es) antigua(s)") && app.includes("order not found"), "cola antigua no queda pendiente para siempre");
 
 if (failures.length) {

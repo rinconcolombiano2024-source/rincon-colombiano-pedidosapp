@@ -7,6 +7,7 @@
     "qa": "node qa-v91.cjs && node qa-i18n-v87.cjs",
     "qa:i18n": "node qa-i18n-v87.cjs",
     "qa:e2e": "playwright test",
+    "qa:integration": "node --test tests/integration/supabase-isolation.test.cjs tests/integration/concurrency-harness.test.cjs",
     "android:prepare-web": "node scripts/prepare-capacitor.mjs",
     "android:add": "npm run android:prepare-web && npx cap add android",
     "android:sync": "npm run android:prepare-web && npx cap sync android",
