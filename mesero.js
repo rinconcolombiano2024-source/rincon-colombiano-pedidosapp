@@ -57,6 +57,7 @@ waiterCustomItemPrice: document.querySelector("#waiterCustomItemPrice"),
 let waiterClient = null;
 let waiterUser = null;
 let waiterMembership = null;
+let waiterMemberships = [];
 let waiterMenu = {};
 let waiterSettings = {};
 let waiterActiveCategory = "";
@@ -1164,19 +1165,38 @@ async function waiterAuthorize() {
     console.error(claimResult.error);
     return;
   }
-  const { data, error } = await waiterClient.rpc("get_my_restaurant_station", {
-    p_restaurant_user_id: waiterStoreId,
-  });
-  if (error) {
-    waiterElements.authCard.hidden = true;
-    waiterElements.app.hidden = true;
-    waiterElements.stationBoard.hidden = true;
-    waiterElements.accessCard.hidden = false;
-    waiterElements.accessMessage.textContent = "No se pudo verificar el acceso. Pide al propietario que revise tu autorizacion.";
-    waiterSetStatus("Configuracion pendiente", "error");
-    return;
-  }
-  waiterMembership = Array.isArray(data) ? data[0] : data;
+  const { data, error } = await waiterClient.rpc("get_my_restaurant_stations", {
+  p_restaurant_user_id: waiterStoreId,
+});
+
+if (error) {
+  waiterElements.authCard.hidden = true;
+  waiterElements.app.hidden = true;
+  waiterElements.stationBoard.hidden = true;
+  waiterElements.accessCard.hidden = false;
+  waiterElements.accessMessage.textContent =
+    "No se pudo verificar el acceso. Pide al propietario que revise tu autorizacion.";
+  waiterSetStatus("Configuracion pendiente", "error");
+  return;
+}
+
+waiterMemberships = Array.isArray(data) ? data : [];
+
+const savedStation = String(
+  window.sessionStorage.getItem(`rc-ordera-station-${waiterStoreId}`) || ""
+).trim();
+
+waiterMembership =
+  waiterMemberships.find((membership) => membership.station === savedStation)
+  || waiterMemberships[0]
+  || null;
+
+if (waiterMembership?.station) {
+  window.sessionStorage.setItem(
+    `rc-ordera-station-${waiterStoreId}`,
+    waiterMembership.station
+  );
+}
   const validStations = [
     "waiter", "cashier", "manager", "kitchen", "grill", "drinks",
     "fast_food", "starters", "salads", "packing", "dispatch"
