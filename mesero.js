@@ -758,8 +758,9 @@ async function waiterLoadStationOrders() {
   }
   waiterElements.stationOrders.innerHTML = `<div class="waiter-empty">Actualizando pedidos...</div>`;
   const { data, error } = await waiterClient.rpc("list_my_station_orders", {
-    p_restaurant_user_id: waiterStoreId,
-  });
+  p_restaurant_user_id: waiterStoreId,
+  p_station: waiterMembership.station,
+});
   if (error) {
     if (Array.isArray(cachedOrders) && cachedOrders.length) waiterRenderStationOrders(cachedOrders);
     else waiterElements.stationOrders.innerHTML = `<div class="waiter-empty">No fue posible cargar esta estacion. Contacta al propietario e intenta nuevamente.</div>`;
