@@ -47,6 +47,9 @@ check(app.includes("await withCloudTimeout(ensureMinimumDatabaseVersion())"), "v
 check(/await withCloudTimeout\(\s*Promise\.all\(\[\s*settingsRequest,/s.test(app), "carga inicial de nube con tiempo maximo");
 check(customer.includes("const requestedStoreId = customerStoreId;"), "menu conserva el restaurante solicitado");
 check(customer.includes("if (requestedStoreId !== customerStoreId) return;"), "respuesta tardia no reemplaza otro menu");
+check(/function saveMenuCatalog\(\)\s*\{[\s\S]*?markMenuPending\(\);[\s\S]*?saveMenuCache\(\{ immediate: true \}\);/.test(app), "menu local protegido antes de sincronizar");
+check(app.includes("remoteMenuHasNewerRevision") && app.includes("protectLocalMenuFromEmptyCloud"), "menu vacio confirmado conserva su revision de nube");
+check(customer.includes("customerReadMenuCache(requestedStoreId)"), "cliente recupera el menu publico cuando falla la nube");
 check(app.includes("anulacion(es) antigua(s)") && app.includes("order not found"), "cola antigua no queda pendiente para siempre");
 
 if (failures.length) {
