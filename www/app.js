@@ -3182,49 +3182,105 @@ async function setCloudNextTicket(number) {
 async function saveCloudOrder(order) {
   if (!cloudState.client || !cloudState.user || !order.saved) return;
 
+  const applyConfirmedRevision = (revision) => {
+    const parsedRevision = Number.parseInt(revision, 10);
+    if (!Number.isFinite(parsedRevision) || parsedRevision < 1) return;
+
+    order._syncRevision = parsedRevision;
+    savedOrders = savedOrders.map((savedOrder) => (
+      savedOrder.id === order.id
+        ? { ...savedOrder, _syncRevision: parsedRevision }
+        : savedOrder
+    ));
+    if (currentOrder.id === order.id) currentOrder._syncRevision = parsedRevision;
+    saveCurrentOrderDraft();
+  };
+
   const saveOrderRow = async () => {
     const orderForCloud = structuredCloneOrder(order);
     orderForCloud.syncStatus = "synced";
-    return cloudState.client.from("orders").upsert({
-      id: order.id,
-      user_id: cloudState.user.id,
-      ticket_number: order.ticketNumber,
-      business_date: orderBusinessDate(order),
-      order_json: orderForCloud,
-      total: orderTotal(order),
-      created_at: order.createdAt,
-      updated_at: order.updatedAt,
+
+    const parsedRevision = Number.parseInt(order._syncRevision, 10);
+    const expectedRevision = Number.isFinite(parsedRevision) && parsedRevision > 0
+      ? parsedRevision
+      : null;
+
+    const { data, error } = await cloudState.client.rpc("save_restaurant_order_atomic", {
+      p_id: order.id,
+      p_ticket_number: order.ticketNumber,
+      p_business_date: orderBusinessDate(order),
+      p_order_json: orderForCloud,
+      p_total: orderTotal(order),
+      p_created_at: order.createdAt || null,
+      p_expected_revision: expectedRevision,
     });
+
+    if (!error) {
+      const result = Array.isArray(data) ? data[0] : data;
+      applyConfirmedRevision(result?.revision);
+    }
+
+    return { data, error };
   };
 
   let { error } = await saveOrderRow();
+
   const ticketCollision = error?.code === "23505"
     && /ticket|order_ticket_reservations|already assigned/i.test(String(error.message || ""));
+
   if (ticketCollision) {
     const offlineTicketNumber = Number(order.ticketNumber) || null;
     await refreshRestaurantBusinessContext({ force: true });
+
     order.offlineTicketNumber = order.offlineTicketNumber || offlineTicketNumber;
     order.ticketNumber = await claimCloudTicket();
     order.businessDate = todayKey;
     order.updatedAt = new Date().toISOString();
+
     ({ error } = await saveOrderRow());
+
     if (!error) {
       nextTicket = Math.max(nextTicket, Number(order.ticketNumber) + 1);
-      showToast(`El ticket local ${formatTicket(offlineTicketNumber)} se sincronizo como ${formatTicket(order.ticketNumber)}.`);
+      showToast(
+        `El ticket local ${formatTicket(offlineTicketNumber)} se sincronizo como ${formatTicket(order.ticketNumber)}.`
+      );
     }
   }
 
-  if (error) throw error;
+  if (error) {
+    if (
+      error.code === "40001"
+      || /ORDER_REVISION_(?:CONFLICT|REQUIRED)/i.test(String(error.message || ""))
+    ) {
+      const conflictError = new Error(
+        appUiText(
+          "Este pedido cambio en otro dispositivo. Actualiza la nube antes de volver a modificarlo."
+        )
+      );
 
-  const stationResult = await cloudState.client.rpc("publish_current_restaurant_order_to_stations", {
-    p_restaurant_order_id: order.id,
-    p_customer_order_id: order.customerOrderId || null,
-  });
-  if (stationResult.error && !["42883", "PGRST202"].includes(stationResult.error.code)) {
+      conflictError.code = "ORDER_REVISION_CONFLICT";
+      conflictError.cause = error;
+      throw conflictError;
+    }
+
+    throw error;
+  }
+
+  const stationResult = await cloudState.client.rpc(
+    "publish_current_restaurant_order_to_stations",
+    {
+      p_restaurant_order_id: order.id,
+      p_customer_order_id: order.customerOrderId || null,
+    }
+  );
+
+  if (
+    stationResult.error
+    && !["42883", "PGRST202"].includes(stationResult.error.code)
+  ) {
     throw stationResult.error;
   }
 }
-
 async function voidCloudOrder(orderId, reason = "Cancelado por el restaurante") {
   if (!cloudState.client || !cloudState.user || !orderId) return;
   const { error } = await cloudState.client.rpc("void_restaurant_order", {
