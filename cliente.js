@@ -108,6 +108,7 @@ const CUSTOMER_APP_LANGUAGE_KEY = "rincon_colombiano_app_language";
 const CUSTOMER_TRANSLATION_CACHE_KEY = "rincon_colombiano_description_translations_v1";
 const CUSTOMER_PENDING_ORDER_KEY_PREFIX = "rc_ordera_pending_customer_order";
 const CUSTOMER_TRACKED_ORDER_KEY_PREFIX = "rc_ordera_tracked_customer_order";
+const CUSTOMER_MENU_CACHE_KEY_PREFIX = "rc_ordera_customer_menu_cache_v1";
 const CUSTOMER_DELIVERY_MARKUP = 1.6714285714;
 const CUSTOMER_I18N = {
   es: {
@@ -3443,6 +3444,37 @@ function customerFetchPublicMenu(storeId) {
   return customerMenuFetchPromise;
 }
 
+function customerMenuCacheKey(storeId) {
+  return `${CUSTOMER_MENU_CACHE_KEY_PREFIX}:${customerNormalizeText(storeId)}`;
+}
+
+function customerReadMenuCache(storeId) {
+  try {
+    const cached = JSON.parse(localStorage.getItem(customerMenuCacheKey(storeId)) || "null");
+    if (!cached || cached.storeId !== customerNormalizeText(storeId)) return null;
+    const menu = customerNormalizeMenu(cached.menu || {});
+    if (!customerMenuProductCount(menu)) return null;
+    return { menu, settings: cached.settings || {} };
+  } catch {
+    return null;
+  }
+}
+
+function customerStoreMenuCache(storeId, menu, settings) {
+  const normalizedMenu = customerNormalizeMenu(menu || {});
+  if (!customerMenuProductCount(normalizedMenu)) return;
+  try {
+    localStorage.setItem(customerMenuCacheKey(storeId), JSON.stringify({
+      storeId: customerNormalizeText(storeId),
+      menu: normalizedMenu,
+      settings: settings || {},
+      updatedAt: new Date().toISOString(),
+    }));
+  } catch (error) {
+    console.warn("No se pudo conservar el menu publico para uso sin conexion.", error);
+  }
+}
+
 async function customerFetchPublicMenuNow(storeId) {
   const { data: rpcData, error: rpcError } = await customerClient.rpc("get_public_restaurant_menu", {
     p_user_id: storeId,
@@ -5167,17 +5199,22 @@ async function customerLoadMenu(options = {}) {
   customerStartMenuRealtime();
 
   let data = null;
+  let loadedFromCache = false;
 
   try {
-  data = await customerFetchPublicMenu(requestedStoreId);
-} catch (error) {
-  console.error("ERROR REAL CARGANDO RESTAURANTE:", error);
-  console.error("STORE ID:", requestedStoreId);
+    data = await customerFetchPublicMenu(requestedStoreId);
+  } catch (error) {
+    console.error("ERROR REAL CARGANDO RESTAURANTE:", error);
+    console.error("STORE ID:", requestedStoreId);
 
-  if (requestedStoreId !== customerStoreId) return;
-  customerSetStatus(customerT("menuLoadError"), "error");
-  return;
-}
+    if (requestedStoreId !== customerStoreId) return;
+    data = customerReadMenuCache(requestedStoreId);
+    if (!data) {
+      customerSetStatus(customerT("menuLoadError"), "error");
+      return;
+    }
+    loadedFromCache = true;
+  }
 
   if (requestedStoreId !== customerStoreId) return;
 
@@ -5232,6 +5269,9 @@ async function customerLoadMenu(options = {}) {
     return;
   }
 
+  if (!loadedFromCache) {
+    customerStoreMenuCache(requestedStoreId, loadedMenu, customerSettings);
+  }
   customerMenu = loadedMenu;
   customerActiveCategory = Object.keys(customerMenu)[0] || "";
   customerSyncCartWithCurrentMenu();
@@ -5241,7 +5281,7 @@ async function customerLoadMenu(options = {}) {
     customerElements.tableLabel.textContent = customerT("orderFor", { table: customerTableFromQr });
   }
 
-  customerSetStatus(customerT("menuReady"), "ok");
+  customerSetStatus(customerT(loadedFromCache ? "noConnection" : "menuReady"), loadedFromCache ? "error" : "ok");
   customerRenderCategories();
   customerRenderMenu();
   customerRenderDeliveryFields();

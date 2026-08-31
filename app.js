@@ -2211,6 +2211,41 @@ if (
 let localMenuPending =
   hasPendingMenu();
 
+const confirmedMenuBeforeLoad =
+  readConfirmedCloudMenu();
+
+const remoteMenuRevision =
+  Number.parseInt(
+    settingsRow?.menu_revision,
+    10
+  );
+
+const remoteMenuHasNewerRevision =
+  Number.isFinite(remoteMenuRevision) &&
+  remoteMenuRevision >
+    storedCloudRevision(
+      STORAGE_KEYS.menuRevision
+    );
+
+const protectLocalMenuFromEmptyCloud =
+  !localMenuPending &&
+  menuProductCount(menuCatalog) > 0 &&
+  menuProductCount(remoteMenu) === 0 &&
+  (
+    confirmedMenuBeforeLoad === null ||
+    menuProductCount(confirmedMenuBeforeLoad) > 0
+  ) &&
+  !(
+    confirmedMenuBeforeLoad !== null &&
+    remoteMenuHasNewerRevision
+  );
+
+if (protectLocalMenuFromEmptyCloud) {
+  markMenuPending();
+  localMenuPending = hasPendingMenu();
+  saveMenuCache({ immediate: true });
+}
+
 if (
   localMenuPending &&
   menuProductCount(menuCatalog) === 0 &&
@@ -6979,7 +7014,8 @@ function saveMenuCache(options = {}) {
 
 function saveMenuCatalog() {
   menuCatalog = normalizeMenuCatalog(menuCatalog);
-  saveMenuCache();
+  markMenuPending();
+  saveMenuCache({ immediate: true });
 
   if (!menuCatalog[activeCategory]) {
     activeCategory = Object.keys(menuCatalog)[0] || "";
