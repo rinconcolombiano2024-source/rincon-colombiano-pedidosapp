@@ -501,6 +501,7 @@ let centralSyncTimer = null;
 let centralSyncInProgress = false;
 let centralSyncRefreshPending = false;
 let pendingDataSyncRequested = false;
+let pendingDataSyncRetryTimer = null;
 let centralRealtimeReconnectTimer = null;
 let clientOrdersRealtimeReconnectTimer = null;
 let clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;
