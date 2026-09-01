@@ -2105,7 +2105,22 @@ async function loadCloudData() {
   );
 
   try {
-    await withCloudTimeout(ensureMinimumDatabaseVersion());
+    try {
+  await withCloudTimeout(
+    ensureMinimumDatabaseVersion()
+  );
+} catch (error) {
+  if (
+    error?.code === "RC_ORDERA_SCHEMA_OUTDATED"
+  ) {
+    throw error;
+  }
+
+  console.warn(
+    "No fue posible verificar temporalmente la version de la base de datos. Se intentara cargar el menu y los datos disponibles.",
+    error
+  );
+}
     const settingsRequest = cloudState.client
       .from("app_settings")
       .select("menu, settings, menu_revision, settings_revision, menu_updated_at, settings_updated_at")
