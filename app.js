@@ -2158,7 +2158,30 @@ async function loadCloudData() {
     const { data: ownerRole, error: ownerRoleError } = ownerRoleResponse;
     const { data: cloudOrders, error: ordersError } = ordersResponse;
 
-   if (settingsError) throw settingsError;
+  if (settingsError) {
+  console.warn(
+    "No fue posible cargar app_settings desde la nube. Se intentara conservar el ultimo menu valido disponible.",
+    settingsError
+  );
+
+  const confirmedMenu =
+    readConfirmedCloudMenu();
+
+  if (
+    menuProductCount(menuCatalog) === 0 &&
+    confirmedMenu &&
+    menuProductCount(confirmedMenu) > 0
+  ) {
+    menuCatalog = confirmedMenu;
+
+    saveMenuCache({
+      immediate: true,
+    });
+  }
+
+  renderCategories();
+  renderMenu();
+}
 
 if (ordersError) {
   console.warn(
@@ -2441,8 +2464,18 @@ if (
     savedOrders = mergeOrders(normalizedCloudOrders, localPendingOrders);
     saveOrders();
 
-    await refreshRestaurantBusinessContext({ force: true });
-    todayKey = restaurantBusinessContext?.businessDate || currentBusinessDate();
+    try {
+  await refreshRestaurantBusinessContext({ force: true });
+} catch (error) {
+  console.warn(
+    "No fue posible actualizar el contexto del restaurante. Se conservara la fecha local y el menu ya cargado.",
+    error
+  );
+}
+
+todayKey =
+  restaurantBusinessContext?.businessDate ||
+  currentBusinessDate();
     const { data: counterRow, error: counterError } = await cloudState.client
       .from("ticket_counters")
       .select("next_ticket")
@@ -2450,8 +2483,18 @@ if (
       .eq("business_date", todayKey)
       .maybeSingle();
 
-    if (counterError) throw counterError;
-    nextTicket = pendingTicketCounter() || counterRow?.next_ticket || 1;
+  if (counterError) {
+  console.warn(
+    "No fue posible cargar el contador de tickets desde la nube. Se conservara el contador local y el menu ya cargado.",
+    counterError
+  );
+}
+
+nextTicket =
+  pendingTicketCounter() ||
+  counterRow?.next_ticket ||
+  nextTicket ||
+  1;
     saveTicketState();
 
     currentOrder = currentOrderHasContent(currentOrderBeforeLoad) ? currentOrderBeforeLoad : createBlankOrder();
@@ -4116,7 +4159,9 @@ if (
   saveOrders({
     immediate: true
   });
-}if (settings || profile) {
+}
+    
+    if (settings || profile) {
   renderCurrencySettings();
   renderRestaurantStatus();
   updateRestaurantStatusSync();
