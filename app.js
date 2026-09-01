@@ -4252,9 +4252,8 @@ function startCentralRealtime() {
     centralSyncStatus = status;
 
     if (status === "SUBSCRIBED") {
-      scheduleCentralRefresh();
-      return;
-    }
+  return;
+}
 
     if (
   status === "CHANNEL_ERROR" ||
@@ -5636,10 +5635,27 @@ const shouldSyncMenu =
       }
     }
 
-    for (const order of pendingOrders) {
-      await saveCloudOrder(order);
-      setOrderSyncStatus(order.id, "synced");
+    let pendingOrderSyncError = null;
+
+for (const order of pendingOrders) {
+  try {
+    await saveCloudOrder(order);
+    setOrderSyncStatus(order.id, "synced");
+  } catch (error) {
+    console.error(
+      `No fue posible sincronizar el pedido ${order.id}.`,
+      error
+    );
+
+    if (!pendingOrderSyncError) {
+      pendingOrderSyncError = error;
     }
+  }
+}
+
+if (pendingOrderSyncError) {
+  throw pendingOrderSyncError;
+}
 
     const highestLocalTicketToday = savedOrders
       .filter((order) => orderBusinessDate(order) === todayKey)
