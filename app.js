@@ -5701,7 +5701,8 @@ if (pendingOrderSyncError) {
     }, 5000);
   }
 }
-
+  }
+}
 async function signInWithEmail() {
   const email = elements.authEmail.value.trim();
   const password = elements.authPassword.value;
