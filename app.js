@@ -2189,6 +2189,9 @@ const accountType = normalizeTextSetting(
 ).toLowerCase();
 
 if (
+  !publicProfileError &&
+  !ownerRoleError &&
+  !settingsRow &&
   !publicProfileRow &&
   !ownerRole &&
   accountType !== "restaurant"
