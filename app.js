@@ -5662,15 +5662,18 @@ const shouldSyncMenu =
   } finally {
   cloudState.syncing = false;
 
-  if (
-    pendingDataSyncRequested &&
-    cloudState.client &&
-    cloudState.user &&
-    navigator.onLine
-  ) {
-    pendingDataSyncRequested = false;
+ if (
+  pendingDataSyncRequested &&
+  cloudState.client &&
+  cloudState.user &&
+  navigator.onLine
+) {
+  pendingDataSyncRequested = false;
 
-    queueMicrotask(() => {
+  if (pendingDataSyncRetryTimer === null) {
+    pendingDataSyncRetryTimer = window.setTimeout(() => {
+      pendingDataSyncRetryTimer = null;
+
       syncPendingData({
         silent: true,
       }).catch((error) => {
@@ -5679,9 +5682,8 @@ const shouldSyncMenu =
           error
         );
       });
-    });
+    }, 5000);
   }
-}
 }
 
 async function signInWithEmail() {
