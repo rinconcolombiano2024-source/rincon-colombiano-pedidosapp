@@ -2143,8 +2143,14 @@ async function loadCloudData() {
     const { data: ownerRole, error: ownerRoleError } = ownerRoleResponse;
     const { data: cloudOrders, error: ordersError } = ordersResponse;
 
-    if (settingsError) throw settingsError;
-    if (ordersError) throw ordersError;
+   if (settingsError) throw settingsError;
+
+if (ordersError) {
+  console.warn(
+    "No fue posible cargar los pedidos desde la nube. El menu continuara cargando.",
+    ordersError
+  );
+}
 
   const restaurantProfile =
   restaurantProfileFromUserMetadata();
