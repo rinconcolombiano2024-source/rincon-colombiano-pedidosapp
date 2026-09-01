@@ -538,12 +538,43 @@ async function ensureMinimumDatabaseVersion() {
     return cloudState.schemaVersion;
   }
   const { data, error } = await cloudState.client.rpc("get_rc_ordera_schema_version");
-  if (error) {
-    const schemaError = new Error(appUiText("La base de datos necesita la migracion V91 antes de continuar."));
-    schemaError.code = "RC_ORDERA_SCHEMA_OUTDATED";
-    schemaError.cause = error;
-    throw schemaError;
+if (error) {
+  const code = String(error?.code || "");
+  const message = String(error?.message || "");
+  const status = Number(error?.status || 0);
+
+  const isTemporaryCloudError =
+    status === 503 ||
+    code === "PGRST002" ||
+    code === "PGRST003" ||
+    /service unavailable/i.test(message) ||
+    /schema cache/i.test(message) ||
+    /connection pool/i.test(message) ||
+    /timeout/i.test(message) ||
+    /timed out/i.test(message) ||
+    /failed to fetch/i.test(message) ||
+    /network/i.test(message);
+
+  if (isTemporaryCloudError) {
+    const cloudError = new Error(
+      appUiText(
+        "La nube de RC ORDERA no está respondiendo temporalmente. Intenta nuevamente en unos momentos."
+      )
+    );
+
+    cloudError.code = "RC_ORDERA_CLOUD_TEMPORARILY_UNAVAILABLE";
+    cloudError.cause = error;
+    throw cloudError;
   }
+
+  const schemaError = new Error(
+    appUiText("No fue posible verificar la versión de la base de datos.")
+  );
+
+  schemaError.code = "RC_ORDERA_SCHEMA_CHECK_FAILED";
+  schemaError.cause = error;
+  throw schemaError;
+}
   const row = Array.isArray(data) ? data[0] : data;
   const version = Number(row?.schema_version ?? row);
   if (!Number.isFinite(version) || version < MINIMUM_DATABASE_SCHEMA_VERSION) {
