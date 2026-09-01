@@ -2323,7 +2323,8 @@ if (
     settingsRow.menu_revision
   );
 }
-
+renderCategories();
+renderMenu();
 if (
   settingsRow?.settings_revision !==
     undefined &&
