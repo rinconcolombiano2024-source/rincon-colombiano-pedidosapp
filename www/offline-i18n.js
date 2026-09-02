@@ -500,6 +500,7 @@
     ["waiter.noProductsSelection", "No hay productos disponibles en esta selección.", "W tym wyborze nie ma dostępnych produktów.", "There are no products available in this selection."],
     ["waiter.selectProducts", "Selecciona productos del menú.", "Wybierz produkty z menu.", "Select products from the menu."],
     ["waiter.noActiveStationOrders", "No hay pedidos activos para esta estacion.", "Brak aktywnych zamówień dla tego stanowiska.", "There are no active orders for this station."],
+    ["waiter.changeStation", "Cambiar estación", "Zmień stanowisko", "Change station"],
     ["waiter.offlineLastInfo", "Sin internet / ultima informacion", "Brak internetu / ostatnie dane", "Offline / last available data"],
     ["waiter.updatingOrders", "Actualizando pedidos...", "Aktualizowanie zamówień...", "Updating orders..."],
     ["waiter.stationLoadMigration", "No fue posible cargar esta estacion. Ejecuta nuevamente la migracion V71.", "Nie udało się załadować tego stanowiska. Uruchom ponownie migrację V71.", "This station could not be loaded. Run migration V71 again."],
@@ -922,6 +923,13 @@
   const catalog = Object.fromEntries(languages.map((language) => [language, {}]));
   const sourceToKey = new Map();
   const patterns = [
+    {
+  key: "waiter.selectStation",
+  source: /^Selecciona la estación:\s*([\s\S]+?)\s*Escribe el número:$/i,
+  es: (options) => `Selecciona la estación:\n\n${options.trim()}\n\nEscribe el número:`,
+  pl: (options) => `Wybierz stanowisko:\n\n${options.trim()}\n\nWpisz numer:`,
+  en: (options) => `Select the station:\n\n${options.trim()}\n\nEnter the number:`,
+},
     {
       key: "cloud.offlinePendingCount",
       source: /^Sin internet \((\d+) pendientes?\)$/i,

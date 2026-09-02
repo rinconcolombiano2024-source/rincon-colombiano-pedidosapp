@@ -6,6 +6,7 @@ const waiterElements = {
   logo: document.querySelector("#waiterLogo"),
   connectionStatus: document.querySelector("#waiterConnectionStatus"),
   signOutButton: document.querySelector("#waiterSignOutButton"),
+  changeStationButton: document.querySelector("#changeStationButton"),
   authCard: document.querySelector("#waiterAuthCard"),
   authForm: document.querySelector("#waiterAuthForm"),
   email: document.querySelector("#waiterEmail"),
@@ -57,6 +58,7 @@ waiterCustomItemPrice: document.querySelector("#waiterCustomItemPrice"),
 let waiterClient = null;
 let waiterUser = null;
 let waiterMembership = null;
+let waiterMemberships = [];
 let waiterMenu = {};
 let waiterSettings = {};
 let waiterActiveCategory = "";
@@ -755,7 +757,7 @@ async function waiterLoadStationOrders() {
     return;
   }
   waiterElements.stationOrders.innerHTML = `<div class="waiter-empty">Actualizando pedidos...</div>`;
-const { data, error } = await waiterClient.rpc("list_my_station_orders", {
+  const { data, error } = await waiterClient.rpc("list_my_station_orders", {
   p_restaurant_user_id: waiterStoreId,
   p_station: waiterMembership.station,
 });
@@ -775,10 +777,11 @@ async function waiterAdvanceStationOrder(orderId, nextStatus, button) {
   if (!orderId || !nextStatus || !waiterClient) return;
   button.disabled = true;
   const { error } = await waiterClient.rpc("update_my_station_order", {
-    p_restaurant_user_id: waiterStoreId,
-    p_order_id: orderId,
-    p_next_station_status: nextStatus,
-  });
+  p_restaurant_user_id: waiterStoreId,
+  p_order_id: orderId,
+  p_next_station_status: nextStatus,
+  p_station: waiterMembership.station,
+});
   if (error) {
     waiterShowToast(/not allowed/i.test(String(error.message || "")) ? "Ese cambio no corresponde a tu estacion." : "No fue posible actualizar el pedido.");
     button.disabled = false;
@@ -1148,7 +1151,76 @@ function waiterStartRealtime() {
     .subscribe();
   waiterStationPollTimer = window.setInterval(() => waiterLoadStationOrders().catch(() => {}), 15000);
 }
+function waiterChangeStation() {
+  if (!Array.isArray(waiterMemberships) || waiterMemberships.length === 0) {
+    waiterShowToast("No hay estaciones disponibles.");
+    return;
+  }
 
+  const options = waiterMemberships
+    .map((membership, index) => {
+      const label = waiterStationLabel(membership.station);
+      const selected =
+        membership.station === waiterMembership?.station
+          ? " ← actual"
+          : "";
+
+      return `${index + 1}. ${label}${selected}`;
+    })
+    .join("\n");
+
+  const answer = window.prompt(
+    `Selecciona la estación:\n\n${options}\n\nEscribe el número:`
+  );
+
+  if (answer === null) return;
+
+  const selectedIndex = Number.parseInt(answer, 10) - 1;
+  const selectedMembership = waiterMemberships[selectedIndex];
+
+  if (!selectedMembership) {
+    waiterShowToast("Estación no válida.");
+    return;
+  }
+
+  if (selectedMembership.station === waiterMembership?.station) {
+    return;
+  }
+
+  waiterStopRealtime();
+
+  waiterMembership = selectedMembership;
+
+  window.sessionStorage.setItem(
+    `rc-ordera-station-${waiterStoreId}`,
+    waiterMembership.station
+  );
+
+  const stationLabel = waiterStationLabel(waiterMembership.station);
+  const restaurantName =
+    waiterMembership.business_name || "Restaurante";
+
+  waiterElements.restaurantName.textContent =
+    `${restaurantName} / ${stationLabel}`;
+
+  const canTakeOrders = ["waiter", "cashier", "manager"].includes(
+    waiterMembership.station
+  );
+
+  waiterElements.app.hidden = !canTakeOrders;
+  waiterElements.stationBoard.hidden = canTakeOrders;
+
+  if (canTakeOrders) {
+    waiterLoadMenu().catch(console.error);
+    waiterLoadSentOrders().catch(console.error);
+  } else {
+    waiterLoadStationOrders().catch(console.error);
+  }
+
+  waiterStartRealtime();
+
+  waiterShowToast(`Estación cambiada a ${stationLabel}.`);
+}
 async function waiterAuthorize() {
   if (!waiterClient || !waiterUser || !waiterStoreId) return;
   waiterSetStatus("Verificando autorizacion...");
@@ -1165,19 +1237,38 @@ async function waiterAuthorize() {
     console.error(claimResult.error);
     return;
   }
-  const { data, error } = await waiterClient.rpc("get_my_restaurant_station", {
-    p_restaurant_user_id: waiterStoreId,
-  });
-  if (error) {
-    waiterElements.authCard.hidden = true;
-    waiterElements.app.hidden = true;
-    waiterElements.stationBoard.hidden = true;
-    waiterElements.accessCard.hidden = false;
-    waiterElements.accessMessage.textContent = "No se pudo verificar el acceso. Pide al propietario que revise tu autorizacion.";
-    waiterSetStatus("Configuracion pendiente", "error");
-    return;
-  }
-  waiterMembership = Array.isArray(data) ? data[0] : data;
+  const { data, error } = await waiterClient.rpc("get_my_restaurant_stations", {
+  p_restaurant_user_id: waiterStoreId,
+});
+
+if (error) {
+  waiterElements.authCard.hidden = true;
+  waiterElements.app.hidden = true;
+  waiterElements.stationBoard.hidden = true;
+  waiterElements.accessCard.hidden = false;
+  waiterElements.accessMessage.textContent =
+    "No se pudo verificar el acceso. Pide al propietario que revise tu autorizacion.";
+  waiterSetStatus("Configuracion pendiente", "error");
+  return;
+}
+
+waiterMemberships = Array.isArray(data) ? data : [];
+
+const savedStation = String(
+  window.sessionStorage.getItem(`rc-ordera-station-${waiterStoreId}`) || ""
+).trim();
+
+waiterMembership =
+  waiterMemberships.find((membership) => membership.station === savedStation)
+  || waiterMemberships[0]
+  || null;
+
+if (waiterMembership?.station) {
+  window.sessionStorage.setItem(
+    `rc-ordera-station-${waiterStoreId}`,
+    waiterMembership.station
+  );
+}
   const validStations = [
     "waiter", "cashier", "manager", "kitchen", "grill", "drinks",
     "fast_food", "starters", "salads", "packing", "dispatch"
@@ -1191,10 +1282,14 @@ async function waiterAuthorize() {
     waiterSetStatus("Sin autorizacion", "error");
     return;
   }
-  waiterElements.authCard.hidden = true;
-  waiterElements.accessCard.hidden = true;
-  waiterElements.signOutButton.hidden = false;
-  waiterElements.shiftBar.hidden = false;
+ waiterElements.authCard.hidden = true;
+waiterElements.accessCard.hidden = true;
+waiterElements.signOutButton.hidden = false;
+
+waiterElements.changeStationButton.hidden =
+  waiterMemberships.length <= 1;
+
+waiterElements.shiftBar.hidden = false;
   const stationLabel = waiterStationLabel(waiterMembership.station);
   const restaurantName = waiterMembership.business_name || "Restaurante";
   waiterElements.restaurantName.textContent = `${restaurantName} / ${stationLabel}`;
@@ -1350,6 +1445,10 @@ async function waiterInitialize() {
 
 waiterElements.authForm.addEventListener("submit", waiterSignIn);
 waiterElements.signUpButton.addEventListener("click", waiterSignUp);
+waiterElements.changeStationButton?.addEventListener(
+  "click",
+  waiterChangeStation
+);
 waiterElements.signOutButton.addEventListener("click", waiterSignOut);
 waiterElements.retryAccessButton.addEventListener("click", waiterActivateAuthorization);
 waiterElements.refreshButton.addEventListener("click", () => waiterLoadMenu().catch(() => waiterSetMessage(waiterElements.orderMessage, "No fue posible actualizar el menu. Intenta nuevamente.", "error")));

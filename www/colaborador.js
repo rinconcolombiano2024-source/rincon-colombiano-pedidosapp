@@ -2285,38 +2285,7 @@ async function courierLoadProfile() {
   if (!courierClient || !courierUser) return;
   const { data, error } = await courierClient
     .from("courier_profiles")
-    .select([
-      "user_id",
-      "first_name",
-      "last_name",
-      "phone",
-      "birth_date",
-      "country",
-      "city",
-      "country_code",
-      "region",
-      "postal_code",
-      "preferred_language",
-      "detected_timezone",
-      "registration_latitude",
-      "registration_longitude",
-      "address",
-      "identity_document",
-      "identity_document_url",
-      "photo_url",
-      "verification_selfie_url",
-      "work_permit_url",
-      "vehicle_type",
-      "vehicle_plate",
-      "driver_license",
-      "driver_license_url",
-      "insurance_info",
-      "insurance_url",
-      "bank_account",
-      "availability",
-      "status",
-      "terms_accepted_at",
-    ].join(","))
+    .select("*")
     .eq("user_id", courierUser.id)
     .maybeSingle();
 

@@ -46,6 +46,7 @@ settingsRevision: "rc_ordera_settings_revision",
 const LOCAL_ORDER_CACHE_LIMIT = 250;
 const CLIENT_ORDERS_POLL_MIN_MS = 15_000;
 const CLIENT_ORDERS_POLL_MAX_MS = 120_000;
+const SYNC_INFRASTRUCTURE_BACKOFF_MS = 30_000;
 const MINIMUM_DATABASE_SCHEMA_VERSION = 91;
 
 const LEGACY_STORAGE_KEYS = {
@@ -501,6 +502,9 @@ let centralSyncTimer = null;
 let centralSyncInProgress = false;
 let centralSyncRefreshPending = false;
 let pendingDataSyncRequested = false;
+let pendingDataSyncRetryTimer = null;
+let pendingDataSyncInFlight = null;
+let pendingDataSyncRetryNotBefore = 0;
 let centralRealtimeReconnectTimer = null;
 let clientOrdersRealtimeReconnectTimer = null;
 let clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;
@@ -538,12 +542,43 @@ async function ensureMinimumDatabaseVersion() {
     return cloudState.schemaVersion;
   }
   const { data, error } = await cloudState.client.rpc("get_rc_ordera_schema_version");
-  if (error) {
-    const schemaError = new Error(appUiText("La base de datos necesita la migracion V91 antes de continuar."));
-    schemaError.code = "RC_ORDERA_SCHEMA_OUTDATED";
-    schemaError.cause = error;
-    throw schemaError;
+if (error) {
+  const code = String(error?.code || "");
+  const message = String(error?.message || "");
+  const status = Number(error?.status || 0);
+
+  const isTemporaryCloudError =
+    status === 503 ||
+    code === "PGRST002" ||
+    code === "PGRST003" ||
+    /service unavailable/i.test(message) ||
+    /schema cache/i.test(message) ||
+    /connection pool/i.test(message) ||
+    /timeout/i.test(message) ||
+    /timed out/i.test(message) ||
+    /failed to fetch/i.test(message) ||
+    /network/i.test(message);
+
+  if (isTemporaryCloudError) {
+    const cloudError = new Error(
+      appUiText(
+        "La nube de RC ORDERA no está respondiendo temporalmente. Intenta nuevamente en unos momentos."
+      )
+    );
+
+    cloudError.code = "RC_ORDERA_CLOUD_TEMPORARILY_UNAVAILABLE";
+    cloudError.cause = error;
+    throw cloudError;
   }
+
+  const schemaError = new Error(
+    appUiText("No fue posible verificar la versión de la base de datos.")
+  );
+
+  schemaError.code = "RC_ORDERA_SCHEMA_CHECK_FAILED";
+  schemaError.cause = error;
+  throw schemaError;
+}
   const row = Array.isArray(data) ? data[0] : data;
   const version = Number(row?.schema_version ?? row);
   if (!Number.isFinite(version) || version < MINIMUM_DATABASE_SCHEMA_VERSION) {
@@ -974,6 +1009,21 @@ function withCloudTimeout(promise, message = "La nube no respondio a tiempo.", t
   });
 }
 
+function isTemporarySyncInfrastructureError(error) {
+  const status = Number(error?.status ?? error?.statusCode ?? error?.cause?.status);
+  const code = String(error?.code || error?.cause?.code || "").toUpperCase();
+  const details = [
+    error?.message,
+    error?.details,
+    error?.hint,
+    error?.cause?.message,
+  ].filter(Boolean).join(" ");
+  return status === 503
+    || code === "PGRST002"
+    || code === "PGRST003"
+    || /\b503\b|schema cache|connection pool|timed?\s*out|timeout|failed to fetch|network error|network request failed/i.test(details);
+}
+
 function needsCloudSync(order) {
   return Boolean(order?.saved && order.syncStatus === "pending");
 }
@@ -1006,6 +1056,14 @@ function clearDeletedOrderId(orderId) {
 
 function pendingDeletedOrdersCount() {
   return readDeletedOrderIds().length;
+}
+
+function hasPendingDataToSync() {
+  return hasPendingSettings()
+    || hasPendingMenu()
+    || pendingTicketCounter() > 0
+    || pendingDeletedOrdersCount() > 0
+    || savedOrders.some(needsCloudSync);
 }
 
 function hasPendingSettings() {
@@ -1371,14 +1429,23 @@ function queueTicketCounter(value) {
   }
 }
 
-function clearPendingTicketCounter() {
+function clearPendingTicketCounter(expectedValue = null) {
+  if (expectedValue && pendingTicketCounter() !== expectedValue) return false;
   localStorage.removeItem(STORAGE_KEYS.ticketCounterPending);
+  return true;
 }
 
 function setOrderSyncStatus(orderId, status) {
   savedOrders = savedOrders.map((order) => (order.id === orderId ? { ...order, syncStatus: status } : order));
   if (currentOrder.id === orderId) currentOrder.syncStatus = status;
   saveCurrentOrderDraft();
+}
+
+function confirmOrderSyncedIfUnchanged(orderId, expectedUpdatedAt) {
+  const currentSavedOrder = savedOrders.find((order) => order.id === orderId);
+  if (!currentSavedOrder || currentSavedOrder.updatedAt !== expectedUpdatedAt) return false;
+  setOrderSyncStatus(orderId, "synced");
+  return true;
 }
 
 function mergeOrders(cloudOrders, localOrders) {
@@ -2073,7 +2140,20 @@ async function loadCloudData() {
   );
 
   try {
-    await withCloudTimeout(ensureMinimumDatabaseVersion());
+    try {
+  await withCloudTimeout(ensureMinimumDatabaseVersion());
+} catch (error) {
+  if (
+    error?.code === "RC_ORDERA_SCHEMA_OUTDATED"
+  ) {
+    throw error;
+  }
+
+  console.warn(
+    "No fue posible verificar temporalmente la version de la base de datos. Se intentara cargar el menu y los datos disponibles.",
+    error
+  );
+}
     const settingsRequest = cloudState.client
       .from("app_settings")
       .select("menu, settings, menu_revision, settings_revision, menu_updated_at, settings_updated_at")
@@ -2094,7 +2174,7 @@ async function loadCloudData() {
       .maybeSingle();
     const ordersRequest = cloudState.client
       .from("orders")
-      .select("order_json")
+      .select("order_json, revision")
       .eq("user_id", cloudState.user.id)
       .order("created_at", { ascending: false })
       .limit(LOCAL_ORDER_CACHE_LIMIT);
@@ -2110,9 +2190,43 @@ async function loadCloudData() {
     const { data: publicProfileRow, error: publicProfileError } = profileResponse;
     const { data: ownerRole, error: ownerRoleError } = ownerRoleResponse;
     const { data: cloudOrders, error: ordersError } = ordersResponse;
+    const temporaryLoadSyncError = [settingsError, ordersError]
+      .find((error) => error && isTemporarySyncInfrastructureError(error));
+    if (temporaryLoadSyncError) {
+      pendingDataSyncRetryNotBefore = Date.now() + SYNC_INFRASTRUCTURE_BACKOFF_MS;
+    }
 
-    if (settingsError) throw settingsError;
-    if (ordersError) throw ordersError;
+  if (settingsError) {
+  console.warn(
+    "No fue posible cargar app_settings desde la nube. Se intentara conservar el ultimo menu valido disponible.",
+    settingsError
+  );
+
+  const confirmedMenu =
+    readConfirmedCloudMenu();
+
+  if (
+    menuProductCount(menuCatalog) === 0 &&
+    confirmedMenu &&
+    menuProductCount(confirmedMenu) > 0
+  ) {
+    menuCatalog = confirmedMenu;
+
+    saveMenuCache({
+      immediate: true,
+    });
+  }
+
+  renderCategories();
+  renderMenu();
+}
+
+if (ordersError) {
+  console.warn(
+    "No fue posible cargar los pedidos desde la nube. El menu continuara cargando.",
+    ordersError
+  );
+}
 
   const restaurantProfile =
   restaurantProfileFromUserMetadata();
@@ -2136,6 +2250,9 @@ const accountType = normalizeTextSetting(
 ).toLowerCase();
 
 if (
+  !publicProfileError &&
+  !ownerRoleError &&
+  !settingsRow &&
   !publicProfileRow &&
   !ownerRole &&
   accountType !== "restaurant"
@@ -2187,6 +2304,11 @@ if (
   );
 }
 
+let localMenuPending =
+  hasPendingMenu();
+
+if (!settingsError) {
+
 const remoteMenu =
   normalizeMenuCatalog(
     settingsRow?.menu ||
@@ -2207,9 +2329,6 @@ if (
 ) {
   markMenuPending();
 }
-
-let localMenuPending =
-  hasPendingMenu();
 
 const confirmedMenuBeforeLoad =
   readConfirmedCloudMenu();
@@ -2291,7 +2410,8 @@ if (
     settingsRow.menu_revision
   );
 }
-
+renderCategories();
+renderMenu();
 if (
   settingsRow?.settings_revision !==
     undefined &&
@@ -2315,6 +2435,7 @@ if (
     settingsRow.settings || {}
   );
 }
+}
 
 /*
  * Si existen ajustes locales pendientes,
@@ -2326,7 +2447,7 @@ if (!localSettingsPending) {
     restaurantProfile,
     {
       onlyIfEmpty:
-        Boolean(settingsRow),
+        Boolean(!settingsError && settingsRow),
     }
   );
 
@@ -2338,6 +2459,7 @@ if (!localSettingsPending) {
   );
 }
 
+if (!settingsError) {
 if (
   !settingsRow ||
   localSettingsPending
@@ -2372,19 +2494,34 @@ if (
     );
   }
 }
+}
+
+if (!ordersError) {
     const normalizedCloudOrders = (cloudOrders || [])
       .map((row) => ({
-        ...row.order_json,
-        type: normalizeOrderType(row.order_json?.type),
-        businessDate: orderBusinessDate(row.order_json),
-        syncStatus: "synced",
-      }))
+  ...row.order_json,
+  type: normalizeOrderType(row.order_json?.type),
+  businessDate: orderBusinessDate(row.order_json),
+  _syncRevision: Number.parseInt(row.revision, 10) || null,
+  syncStatus: "synced",
+}))
       .filter((order) => !localDeletedOrderIds.includes(order.id));
     savedOrders = mergeOrders(normalizedCloudOrders, localPendingOrders);
     saveOrders();
+}
 
-    await refreshRestaurantBusinessContext({ force: true });
-    todayKey = restaurantBusinessContext?.businessDate || currentBusinessDate();
+    try {
+  await refreshRestaurantBusinessContext({ force: true });
+} catch (error) {
+  console.warn(
+    "No fue posible actualizar el contexto del restaurante. Se conservara la fecha local y el menu ya cargado.",
+    error
+  );
+}
+
+todayKey =
+  restaurantBusinessContext?.businessDate ||
+  currentBusinessDate();
     const { data: counterRow, error: counterError } = await cloudState.client
       .from("ticket_counters")
       .select("next_ticket")
@@ -2392,8 +2529,18 @@ if (
       .eq("business_date", todayKey)
       .maybeSingle();
 
-    if (counterError) throw counterError;
-    nextTicket = pendingTicketCounter() || counterRow?.next_ticket || 1;
+  if (counterError) {
+  console.warn(
+    "No fue posible cargar el contador de tickets desde la nube. Se conservara el contador local y el menu ya cargado.",
+    counterError
+  );
+}
+
+nextTicket =
+  pendingTicketCounter() ||
+  counterRow?.next_ticket ||
+  nextTicket ||
+  1;
     saveTicketState();
 
     currentOrder = currentOrderHasContent(currentOrderBeforeLoad) ? currentOrderBeforeLoad : createBlankOrder();
@@ -3235,10 +3382,30 @@ async function saveCloudOrder(order) {
     const orderForCloud = structuredCloneOrder(order);
     orderForCloud.syncStatus = "synced";
 
-    const parsedRevision = Number.parseInt(order._syncRevision, 10);
-    const expectedRevision = Number.isFinite(parsedRevision) && parsedRevision > 0
-      ? parsedRevision
-      : null;
+    let parsedRevision = Number.parseInt(order._syncRevision, 10);
+
+if (!Number.isFinite(parsedRevision) || parsedRevision < 1) {
+  const { data: existingRow, error: existingRowError } = await cloudState.client
+    .from("orders")
+    .select("revision")
+    .eq("id", order.id)
+    .eq("user_id", cloudState.user.id)
+    .maybeSingle();
+
+  if (existingRowError) throw existingRowError;
+
+  const remoteRevision = Number.parseInt(existingRow?.revision, 10);
+
+  if (Number.isFinite(remoteRevision) && remoteRevision > 0) {
+    parsedRevision = remoteRevision;
+    applyConfirmedRevision(remoteRevision);
+  }
+}
+
+const expectedRevision =
+  Number.isFinite(parsedRevision) && parsedRevision > 0
+    ? parsedRevision
+    : null;
 
     const { data, error } = await cloudState.client.rpc("save_restaurant_order_atomic", {
       p_id: order.id,
@@ -3853,7 +4020,7 @@ centralSyncRefreshPending = false;
   orders
     ? cloudState.client
         .from("orders")
-        .select("order_json")
+        .select("order_json, revision")
         .eq("user_id", cloudState.user.id)
         .order("created_at", {
           ascending: false,
@@ -4038,7 +4205,9 @@ if (
   saveOrders({
     immediate: true
   });
-}if (settings || profile) {
+}
+    
+    if (settings || profile) {
   renderCurrencySettings();
   renderRestaurantStatus();
   updateRestaurantStatusSync();
@@ -4199,9 +4368,8 @@ function startCentralRealtime() {
     centralSyncStatus = status;
 
     if (status === "SUBSCRIBED") {
-      scheduleCentralRefresh();
-      return;
-    }
+  return;
+}
 
     if (
   status === "CHANNEL_ERROR" ||
@@ -5509,37 +5677,63 @@ async function openClientOrdersDialog() {
   }
 }
 
-async function syncPendingData(options = {}) {
-  const { silent = false, allowWhileLoading = false } = options;
- if (!cloudState.client || !cloudState.user || !navigator.onLine) {
-  updateCloudStatus();
-  return false;
+function syncPendingData(options = {}) {
+  const { allowWhileLoading = false } = options;
+  if (!cloudState.client || !cloudState.user || !navigator.onLine) {
+    updateCloudStatus();
+    return Promise.resolve(false);
+  }
+
+  if (pendingDataSyncInFlight) {
+    pendingDataSyncRequested = true;
+    return pendingDataSyncInFlight;
+  }
+
+  if (cloudState.syncing) {
+    pendingDataSyncRequested = true;
+    return Promise.resolve(false);
+  }
+
+  if (cloudState.loading && !allowWhileLoading) {
+    pendingDataSyncRequested = true;
+    return Promise.resolve(false);
+  }
+
+  const retryDelay = pendingDataSyncRetryNotBefore - Date.now();
+  if (retryDelay > 0) {
+    pendingDataSyncRequested = true;
+    schedulePendingDataSyncRetry(retryDelay);
+    return Promise.resolve(false);
+  }
+
+  const operation = runPendingDataSync(options);
+  pendingDataSyncInFlight = operation;
+  operation.finally(() => {
+    if (pendingDataSyncInFlight === operation) pendingDataSyncInFlight = null;
+  });
+  return operation;
 }
 
-if (cloudState.syncing) {
-  pendingDataSyncRequested = true;
-  return false;
+function schedulePendingDataSyncRetry(delayMs = 5000) {
+  if (pendingDataSyncRetryTimer !== null) return;
+  pendingDataSyncRetryTimer = window.setTimeout(() => {
+    pendingDataSyncRetryTimer = null;
+    syncPendingData({ silent: true }).catch((error) => {
+      console.error("No fue posible completar la sincronizacion pendiente.", error);
+    });
+  }, Math.max(0, delayMs));
 }
 
-if (cloudState.loading && !allowWhileLoading) {
-  pendingDataSyncRequested = true;
-  return false;
-}
-
-pendingDataSyncRequested = false;
+async function runPendingDataSync(options = {}) {
+  const { silent = false } = options;
+  pendingDataSyncRequested = false;
 
   const pendingDeletedOrderIds = readDeletedOrderIds();
   const pendingOrders = savedOrders.filter((order) => needsCloudSync(order) && !pendingDeletedOrderIds.includes(order.id));
-  const settingsPendingToken =
-  currentSettingsPendingToken();
-
-const shouldSyncSettings =
-  Boolean(settingsPendingToken);
-  const menuPendingToken =
-  currentMenuPendingToken();
-
-const shouldSyncMenu =
-  Boolean(menuPendingToken);
+  const settingsPendingToken = currentSettingsPendingToken();
+  const shouldSyncSettings = Boolean(settingsPendingToken);
+  const menuPendingToken = currentMenuPendingToken();
+  const shouldSyncMenu = Boolean(menuPendingToken);
   const shouldSyncTicketCounter = pendingTicketCounter();
   if (!pendingOrders.length && !pendingDeletedOrderIds.length && !shouldSyncSettings && !shouldSyncMenu && !shouldSyncTicketCounter) {
     updateCloudStatus();
@@ -5551,22 +5745,16 @@ const shouldSyncMenu =
 
   try {
     if (shouldSyncSettings) {
-  await saveCloudSettings();
-
-  clearSettingsPending(
-    settingsPendingToken
-  );
-}
+      await saveCloudSettings();
+      clearSettingsPending(settingsPendingToken);
+    }
     if (shouldSyncMenu) {
-  await saveCloudMenu();
-
-  clearMenuPending(
-    menuPendingToken
-  );
-}
+      await saveCloudMenu();
+      clearMenuPending(menuPendingToken);
+    }
     if (shouldSyncTicketCounter) {
       await setCloudNextTicket(shouldSyncTicketCounter);
-      clearPendingTicketCounter();
+      clearPendingTicketCounter(shouldSyncTicketCounter);
     }
 
     for (const orderId of pendingDeletedOrderIds) {
@@ -5583,10 +5771,20 @@ const shouldSyncMenu =
       }
     }
 
+    let pendingOrderSyncError = null;
     for (const order of pendingOrders) {
-      await saveCloudOrder(order);
-      setOrderSyncStatus(order.id, "synced");
+      try {
+        const expectedUpdatedAt = order.updatedAt;
+        await saveCloudOrder(order);
+        confirmOrderSyncedIfUnchanged(order.id, expectedUpdatedAt);
+      } catch (error) {
+        console.error(`No fue posible sincronizar el pedido ${order.id}.`, error);
+        if (!pendingOrderSyncError) pendingOrderSyncError = error;
+        if (isTemporarySyncInfrastructureError(error)) break;
+      }
     }
+
+    if (pendingOrderSyncError) throw pendingOrderSyncError;
 
     const highestLocalTicketToday = savedOrders
       .filter((order) => orderBusinessDate(order) === todayKey)
@@ -5597,40 +5795,36 @@ const shouldSyncMenu =
     saveTicketState();
     saveOrders({ immediate: true });
     cloudState.lastError = "";
+    pendingDataSyncRetryNotBefore = 0;
     renderOrder();
     renderHistory();
     updateCloudStatus();
     return true;
   } catch (error) {
     console.error(error);
+    if (isTemporarySyncInfrastructureError(error)) {
+      pendingDataSyncRetryNotBefore = Date.now() + SYNC_INFRASTRUCTURE_BACKOFF_MS;
+      pendingDataSyncRequested = true;
+    }
     saveOrders({ immediate: true });
     setCloudError(error);
     return false;
   } finally {
-  cloudState.syncing = false;
-
-  if (
-    pendingDataSyncRequested &&
-    cloudState.client &&
-    cloudState.user &&
-    navigator.onLine
-  ) {
-    pendingDataSyncRequested = false;
-
-    queueMicrotask(() => {
-      syncPendingData({
-        silent: true,
-      }).catch((error) => {
-        console.error(
-          "No fue posible completar la sincronizacion pendiente.",
-          error
-        );
-      });
-    });
+    cloudState.syncing = false;
+    if (
+      pendingDataSyncRequested &&
+      hasPendingDataToSync() &&
+      cloudState.client &&
+      cloudState.user &&
+      navigator.onLine
+    ) {
+      pendingDataSyncRequested = false;
+      schedulePendingDataSyncRetry(
+        Math.max(5000, pendingDataSyncRetryNotBefore - Date.now())
+      );
+    }
   }
 }
-}
-
 async function signInWithEmail() {
   const email = elements.authEmail.value.trim();
   const password = elements.authPassword.value;
