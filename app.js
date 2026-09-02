@@ -46,6 +46,7 @@ settingsRevision: "rc_ordera_settings_revision",
 const LOCAL_ORDER_CACHE_LIMIT = 250;
 const CLIENT_ORDERS_POLL_MIN_MS = 15_000;
 const CLIENT_ORDERS_POLL_MAX_MS = 120_000;
+const SYNC_INFRASTRUCTURE_BACKOFF_MS = 30_000;
 const MINIMUM_DATABASE_SCHEMA_VERSION = 91;
 
 const LEGACY_STORAGE_KEYS = {
@@ -502,6 +503,8 @@ let centralSyncInProgress = false;
 let centralSyncRefreshPending = false;
 let pendingDataSyncRequested = false;
 let pendingDataSyncRetryTimer = null;
+let pendingDataSyncInFlight = null;
+let pendingDataSyncRetryNotBefore = 0;
 let centralRealtimeReconnectTimer = null;
 let clientOrdersRealtimeReconnectTimer = null;
 let clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;
@@ -1006,6 +1009,21 @@ function withCloudTimeout(promise, message = "La nube no respondio a tiempo.", t
   });
 }
 
+function isTemporarySyncInfrastructureError(error) {
+  const status = Number(error?.status ?? error?.statusCode ?? error?.cause?.status);
+  const code = String(error?.code || error?.cause?.code || "").toUpperCase();
+  const details = [
+    error?.message,
+    error?.details,
+    error?.hint,
+    error?.cause?.message,
+  ].filter(Boolean).join(" ");
+  return status === 503
+    || code === "PGRST002"
+    || code === "PGRST003"
+    || /\b503\b|schema cache|connection pool|timed?\s*out|timeout|failed to fetch|network error|network request failed/i.test(details);
+}
+
 function needsCloudSync(order) {
   return Boolean(order?.saved && order.syncStatus === "pending");
 }
@@ -1038,6 +1056,14 @@ function clearDeletedOrderId(orderId) {
 
 function pendingDeletedOrdersCount() {
   return readDeletedOrderIds().length;
+}
+
+function hasPendingDataToSync() {
+  return hasPendingSettings()
+    || hasPendingMenu()
+    || pendingTicketCounter() > 0
+    || pendingDeletedOrdersCount() > 0
+    || savedOrders.some(needsCloudSync);
 }
 
 function hasPendingSettings() {
@@ -1403,14 +1429,23 @@ function queueTicketCounter(value) {
   }
 }
 
-function clearPendingTicketCounter() {
+function clearPendingTicketCounter(expectedValue = null) {
+  if (expectedValue && pendingTicketCounter() !== expectedValue) return false;
   localStorage.removeItem(STORAGE_KEYS.ticketCounterPending);
+  return true;
 }
 
 function setOrderSyncStatus(orderId, status) {
   savedOrders = savedOrders.map((order) => (order.id === orderId ? { ...order, syncStatus: status } : order));
   if (currentOrder.id === orderId) currentOrder.syncStatus = status;
   saveCurrentOrderDraft();
+}
+
+function confirmOrderSyncedIfUnchanged(orderId, expectedUpdatedAt) {
+  const currentSavedOrder = savedOrders.find((order) => order.id === orderId);
+  if (!currentSavedOrder || currentSavedOrder.updatedAt !== expectedUpdatedAt) return false;
+  setOrderSyncStatus(orderId, "synced");
+  return true;
 }
 
 function mergeOrders(cloudOrders, localOrders) {
@@ -2106,9 +2141,7 @@ async function loadCloudData() {
 
   try {
     try {
-  await withCloudTimeout(
-    ensureMinimumDatabaseVersion()
-  );
+  await withCloudTimeout(ensureMinimumDatabaseVersion());
 } catch (error) {
   if (
     error?.code === "RC_ORDERA_SCHEMA_OUTDATED"
@@ -2157,6 +2190,11 @@ async function loadCloudData() {
     const { data: publicProfileRow, error: publicProfileError } = profileResponse;
     const { data: ownerRole, error: ownerRoleError } = ownerRoleResponse;
     const { data: cloudOrders, error: ordersError } = ordersResponse;
+    const temporaryLoadSyncError = [settingsError, ordersError]
+      .find((error) => error && isTemporarySyncInfrastructureError(error));
+    if (temporaryLoadSyncError) {
+      pendingDataSyncRetryNotBefore = Date.now() + SYNC_INFRASTRUCTURE_BACKOFF_MS;
+    }
 
   if (settingsError) {
   console.warn(
@@ -2266,6 +2304,11 @@ if (
   );
 }
 
+let localMenuPending =
+  hasPendingMenu();
+
+if (!settingsError) {
+
 const remoteMenu =
   normalizeMenuCatalog(
     settingsRow?.menu ||
@@ -2286,9 +2329,6 @@ if (
 ) {
   markMenuPending();
 }
-
-let localMenuPending =
-  hasPendingMenu();
 
 const confirmedMenuBeforeLoad =
   readConfirmedCloudMenu();
@@ -2395,6 +2435,7 @@ if (
     settingsRow.settings || {}
   );
 }
+}
 
 /*
  * Si existen ajustes locales pendientes,
@@ -2406,7 +2447,7 @@ if (!localSettingsPending) {
     restaurantProfile,
     {
       onlyIfEmpty:
-        Boolean(settingsRow),
+        Boolean(!settingsError && settingsRow),
     }
   );
 
@@ -2418,6 +2459,7 @@ if (!localSettingsPending) {
   );
 }
 
+if (!settingsError) {
 if (
   !settingsRow ||
   localSettingsPending
@@ -2452,6 +2494,9 @@ if (
     );
   }
 }
+}
+
+if (!ordersError) {
     const normalizedCloudOrders = (cloudOrders || [])
       .map((row) => ({
   ...row.order_json,
@@ -2463,6 +2508,7 @@ if (
       .filter((order) => !localDeletedOrderIds.includes(order.id));
     savedOrders = mergeOrders(normalizedCloudOrders, localPendingOrders);
     saveOrders();
+}
 
     try {
   await refreshRestaurantBusinessContext({ force: true });
@@ -5631,37 +5677,63 @@ async function openClientOrdersDialog() {
   }
 }
 
-async function syncPendingData(options = {}) {
-  const { silent = false, allowWhileLoading = false } = options;
- if (!cloudState.client || !cloudState.user || !navigator.onLine) {
-  updateCloudStatus();
-  return false;
+function syncPendingData(options = {}) {
+  const { allowWhileLoading = false } = options;
+  if (!cloudState.client || !cloudState.user || !navigator.onLine) {
+    updateCloudStatus();
+    return Promise.resolve(false);
+  }
+
+  if (pendingDataSyncInFlight) {
+    pendingDataSyncRequested = true;
+    return pendingDataSyncInFlight;
+  }
+
+  if (cloudState.syncing) {
+    pendingDataSyncRequested = true;
+    return Promise.resolve(false);
+  }
+
+  if (cloudState.loading && !allowWhileLoading) {
+    pendingDataSyncRequested = true;
+    return Promise.resolve(false);
+  }
+
+  const retryDelay = pendingDataSyncRetryNotBefore - Date.now();
+  if (retryDelay > 0) {
+    pendingDataSyncRequested = true;
+    schedulePendingDataSyncRetry(retryDelay);
+    return Promise.resolve(false);
+  }
+
+  const operation = runPendingDataSync(options);
+  pendingDataSyncInFlight = operation;
+  operation.finally(() => {
+    if (pendingDataSyncInFlight === operation) pendingDataSyncInFlight = null;
+  });
+  return operation;
 }
 
-if (cloudState.syncing) {
-  pendingDataSyncRequested = true;
-  return false;
+function schedulePendingDataSyncRetry(delayMs = 5000) {
+  if (pendingDataSyncRetryTimer !== null) return;
+  pendingDataSyncRetryTimer = window.setTimeout(() => {
+    pendingDataSyncRetryTimer = null;
+    syncPendingData({ silent: true }).catch((error) => {
+      console.error("No fue posible completar la sincronizacion pendiente.", error);
+    });
+  }, Math.max(0, delayMs));
 }
 
-if (cloudState.loading && !allowWhileLoading) {
-  pendingDataSyncRequested = true;
-  return false;
-}
-
-pendingDataSyncRequested = false;
+async function runPendingDataSync(options = {}) {
+  const { silent = false } = options;
+  pendingDataSyncRequested = false;
 
   const pendingDeletedOrderIds = readDeletedOrderIds();
   const pendingOrders = savedOrders.filter((order) => needsCloudSync(order) && !pendingDeletedOrderIds.includes(order.id));
-  const settingsPendingToken =
-  currentSettingsPendingToken();
-
-const shouldSyncSettings =
-  Boolean(settingsPendingToken);
-  const menuPendingToken =
-  currentMenuPendingToken();
-
-const shouldSyncMenu =
-  Boolean(menuPendingToken);
+  const settingsPendingToken = currentSettingsPendingToken();
+  const shouldSyncSettings = Boolean(settingsPendingToken);
+  const menuPendingToken = currentMenuPendingToken();
+  const shouldSyncMenu = Boolean(menuPendingToken);
   const shouldSyncTicketCounter = pendingTicketCounter();
   if (!pendingOrders.length && !pendingDeletedOrderIds.length && !shouldSyncSettings && !shouldSyncMenu && !shouldSyncTicketCounter) {
     updateCloudStatus();
@@ -5673,22 +5745,16 @@ const shouldSyncMenu =
 
   try {
     if (shouldSyncSettings) {
-  await saveCloudSettings();
-
-  clearSettingsPending(
-    settingsPendingToken
-  );
-}
+      await saveCloudSettings();
+      clearSettingsPending(settingsPendingToken);
+    }
     if (shouldSyncMenu) {
-  await saveCloudMenu();
-
-  clearMenuPending(
-    menuPendingToken
-  );
-}
+      await saveCloudMenu();
+      clearMenuPending(menuPendingToken);
+    }
     if (shouldSyncTicketCounter) {
       await setCloudNextTicket(shouldSyncTicketCounter);
-      clearPendingTicketCounter();
+      clearPendingTicketCounter(shouldSyncTicketCounter);
     }
 
     for (const orderId of pendingDeletedOrderIds) {
@@ -5706,26 +5772,19 @@ const shouldSyncMenu =
     }
 
     let pendingOrderSyncError = null;
-
-for (const order of pendingOrders) {
-  try {
-    await saveCloudOrder(order);
-    setOrderSyncStatus(order.id, "synced");
-  } catch (error) {
-    console.error(
-      `No fue posible sincronizar el pedido ${order.id}.`,
-      error
-    );
-
-    if (!pendingOrderSyncError) {
-      pendingOrderSyncError = error;
+    for (const order of pendingOrders) {
+      try {
+        const expectedUpdatedAt = order.updatedAt;
+        await saveCloudOrder(order);
+        confirmOrderSyncedIfUnchanged(order.id, expectedUpdatedAt);
+      } catch (error) {
+        console.error(`No fue posible sincronizar el pedido ${order.id}.`, error);
+        if (!pendingOrderSyncError) pendingOrderSyncError = error;
+        if (isTemporarySyncInfrastructureError(error)) break;
+      }
     }
-  }
-}
 
-if (pendingOrderSyncError) {
-  throw pendingOrderSyncError;
-}
+    if (pendingOrderSyncError) throw pendingOrderSyncError;
 
     const highestLocalTicketToday = savedOrders
       .filter((order) => orderBusinessDate(order) === todayKey)
@@ -5736,41 +5795,34 @@ if (pendingOrderSyncError) {
     saveTicketState();
     saveOrders({ immediate: true });
     cloudState.lastError = "";
+    pendingDataSyncRetryNotBefore = 0;
     renderOrder();
     renderHistory();
     updateCloudStatus();
     return true;
   } catch (error) {
     console.error(error);
+    if (isTemporarySyncInfrastructureError(error)) {
+      pendingDataSyncRetryNotBefore = Date.now() + SYNC_INFRASTRUCTURE_BACKOFF_MS;
+      pendingDataSyncRequested = true;
+    }
     saveOrders({ immediate: true });
     setCloudError(error);
     return false;
   } finally {
-  cloudState.syncing = false;
-
- if (
-  pendingDataSyncRequested &&
-  cloudState.client &&
-  cloudState.user &&
-  navigator.onLine
-) {
-  pendingDataSyncRequested = false;
-
-  if (pendingDataSyncRetryTimer === null) {
-    pendingDataSyncRetryTimer = window.setTimeout(() => {
-      pendingDataSyncRetryTimer = null;
-
-      syncPendingData({
-        silent: true,
-      }).catch((error) => {
-        console.error(
-          "No fue posible completar la sincronizacion pendiente.",
-          error
-        );
-      });
-    }, 5000);
-  }
-}
+    cloudState.syncing = false;
+    if (
+      pendingDataSyncRequested &&
+      hasPendingDataToSync() &&
+      cloudState.client &&
+      cloudState.user &&
+      navigator.onLine
+    ) {
+      pendingDataSyncRequested = false;
+      schedulePendingDataSyncRetry(
+        Math.max(5000, pendingDataSyncRetryNotBefore - Date.now())
+      );
+    }
   }
 }
 async function signInWithEmail() {
