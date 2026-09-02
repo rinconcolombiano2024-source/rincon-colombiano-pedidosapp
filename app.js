@@ -5744,7 +5744,19 @@ async function runPendingDataSync(options = {}) {
   if (!silent) updateCloudStatus("Sincronizando...");
 
   try {
-   
+    if (shouldSyncSettings) {
+      await saveCloudSettings();
+      clearSettingsPending(settingsPendingToken);
+    }
+    if (shouldSyncMenu) {
+      await saveCloudMenu();
+      clearMenuPending(menuPendingToken);
+    }
+    if (shouldSyncTicketCounter) {
+      await setCloudNextTicket(shouldSyncTicketCounter);
+      clearPendingTicketCounter(shouldSyncTicketCounter);
+    }
+
     for (const orderId of pendingDeletedOrderIds) {
       try {
         await voidCloudOrder(orderId);
@@ -5774,20 +5786,6 @@ async function runPendingDataSync(options = {}) {
 
     if (pendingOrderSyncError) throw pendingOrderSyncError;
 
-if (shouldSyncTicketCounter) {
-  await setCloudNextTicket(shouldSyncTicketCounter);
-  clearPendingTicketCounter(shouldSyncTicketCounter);
-}
-
-if (shouldSyncSettings) {
-  await saveCloudSettings();
-  clearSettingsPending(settingsPendingToken);
-}
-
-if (shouldSyncMenu) {
-  await saveCloudMenu();
-  clearMenuPending(menuPendingToken);
-}
     const highestLocalTicketToday = savedOrders
       .filter((order) => orderBusinessDate(order) === todayKey)
       .reduce((highest, order) => Math.max(highest, Number(order.ticketNumber) || 0), 0);
