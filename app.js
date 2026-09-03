@@ -46,6 +46,8 @@ settingsRevision: "rc_ordera_settings_revision",
 const LOCAL_ORDER_CACHE_LIMIT = 250;
 const CLIENT_ORDERS_POLL_MIN_MS = 15_000;
 const CLIENT_ORDERS_POLL_MAX_MS = 120_000;
+const CLIENT_ORDERS_REALTIME_RECONNECT_MIN_MS = 1_500;
+const CLIENT_ORDERS_REALTIME_RECONNECT_MAX_MS = 60_000;
 const CENTRAL_REALTIME_RECONNECT_MIN_MS = 1_500;
 const CENTRAL_REALTIME_RECONNECT_MAX_MS = 60_000;
 const SYNC_INFRASTRUCTURE_BACKOFF_MS = 30_000;
@@ -510,6 +512,8 @@ let pendingDataSyncRetryNotBefore = 0;
 let centralRealtimeReconnectTimer = null;
 let centralRealtimeReconnectDelay = CENTRAL_REALTIME_RECONNECT_MIN_MS;
 let clientOrdersRealtimeReconnectTimer = null;
+let clientOrdersRealtimeReconnectDelay =
+  CLIENT_ORDERS_REALTIME_RECONNECT_MIN_MS;
 let clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;
 let clientOrdersRefreshInFlight = null;
 let clientOrdersRefreshPending = false;
@@ -4418,23 +4422,33 @@ function scheduleClientOrdersRealtimeReconnect() {
     return;
   }
 
-  clientOrdersRealtimeReconnectTimer = setTimeout(() => {
-    clientOrdersRealtimeReconnectTimer = null;
+  const retryDelay =
+    clientOrdersRealtimeReconnectDelay;
 
-    if (
-      !navigator.onLine ||
-      !cloudState.client ||
-      !cloudState.user
-    ) {
-      return;
-    }
+   clientOrdersRealtimeReconnectTimer =
+    setTimeout(() => {
+      clientOrdersRealtimeReconnectTimer = null;
 
-    console.info(
-      "Reconectando Realtime de pedidos..."
-    );
+      if (
+        !navigator.onLine ||
+        !cloudState.client ||
+        !cloudState.user
+      ) {
+        return;
+      }
 
-    startClientOrdersRealtime();
-  }, 1500);
+      console.info(
+        "Reconectando Realtime de pedidos..."
+      );
+
+      clientOrdersRealtimeReconnectDelay =
+        Math.min(
+          retryDelay * 2,
+          CLIENT_ORDERS_REALTIME_RECONNECT_MAX_MS
+        );
+
+      startClientOrdersRealtime();
+    }, retryDelay);
 }
 function startClientOrdersRealtime() {
   stopClientOrdersRealtime();
@@ -4476,8 +4490,18 @@ function startClientOrdersRealtime() {
       const previousStatus = clientOrdersRealtimeStatus;
       clientOrdersRealtimeStatus = status;
       if (status === "SUBSCRIBED") {
-        stopClientOrdersPolling();
-        clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;
+  if (clientOrdersRealtimeReconnectTimer) {
+    clearTimeout(
+      clientOrdersRealtimeReconnectTimer
+    );
+    clientOrdersRealtimeReconnectTimer = null;
+  }
+
+  clientOrdersRealtimeReconnectDelay =
+    CLIENT_ORDERS_REALTIME_RECONNECT_MIN_MS;
+
+  stopClientOrdersPolling();
+  clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;
         if (previousStatus !== "SUBSCRIBED") {
           refreshClientOrders({ silent: true }).catch((error) => {
             console.error("No fue posible resincronizar los pedidos al reconectar Realtime.", error);
