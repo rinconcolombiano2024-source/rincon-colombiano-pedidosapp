@@ -134,6 +134,30 @@ check(
     && pendingSyncBlock.includes("SYNC_INFRASTRUCTURE_BACKOFF_MS"),
   "error general 503 corta la ronda y aplica backoff"
 );
+const centralRealtimeReconnectStart = app.indexOf("function scheduleCentralRealtimeReconnect()");
+const centralRealtimeStart = app.indexOf("function startCentralRealtime()", centralRealtimeReconnectStart);
+const clientRealtimeReconnectStart = app.indexOf("function scheduleClientOrdersRealtimeReconnect()", centralRealtimeStart);
+const centralRealtimeReconnectBlock = centralRealtimeReconnectStart >= 0 && centralRealtimeStart > centralRealtimeReconnectStart
+  ? app.slice(centralRealtimeReconnectStart, centralRealtimeStart)
+  : "";
+const centralRealtimeSubscribeBlock = centralRealtimeStart >= 0 && clientRealtimeReconnectStart > centralRealtimeStart
+  ? app.slice(centralRealtimeStart, clientRealtimeReconnectStart)
+  : "";
+check(
+  app.includes("const CENTRAL_REALTIME_RECONNECT_MIN_MS = 1_500;")
+    && app.includes("const CENTRAL_REALTIME_RECONNECT_MAX_MS = 60_000;")
+    && centralRealtimeReconnectBlock.includes("const retryDelay = centralRealtimeReconnectDelay;")
+    && centralRealtimeReconnectBlock.includes("retryDelay * 2")
+    && centralRealtimeReconnectBlock.includes("CENTRAL_REALTIME_RECONNECT_MAX_MS")
+    && centralRealtimeReconnectBlock.includes("}, retryDelay);")
+    && !centralRealtimeReconnectBlock.includes("}, 1500);"),
+  "Realtime central aplica backoff exponencial"
+);
+check(
+  centralRealtimeSubscribeBlock.includes("centralRealtimeReconnectDelay = CENTRAL_REALTIME_RECONNECT_MIN_MS;")
+    && /if \(status === "SUBSCRIBED"\)[\s\S]*?scheduleCentralRefresh\(\{[\s\S]*?settings: true,[\s\S]*?profile: true,[\s\S]*?orders: true,/s.test(centralRealtimeSubscribeBlock),
+  "Realtime central recupera datos y reinicia backoff al reconectar"
+);
 check(
   pendingOrderLoop.includes("if (!pendingOrderSyncError) pendingOrderSyncError = error;")
     && pendingOrderLoop.includes("if (isTemporarySyncInfrastructureError(error)) break;"),
