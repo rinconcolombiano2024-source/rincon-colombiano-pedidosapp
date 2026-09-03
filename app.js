@@ -619,6 +619,7 @@ async function refreshRestaurantBusinessContext(options = {}) {
   };
   todayKey = restaurantBusinessContext.businessDate;
   if (previousDate !== todayKey) {
+    clearPendingTicketCounter();
     nextTicket = 1;
     if (!currentOrder.saved) {
       currentOrder.ticketNumber = null;
@@ -716,6 +717,7 @@ function currentBusinessDate(date = null) {
 function initializeDailyTicket() {
   const storedDate = localStorage.getItem(STORAGE_KEYS.ticketDate);
   if (storedDate !== todayKey) {
+    localStorage.removeItem(STORAGE_KEYS.ticketCounterPending);
     localStorage.setItem(STORAGE_KEYS.ticketDate, todayKey);
     localStorage.setItem(STORAGE_KEYS.nextTicket, "1");
     return 1;
@@ -730,9 +732,14 @@ function saveTicketState() {
 }
 
 function rollOverDayIfNeeded() {
-  const latestDate = restaurantBusinessContext?.businessDate || currentBusinessDate();
+  const contextIsFresh = restaurantBusinessContext?.loadedAt
+    && Date.now() - restaurantBusinessContext.loadedAt < 60_000;
+  const latestDate = contextIsFresh
+    ? restaurantBusinessContext.businessDate
+    : currentBusinessDate(new Date());
   if (latestDate === todayKey) return false;
 
+  clearPendingTicketCounter();
   todayKey = latestDate;
   nextTicket = 1;
   saveTicketState();
