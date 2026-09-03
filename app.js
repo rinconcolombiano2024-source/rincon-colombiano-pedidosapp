@@ -508,8 +508,7 @@ let pendingDataSyncRetryTimer = null;
 let pendingDataSyncInFlight = null;
 let pendingDataSyncRetryNotBefore = 0;
 let centralRealtimeReconnectTimer = null;
-let centralRealtimeReconnectDelay =
-  CENTRAL_REALTIME_RECONNECT_MIN_MS;
+let centralRealtimeReconnectDelay = CENTRAL_REALTIME_RECONNECT_MIN_MS;
 let clientOrdersRealtimeReconnectTimer = null;
 let clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;
 let clientOrdersRefreshInFlight = null;
@@ -4257,7 +4256,7 @@ function scheduleCentralRealtimeReconnect() {
 
   const retryDelay = centralRealtimeReconnectDelay;
 
-centralRealtimeReconnectTimer = setTimeout(() => {
+  centralRealtimeReconnectTimer = setTimeout(() => {
     centralRealtimeReconnectTimer = null;
 
     if (
@@ -4271,10 +4270,12 @@ centralRealtimeReconnectTimer = setTimeout(() => {
     console.info(
       "Reconectando canal central Realtime..."
     );
-centralRealtimeReconnectDelay = Math.min(
-  retryDelay * 2,
-  CENTRAL_REALTIME_RECONNECT_MAX_MS
-);
+
+    centralRealtimeReconnectDelay = Math.min(
+      retryDelay * 2,
+      CENTRAL_REALTIME_RECONNECT_MAX_MS
+    );
+
     startCentralRealtime();
   }, retryDelay);
 }
@@ -4377,8 +4378,14 @@ function startCentralRealtime() {
     centralSyncStatus = status;
 
     if (status === "SUBSCRIBED") {
-  return;
-}
+      centralRealtimeReconnectDelay = CENTRAL_REALTIME_RECONNECT_MIN_MS;
+      scheduleCentralRefresh({
+        settings: true,
+        profile: true,
+        orders: true,
+      });
+      return;
+    }
 
     if (
   status === "CHANNEL_ERROR" ||
