@@ -4453,9 +4453,10 @@ function scheduleClientOrdersRealtimeReconnect() {
 function startClientOrdersRealtime() {
   stopClientOrdersRealtime();
   if (!canUseCustomerModule()) return;
-  clientOrdersRealtimeStatus = "connecting";
-  clientOrdersChannel = cloudState.client
-    .channel(`restaurant-incoming-orders-${cloudState.user.id}`)
+ clientOrdersRealtimeStatus = "connecting";
+
+const channel = cloudState.client
+  .channel(`restaurant-incoming-orders-${cloudState.user.id}`)
     .on(
       "postgres_changes",
       {
