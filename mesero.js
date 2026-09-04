@@ -1174,6 +1174,15 @@ function waiterStartStationPolling(options = {}) {
 
 function waiterStopRealtime() {
   waiterStopStationPolling();
+    if (waiterRealtimeReconnectTimer) {
+    window.clearTimeout(waiterRealtimeReconnectTimer);
+    waiterRealtimeReconnectTimer = null;
+  }
+
+  if (waiterRealtimeStableTimer) {
+    window.clearTimeout(waiterRealtimeStableTimer);
+    waiterRealtimeStableTimer = null;
+  }
   [waiterMenuChannel, waiterOrdersChannel].forEach((channel) => {
     if (channel && waiterClient?.removeChannel) waiterClient.removeChannel(channel).catch(() => {});
   });
@@ -1181,7 +1190,41 @@ function waiterStopRealtime() {
   waiterOrdersChannel = null;
   waiterOrdersRealtimeStatus = "idle";
 }
+function waiterScheduleRealtimeReconnect() {
+  if (
+    waiterRealtimeReconnectTimer ||
+    !navigator.onLine ||
+    !waiterClient ||
+    !waiterStoreId ||
+    !waiterUser ||
+    !waiterMembership
+  ) {
+    return;
+  }
 
+  const retryDelay = waiterRealtimeReconnectDelay;
+
+  waiterRealtimeReconnectTimer = window.setTimeout(() => {
+    waiterRealtimeReconnectTimer = null;
+
+    if (
+      !navigator.onLine ||
+      !waiterClient ||
+      !waiterStoreId ||
+      !waiterUser ||
+      !waiterMembership
+    ) {
+      return;
+    }
+
+    waiterRealtimeReconnectDelay = Math.min(
+      retryDelay * 2,
+      WAITER_REALTIME_RECONNECT_MAX_MS
+    );
+
+    waiterStartRealtime();
+  }, retryDelay);
+}
 function waiterStartRealtime() {
   waiterStopRealtime();
   if (!waiterClient || !waiterStoreId || !waiterUser) return;
