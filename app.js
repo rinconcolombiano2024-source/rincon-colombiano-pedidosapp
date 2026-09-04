@@ -51,6 +51,7 @@ const CLIENT_ORDERS_REALTIME_RECONNECT_MAX_MS = 60_000;
 const CLIENT_ORDERS_REALTIME_STABLE_MS = 30_000;
 const CENTRAL_REALTIME_RECONNECT_MIN_MS = 1_500;
 const CENTRAL_REALTIME_RECONNECT_MAX_MS = 60_000;
+const CENTRAL_REALTIME_STABLE_MS = 30_000;
 const SYNC_INFRASTRUCTURE_BACKOFF_MS = 30_000;
 const MINIMUM_DATABASE_SCHEMA_VERSION = 91;
 
@@ -511,6 +512,7 @@ let pendingDataSyncRetryTimer = null;
 let pendingDataSyncInFlight = null;
 let pendingDataSyncRetryNotBefore = 0;
 let centralRealtimeReconnectTimer = null;
+let centralRealtimeStableTimer = null;
 let centralRealtimeReconnectDelay = CENTRAL_REALTIME_RECONNECT_MIN_MS;
 let clientOrdersRealtimeReconnectTimer = null;
 let clientOrdersRealtimeStableTimer = null;
@@ -3908,6 +3910,11 @@ function stopCentralRealtime() {
   if (centralRealtimeReconnectTimer) {
     clearTimeout(centralRealtimeReconnectTimer);
     centralRealtimeReconnectTimer = null;
+  }
+
+  if (centralRealtimeStableTimer) {
+    clearTimeout(centralRealtimeStableTimer);
+    centralRealtimeStableTimer = null;
   }
 
   const channel = centralSyncChannel;
