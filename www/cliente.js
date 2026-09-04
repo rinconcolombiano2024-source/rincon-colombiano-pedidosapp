@@ -109,6 +109,10 @@ const CUSTOMER_TRANSLATION_CACHE_KEY = "rincon_colombiano_description_translatio
 const CUSTOMER_PENDING_ORDER_KEY_PREFIX = "rc_ordera_pending_customer_order";
 const CUSTOMER_TRACKED_ORDER_KEY_PREFIX = "rc_ordera_tracked_customer_order";
 const CUSTOMER_MENU_CACHE_KEY_PREFIX = "rc_ordera_customer_menu_cache_v1";
+const CUSTOMER_REALTIME_RECONNECT_MIN_MS = 2_000;
+const CUSTOMER_REALTIME_RECONNECT_MAX_MS = 60_000;
+const CUSTOMER_REALTIME_STABLE_MS = 30_000;
+const CUSTOMER_RECOVERY_DEDUP_MS = 2_000;
 const CUSTOMER_DELIVERY_MARKUP = 1.6714285714;
 const CUSTOMER_I18N = {
   es: {
@@ -1621,6 +1625,9 @@ let customerTrackingRealtimeChannel = null;
 let customerTrackingRealtimeSignature = "";
 let customerTrackingRefreshTimer = null;
 let customerTrackingRealtimeRetryTimer = null;
+let customerTrackingRealtimeStableTimer = null;
+let customerTrackingRealtimeRetryDelay =
+  CUSTOMER_REALTIME_RECONNECT_MIN_MS;
 let customerTrackingRealtimeStatus = "idle";
 let customerTrackingRpcAvailable = null;
 let customerChatTimer = null;
@@ -1630,11 +1637,19 @@ let customerMenuRealtimeChannel = null;
 let customerMenuRealtimeStoreId = "";
 let customerMenuRealtimeTimer = null;
 let customerMenuRealtimeRetryTimer = null;
+let customerMenuRealtimeStableTimer = null;
+let customerMenuRealtimeRetryDelay =
+  CUSTOMER_REALTIME_RECONNECT_MIN_MS;
 let customerDirectoryRealtimeChannel = null;
 let customerDirectoryRealtimeTimer = null;
 let customerDirectoryPollTimer = null;
 let customerDirectoryRealtimeRetryTimer = null;
+let customerDirectoryRealtimeStableTimer = null;
+let customerDirectoryRealtimeRetryDelay =
+  CUSTOMER_REALTIME_RECONNECT_MIN_MS;
 let customerDirectoryRealtimeStatus = "idle";
+let customerRecoveryInFlight = null;
+let customerRecoveryLastCompletedAt = 0;
 let customerDirectoryLoadPromise = null;
 let customerMenuFetchPromise = null;
 let customerMenuFetchStoreId = "";
@@ -3010,6 +3025,10 @@ function customerStopDirectoryRealtime() {
     window.clearTimeout(customerDirectoryRealtimeRetryTimer);
     customerDirectoryRealtimeRetryTimer = null;
   }
+  if (customerDirectoryRealtimeStableTimer) {
+  window.clearTimeout(customerDirectoryRealtimeStableTimer);
+  customerDirectoryRealtimeStableTimer = null;
+}
   if (customerDirectoryRealtimeTimer) {
     window.clearTimeout(customerDirectoryRealtimeTimer);
     customerDirectoryRealtimeTimer = null;
@@ -3054,28 +3073,74 @@ function customerStartDirectoryRealtime() {
       customerScheduleDirectoryRefresh
     );
   customerDirectoryRealtimeChannel = channel;
-  channel.subscribe((status) => {
-    if (channel !== customerDirectoryRealtimeChannel) return;
-    customerDirectoryRealtimeStatus = status;
-    if (status === "SUBSCRIBED") {
-      if (customerDirectoryPollTimer) {
-        window.clearInterval(customerDirectoryPollTimer);
-        customerDirectoryPollTimer = null;
+ channel.subscribe((status) => {
+  if (channel !== customerDirectoryRealtimeChannel) return;
+
+  customerDirectoryRealtimeStatus = status;
+
+  if (status === "SUBSCRIBED") {
+    if (customerDirectoryRealtimeStableTimer) {
+      window.clearTimeout(customerDirectoryRealtimeStableTimer);
+    }
+
+    customerDirectoryRealtimeStableTimer = window.setTimeout(() => {
+      customerDirectoryRealtimeStableTimer = null;
+
+      if (
+        channel === customerDirectoryRealtimeChannel &&
+        customerDirectoryRealtimeStatus === "SUBSCRIBED"
+      ) {
+        customerDirectoryRealtimeRetryDelay =
+          CUSTOMER_REALTIME_RECONNECT_MIN_MS;
       }
-      customerScheduleDirectoryRefresh();
-      return;
+    }, CUSTOMER_REALTIME_STABLE_MS);
+
+    if (customerDirectoryPollTimer) {
+      window.clearInterval(customerDirectoryPollTimer);
+      customerDirectoryPollTimer = null;
     }
-    if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-      customerDirectoryRealtimeChannel = null;
-      if (customerClient?.removeChannel) customerClient.removeChannel(channel).catch(() => {});
-      if (customerDirectoryRealtimeRetryTimer) window.clearTimeout(customerDirectoryRealtimeRetryTimer);
-      customerDirectoryRealtimeRetryTimer = window.setTimeout(() => {
-        customerDirectoryRealtimeRetryTimer = null;
-        if (window.navigator.onLine) customerStartDirectoryRealtime();
-      }, 2000);
+
+    customerScheduleDirectoryRefresh();
+    return;
+  }
+
+  if (
+    status === "CHANNEL_ERROR" ||
+    status === "TIMED_OUT" ||
+    status === "CLOSED"
+  ) {
+    if (customerDirectoryRealtimeStableTimer) {
+      window.clearTimeout(customerDirectoryRealtimeStableTimer);
+      customerDirectoryRealtimeStableTimer = null;
     }
-  });
-}
+
+    customerDirectoryRealtimeChannel = null;
+
+    if (customerClient?.removeChannel) {
+      customerClient.removeChannel(channel).catch(() => {});
+    }
+
+    if (customerDirectoryRealtimeRetryTimer) {
+      window.clearTimeout(customerDirectoryRealtimeRetryTimer);
+    }
+
+    const retryDelay = customerDirectoryRealtimeRetryDelay;
+
+    customerDirectoryRealtimeRetryDelay = Math.min(
+      retryDelay * 2,
+      CUSTOMER_REALTIME_RECONNECT_MAX_MS
+    );
+
+    customerDirectoryRealtimeRetryTimer = window.setTimeout(() => {
+      customerDirectoryRealtimeRetryTimer = null;
+
+      if (window.navigator.onLine) {
+        customerStartDirectoryRealtime();
+      }
+    }, retryDelay);
+  }
+});
+  }
 
 function customerRestaurantDedupeKey(restaurant) {
   const name = customerNormalizeSearchText(restaurant?.name || "");
@@ -3509,6 +3574,10 @@ function customerStopMenuRealtime() {
     window.clearTimeout(customerMenuRealtimeRetryTimer);
     customerMenuRealtimeRetryTimer = null;
   }
+  if (customerMenuRealtimeStableTimer) {
+  window.clearTimeout(customerMenuRealtimeStableTimer);
+  customerMenuRealtimeStableTimer = null;
+}
   if (customerMenuRealtimeTimer) {
     window.clearTimeout(customerMenuRealtimeTimer);
     customerMenuRealtimeTimer = null;
@@ -3579,28 +3648,81 @@ function customerStartMenuRealtime() {
     );
   customerMenuRealtimeChannel = channel;
   channel.subscribe((status) => {
-    if (storeId !== customerStoreId || channel !== customerMenuRealtimeChannel) return;
-    if (status === "SUBSCRIBED") {
-      customerScheduleMenuRealtimeRefetch();
-      return;
-    }
-    if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-      customerMenuRealtimeChannel = null;
-      customerMenuRealtimeStoreId = "";
-      if (customerClient?.removeChannel) customerClient.removeChannel(channel).catch(() => {});
-      customerSetStatus(customerT("menuRealtimeError"), "error");
-      if (customerMenuRealtimeRetryTimer) window.clearTimeout(customerMenuRealtimeRetryTimer);
-      customerMenuRealtimeRetryTimer = window.setTimeout(() => {
-        customerMenuRealtimeRetryTimer = null;
-        if (storeId === customerStoreId && window.navigator.onLine) {
-          customerStartMenuRealtime();
-          customerRefreshMenu().catch(() => {});
-        }
-      }, 2000);
-    }
-  });
-}
+  if (
+    storeId !== customerStoreId ||
+    channel !== customerMenuRealtimeChannel
+  ) {
+    return;
+  }
 
+  if (status === "SUBSCRIBED") {
+    if (customerMenuRealtimeStableTimer) {
+      window.clearTimeout(customerMenuRealtimeStableTimer);
+    }
+
+    customerMenuRealtimeStableTimer = window.setTimeout(() => {
+      customerMenuRealtimeStableTimer = null;
+
+      if (
+        storeId === customerStoreId &&
+        channel === customerMenuRealtimeChannel
+      ) {
+        customerMenuRealtimeRetryDelay =
+          CUSTOMER_REALTIME_RECONNECT_MIN_MS;
+      }
+    }, CUSTOMER_REALTIME_STABLE_MS);
+
+    customerScheduleMenuRealtimeRefetch();
+    return;
+  }
+
+  if (
+    status === "CHANNEL_ERROR" ||
+    status === "TIMED_OUT" ||
+    status === "CLOSED"
+  ) {
+    if (customerMenuRealtimeStableTimer) {
+      window.clearTimeout(customerMenuRealtimeStableTimer);
+      customerMenuRealtimeStableTimer = null;
+    }
+
+    customerMenuRealtimeChannel = null;
+    customerMenuRealtimeStoreId = "";
+
+    if (customerClient?.removeChannel) {
+      customerClient.removeChannel(channel).catch(() => {});
+    }
+
+    customerSetStatus(
+      customerT("menuRealtimeError"),
+      "error"
+    );
+
+    if (customerMenuRealtimeRetryTimer) {
+      window.clearTimeout(customerMenuRealtimeRetryTimer);
+    }
+
+    const retryDelay = customerMenuRealtimeRetryDelay;
+
+    customerMenuRealtimeRetryDelay = Math.min(
+      retryDelay * 2,
+      CUSTOMER_REALTIME_RECONNECT_MAX_MS
+    );
+
+    customerMenuRealtimeRetryTimer = window.setTimeout(() => {
+      customerMenuRealtimeRetryTimer = null;
+
+      if (
+        storeId === customerStoreId &&
+        window.navigator.onLine
+      ) {
+        customerStartMenuRealtime();
+        customerRefreshMenu().catch(() => {});
+      }
+    }, retryDelay);
+  }
+});
+  }
 function customerMenuProductCount(menu = customerMenu) {
   return Object.values(menu || {}).reduce((count, dishes) => count + (Array.isArray(dishes) ? dishes.length : 0), 0);
 }
@@ -4840,6 +4962,10 @@ function customerStopOrderTrackingRealtime() {
     window.clearTimeout(customerTrackingRealtimeRetryTimer);
     customerTrackingRealtimeRetryTimer = null;
   }
+  if (customerTrackingRealtimeStableTimer) {
+  window.clearTimeout(customerTrackingRealtimeStableTimer);
+  customerTrackingRealtimeStableTimer = null;
+}
   if (customerTrackingRefreshTimer) {
     window.clearTimeout(customerTrackingRefreshTimer);
     customerTrackingRefreshTimer = null;
@@ -4883,25 +5009,78 @@ function customerStartOrderTrackingRealtime(row = {}) {
   customerTrackingRealtimeChannel = channel;
   customerTrackingRealtimeStatus = "connecting";
   channel.subscribe((status) => {
-    if (channel !== customerTrackingRealtimeChannel || signature !== customerTrackingRealtimeSignature) return;
-    customerTrackingRealtimeStatus = status;
-    if (status === "SUBSCRIBED") {
-      customerScheduleTrackingRefresh();
-      return;
-    }
-    if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-      customerTrackingRealtimeChannel = null;
-      customerTrackingRealtimeSignature = "";
-      if (customerClient?.removeChannel) customerClient.removeChannel(channel).catch(() => {});
-      if (customerTrackingRealtimeRetryTimer) window.clearTimeout(customerTrackingRealtimeRetryTimer);
-      customerTrackingRealtimeRetryTimer = window.setTimeout(() => {
-        customerTrackingRealtimeRetryTimer = null;
-        if (customerTrackedOrder?.id && window.navigator.onLine) customerPollOrderStatus().catch(() => {});
-      }, 2000);
-    }
-  });
-}
+  if (
+    channel !== customerTrackingRealtimeChannel ||
+    signature !== customerTrackingRealtimeSignature
+  ) {
+    return;
+  }
 
+  customerTrackingRealtimeStatus = status;
+
+  if (status === "SUBSCRIBED") {
+    if (customerTrackingRealtimeStableTimer) {
+      window.clearTimeout(customerTrackingRealtimeStableTimer);
+    }
+
+    customerTrackingRealtimeStableTimer = window.setTimeout(() => {
+      customerTrackingRealtimeStableTimer = null;
+
+      if (
+        channel === customerTrackingRealtimeChannel &&
+        signature === customerTrackingRealtimeSignature &&
+        customerTrackingRealtimeStatus === "SUBSCRIBED"
+      ) {
+        customerTrackingRealtimeRetryDelay =
+          CUSTOMER_REALTIME_RECONNECT_MIN_MS;
+      }
+    }, CUSTOMER_REALTIME_STABLE_MS);
+
+    customerScheduleTrackingRefresh();
+    return;
+  }
+
+  if (
+    status === "CHANNEL_ERROR" ||
+    status === "TIMED_OUT" ||
+    status === "CLOSED"
+  ) {
+    if (customerTrackingRealtimeStableTimer) {
+      window.clearTimeout(customerTrackingRealtimeStableTimer);
+      customerTrackingRealtimeStableTimer = null;
+    }
+
+    customerTrackingRealtimeChannel = null;
+    customerTrackingRealtimeSignature = "";
+
+    if (customerClient?.removeChannel) {
+      customerClient.removeChannel(channel).catch(() => {});
+    }
+
+    if (customerTrackingRealtimeRetryTimer) {
+      window.clearTimeout(customerTrackingRealtimeRetryTimer);
+    }
+
+    const retryDelay = customerTrackingRealtimeRetryDelay;
+
+    customerTrackingRealtimeRetryDelay = Math.min(
+      retryDelay * 2,
+      CUSTOMER_REALTIME_RECONNECT_MAX_MS
+    );
+
+    customerTrackingRealtimeRetryTimer = window.setTimeout(() => {
+      customerTrackingRealtimeRetryTimer = null;
+
+      if (
+        customerTrackedOrder?.id &&
+        window.navigator.onLine
+      ) {
+        customerPollOrderStatus().catch(() => {});
+      }
+    }, retryDelay);
+  }
+});
+  }
 async function customerPollOrderStatus() {
   if (!customerTrackedOrder?.id || !customerTrackedOrder.publicToken || !customerClient || !navigator.onLine) return;
 
@@ -5992,29 +6171,86 @@ if (customerElements.registerNeighborhoodInput) {
     }
   });
 });
-window.addEventListener("online", () => {
-  customerStartDirectoryRealtime();
-  customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
-  if (customerTrackedOrder) customerPollOrderStatus().catch(() => {});
-  if (customerStoreId) {
-    customerStartMenuRealtime();
-    customerRefreshMenu().catch(() => {
-      customerSetStatus(customerT("menuRealtimeError"), "error");
-    });
+function customerRecoverConnection() {
+  if (customerRecoveryInFlight) {
+    return customerRecoveryInFlight;
   }
+
+  if (
+    Date.now() - customerRecoveryLastCompletedAt <
+    CUSTOMER_RECOVERY_DEDUP_MS
+  ) {
+    return Promise.resolve(true);
+  }
+
+  const operation = (async () => {
+    if (!window.navigator.onLine) return false;
+
+    customerStartDirectoryRealtime();
+
+    const recoveryTasks = [
+      customerLoadRestaurantDirectory({
+        silent: true,
+      }).catch(() => {}),
+    ];
+
+    if (customerTrackedOrder) {
+      recoveryTasks.push(
+        customerPollOrderStatus().catch(() => {})
+      );
+    }
+
+    if (customerStoreId) {
+      customerStartMenuRealtime();
+
+      recoveryTasks.push(
+        customerRefreshMenu().catch(() => {
+          customerSetStatus(
+            customerT("menuRealtimeError"),
+            "error"
+          );
+        })
+      );
+    }
+
+    await Promise.all(recoveryTasks);
+
+    customerRecoveryLastCompletedAt = Date.now();
+    return true;
+  })();
+
+  customerRecoveryInFlight = operation;
+
+  operation.then(
+    () => {
+      if (customerRecoveryInFlight === operation) {
+        customerRecoveryInFlight = null;
+      }
+    },
+    () => {
+      if (customerRecoveryInFlight === operation) {
+        customerRecoveryInFlight = null;
+      }
+    }
+  );
+
+  return operation;
+}
+
+window.addEventListener("online", () => {
+  customerRecoverConnection().catch(() => {});
 });
 
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState !== "visible" || !window.navigator.onLine) return;
-  customerStartDirectoryRealtime();
-  customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
-  if (customerTrackedOrder) customerPollOrderStatus().catch(() => {});
-  if (customerStoreId) {
-    customerStartMenuRealtime();
-    customerRefreshMenu().catch(() => {});
+  if (
+    document.visibilityState !== "visible" ||
+    !window.navigator.onLine
+  ) {
+    return;
   }
-});
 
+  customerRecoverConnection().catch(() => {});
+});
 window.addEventListener("offline", () => {
   if (customerStoreId) customerSetStatus(customerT("noConnection"), "error");
 });
