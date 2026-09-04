@@ -4485,9 +4485,15 @@ const channel = cloudState.client
         table: "customer_order_messages",
         filter: `user_id=eq.${cloudState.user.id}`,
       },
-      handleClientMessageRealtimePayload
-    )
-    .subscribe((status) => {
+            handleClientMessageRealtimePayload
+    );
+
+  clientOrdersChannel = channel;
+
+  channel.subscribe((status) => {
+        if (channel !== clientOrdersChannel) {
+      return;
+    }
       const previousStatus = clientOrdersRealtimeStatus;
       clientOrdersRealtimeStatus = status;
       if (status === "SUBSCRIBED") {
