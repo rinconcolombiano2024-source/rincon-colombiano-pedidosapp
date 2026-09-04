@@ -57,6 +57,9 @@ waiterCustomItemPrice: document.querySelector("#waiterCustomItemPrice"),
 
 const WAITER_STATION_POLL_MIN_MS = 15_000;
 const WAITER_STATION_POLL_MAX_MS = 120_000;
+const WAITER_REALTIME_RECONNECT_MIN_MS = 2_000;
+const WAITER_REALTIME_RECONNECT_MAX_MS = 60_000;
+const WAITER_REALTIME_STABLE_MS = 30_000;
 
 let waiterClient = null;
 let waiterUser = null;
@@ -69,6 +72,10 @@ let waiterCart = [];
 let waiterMenuChannel = null;
 let waiterOrdersChannel = null;
 let waiterStationPollTimer = null;
+let waiterRealtimeReconnectTimer = null;
+let waiterRealtimeStableTimer = null;
+let waiterRealtimeReconnectDelay =
+  WAITER_REALTIME_RECONNECT_MIN_MS;
 let waiterOrdersRealtimeStatus = "idle";
 let waiterStationPollingDelay = WAITER_STATION_POLL_MIN_MS;
 let waiterToastTimer = null;
