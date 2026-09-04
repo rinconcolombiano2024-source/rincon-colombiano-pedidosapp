@@ -4404,15 +4404,31 @@ function startCentralRealtime() {
 
     centralSyncStatus = status;
 
-    if (status === "SUBSCRIBED") {
-      centralRealtimeReconnectDelay = CENTRAL_REALTIME_RECONNECT_MIN_MS;
-      scheduleCentralRefresh({
-        settings: true,
-        profile: true,
-        orders: true,
-      });
-      return;
+   if (status === "SUBSCRIBED") {
+  if (centralRealtimeStableTimer) {
+    clearTimeout(centralRealtimeStableTimer);
+  }
+
+  centralRealtimeStableTimer = setTimeout(() => {
+    centralRealtimeStableTimer = null;
+
+    if (
+      channel === centralSyncChannel &&
+      centralSyncStatus === "SUBSCRIBED"
+    ) {
+      centralRealtimeReconnectDelay =
+        CENTRAL_REALTIME_RECONNECT_MIN_MS;
     }
+  }, CENTRAL_REALTIME_STABLE_MS);
+
+  scheduleCentralRefresh({
+    settings: true,
+    profile: true,
+    orders: true,
+  });
+
+  return;
+}
 
     if (
   status === "CHANNEL_ERROR" ||
