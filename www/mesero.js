@@ -55,6 +55,9 @@ waiterCustomItemPrice: document.querySelector("#waiterCustomItemPrice"),
   toast: document.querySelector("#waiterToast"),
 };
 
+const WAITER_STATION_POLL_MIN_MS = 15_000;
+const WAITER_STATION_POLL_MAX_MS = 120_000;
+
 let waiterClient = null;
 let waiterUser = null;
 let waiterMembership = null;
@@ -66,6 +69,8 @@ let waiterCart = [];
 let waiterMenuChannel = null;
 let waiterOrdersChannel = null;
 let waiterStationPollTimer = null;
+let waiterOrdersRealtimeStatus = "idle";
+let waiterStationPollingDelay = WAITER_STATION_POLL_MIN_MS;
 let waiterToastTimer = null;
 let waiterSyncingQueue = false;
 let waiterBusinessContext = null;
@@ -754,7 +759,7 @@ async function waiterLoadStationOrders() {
   if (!navigator.onLine) {
     waiterRenderStationOrders(Array.isArray(cachedOrders) ? cachedOrders : []);
     waiterSetStatus("Sin internet / ultima informacion", "offline");
-    return;
+    return false;
   }
   waiterElements.stationOrders.innerHTML = `<div class="waiter-empty">Actualizando pedidos...</div>`;
   const { data, error } = await waiterClient.rpc("list_my_station_orders", {
@@ -765,12 +770,13 @@ async function waiterLoadStationOrders() {
     if (Array.isArray(cachedOrders) && cachedOrders.length) waiterRenderStationOrders(cachedOrders);
     else waiterElements.stationOrders.innerHTML = `<div class="waiter-empty">No fue posible cargar esta estacion. Contacta al propietario e intenta nuevamente.</div>`;
     waiterSetStatus("Error de estacion", "error");
-    return;
+    return false;
   }
   const orders = Array.isArray(data) ? data : [];
   localStorage.setItem(waiterStationCacheKey(), JSON.stringify(orders));
   waiterRenderStationOrders(orders);
   waiterSetStatus("Sincronizado", "ok");
+  return true;
 }
 
 async function waiterAdvanceStationOrder(orderId, nextStatus, button) {
@@ -1043,7 +1049,23 @@ function waiterQueueOrder(payload) {
 async function waiterSubmitPayload(payload) {
   const { data, error } = await waiterClient.rpc("submit_waiter_order", payload);
   if (error) throw error;
-  return Array.isArray(data) ? data[0] : data;
+  const confirmedOrder = Array.isArray(data) ? data[0] : data;
+  if (!confirmedOrder?.id) {
+    const confirmationError = new Error();
+    confirmationError.code = "RC_WAITER_ORDER_UNCONFIRMED";
+    throw confirmationError;
+  }
+  return confirmedOrder;
+}
+
+function waiterIsTemporarySyncError(error) {
+  const code = String(error?.code || "").toUpperCase();
+  const status = Number(error?.status || error?.statusCode || 0);
+  const message = String(error?.message || error || "");
+  return status === 503
+    || code === "PGRST002"
+    || code === "PGRST003"
+    || /fetch|network|timeout|timed out|service unavailable|schema cache|connection pool/i.test(message);
 }
 
 async function waiterSyncQueue() {
@@ -1051,12 +1073,17 @@ async function waiterSyncQueue() {
   waiterSyncingQueue = true;
   const queue = waiterReadQueue();
   const remaining = [];
-  for (const payload of queue) {
+  for (let index = 0; index < queue.length; index += 1) {
+    const payload = queue[index];
     try {
       await waiterSubmitPayload(payload);
     } catch (error) {
       remaining.push(payload);
-      if (!/fetch|network|timeout/i.test(String(error?.message || ""))) console.error(error);
+      if (waiterIsTemporarySyncError(error)) {
+        remaining.push(...queue.slice(index + 1));
+        break;
+      }
+      console.error(error);
     }
   }
   waiterWriteQueue(remaining);
@@ -1092,14 +1119,14 @@ async function waiterSendOrder() {
   } catch (error) {
     console.error("ERROR REAL submit_waiter_order:", error);
     const message = String(error?.message || "");
-    if (/fetch|network|timeout/i.test(message)) {
+    if (waiterIsTemporarySyncError(error)) {
       waiterQueueOrder(payload);
       waiterClearDraft();
       waiterSetMessage(waiterElements.orderMessage, "Conexion inestable. El pedido quedo pendiente de sincronizacion.", "ok");
     } else if (/not authorized|autoriz/i.test(message)) {
       waiterSetMessage(waiterElements.orderMessage, "Tu autorizacion ya no esta activa. Pide ayuda al propietario.", "error");
       await waiterAuthorize();
-    } else if (/unavailable/i.test(message)) {
+    } else if (/unavailable|menu product was not found|product not found/i.test(message)) {
       waiterSetMessage(waiterElements.orderMessage, "Un producto ya no esta disponible. Actualiza el menu y revisa el pedido.", "error");
       await waiterLoadMenu();
     } else {
@@ -1111,16 +1138,41 @@ async function waiterSendOrder() {
   }
 }
 
-function waiterStopRealtime() {
+function waiterStopStationPolling() {
   if (waiterStationPollTimer) {
-    window.clearInterval(waiterStationPollTimer);
+    window.clearTimeout(waiterStationPollTimer);
     waiterStationPollTimer = null;
   }
+}
+
+function waiterStartStationPolling(options = {}) {
+  const { immediate = false } = options;
+  waiterStopStationPolling();
+  if (waiterOrdersRealtimeStatus === "SUBSCRIBED") return;
+  const poll = async () => {
+    waiterStationPollTimer = null;
+    if (waiterOrdersRealtimeStatus === "SUBSCRIBED" || !waiterUser || !waiterMembership) return;
+    if (document.visibilityState === "visible" && navigator.onLine) {
+      const loaded = await waiterLoadStationOrders();
+      waiterStationPollingDelay = loaded
+        ? WAITER_STATION_POLL_MIN_MS
+        : Math.min(waiterStationPollingDelay * 2, WAITER_STATION_POLL_MAX_MS);
+    }
+    if (waiterOrdersRealtimeStatus !== "SUBSCRIBED") {
+      waiterStationPollTimer = window.setTimeout(poll, waiterStationPollingDelay);
+    }
+  };
+  waiterStationPollTimer = window.setTimeout(poll, immediate ? 0 : waiterStationPollingDelay);
+}
+
+function waiterStopRealtime() {
+  waiterStopStationPolling();
   [waiterMenuChannel, waiterOrdersChannel].forEach((channel) => {
     if (channel && waiterClient?.removeChannel) waiterClient.removeChannel(channel).catch(() => {});
   });
   waiterMenuChannel = null;
   waiterOrdersChannel = null;
+  waiterOrdersRealtimeStatus = "idle";
 }
 
 function waiterStartRealtime() {
@@ -1143,13 +1195,27 @@ function waiterStartRealtime() {
       .subscribe();
     return;
   }
-  waiterOrdersChannel = waiterClient
+  waiterOrdersRealtimeStatus = "connecting";
+  const channel = waiterClient
     .channel(`restaurant-station-${waiterStoreId}-${waiterUser.id}`)
     .on("postgres_changes", { event: "*", schema: "public", table: "customer_orders", filter: `user_id=eq.${waiterStoreId}` }, () => {
       waiterLoadStationOrders().catch(console.error);
-    })
-    .subscribe();
-  waiterStationPollTimer = window.setInterval(() => waiterLoadStationOrders().catch(() => {}), 15000);
+    });
+  waiterOrdersChannel = channel;
+  channel.subscribe((status) => {
+    if (channel !== waiterOrdersChannel) return;
+    waiterOrdersRealtimeStatus = status;
+    if (status === "SUBSCRIBED") {
+      waiterStationPollingDelay = WAITER_STATION_POLL_MIN_MS;
+      waiterStopStationPolling();
+      waiterLoadStationOrders().catch(console.error);
+      return;
+    }
+    if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)) {
+      waiterStartStationPolling({ immediate: true });
+    }
+  });
+  waiterStartStationPolling();
 }
 function waiterChangeStation() {
   if (!Array.isArray(waiterMemberships) || waiterMemberships.length === 0) {
