@@ -1183,7 +1183,7 @@ function waiterStopRealtime() {
     window.clearTimeout(waiterRealtimeStableTimer);
     waiterRealtimeStableTimer = null;
   }
-  [waiterMenuChannel, waiterOrdersChannel].forEach((channel) => {
+ new Set([waiterMenuChannel, waiterOrdersChannel]).forEach((channel) => {
     if (channel && waiterClient?.removeChannel) waiterClient.removeChannel(channel).catch(() => {});
   });
   waiterMenuChannel = null;
@@ -1229,22 +1229,97 @@ function waiterStartRealtime() {
   waiterStopRealtime();
   if (!waiterClient || !waiterStoreId || !waiterUser) return;
   const canTakeOrders = ["waiter", "cashier", "manager"].includes(waiterMembership?.station);
-  if (canTakeOrders) {
-    waiterMenuChannel = waiterClient
-      .channel(`waiter-menu-${waiterStoreId}-${waiterUser.id}`)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "app_settings", filter: `user_id=eq.${waiterStoreId}` }, () => {
+if (canTakeOrders) {
+  waiterOrdersRealtimeStatus = "connecting";
+
+  const channel = waiterClient
+    .channel(
+      `waiter-live-${waiterStoreId}-${waiterUser.id}`
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "app_settings",
+        filter: `user_id=eq.${waiterStoreId}`,
+      },
+      () => {
         waiterLoadMenu().catch(console.error);
-        waiterShowToast("Menu actualizado por el restaurante.");
-      })
-      .subscribe();
-    waiterOrdersChannel = waiterClient
-      .channel(`waiter-orders-${waiterStoreId}-${waiterUser.id}`)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "customer_orders", filter: `created_by_user_id=eq.${waiterUser.id}` }, () => {
+        waiterShowToast(
+          "Menu actualizado por el restaurante."
+        );
+      }
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "customer_orders",
+        filter:
+          `created_by_user_id=eq.${waiterUser.id}`,
+      },
+      () => {
         waiterLoadSentOrders().catch(console.error);
-      })
-      .subscribe();
-    return;
-  }
+      }
+    );
+
+  waiterMenuChannel = channel;
+  waiterOrdersChannel = channel;
+
+  channel.subscribe((status) => {
+    if (
+      channel !== waiterMenuChannel ||
+      channel !== waiterOrdersChannel
+    ) {
+      return;
+    }
+
+    waiterOrdersRealtimeStatus = status;
+
+    if (status === "SUBSCRIBED") {
+      if (waiterRealtimeStableTimer) {
+        window.clearTimeout(waiterRealtimeStableTimer);
+      }
+
+      waiterRealtimeStableTimer = window.setTimeout(() => {
+        waiterRealtimeStableTimer = null;
+
+        if (
+          channel === waiterMenuChannel &&
+          channel === waiterOrdersChannel &&
+          waiterOrdersRealtimeStatus === "SUBSCRIBED"
+        ) {
+          waiterRealtimeReconnectDelay =
+            WAITER_REALTIME_RECONNECT_MIN_MS;
+        }
+      }, WAITER_REALTIME_STABLE_MS);
+
+      Promise.all([
+        waiterLoadMenu(),
+        waiterLoadSentOrders(),
+      ]).catch(console.error);
+
+      return;
+    }
+
+    if (
+      status === "CHANNEL_ERROR" ||
+      status === "TIMED_OUT" ||
+      status === "CLOSED"
+    ) {
+      if (waiterRealtimeStableTimer) {
+        window.clearTimeout(waiterRealtimeStableTimer);
+        waiterRealtimeStableTimer = null;
+      }
+
+      waiterScheduleRealtimeReconnect();
+    }
+  });
+
+  return;
+}
   waiterOrdersRealtimeStatus = "connecting";
   const channel = waiterClient
     .channel(`restaurant-station-${waiterStoreId}-${waiterUser.id}`)
@@ -1586,11 +1661,17 @@ async function waiterInitialize() {
   if (waiterUser) await waiterAuthorize();
   else waiterRenderLoggedOut();
 
-  waiterClient.auth.onAuthStateChange(async (_event, session) => {
-    waiterUser = session?.user || null;
-    if (waiterUser) await waiterAuthorize();
-    else waiterRenderLoggedOut();
-  });
+waiterClient.auth.onAuthStateChange(async (event, session) => {
+  waiterUser = session?.user || null;
+
+  if (event === "INITIAL_SESSION") return;
+
+  if (waiterUser) {
+    await waiterAuthorize();
+  } else {
+    waiterRenderLoggedOut();
+  }
+});
 }
 
 waiterElements.authForm.addEventListener("submit", waiterSignIn);
