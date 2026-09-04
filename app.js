@@ -4435,6 +4435,10 @@ function startCentralRealtime() {
   status === "TIMED_OUT" ||
   status === "CLOSED"
 ) {
+        if (centralRealtimeStableTimer) {
+    clearTimeout(centralRealtimeStableTimer);
+    centralRealtimeStableTimer = null;
+  }
   console.warn(
     "Canal central Realtime:",
     status
