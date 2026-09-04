@@ -4504,8 +4504,6 @@ const channel = cloudState.client
     clientOrdersRealtimeReconnectTimer = null;
   }
 
-  clientOrdersRealtimeReconnectDelay =
-    CLIENT_ORDERS_REALTIME_RECONNECT_MIN_MS;
 
   stopClientOrdersPolling();
   clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;
