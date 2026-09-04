@@ -52,6 +52,7 @@ const CLIENT_ORDERS_REALTIME_STABLE_MS = 30_000;
 const CENTRAL_REALTIME_RECONNECT_MIN_MS = 1_500;
 const CENTRAL_REALTIME_RECONNECT_MAX_MS = 60_000;
 const CENTRAL_REALTIME_STABLE_MS = 30_000;
+const CLOUD_RECOVERY_DEDUP_MS = 2_000;
 const SYNC_INFRASTRUCTURE_BACKOFF_MS = 30_000;
 const MINIMUM_DATABASE_SCHEMA_VERSION = 91;
 
@@ -531,6 +532,8 @@ let restaurantMapsScriptPromise = null;
 const restaurantPlaceAutocompletes = new Map();
 let restaurantStatusSyncTimer = null;
 let restaurantStatusSyncing = false;
+let cloudRecoveryInFlight = null;
+let cloudRecoveryLastCompletedAt = 0;
 let menuSaveQueue = Promise.resolve();
 let clientChatKnownMessageIds = new Set();
 let clientChatLoadedOnce = false;
@@ -2124,10 +2127,13 @@ async function initializeCloud() {
     cloudState.user = session?.user || null;
     if (cloudState.user) rememberCloudSession(cloudState.user);
     if (event === "PASSWORD_RECOVERY") {
-      showPasswordRecoveryForm();
-      return;
-    }
-    renderCloudState();
+  showPasswordRecoveryForm();
+  return;
+}
+
+if (event === "INITIAL_SESSION") return;
+
+renderCloudState();
     if (cloudState.user) {
       await loadCloudData();
     } else {
@@ -11280,41 +11286,37 @@ window.addEventListener("beforeunload", () => {
 window.addEventListener("offline", () => {
   renderCloudState();
 });
-window.addEventListener("online", async () => {
-  updateCloudStatus("Conectando...");
+function recoverCloudConnection() {
+  if (cloudRecoveryInFlight) {
+    return cloudRecoveryInFlight;
+  }
 
-  try {
+  if (
+    Date.now() - cloudRecoveryLastCompletedAt <
+    CLOUD_RECOVERY_DEDUP_MS
+  ) {
+    return Promise.resolve(true);
+  }
+
+  const operation = (async () => {
     if (cloudState.configured && !cloudState.client) {
       await initializeCloud();
     }
 
-    if (!cloudState.client || !cloudState.user) {
+    if (
+      !navigator.onLine ||
+      !cloudState.client ||
+      !cloudState.user
+    ) {
+      updateRestaurantStatusSync();
       updateCloudStatus();
-      return;
+      return false;
     }
 
-    /*
-     * 1. Primero enviamos todo lo que quedó pendiente offline.
-     */
-    await syncPendingData();
-
-    /*
-     * 2. Después volvemos a leer la verdad actual de Supabase.
-     *    Ajustes + perfil + menú + pedidos internos.
-     */
+    await syncPendingData({ silent: true });
     await refreshCentralCloudState();
+    await refreshClientOrders({ silent: true });
 
-    /*
-     * 3. Resincronizamos pedidos provenientes del cliente.
-     */
-    await refreshClientOrders({
-      silent: true
-    });
-
-    /*
-     * 4. Si Realtime se perdió durante la desconexión,
-     *    reconstruimos los canales.
-     */
     if (!centralSyncChannel) {
       startCentralRealtime();
     }
@@ -11323,96 +11325,58 @@ window.addEventListener("online", async () => {
       startClientOrdersRealtime();
     }
 
-    /*
-     * 5. Actualizamos el estado operativo.
-     */
     updateRestaurantStatusSync();
 
     await syncRestaurantOperationalStatus({
-      silent: true
+      silent: true,
     });
 
     updateCloudStatus();
-  } catch (error) {
+    cloudRecoveryLastCompletedAt = Date.now();
+    return true;
+  })();
+
+  cloudRecoveryInFlight = operation;
+
+  operation.then(
+    () => {
+      if (cloudRecoveryInFlight === operation) {
+        cloudRecoveryInFlight = null;
+      }
+    },
+    () => {
+      if (cloudRecoveryInFlight === operation) {
+        cloudRecoveryInFlight = null;
+      }
+    }
+  );
+
+  return operation;
+}
+
+window.addEventListener("online", () => {
+  updateCloudStatus("Conectando...");
+
+  recoverCloudConnection().catch((error) => {
     console.error(
       "Error recuperando sincronización después de volver Internet.",
       error
     );
-
     updateCloudStatus();
-  }
+  });
 });
-document.addEventListener("visibilitychange", async () => {
-  if (document.visibilityState !== "visible") {
-    return;
-  }
 
-  if (
-    !navigator.onLine ||
-    !cloudState.client ||
-    !cloudState.user
-  ) {
-    updateRestaurantStatusSync();
-    return;
-  }
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible") return;
 
-  try {
-    /*
-     * 1. Primero intentamos subir cualquier cambio
-     *    que haya quedado pendiente.
-     */
-    await syncPendingData({
-      silent: true
-    });
-
-    /*
-     * 2. Recuperamos la versión actual de:
-     *    - ajustes
-     *    - menú
-     *    - perfil
-     *    - pedidos internos
-     */
-    await refreshCentralCloudState();
-
-    /*
-     * 3. Actualizamos pedidos QR / cliente.
-     */
-    await refreshClientOrders({
-      silent: true
-    });
-
-    /*
-     * 4. Recuperamos Realtime si el navegador
-     *    suspendió los sockets estando en segundo plano.
-     */
-    if (!centralSyncChannel) {
-      startCentralRealtime();
-    }
-
-    if (!clientOrdersChannel) {
-      startClientOrdersRealtime();
-    }
-
-    /*
-     * 5. Actualizamos abierto/cerrado.
-     */
-    updateRestaurantStatusSync();
-
-    await syncRestaurantOperationalStatus({
-      silent: true
-    });
-
-    updateCloudStatus();
-  } catch (error) {
+  recoverCloudConnection().catch((error) => {
     console.error(
       "Error resincronizando la app al volver al primer plano.",
       error
     );
-
     updateCloudStatus();
-  }
+  });
 });
-
 if ("serviceWorker" in navigator && window.location.protocol.startsWith("http")) {
   navigator.serviceWorker.register("./service-worker.js").catch(() => {});
 }
