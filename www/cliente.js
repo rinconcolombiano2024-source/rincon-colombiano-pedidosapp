@@ -113,6 +113,10 @@ const CUSTOMER_REALTIME_RECONNECT_MIN_MS = 2_000;
 const CUSTOMER_REALTIME_RECONNECT_MAX_MS = 60_000;
 const CUSTOMER_REALTIME_STABLE_MS = 30_000;
 const CUSTOMER_RECOVERY_DEDUP_MS = 2_000;
+const CUSTOMER_CHAT_POLL_MIN_MS = 15_000;
+const CUSTOMER_CHAT_POLL_MAX_MS = 120_000;
+const CUSTOMER_STATUS_POLL_MIN_MS = 15_000;
+const CUSTOMER_STATUS_POLL_MAX_MS = 120_000;
 const CUSTOMER_DELIVERY_MARKUP = 1.6714285714;
 const CUSTOMER_I18N = {
   es: {
@@ -1621,6 +1625,9 @@ const customerPlaceAutocompletes = new Map();
 let customerLocationCoords = null;
 let customerTrackedOrder = null;
 let customerStatusTimer = null;
+let customerStatusPollSignature = "";
+let customerStatusPollingDelay = CUSTOMER_STATUS_POLL_MIN_MS;
+let customerStatusPollInFlight = null;
 let customerTrackingRealtimeChannel = null;
 let customerTrackingRealtimeSignature = "";
 let customerTrackingRefreshTimer = null;
@@ -1631,6 +1638,9 @@ let customerTrackingRealtimeRetryDelay =
 let customerTrackingRealtimeStatus = "idle";
 let customerTrackingRpcAvailable = null;
 let customerChatTimer = null;
+let customerChatLoadInFlight = null;
+let customerChatPollSignature = "";
+let customerChatPollingDelay = CUSTOMER_CHAT_POLL_MIN_MS;
 let customerKnownChatMessageIds = new Set();
 let customerChatLoadedOnce = false;
 let customerMenuRealtimeChannel = null;
@@ -2465,10 +2475,8 @@ async function customerSignOut() {
   try {
     await customerClient.auth.signOut({ scope: "local" });
   } finally {
-    if (customerStatusTimer) window.clearInterval(customerStatusTimer);
-    if (customerChatTimer) window.clearInterval(customerChatTimer);
-    customerStatusTimer = null;
-    customerChatTimer = null;
+    customerStopStatusPolling();
+    customerStopChatPolling();
     customerStopOrderTrackingRealtime();
     customerTrackedOrder = null;
     customerUser = null;
@@ -4608,43 +4616,84 @@ async function customerImageFileToDataUrl(file) {
 
 async function customerLoadChatMessages(options = {}) {
   const { silent = false } = options;
-  if (!customerTrackedOrder?.id || !customerTrackedOrder.publicToken || !customerClient) return;
+  if (!customerTrackedOrder?.id || !customerTrackedOrder.publicToken || !customerClient) return false;
+  if (customerChatLoadInFlight) return customerChatLoadInFlight;
 
-  const { data, error } = await customerClient.rpc("get_customer_order_messages", {
-    p_order_id: customerTrackedOrder.id,
-    p_public_token: customerTrackedOrder.publicToken,
-  });
+  const operation = (async () => {
+    const { data, error } = await customerClient.rpc("get_customer_order_messages", {
+      p_order_id: customerTrackedOrder.id,
+      p_public_token: customerTrackedOrder.publicToken,
+    });
 
-  if (error) {
-    if (!silent) customerSetChatStatus(customerT("chatLoadError"), "error");
+    if (error) {
+      if (!silent) customerSetChatStatus(customerT("chatLoadError"), "error");
+      return false;
+    }
+
+    const messages = Array.isArray(data) ? data : [];
+    const newRestaurantMessage = messages.some(
+      (message) => message.sender === "restaurant" && customerChatLoadedOnce && !customerKnownChatMessageIds.has(message.id)
+    );
+    customerKnownChatMessageIds = new Set(messages.map((message) => message.id));
+    customerChatLoadedOnce = true;
+    customerRenderChatMessages(messages);
+    if (newRestaurantMessage) {
+      customerShowNotification(customerT("restaurantMessageTitle"), customerT("restaurantMessageBody"));
+    }
+    return true;
+  })();
+
+  customerChatLoadInFlight = operation;
+  try {
+    return await operation;
+  } finally {
+    if (customerChatLoadInFlight === operation) customerChatLoadInFlight = null;
+  }
+}
+
+function customerStopChatPolling() {
+  if (customerChatTimer) {
+    window.clearTimeout(customerChatTimer);
+    customerChatTimer = null;
+  }
+  customerChatPollSignature = "";
+}
+
+function customerScheduleChatPoll(delayMs) {
+  if (!customerTrackedOrder?.id || !customerTrackedOrder.publicToken || !customerClient) {
+    customerStopChatPolling();
     return;
   }
-
-  const messages = Array.isArray(data) ? data : [];
-  const newRestaurantMessage = messages.some(
-    (message) => message.sender === "restaurant" && customerChatLoadedOnce && !customerKnownChatMessageIds.has(message.id)
-  );
-  customerKnownChatMessageIds = new Set(messages.map((message) => message.id));
-  customerChatLoadedOnce = true;
-  customerRenderChatMessages(messages);
-  if (newRestaurantMessage) {
-    customerShowNotification(customerT("restaurantMessageTitle"), customerT("restaurantMessageBody"));
-  }
+  if (customerChatTimer) window.clearTimeout(customerChatTimer);
+  const signature = `${customerTrackedOrder.id}:${customerTrackedOrder.publicToken}`;
+  customerChatPollSignature = signature;
+  customerChatTimer = window.setTimeout(async () => {
+    customerChatTimer = null;
+    const currentSignature = `${customerTrackedOrder?.id || ""}:${customerTrackedOrder?.publicToken || ""}`;
+    if (signature !== customerChatPollSignature || signature !== currentSignature) return;
+    if (document.visibilityState !== "visible" || !window.navigator.onLine) {
+      customerScheduleChatPoll(CUSTOMER_CHAT_POLL_MIN_MS);
+      return;
+    }
+    const loaded = await customerLoadChatMessages({ silent: true });
+    customerChatPollingDelay = loaded
+      ? CUSTOMER_CHAT_POLL_MIN_MS
+      : Math.min(Math.max(customerChatPollingDelay, CUSTOMER_CHAT_POLL_MIN_MS) * 2, CUSTOMER_CHAT_POLL_MAX_MS);
+    customerScheduleChatPoll(customerChatPollingDelay);
+  }, Math.max(0, Number(delayMs) || 0));
 }
 
 function customerStartChat(orderId, publicToken) {
   if (!customerElements.chatPanel || !orderId || !publicToken) return;
-  if (customerChatTimer) window.clearInterval(customerChatTimer);
+  customerStopChatPolling();
   customerKnownChatMessageIds = new Set();
   customerChatLoadedOnce = false;
+  customerChatPollingDelay = CUSTOMER_CHAT_POLL_MIN_MS;
   customerElements.chatPanel.hidden = false;
   customerRenderActiveOrderState();
   customerRenderChatMessages([]);
   customerSetChatStatus("");
-  customerLoadChatMessages().catch(() => {});
-  customerChatTimer = window.setInterval(() => {
-    customerLoadChatMessages({ silent: true }).catch(() => {});
-  }, 7000);
+  customerScheduleChatPoll(0);
 }
 
 async function customerSendChatMessage() {
@@ -5082,7 +5131,10 @@ function customerStartOrderTrackingRealtime(row = {}) {
 });
   }
 async function customerPollOrderStatus() {
-  if (!customerTrackedOrder?.id || !customerTrackedOrder.publicToken || !customerClient || !navigator.onLine) return;
+  if (!customerTrackedOrder?.id || !customerTrackedOrder.publicToken || !customerClient || !navigator.onLine) return false;
+  if (customerStatusPollInFlight) return customerStatusPollInFlight;
+
+  const operation = (async () => {
 
   let data = null;
   let error = null;
@@ -5109,11 +5161,11 @@ async function customerPollOrderStatus() {
 
   if (error) {
     customerSetTrackingStatus(customerT("orderSentCashier"), "");
-    return;
+    return false;
   }
 
   const row = customerNormalizeRpcRow(data);
-  if (!row) return;
+  if (!row) return false;
   const nextStatus = row.canonical_status || row.status || "pending";
   const previousStatus = customerTrackedOrder.status;
   customerTrackedOrder.status = nextStatus;
@@ -5138,14 +5190,59 @@ async function customerPollOrderStatus() {
   }
 
   if (["delivered", "cancelled", "rejected", "failed", "refunded"].includes(nextStatus)) {
-    if (customerStatusTimer) window.clearInterval(customerStatusTimer);
-    customerStatusTimer = null;
+    customerStopStatusPolling();
+    customerStopChatPolling();
     customerStopOrderTrackingRealtime();
+  }
+  return true;
+  })();
+
+  customerStatusPollInFlight = operation;
+  try {
+    return await operation;
+  } finally {
+    if (customerStatusPollInFlight === operation) customerStatusPollInFlight = null;
   }
 }
 
+function customerStopStatusPolling() {
+  if (customerStatusTimer) {
+    window.clearTimeout(customerStatusTimer);
+    customerStatusTimer = null;
+  }
+  customerStatusPollSignature = "";
+}
+
+function customerScheduleStatusPoll(delayMs) {
+  if (!customerTrackedOrder?.id || !customerTrackedOrder.publicToken || !customerClient) {
+    customerStopStatusPolling();
+    return;
+  }
+  if (customerStatusTimer) window.clearTimeout(customerStatusTimer);
+  const signature = `${customerTrackedOrder.id}:${customerTrackedOrder.publicToken}`;
+  customerStatusPollSignature = signature;
+  customerStatusTimer = window.setTimeout(async () => {
+    customerStatusTimer = null;
+    const currentSignature = `${customerTrackedOrder?.id || ""}:${customerTrackedOrder?.publicToken || ""}`;
+    if (signature !== customerStatusPollSignature || signature !== currentSignature) return;
+    if (document.visibilityState !== "visible" || !window.navigator.onLine) {
+      customerScheduleStatusPoll(CUSTOMER_STATUS_POLL_MIN_MS);
+      return;
+    }
+    if (customerTrackingRealtimeStatus === "SUBSCRIBED") {
+      customerScheduleStatusPoll(CUSTOMER_STATUS_POLL_MIN_MS);
+      return;
+    }
+    const loaded = await customerPollOrderStatus();
+    customerStatusPollingDelay = loaded
+      ? CUSTOMER_STATUS_POLL_MIN_MS
+      : Math.min(Math.max(customerStatusPollingDelay, CUSTOMER_STATUS_POLL_MIN_MS) * 2, CUSTOMER_STATUS_POLL_MAX_MS);
+    customerScheduleStatusPoll(customerStatusPollingDelay);
+  }, Math.max(0, Number(delayMs) || 0));
+}
+
 function customerStartStatusTracking(orderId, publicToken, paymentMethod, paymentUrl) {
-  if (customerStatusTimer) window.clearInterval(customerStatusTimer);
+  customerStopStatusPolling();
   customerStopOrderTrackingRealtime();
   customerTrackedOrder = {
     id: orderId,
@@ -5158,10 +5255,8 @@ function customerStartStatusTracking(orderId, publicToken, paymentMethod, paymen
   if (customerElements.confirmDeliveryButton) customerElements.confirmDeliveryButton.hidden = true;
   customerRenderCourierTracking(null);
   customerRenderOrderTimeline([]);
-  customerPollOrderStatus().catch(() => {});
-  customerStatusTimer = window.setInterval(() => {
-    if (customerTrackingRealtimeStatus !== "SUBSCRIBED") customerPollOrderStatus().catch(() => {});
-  }, 8000);
+  customerStatusPollingDelay = CUSTOMER_STATUS_POLL_MIN_MS;
+  customerScheduleStatusPoll(0);
   customerStartChat(orderId, publicToken);
 }
 
@@ -6256,6 +6351,8 @@ window.addEventListener("offline", () => {
 });
 
 window.addEventListener("beforeunload", () => {
+  customerStopStatusPolling();
+  customerStopChatPolling();
   customerStopDirectoryRealtime();
   customerStopMenuRealtime();
   customerStopOrderTrackingRealtime();
