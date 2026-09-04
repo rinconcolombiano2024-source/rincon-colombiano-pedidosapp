@@ -48,6 +48,7 @@ const CLIENT_ORDERS_POLL_MIN_MS = 15_000;
 const CLIENT_ORDERS_POLL_MAX_MS = 120_000;
 const CLIENT_ORDERS_REALTIME_RECONNECT_MIN_MS = 1_500;
 const CLIENT_ORDERS_REALTIME_RECONNECT_MAX_MS = 60_000;
+const CLIENT_ORDERS_REALTIME_STABLE_MS = 30_000;
 const CENTRAL_REALTIME_RECONNECT_MIN_MS = 1_500;
 const CENTRAL_REALTIME_RECONNECT_MAX_MS = 60_000;
 const SYNC_INFRASTRUCTURE_BACKOFF_MS = 30_000;
@@ -512,6 +513,7 @@ let pendingDataSyncRetryNotBefore = 0;
 let centralRealtimeReconnectTimer = null;
 let centralRealtimeReconnectDelay = CENTRAL_REALTIME_RECONNECT_MIN_MS;
 let clientOrdersRealtimeReconnectTimer = null;
+let clientOrdersRealtimeStableTimer = null;
 let clientOrdersRealtimeReconnectDelay =
   CLIENT_ORDERS_REALTIME_RECONNECT_MIN_MS;
 let clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;
@@ -3767,8 +3769,15 @@ function stopClientOrdersRealtime() {
     clientOrdersRealtimeReconnectTimer = null;
   }
 
-  const channel = clientOrdersChannel;
+  if (clientOrdersRealtimeStableTimer) {
+    clearTimeout(
+      clientOrdersRealtimeStableTimer
+    );
 
+    clientOrdersRealtimeStableTimer = null;
+  }
+
+  const channel = clientOrdersChannel;
   clientOrdersChannel = null;
   clientOrdersRealtimeStatus = "idle";
 
