@@ -1252,19 +1252,53 @@ function waiterStartRealtime() {
       waiterLoadStationOrders().catch(console.error);
     });
   waiterOrdersChannel = channel;
-  channel.subscribe((status) => {
-    if (channel !== waiterOrdersChannel) return;
-    waiterOrdersRealtimeStatus = status;
-    if (status === "SUBSCRIBED") {
-      waiterStationPollingDelay = WAITER_STATION_POLL_MIN_MS;
-      waiterStopStationPolling();
-      waiterLoadStationOrders().catch(console.error);
-      return;
+ channel.subscribe((status) => {
+  if (channel !== waiterOrdersChannel) return;
+
+  waiterOrdersRealtimeStatus = status;
+
+  if (status === "SUBSCRIBED") {
+    if (waiterRealtimeStableTimer) {
+      window.clearTimeout(waiterRealtimeStableTimer);
     }
-    if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)) {
-      waiterStartStationPolling({ immediate: true });
+
+    waiterRealtimeStableTimer = window.setTimeout(() => {
+      waiterRealtimeStableTimer = null;
+
+      if (
+        channel === waiterOrdersChannel &&
+        waiterOrdersRealtimeStatus === "SUBSCRIBED"
+      ) {
+        waiterRealtimeReconnectDelay =
+          WAITER_REALTIME_RECONNECT_MIN_MS;
+      }
+    }, WAITER_REALTIME_STABLE_MS);
+
+    waiterStationPollingDelay =
+      WAITER_STATION_POLL_MIN_MS;
+
+    waiterStopStationPolling();
+    waiterLoadStationOrders().catch(console.error);
+    return;
+  }
+
+  if (
+    status === "CHANNEL_ERROR" ||
+    status === "TIMED_OUT" ||
+    status === "CLOSED"
+  ) {
+    if (waiterRealtimeStableTimer) {
+      window.clearTimeout(waiterRealtimeStableTimer);
+      waiterRealtimeStableTimer = null;
     }
-  });
+
+    waiterStartStationPolling({
+      immediate: true,
+    });
+
+    waiterScheduleRealtimeReconnect();
+  }
+});
   waiterStartStationPolling();
 }
 function waiterChangeStation() {
