@@ -3415,15 +3415,19 @@ const expectedRevision =
   Number.isFinite(parsedRevision) && parsedRevision > 0
     ? parsedRevision
     : null;
-    const { data, error } = await cloudState.client.rpc("save_restaurant_order_atomic", {
-      p_id: order.id,
-      p_ticket_number: order.ticketNumber,
-      p_business_date: orderBusinessDate(order),
-      p_order_json: orderForCloud,
-      p_total: orderTotal(order),
-      p_created_at: order.createdAt || null,
-      p_expected_revision: expectedRevision,
-    });
+const { data, error } = await cloudState.client.rpc(
+  "save_and_publish_restaurant_order_atomic",
+  {
+    p_id: order.id,
+    p_ticket_number: order.ticketNumber,
+    p_business_date: orderBusinessDate(order),
+    p_order_json: orderForCloud,
+    p_total: orderTotal(order),
+    p_created_at: order.createdAt || null,
+    p_customer_order_id: order.customerOrderId || null,
+    p_expected_revision: expectedRevision,
+  }
+);
 
     if (!error) {
       const result = Array.isArray(data) ? data[0] : data;
