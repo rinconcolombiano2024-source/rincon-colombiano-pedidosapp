@@ -57,6 +57,9 @@ waiterCustomItemPrice: document.querySelector("#waiterCustomItemPrice"),
 
 const WAITER_STATION_POLL_MIN_MS = 15_000;
 const WAITER_STATION_POLL_MAX_MS = 120_000;
+const WAITER_REALTIME_RECONNECT_MIN_MS = 2_000;
+const WAITER_REALTIME_RECONNECT_MAX_MS = 60_000;
+const WAITER_REALTIME_STABLE_MS = 30_000;
 
 let waiterClient = null;
 let waiterUser = null;
@@ -69,6 +72,10 @@ let waiterCart = [];
 let waiterMenuChannel = null;
 let waiterOrdersChannel = null;
 let waiterStationPollTimer = null;
+let waiterRealtimeReconnectTimer = null;
+let waiterRealtimeStableTimer = null;
+let waiterRealtimeReconnectDelay =
+  WAITER_REALTIME_RECONNECT_MIN_MS;
 let waiterOrdersRealtimeStatus = "idle";
 let waiterStationPollingDelay = WAITER_STATION_POLL_MIN_MS;
 let waiterToastTimer = null;
@@ -1167,34 +1174,152 @@ function waiterStartStationPolling(options = {}) {
 
 function waiterStopRealtime() {
   waiterStopStationPolling();
-  [waiterMenuChannel, waiterOrdersChannel].forEach((channel) => {
+    if (waiterRealtimeReconnectTimer) {
+    window.clearTimeout(waiterRealtimeReconnectTimer);
+    waiterRealtimeReconnectTimer = null;
+  }
+
+  if (waiterRealtimeStableTimer) {
+    window.clearTimeout(waiterRealtimeStableTimer);
+    waiterRealtimeStableTimer = null;
+  }
+ new Set([waiterMenuChannel, waiterOrdersChannel]).forEach((channel) => {
     if (channel && waiterClient?.removeChannel) waiterClient.removeChannel(channel).catch(() => {});
   });
   waiterMenuChannel = null;
   waiterOrdersChannel = null;
   waiterOrdersRealtimeStatus = "idle";
 }
+function waiterScheduleRealtimeReconnect() {
+  if (
+    waiterRealtimeReconnectTimer ||
+    !navigator.onLine ||
+    !waiterClient ||
+    !waiterStoreId ||
+    !waiterUser ||
+    !waiterMembership
+  ) {
+    return;
+  }
 
+  const retryDelay = waiterRealtimeReconnectDelay;
+
+  waiterRealtimeReconnectTimer = window.setTimeout(() => {
+    waiterRealtimeReconnectTimer = null;
+
+    if (
+      !navigator.onLine ||
+      !waiterClient ||
+      !waiterStoreId ||
+      !waiterUser ||
+      !waiterMembership
+    ) {
+      return;
+    }
+
+    waiterRealtimeReconnectDelay = Math.min(
+      retryDelay * 2,
+      WAITER_REALTIME_RECONNECT_MAX_MS
+    );
+
+    waiterStartRealtime();
+  }, retryDelay);
+}
 function waiterStartRealtime() {
   waiterStopRealtime();
   if (!waiterClient || !waiterStoreId || !waiterUser) return;
   const canTakeOrders = ["waiter", "cashier", "manager"].includes(waiterMembership?.station);
-  if (canTakeOrders) {
-    waiterMenuChannel = waiterClient
-      .channel(`waiter-menu-${waiterStoreId}-${waiterUser.id}`)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "app_settings", filter: `user_id=eq.${waiterStoreId}` }, () => {
+if (canTakeOrders) {
+  waiterOrdersRealtimeStatus = "connecting";
+
+  const channel = waiterClient
+    .channel(
+      `waiter-live-${waiterStoreId}-${waiterUser.id}`
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "app_settings",
+        filter: `user_id=eq.${waiterStoreId}`,
+      },
+      () => {
         waiterLoadMenu().catch(console.error);
-        waiterShowToast("Menu actualizado por el restaurante.");
-      })
-      .subscribe();
-    waiterOrdersChannel = waiterClient
-      .channel(`waiter-orders-${waiterStoreId}-${waiterUser.id}`)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "customer_orders", filter: `created_by_user_id=eq.${waiterUser.id}` }, () => {
+        waiterShowToast(
+          "Menu actualizado por el restaurante."
+        );
+      }
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "customer_orders",
+        filter:
+          `created_by_user_id=eq.${waiterUser.id}`,
+      },
+      () => {
         waiterLoadSentOrders().catch(console.error);
-      })
-      .subscribe();
-    return;
-  }
+      }
+    );
+
+  waiterMenuChannel = channel;
+  waiterOrdersChannel = channel;
+
+  channel.subscribe((status) => {
+    if (
+      channel !== waiterMenuChannel ||
+      channel !== waiterOrdersChannel
+    ) {
+      return;
+    }
+
+    waiterOrdersRealtimeStatus = status;
+
+    if (status === "SUBSCRIBED") {
+      if (waiterRealtimeStableTimer) {
+        window.clearTimeout(waiterRealtimeStableTimer);
+      }
+
+      waiterRealtimeStableTimer = window.setTimeout(() => {
+        waiterRealtimeStableTimer = null;
+
+        if (
+          channel === waiterMenuChannel &&
+          channel === waiterOrdersChannel &&
+          waiterOrdersRealtimeStatus === "SUBSCRIBED"
+        ) {
+          waiterRealtimeReconnectDelay =
+            WAITER_REALTIME_RECONNECT_MIN_MS;
+        }
+      }, WAITER_REALTIME_STABLE_MS);
+
+      Promise.all([
+        waiterLoadMenu(),
+        waiterLoadSentOrders(),
+      ]).catch(console.error);
+
+      return;
+    }
+
+    if (
+      status === "CHANNEL_ERROR" ||
+      status === "TIMED_OUT" ||
+      status === "CLOSED"
+    ) {
+      if (waiterRealtimeStableTimer) {
+        window.clearTimeout(waiterRealtimeStableTimer);
+        waiterRealtimeStableTimer = null;
+      }
+
+      waiterScheduleRealtimeReconnect();
+    }
+  });
+
+  return;
+}
   waiterOrdersRealtimeStatus = "connecting";
   const channel = waiterClient
     .channel(`restaurant-station-${waiterStoreId}-${waiterUser.id}`)
@@ -1202,19 +1327,53 @@ function waiterStartRealtime() {
       waiterLoadStationOrders().catch(console.error);
     });
   waiterOrdersChannel = channel;
-  channel.subscribe((status) => {
-    if (channel !== waiterOrdersChannel) return;
-    waiterOrdersRealtimeStatus = status;
-    if (status === "SUBSCRIBED") {
-      waiterStationPollingDelay = WAITER_STATION_POLL_MIN_MS;
-      waiterStopStationPolling();
-      waiterLoadStationOrders().catch(console.error);
-      return;
+ channel.subscribe((status) => {
+  if (channel !== waiterOrdersChannel) return;
+
+  waiterOrdersRealtimeStatus = status;
+
+  if (status === "SUBSCRIBED") {
+    if (waiterRealtimeStableTimer) {
+      window.clearTimeout(waiterRealtimeStableTimer);
     }
-    if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)) {
-      waiterStartStationPolling({ immediate: true });
+
+    waiterRealtimeStableTimer = window.setTimeout(() => {
+      waiterRealtimeStableTimer = null;
+
+      if (
+        channel === waiterOrdersChannel &&
+        waiterOrdersRealtimeStatus === "SUBSCRIBED"
+      ) {
+        waiterRealtimeReconnectDelay =
+          WAITER_REALTIME_RECONNECT_MIN_MS;
+      }
+    }, WAITER_REALTIME_STABLE_MS);
+
+    waiterStationPollingDelay =
+      WAITER_STATION_POLL_MIN_MS;
+
+    waiterStopStationPolling();
+    waiterLoadStationOrders().catch(console.error);
+    return;
+  }
+
+  if (
+    status === "CHANNEL_ERROR" ||
+    status === "TIMED_OUT" ||
+    status === "CLOSED"
+  ) {
+    if (waiterRealtimeStableTimer) {
+      window.clearTimeout(waiterRealtimeStableTimer);
+      waiterRealtimeStableTimer = null;
     }
-  });
+
+    waiterStartStationPolling({
+      immediate: true,
+    });
+
+    waiterScheduleRealtimeReconnect();
+  }
+});
   waiterStartStationPolling();
 }
 function waiterChangeStation() {
@@ -1502,11 +1661,17 @@ async function waiterInitialize() {
   if (waiterUser) await waiterAuthorize();
   else waiterRenderLoggedOut();
 
-  waiterClient.auth.onAuthStateChange(async (_event, session) => {
-    waiterUser = session?.user || null;
-    if (waiterUser) await waiterAuthorize();
-    else waiterRenderLoggedOut();
-  });
+waiterClient.auth.onAuthStateChange(async (event, session) => {
+  waiterUser = session?.user || null;
+
+  if (event === "INITIAL_SESSION") return;
+
+  if (waiterUser) {
+    await waiterAuthorize();
+  } else {
+    waiterRenderLoggedOut();
+  }
+});
 }
 
 waiterElements.authForm.addEventListener("submit", waiterSignIn);
