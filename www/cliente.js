@@ -113,6 +113,8 @@ const CUSTOMER_REALTIME_RECONNECT_MIN_MS = 2_000;
 const CUSTOMER_REALTIME_RECONNECT_MAX_MS = 60_000;
 const CUSTOMER_REALTIME_STABLE_MS = 30_000;
 const CUSTOMER_RECOVERY_DEDUP_MS = 2_000;
+const CUSTOMER_DIRECTORY_POLL_MIN_MS = 30_000;
+const CUSTOMER_DIRECTORY_POLL_MAX_MS = 300_000;
 const CUSTOMER_CHAT_POLL_MIN_MS = 15_000;
 const CUSTOMER_CHAT_POLL_MAX_MS = 120_000;
 const CUSTOMER_STATUS_POLL_MIN_MS = 15_000;
@@ -1658,6 +1660,7 @@ let customerDirectoryRealtimeStableTimer = null;
 let customerDirectoryRealtimeRetryDelay =
   CUSTOMER_REALTIME_RECONNECT_MIN_MS;
 let customerDirectoryRealtimeStatus = "idle";
+let customerDirectoryPollingDelay = CUSTOMER_DIRECTORY_POLL_MIN_MS;
 let customerRecoveryInFlight = null;
 let customerRecoveryLastCompletedAt = 0;
 let customerDirectoryLoadPromise = null;
@@ -3042,7 +3045,7 @@ function customerStopDirectoryRealtime() {
     customerDirectoryRealtimeTimer = null;
   }
   if (customerDirectoryPollTimer) {
-    window.clearInterval(customerDirectoryPollTimer);
+    window.clearTimeout(customerDirectoryPollTimer);
     customerDirectoryPollTimer = null;
   }
   const channel = customerDirectoryRealtimeChannel;
@@ -3059,13 +3062,46 @@ function customerScheduleDirectoryRefresh() {
   }, 300);
 }
 
+function customerScheduleDirectoryPoll(delayMs = customerDirectoryPollingDelay) {
+  if (customerDirectoryRealtimeStatus === "SUBSCRIBED") {
+    if (customerDirectoryPollTimer) {
+      window.clearTimeout(customerDirectoryPollTimer);
+      customerDirectoryPollTimer = null;
+    }
+    return;
+  }
+
+  if (customerDirectoryPollTimer) {
+    window.clearTimeout(customerDirectoryPollTimer);
+  }
+
+  customerDirectoryPollTimer = window.setTimeout(async () => {
+    customerDirectoryPollTimer = null;
+
+    if (customerDirectoryRealtimeStatus === "SUBSCRIBED") return;
+
+    if (document.visibilityState !== "visible" || !window.navigator.onLine) {
+      customerScheduleDirectoryPoll(CUSTOMER_DIRECTORY_POLL_MIN_MS);
+      return;
+    }
+
+    const loaded = await customerLoadRestaurantDirectory({ silent: true });
+    customerDirectoryPollingDelay = loaded
+      ? CUSTOMER_DIRECTORY_POLL_MIN_MS
+      : Math.min(
+          Math.max(customerDirectoryPollingDelay, CUSTOMER_DIRECTORY_POLL_MIN_MS) * 2,
+          CUSTOMER_DIRECTORY_POLL_MAX_MS
+        );
+
+    if (customerDirectoryRealtimeStatus !== "SUBSCRIBED") {
+      customerScheduleDirectoryPoll(customerDirectoryPollingDelay);
+    }
+  }, Math.max(0, Number(delayMs) || 0));
+}
+
 function customerStartDirectoryRealtime() {
   if (!customerDirectoryPollTimer) {
-    customerDirectoryPollTimer = window.setInterval(() => {
-      if (customerDirectoryRealtimeStatus !== "SUBSCRIBED" && document.visibilityState === "visible" && window.navigator.onLine) {
-        customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
-      }
-    }, 15000);
+    customerScheduleDirectoryPoll(customerDirectoryPollingDelay);
   }
   if (!customerClient?.channel || customerDirectoryRealtimeChannel) return;
   customerDirectoryRealtimeStatus = "connecting";
@@ -3104,9 +3140,10 @@ function customerStartDirectoryRealtime() {
     }, CUSTOMER_REALTIME_STABLE_MS);
 
     if (customerDirectoryPollTimer) {
-      window.clearInterval(customerDirectoryPollTimer);
+      window.clearTimeout(customerDirectoryPollTimer);
       customerDirectoryPollTimer = null;
     }
+    customerDirectoryPollingDelay = CUSTOMER_DIRECTORY_POLL_MIN_MS;
 
     customerScheduleDirectoryRefresh();
     return;
@@ -3123,6 +3160,7 @@ function customerStartDirectoryRealtime() {
     }
 
     customerDirectoryRealtimeChannel = null;
+    customerScheduleDirectoryPoll(customerDirectoryPollingDelay);
 
     if (customerClient?.removeChannel) {
       customerClient.removeChannel(channel).catch(() => {});
@@ -3422,7 +3460,7 @@ function customerLoadRestaurantDirectory(options = {}) {
 async function customerLoadRestaurantDirectoryNow(options = {}) {
   const { silent = false } = options;
   const client = customerEnsureClient();
-  if (!client || !customerElements.restaurantList) return;
+  if (!client || !customerElements.restaurantList) return false;
 
   if (!silent) {
     customerElements.restaurantList.innerHTML = `<div class="customer-empty">${customerEscapeHtml(
@@ -3451,7 +3489,7 @@ async function customerLoadRestaurantDirectoryNow(options = {}) {
     customerElements.restaurantList.innerHTML = `<div class="customer-empty">${customerEscapeHtml(
       customerT("restaurantLoadError")
     )}</div>`;
-    return;
+    return false;
   }
 
   customerRestaurants = customerDeduplicateRestaurants((Array.isArray(data) ? data : [])
@@ -3467,9 +3505,10 @@ async function customerLoadRestaurantDirectoryNow(options = {}) {
     ));
   if (customerStoreId && !customerSelectedRestaurant()) {
     customerClearRestaurantSelection("restaurantUnavailable");
-    return;
+    return true;
   }
   customerRenderRestaurantDirectory();
+  return true;
 }
 
 async function customerSelectRestaurant(storeId, options = {}) {
