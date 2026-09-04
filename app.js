@@ -4512,7 +4512,23 @@ const channel = cloudState.client
     );
     clientOrdersRealtimeReconnectTimer = null;
   }
+if (clientOrdersRealtimeStableTimer) {
+  clearTimeout(
+    clientOrdersRealtimeStableTimer
+  );
+}
 
+clientOrdersRealtimeStableTimer = setTimeout(() => {
+  clientOrdersRealtimeStableTimer = null;
+
+  if (
+    channel === clientOrdersChannel &&
+    clientOrdersRealtimeStatus === "SUBSCRIBED"
+  ) {
+    clientOrdersRealtimeReconnectDelay =
+      CLIENT_ORDERS_REALTIME_RECONNECT_MIN_MS;
+  }
+}, CLIENT_ORDERS_REALTIME_STABLE_MS);
 
   stopClientOrdersPolling();
   clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;
