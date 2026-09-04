@@ -54,6 +54,9 @@ const CENTRAL_REALTIME_RECONNECT_MAX_MS = 60_000;
 const CENTRAL_REALTIME_STABLE_MS = 30_000;
 const CLOUD_RECOVERY_DEDUP_MS = 2_000;
 const SYNC_INFRASTRUCTURE_BACKOFF_MS = 30_000;
+const SYNC_ORDER_CONFLICT_BACKOFF_MS = 5 * 60_000;
+const SYNC_ORDER_BATCH_SIZE = 5;
+const SYNC_ORDER_BATCH_DELAY_MS = 15_000;
 const MINIMUM_DATABASE_SCHEMA_VERSION = 91;
 
 const LEGACY_STORAGE_KEYS = {
@@ -1044,7 +1047,28 @@ function isTemporarySyncInfrastructureError(error) {
     || code === "PGRST003"
     || /\b503\b|schema cache|connection pool|timed?\s*out|timeout|failed to fetch|network error|network request failed/i.test(details);
 }
+function isOrderRevisionConflictError(error) {
+  const code = String(
+    error?.code ||
+    error?.cause?.code ||
+    ""
+  ).trim();
 
+  const details = [
+    error?.message,
+    error?.details,
+    error?.hint,
+    error?.cause?.message,
+    error?.cause?.details,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    code === "ORDER_REVISION_CONFLICT" ||
+    /ORDER_REVISION_(?:CONFLICT|REQUIRED)/i.test(details)
+  );
+}
 function needsCloudSync(order) {
   return Boolean(order?.saved && order.syncStatus === "pending");
 }
@@ -3479,21 +3503,6 @@ const { data, error } = await cloudState.client.rpc(
 
     throw error;
   }
-
-  const stationResult = await cloudState.client.rpc(
-    "publish_current_restaurant_order_to_stations",
-    {
-      p_restaurant_order_id: order.id,
-      p_customer_order_id: order.customerOrderId || null,
-    }
-  );
-
-  if (
-    stationResult.error
-    && !["42883", "PGRST202"].includes(stationResult.error.code)
-  ) {
-    throw stationResult.error;
-  }
 }
 async function voidCloudOrder(orderId, reason = "Cancelado por el restaurante") {
   if (!cloudState.client || !cloudState.user || !orderId) return;
@@ -5827,7 +5836,19 @@ async function runPendingDataSync(options = {}) {
   pendingDataSyncRequested = false;
 
   const pendingDeletedOrderIds = readDeletedOrderIds();
-  const pendingOrders = savedOrders.filter((order) => needsCloudSync(order) && !pendingDeletedOrderIds.includes(order.id));
+const allPendingOrders = savedOrders.filter(
+  (order) =>
+    needsCloudSync(order) &&
+    !pendingDeletedOrderIds.includes(order.id)
+);
+
+const pendingOrders = allPendingOrders.slice(
+  0,
+  SYNC_ORDER_BATCH_SIZE
+);
+
+const hasMorePendingOrders =
+  allPendingOrders.length > pendingOrders.length;
   const settingsPendingToken = currentSettingsPendingToken();
   const shouldSyncSettings = Boolean(settingsPendingToken);
   const menuPendingToken = currentMenuPendingToken();
@@ -5875,11 +5896,21 @@ async function runPendingDataSync(options = {}) {
         const expectedUpdatedAt = order.updatedAt;
         await saveCloudOrder(order);
         confirmOrderSyncedIfUnchanged(order.id, expectedUpdatedAt);
-      } catch (error) {
-        console.error(`No fue posible sincronizar el pedido ${order.id}.`, error);
-        if (!pendingOrderSyncError) pendingOrderSyncError = error;
-        if (isTemporarySyncInfrastructureError(error)) break;
-      }
+     } catch (error) {
+  console.error(
+    `No fue posible sincronizar el pedido ${order.id}.`,
+    error
+  );
+
+  if (isTemporarySyncInfrastructureError(error)) {
+    pendingOrderSyncError = error;
+    break;
+  }
+
+  if (!pendingOrderSyncError) {
+    pendingOrderSyncError = error;
+  }
+}
     }
 
     if (pendingOrderSyncError) throw pendingOrderSyncError;
@@ -5893,17 +5924,35 @@ async function runPendingDataSync(options = {}) {
     saveTicketState();
     saveOrders({ immediate: true });
     cloudState.lastError = "";
-    pendingDataSyncRetryNotBefore = 0;
-    renderOrder();
+pendingDataSyncRetryNotBefore = 0;
+
+if (
+  hasMorePendingOrders &&
+  hasPendingDataToSync()
+) {
+  pendingDataSyncRequested = true;
+  schedulePendingDataSyncRetry(
+    SYNC_ORDER_BATCH_DELAY_MS
+  );
+}
+
+renderOrder();
     renderHistory();
     updateCloudStatus();
     return true;
   } catch (error) {
     console.error(error);
     if (isTemporarySyncInfrastructureError(error)) {
-      pendingDataSyncRetryNotBefore = Date.now() + SYNC_INFRASTRUCTURE_BACKOFF_MS;
-      pendingDataSyncRequested = true;
-    }
+  pendingDataSyncRetryNotBefore =
+    Date.now() + SYNC_INFRASTRUCTURE_BACKOFF_MS;
+
+  pendingDataSyncRequested = true;
+} else if (isOrderRevisionConflictError(error)) {
+  pendingDataSyncRetryNotBefore =
+    Date.now() + SYNC_ORDER_CONFLICT_BACKOFF_MS;
+
+  pendingDataSyncRequested = true;
+}
     saveOrders({ immediate: true });
     setCloudError(error);
     return false;
