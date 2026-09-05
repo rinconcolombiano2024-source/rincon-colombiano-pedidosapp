@@ -212,24 +212,75 @@ const RESTAURANT_REGIONS = {
 };
 
 function renderRestaurantRegionSuggestions(countryCode) {
-  const datalist = document.querySelector("#restaurantRegionOptions");
+  const datalist =
+    document.querySelector(
+      "#restaurantRegionOptions"
+    );
+
   if (!datalist) return;
-  datalist.innerHTML = (RESTAURANT_REGIONS[countryCode] || [])
-    .map((region) => `<option value="${escapeHtml(region)}"></option>`)
-    .join("");
+
+  datalist.textContent = "";
+
+  const regions =
+    RESTAURANT_REGIONS[countryCode] || [];
+
+  const fragment =
+    document.createDocumentFragment();
+
+  regions.forEach((region) => {
+    const option =
+      document.createElement("option");
+
+    option.value = region;
+
+    fragment.appendChild(option);
+  });
+
+  datalist.appendChild(fragment);
 }
 
 function normalizedRestaurantRegion(countryCode, value) {
-  const cleanValue = normalizeTextSetting(value);
-  if (!cleanValue) return "";
-  const comparable = (text) => String(text || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/\b(wojewodztwo|voivodeship|departamento|department)\b/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-  const match = (RESTAURANT_REGIONS[countryCode] || []).find((region) => comparable(region) === comparable(cleanValue));
+  const cleanValue =
+    normalizeTextSetting(value);
+
+  if (!cleanValue) {
+    return "";
+  }
+
+  const comparable = (text) =>
+    String(text || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(
+        /\b(wojewodztwo|voivodeship|departamento|department)\b/g,
+        ""
+      )
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+
+  const cleanComparable =
+    comparable(cleanValue);
+
+  /*
+   * Si después de normalizar no queda
+   * contenido significativo, conservamos
+   * lo que escribió el usuario.
+   */
+  if (!cleanComparable) {
+    return cleanValue;
+  }
+
+  const match =
+    (
+      RESTAURANT_REGIONS[countryCode] ||
+      []
+    ).find(
+      (region) =>
+        comparable(region) ===
+        cleanComparable
+    );
+
   return match || cleanValue;
 }
 
