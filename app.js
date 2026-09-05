@@ -2245,6 +2245,73 @@ renderMenu();
 renderOrder();
 renderHistory();
 
+/*
+ * ARRANQUE DE EMERGENCIA:
+ * si esta tablet no tiene menu local,
+ * recuperamos SOLO el menu de Supabase
+ * antes de cargar pedidos, perfil o cualquier otra cosa.
+ */
+if (menuProductCount(menuCatalog) === 0) {
+  try {
+    const {
+      data: startupSettingsRow,
+      error: startupMenuError,
+    } = await withCloudTimeout(
+      cloudState.client
+        .from("app_settings")
+        .select("menu, menu_revision")
+        .eq("user_id", cloudState.user.id)
+        .maybeSingle(),
+      "El menu tardo demasiado en cargar.",
+      8000
+    );
+
+    if (startupMenuError) {
+      throw startupMenuError;
+    }
+
+    const startupMenu =
+      normalizeMenuCatalog(
+        startupSettingsRow?.menu ||
+        EMPTY_MENU_CATALOG
+      );
+
+    if (menuProductCount(startupMenu) > 0) {
+      menuCatalog = startupMenu;
+
+      activeCategory =
+        Object.keys(menuCatalog)[0] || "";
+
+      saveMenuCache({
+        immediate: true,
+      });
+
+      storeConfirmedCloudMenu(
+        menuCatalog
+      );
+
+      if (
+        startupSettingsRow?.menu_revision !==
+        undefined
+      ) {
+        storeCloudRevision(
+          STORAGE_KEYS.menuRevision,
+          startupSettingsRow.menu_revision
+        );
+      }
+
+      renderCategories();
+      renderMenu();
+    }
+  } catch (error) {
+    console.error(
+      "No fue posible recuperar el menu durante el arranque.",
+      error
+    );
+  }
+}
+
+
 try {
     try {
   await withCloudTimeout(ensureMinimumDatabaseVersion());
