@@ -13049,4 +13049,3 @@ initializeCloud().catch((error) => {
   const friendlyMessage = navigator.onLine ? setCloudError(error) : "Sin internet. Puedes continuar con los datos guardados.";
   elements.authMessage.textContent = friendlyMessage;
 });
-
