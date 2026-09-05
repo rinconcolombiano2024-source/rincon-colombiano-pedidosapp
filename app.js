@@ -1085,12 +1085,85 @@ function buildMonthlyClose(month) {
 function persistOrdersCache() {
   orderCachePersistHandle = null;
   orderCachePersistMode = "";
-  localStorage.setItem(
-    STORAGE_KEYS.orders,
-    JSON.stringify(savedOrders.slice(0, LOCAL_ORDER_CACHE_LIMIT))
-  );
-}
 
+  /*
+   * Los pedidos que todavía dependen
+   * del almacenamiento local tienen prioridad.
+   */
+  const criticalOrders =
+    savedOrders.filter((order) =>
+      order?.saved &&
+      (
+        order.syncStatus === "pending" ||
+        order.syncStatus === "local" ||
+        order.id === currentOrder?.id
+      )
+    );
+
+  const criticalIds =
+    new Set(
+      criticalOrders.map(
+        (order) => order.id
+      )
+    );
+
+  /*
+   * Completamos el cache con pedidos ya
+   * sincronizados, sin desplazar pedidos críticos.
+   */
+  const availableSlots =
+    Math.max(
+      0,
+      LOCAL_ORDER_CACHE_LIMIT -
+        criticalOrders.length
+    );
+
+  const remainingOrders =
+    savedOrders
+      .filter(
+        (order) =>
+          !criticalIds.has(order.id)
+      )
+      .slice(0, availableSlots);
+
+  /*
+   * Conservamos el orden cronológico habitual
+   * de la aplicación.
+   */
+  const ordersToPersist =
+    [
+      ...criticalOrders,
+      ...remainingOrders,
+    ].sort(
+      (a, b) =>
+        new Date(b.createdAt || 0) -
+        new Date(a.createdAt || 0)
+    );
+
+  try {
+    localStorage.setItem(
+      STORAGE_KEYS.orders,
+      JSON.stringify(
+        ordersToPersist
+      )
+    );
+
+    return true;
+  } catch (error) {
+    /*
+     * MUY IMPORTANTE:
+     * no eliminamos pedidos,
+     * no borramos currentOrderDraft
+     * y no hacemos podas destructivas.
+     */
+    console.error(
+      "No fue posible persistir el cache local de pedidos. Los datos en memoria se conservan.",
+      error
+    );
+
+    return false;
+  }
+}
 function saveOrders(options = {}) {
   const { immediate = false } = options;
   if (immediate) {
