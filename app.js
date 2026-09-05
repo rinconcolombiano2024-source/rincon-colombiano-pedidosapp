@@ -1206,36 +1206,104 @@ function shouldQueueForCloud() {
   return cloudState.configured && (Boolean(cloudState.user) || hasKnownCloudSession());
 }
 
-function withCloudTimeout(promise, message = "La nube no respondio a tiempo.", timeoutMs = 20000) {
+function withCloudTimeout(
+  operation,
+  message =
+    "La nube no respondio a tiempo.",
+  timeoutMs = 20000
+) {
   let timerId = null;
-  const timeout = new Promise((_, reject) => {
-    timerId = window.setTimeout(() => reject(new Error(message)), timeoutMs);
-  });
-  return Promise.race([promise, timeout]).finally(() => {
-    if (timerId) window.clearTimeout(timerId);
-  });
-}
+  let abortController = null;
+  let pendingOperation = operation;
 
-function isTemporarySyncInfrastructureError(error) {
-  const status = Number(error?.status ?? error?.statusCode ?? error?.cause?.status);
-  const code = String(error?.code || error?.cause?.code || "").toUpperCase();
-  const details = [
-    error?.message,
-    error?.details,
-    error?.hint,
-    error?.cause?.message,
-  ].filter(Boolean).join(" ");
-  return status === 503
-    || code === "PGRST002"
-    || code === "PGRST003"
-    || /\b503\b|schema cache|connection pool|timed?\s*out|timeout|failed to fetch|network error|network request failed/i.test(details);
+  /*
+   * Las consultas PostgREST de Supabase
+   * permiten AbortSignal.
+   *
+   * Si esta operación lo soporta,
+   * el timeout cancela también la
+   * solicitud real y no solamente
+   * deja de esperarla.
+   */
+  if (
+    operation &&
+    typeof operation.abortSignal ===
+      "function" &&
+    typeof AbortController !==
+      "undefined"
+  ) {
+    abortController =
+      new AbortController();
+
+    pendingOperation =
+      operation.abortSignal(
+        abortController.signal
+      );
+  }
+
+  const timeout =
+    new Promise((_, reject) => {
+      timerId = window.setTimeout(
+        () => {
+          /*
+           * Cancelamos la petición
+           * únicamente si esta operación
+           * admite cancelación.
+           */
+          if (
+            abortController &&
+            !abortController.signal.aborted
+          ) {
+            abortController.abort();
+          }
+
+          const error =
+            new Error(message);
+
+          error.name = "TimeoutError";
+          error.code =
+            "RC_ORDERA_CLOUD_TIMEOUT";
+
+          reject(error);
+        },
+        timeoutMs
+      );
+    });
+
+  return Promise.race([
+    Promise.resolve(
+      pendingOperation
+    ),
+    timeout,
+  ]).finally(() => {
+    if (timerId !== null) {
+      window.clearTimeout(timerId);
+    }
+  });
 }
-function isOrderRevisionConflictError(error) {
+function isTemporarySyncInfrastructureError(error) {
+  const status = Number(
+    error?.status ??
+    error?.statusCode ??
+    error?.cause?.status ??
+    error?.cause?.statusCode
+  );
+
   const code = String(
     error?.code ||
     error?.cause?.code ||
     ""
-  ).trim();
+  )
+    .trim()
+    .toUpperCase();
+
+  const name = String(
+    error?.name ||
+    error?.cause?.name ||
+    ""
+  )
+    .trim()
+    .toUpperCase();
 
   const details = [
     error?.message,
@@ -1243,13 +1311,134 @@ function isOrderRevisionConflictError(error) {
     error?.hint,
     error?.cause?.message,
     error?.cause?.details,
+    error?.cause?.hint,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  /*
+   * Timeout controlado por RC ORDERA.
+   */
+  if (
+    code ===
+    "RC_ORDERA_CLOUD_TIMEOUT"
+  ) {
+    return true;
+  }
+
+  /*
+   * Una petición abortada por nuestro
+   * timeout también es un fallo temporal.
+   */
+  if (name === "ABORTERROR") {
+    return true;
+  }
+
+  /*
+   * Errores HTTP típicamente transitorios.
+   *
+   * 408 = request timeout
+   * 429 = rate limit
+   * 502/503/504 = infraestructura upstream
+   */
+  if (
+    status === 408 ||
+    status === 429 ||
+    status === 502 ||
+    status === 503 ||
+    status === 504
+  ) {
+    return true;
+  }
+
+  /*
+   * Errores PostgREST asociados a
+   * disponibilidad/conexiones.
+   */
+  if (
+    code === "PGRST002" ||
+    code === "PGRST003"
+  ) {
+    return true;
+  }
+
+  /*
+   * Última defensa para errores de red
+   * que no entregan status ni código fiable.
+   */
+  return (
+    /\b502\b|\b503\b|\b504\b/i.test(
+      details
+    ) ||
+    /schema cache/i.test(details) ||
+    /connection pool/i.test(details) ||
+    /timed?\s*out/i.test(details) ||
+    /\btimeout\b/i.test(details) ||
+    /failed to fetch/i.test(details) ||
+    /fetch failed/i.test(details) ||
+    /network error/i.test(details) ||
+    /network request failed/i.test(
+      details
+    ) ||
+    /load failed/i.test(details) ||
+    /econnreset/i.test(details) ||
+    /etimedout/i.test(details)
+  );
+}
+function isOrderRevisionConflictError(error) {
+  if (!error) {
+    return false;
+  }
+
+  const codes = [
+    error?.code,
+    error?.cause?.code,
+  ]
+    .filter(Boolean)
+    .map((value) =>
+      String(value)
+        .trim()
+        .toUpperCase()
+    );
+
+  /*
+   * En RC ORDERA un conflicto verdadero
+   * debe llegar normalizado con este código.
+   *
+   * saveCloudOrder() ya se encarga antes de
+   * distinguir entre:
+   *
+   * - confirmación perdida
+   * - revisión requerida
+   * - conflicto real entre dispositivos
+   */
+  if (
+    codes.includes(
+      "ORDER_REVISION_CONFLICT"
+    )
+  ) {
+    return true;
+  }
+
+  /*
+   * Defensa para errores serializados donde
+   * el código pudiera venir dentro del mensaje,
+   * details o hint.
+   */
+  const details = [
+    error?.message,
+    error?.details,
+    error?.hint,
+    error?.cause?.message,
+    error?.cause?.details,
+    error?.cause?.hint,
   ]
     .filter(Boolean)
     .join(" ");
 
   return (
-    code === "ORDER_REVISION_CONFLICT" ||
-    /ORDER_REVISION_(?:CONFLICT|REQUIRED)/i.test(details)
+    /\bORDER_REVISION_CONFLICT\b/i
+      .test(details)
   );
 }
 function needsCloudSync(order) {
