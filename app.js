@@ -6996,19 +6996,81 @@ if (shouldSyncTicketCounter) {
   }
 }
 
-    for (const orderId of pendingDeletedOrderIds) {
-      try {
-        await voidCloudOrder(orderId);
-        setOrderSyncStatus(orderId, "synced");
-        clearDeletedOrderId(orderId);
-      } catch (error) {
-        if (/order not found|pedido no encontrado/i.test(String(error?.message || ""))) {
-          clearDeletedOrderId(orderId);
-          continue;
-        }
-        throw error;
-      }
+   for (const orderId of pendingDeletedOrderIds) {
+  try {
+    /*
+     * Primero confirmamos la anulación
+     * en Supabase.
+     */
+    await voidCloudOrder(orderId);
+
+    /*
+     * Después retiramos la intención
+     * de anulación de la cola local.
+     *
+     * Si localStorage falla, NO fingimos
+     * que la operación quedó cerrada.
+     */
+    const cleared =
+      clearDeletedOrderId(orderId);
+
+    if (!cleared) {
+      const queueError =
+        new Error(
+          `No fue posible confirmar localmente la anulación del pedido ${orderId}.`
+        );
+
+      queueError.code =
+        "RC_ORDERA_DELETED_ORDER_QUEUE_WRITE_FAILED";
+
+      throw queueError;
     }
+
+    /*
+     * Solo cuando nube + cola local están
+     * confirmadas marcamos el pedido synced.
+     */
+    setOrderSyncStatus(
+      orderId,
+      "synced"
+    );
+  } catch (error) {
+    /*
+     * Si el pedido ya no existe en Supabase,
+     * el objetivo remoto ya está cumplido.
+     * Aun así debemos confirmar la limpieza local.
+     */
+    if (
+      /order not found|pedido no encontrado/i.test(
+        String(error?.message || "")
+      )
+    ) {
+      const cleared =
+        clearDeletedOrderId(orderId);
+
+      if (!cleared) {
+        const queueError =
+          new Error(
+            `El pedido ${orderId} ya no existe en nube, pero no fue posible limpiar su anulación local.`
+          );
+
+        queueError.code =
+          "RC_ORDERA_DELETED_ORDER_QUEUE_WRITE_FAILED";
+
+        throw queueError;
+      }
+
+      setOrderSyncStatus(
+        orderId,
+        "synced"
+      );
+
+      continue;
+    }
+
+    throw error;
+  }
+}
 
 let pendingOrderSyncError = null;
 
