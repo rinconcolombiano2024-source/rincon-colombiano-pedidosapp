@@ -2700,6 +2700,11 @@ updateRestaurantStatusSync();
     console.error(error);
     const friendlyMessage = navigator.onLine ? setCloudError(error) : "Sin internet. Los datos locales siguen disponibles.";
     elements.authMessage.textContent = friendlyMessage;
+  renderCurrencySettings();
+renderCategories();
+renderMenu();
+renderOrder();
+renderHistory();
     return { ok: false, error, message: friendlyMessage };
   } finally {
   cloudState.loading = false;
