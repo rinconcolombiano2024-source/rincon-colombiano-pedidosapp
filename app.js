@@ -1560,16 +1560,48 @@ function friendlyCloudError(error) {
 
 function setCloudError(error, options = {}) {
   const friendlyMessage = friendlyCloudError(error);
+
+  const technicalDetails = [
+    error?.code,
+    error?.status,
+    error?.message,
+    error?.details,
+    error?.hint,
+    error?.cause?.message,
+  ]
+    .filter(Boolean)
+    .join(" | ");
+
   if (options.moduleOnly) {
     cloudState.moduleWarning = friendlyMessage;
   } else {
     cloudState.lastError = friendlyMessage;
   }
-  updateCloudStatus(options.moduleOnly ? "Nube parcial" : "Revisar nube");
-  if (elements.cloudStatus) elements.cloudStatus.title = friendlyMessage;
+
+  updateCloudStatus(
+    options.moduleOnly
+      ? "Nube parcial"
+      : "Revisar nube"
+  );
+
+  if (elements.cloudStatus) {
+    elements.cloudStatus.title =
+      technicalDetails
+        ? `${friendlyMessage}\n${technicalDetails}`
+        : friendlyMessage;
+  }
+
+  console.error(
+    "[RC ORDERA CLOUD ERROR]",
+    {
+      friendlyMessage,
+      technicalDetails,
+      originalError: error,
+    }
+  );
+
   return friendlyMessage;
 }
-
 function clearCloudErrors() {
   cloudState.lastError = "";
   cloudState.moduleWarning = "";
@@ -10790,6 +10822,16 @@ elements.cancelRecoveryButton.addEventListener("click", () => hidePasswordRecove
 if (elements.refreshAppButton) {
   elements.refreshAppButton.addEventListener("click", refreshRestaurantApp);
 }
+elements.cloudStatus?.addEventListener("click", () => {
+  const message =
+    elements.cloudStatus?.title ||
+    cloudState.lastError ||
+    cloudState.moduleWarning;
+
+  if (message) {
+    alert(message);
+  }
+});
 elements.openSignInButton.addEventListener("click", openSignInScreen);
 elements.signOutButton.addEventListener("click", signOut);
 elements.closeRestaurantButton?.addEventListener("click", toggleRestaurantOperationalOpen);
