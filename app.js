@@ -6150,8 +6150,132 @@ if (
       }
     }
 
-    let pendingOrderSyncError = null;
-    for (const order of pendingOrders) {
+let pendingOrderSyncError = null;
+
+/*
+ * Antes de volver a escribir un pedido pendiente,
+ * comprobamos si esa misma edición ya existe
+ * en Supabase.
+ *
+ * Esto evita reenviar pedidos que sí fueron
+ * guardados pero cuya confirmación se perdió.
+ */
+let pendingOrdersToUpload = pendingOrders;
+
+if (pendingOrders.length) {
+  const pendingIds = pendingOrders
+    .map((order) => order.id)
+    .filter(Boolean);
+
+  const { data: remotePendingRows, error: remotePendingError } =
+    await withCloudTimeout(
+      cloudState.client
+        .from("orders")
+        .select("id, order_json, revision")
+        .eq("user_id", cloudState.user.id)
+        .in("id", pendingIds),
+      "No fue posible comprobar los pedidos pendientes en nube a tiempo.",
+      8000
+    );
+
+  if (remotePendingError) {
+    throw remotePendingError;
+  }
+
+  const remoteById = new Map(
+    (remotePendingRows || []).map(
+      (row) => [String(row.id), row]
+    )
+  );
+
+  pendingOrdersToUpload = [];
+
+  for (const order of pendingOrders) {
+    const remoteRow =
+      remoteById.get(String(order.id));
+
+    const localUpdatedAt =
+      String(order.updatedAt || "");
+
+    const remoteUpdatedAt =
+      String(
+        remoteRow?.order_json?.updatedAt ||
+        ""
+      );
+
+    /*
+     * Mismo ID + mismo updatedAt:
+     * es exactamente la edición local que
+     * ya consiguió llegar a la nube.
+     */
+    if (
+      remoteRow &&
+      localUpdatedAt &&
+      remoteUpdatedAt === localUpdatedAt
+    ) {
+      const parsedRevision =
+        Number.parseInt(
+          remoteRow.revision,
+          10
+        );
+
+      const patch = {
+        syncStatus: "synced",
+      };
+
+      if (
+        Number.isFinite(parsedRevision) &&
+        parsedRevision > 0
+      ) {
+        patch._syncRevision =
+          parsedRevision;
+      }
+
+      Object.assign(
+        order,
+        patch
+      );
+
+      savedOrders =
+        savedOrders.map(
+          (savedOrder) =>
+            savedOrder.id === order.id
+              ? {
+                  ...savedOrder,
+                  ...patch,
+                }
+              : savedOrder
+        );
+
+      if (
+        currentOrder.id === order.id
+      ) {
+        Object.assign(
+          currentOrder,
+          patch
+        );
+      }
+
+      continue;
+    }
+
+    /*
+     * No existe en nube o es una edición
+     * diferente: sí necesita sincronización.
+     */
+    pendingOrdersToUpload.push(
+      order
+    );
+  }
+
+  saveOrders({
+    immediate: true,
+  });
+
+  saveCurrentOrderDraft();
+}
+
+for (const order of pendingOrdersToUpload) {
       try {
         const expectedUpdatedAt = order.updatedAt;
         await saveCloudOrder(order);
