@@ -3455,20 +3455,59 @@ async function setCloudNextTicket(number) {
 async function saveCloudOrder(order) {
   if (!cloudState.client || !cloudState.user || !order.saved) return;
 
-  const applyConfirmedRevision = (revision) => {
-    const parsedRevision = Number.parseInt(revision, 10);
-    if (!Number.isFinite(parsedRevision) || parsedRevision < 1) return;
+ const applyConfirmedCloudState = (result = {}) => {
+  const parsedRevision = Number.parseInt(
+    result?.revision,
+    10
+  );
 
-    order._syncRevision = parsedRevision;
-    savedOrders = savedOrders.map((savedOrder) => (
+  const customerOrderId =
+    result?.customer_order_id ||
+    result?.customerOrderId ||
+    null;
+
+  const patch = {};
+
+  if (
+    Number.isFinite(parsedRevision) &&
+    parsedRevision > 0
+  ) {
+    patch._syncRevision = parsedRevision;
+  }
+
+  if (customerOrderId) {
+    patch.customerOrderId = customerOrderId;
+  }
+
+  if (!Object.keys(patch).length) {
+    return;
+  }
+
+  Object.assign(order, patch);
+
+  savedOrders = savedOrders.map(
+    (savedOrder) =>
       savedOrder.id === order.id
-        ? { ...savedOrder, _syncRevision: parsedRevision }
+        ? {
+            ...savedOrder,
+            ...patch,
+          }
         : savedOrder
-    ));
-    if (currentOrder.id === order.id) currentOrder._syncRevision = parsedRevision;
-    saveCurrentOrderDraft();
-  };
+  );
 
+  if (currentOrder.id === order.id) {
+    Object.assign(
+      currentOrder,
+      patch
+    );
+  }
+
+  saveOrders({
+    immediate: true,
+  });
+
+  saveCurrentOrderDraft();
+};
   const saveOrderRow = async () => {
     const orderForCloud = structuredCloneOrder(order);
     orderForCloud.syncStatus = "synced";
@@ -3497,9 +3536,13 @@ const { data, error } = await cloudState.client.rpc(
 );
 
     if (!error) {
-      const result = Array.isArray(data) ? data[0] : data;
-      applyConfirmedRevision(result?.revision);
-    }
+  const result =
+    Array.isArray(data)
+      ? data[0]
+      : data;
+
+  applyConfirmedCloudState(result);
+}
 
     return { data, error };
   };
@@ -3530,20 +3573,140 @@ const { data, error } = await cloudState.client.rpc(
 
   if (error) {
     if (
-      error.code === "40001"
-      || /ORDER_REVISION_(?:CONFLICT|REQUIRED)/i.test(String(error.message || ""))
-    ) {
-      const conflictError = new Error(
-        appUiText(
-          "Este pedido cambio en otro dispositivo. Actualiza la nube antes de volver a modificarlo."
-        )
-      );
+  error.code === "40001" ||
+  /ORDER_REVISION_(?:CONFLICT|REQUIRED)/i.test(
+    String(error.message || "")
+  )
+) {
+  /*
+   * Antes de declarar un conflicto real comprobamos
+   * si el servidor ya contiene exactamente la misma
+   * edición local.
+   *
+   * Esto cubre el caso:
+   *
+   * servidor guarda correctamente
+   * -> respuesta se pierde / timeout
+   * -> navegador conserva revision anterior
+   * -> siguiente intento recibe conflicto.
+   */
 
-      conflictError.code = "ORDER_REVISION_CONFLICT";
-      conflictError.cause = error;
-      throw conflictError;
+  try {
+    const [
+      remoteOrderResponse,
+      remoteCustomerOrderResponse,
+    ] = await withCloudTimeout(
+      Promise.all([
+        cloudState.client
+          .from("orders")
+          .select(
+            "order_json, revision, updated_at"
+          )
+          .eq(
+            "id",
+            order.id
+          )
+          .eq(
+            "user_id",
+            cloudState.user.id
+          )
+          .maybeSingle(),
+
+        cloudState.client
+          .from("customer_orders")
+          .select("id")
+          .eq(
+            "user_id",
+            cloudState.user.id
+          )
+          .eq(
+            "restaurant_order_id",
+            order.id
+          )
+          .limit(1)
+          .maybeSingle(),
+      ]),
+      "No fue posible verificar el pedido en nube a tiempo.",
+      8000
+    );
+
+    if (remoteOrderResponse.error) {
+      throw remoteOrderResponse.error;
     }
 
+    const remoteRow =
+      remoteOrderResponse.data;
+
+    const localUpdatedAt =
+      String(
+        order.updatedAt ||
+        ""
+      );
+
+    const remoteUpdatedAt =
+      String(
+        remoteRow?.order_json?.updatedAt ||
+        ""
+      );
+
+    /*
+     * Si updatedAt coincide, es la misma edición que
+     * esta tablet intentó enviar anteriormente.
+     *
+     * Por tanto NO es un conflicto real.
+     * Simplemente se perdió la confirmación.
+     */
+    if (
+      localUpdatedAt &&
+      remoteUpdatedAt === localUpdatedAt
+    ) {
+      applyConfirmedCloudState({
+        revision:
+          remoteRow.revision,
+
+        customer_order_id:
+          remoteCustomerOrderResponse
+            ?.data?.id ||
+          null,
+      });
+
+      console.info(
+        "[RC ORDERA] Pedido recuperado después de una confirmación perdida.",
+        {
+          orderId: order.id,
+          revision: remoteRow.revision,
+        }
+      );
+
+      return;
+    }
+  } catch (reconciliationError) {
+    console.warn(
+      "[RC ORDERA] No fue posible reconciliar automáticamente el conflicto.",
+      reconciliationError
+    );
+  }
+
+  /*
+   * Si updatedAt es diferente, entonces sí existe
+   * una modificación verdadera de otro dispositivo.
+   * No sobrescribimos nada.
+   */
+  const conflictError =
+    new Error(
+      appUiText(
+        "Este pedido cambio en otro dispositivo. Actualiza la nube antes de volver a modificarlo."
+      )
+    );
+
+  conflictError.code =
+    "ORDER_REVISION_CONFLICT";
+
+  conflictError.cause =
+    error;
+
+  throw conflictError;
+}
     throw error;
   }
 }
