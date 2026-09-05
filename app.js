@@ -12083,11 +12083,9 @@ function recoverCloudConnection() {
     await syncPendingData({ silent: true });
     await refreshCentralCloudState();
     await refreshClientOrders({ silent: true });
-
-stopCentralRealtime();
-stopClientOrdersRealtime();
-startClientOrdersPolling();
-
+startCentralRealtime();
+startClientOrdersRealtime();
+    
     updateRestaurantStatusSync();
 
     await syncRestaurantOperationalStatus({
