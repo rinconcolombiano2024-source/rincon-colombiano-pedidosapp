@@ -7064,21 +7064,49 @@ if (
   if (!silent) updateCloudStatus("Sincronizando...");
 
   try {
-   if (shouldSyncSettings) {
-  await saveCloudSettings();
+  let deferredSyncError = null;
 
-  const cleared =
-    clearSettingsPending(
-      settingsPendingToken
-    );
+if (shouldSyncSettings) {
+  try {
+    await saveCloudSettings();
 
-  if (!cleared) {
+    const cleared =
+      clearSettingsPending(
+        settingsPendingToken
+      );
+
+    if (!cleared) {
+      /*
+       * Los ajustes cambiaron mientras
+       * esta sincronización estaba en curso.
+       */
+      pendingDataSyncRequested = true;
+    }
+  } catch (settingsSyncError) {
     /*
-     * Los ajustes cambiaron mientras
-     * esta sincronización estaba en curso.
-     * Debemos ejecutar otra pasada.
+     * Un fallo temporal de Supabase debe detener
+     * inmediatamente la ronda y aplicar backoff.
      */
-    pendingDataSyncRequested = true;
+    if (
+      isTemporarySyncInfrastructureError(
+        settingsSyncError
+      )
+    ) {
+      throw settingsSyncError;
+    }
+
+    /*
+     * Un error lógico de ajustes no debe impedir
+     * que los pedidos continúen sincronizándose.
+     * El pendiente de ajustes se conserva.
+     */
+    deferredSyncError =
+      settingsSyncError;
+
+    console.error(
+      "No fue posible sincronizar los ajustes. Los pedidos continuarán.",
+      settingsSyncError
+    );
   }
 }
 
@@ -7341,9 +7369,15 @@ for (const order of pendingOrdersToUpload) {
 }
     }
 
-    if (pendingOrderSyncError) throw pendingOrderSyncError;
+if (pendingOrderSyncError) {
+  throw pendingOrderSyncError;
+}
 
-    const highestLocalTicketToday = savedOrders
+if (deferredSyncError) {
+  throw deferredSyncError;
+}
+
+const highestLocalTicketToday = savedOrders
       .filter((order) => orderBusinessDate(order) === todayKey)
       .reduce((highest, order) => Math.max(highest, Number(order.ticketNumber) || 0), 0);
     const minimumNextTicket = Math.max(nextTicket, highestLocalTicketToday + 1);
