@@ -7111,19 +7111,49 @@ if (shouldSyncSettings) {
 }
 
 if (shouldSyncMenu) {
-  await saveCloudMenu();
+  try {
+    await saveCloudMenu();
 
-  const cleared =
-    clearMenuPending(
-      menuPendingToken
-    );
+    const cleared =
+      clearMenuPending(
+        menuPendingToken
+      );
 
-  if (!cleared) {
+    if (!cleared) {
+      /*
+       * El menú cambió mientras se estaba
+       * sincronizando y necesita otra ronda.
+       */
+      pendingDataSyncRequested = true;
+    }
+  } catch (menuSyncError) {
     /*
-     * El menú volvió a cambiar mientras
-     * estábamos sincronizando.
+     * Un fallo temporal indica que Supabase
+     * no está disponible. Detenemos la ronda
+     * para no generar más llamadas.
      */
-    pendingDataSyncRequested = true;
+    if (
+      isTemporarySyncInfrastructureError(
+        menuSyncError
+      )
+    ) {
+      throw menuSyncError;
+    }
+
+    /*
+     * Un error lógico del menú no puede impedir
+     * que los pedidos pendientes se guarden.
+     * El menú permanece marcado como pendiente.
+     */
+    if (!deferredSyncError) {
+      deferredSyncError =
+        menuSyncError;
+    }
+
+    console.error(
+      "No fue posible sincronizar el menú. Los pedidos continuarán.",
+      menuSyncError
+    );
   }
 }
 
