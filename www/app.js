@@ -2606,7 +2606,7 @@ nextTicket =
       console.warn("El modulo de pedidos de clientes necesita revision.", moduleError);
       setCloudError(moduleError, { moduleOnly: true });
     }
-stopClientOrdersRealtime();
+ stopClientOrdersRealtime();
 stopCentralRealtime();
 startClientOrdersPolling({
   immediate: true,
@@ -4489,7 +4489,7 @@ function scheduleClientOrdersRealtimeReconnect() {
           CLIENT_ORDERS_REALTIME_RECONNECT_MAX_MS
         );
 
-  stopClientOrdersRealtime();
+    stopClientOrdersRealtime();
 startClientOrdersPolling({
   immediate: true,
 });
