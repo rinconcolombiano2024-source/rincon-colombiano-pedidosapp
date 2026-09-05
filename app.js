@@ -2226,10 +2226,26 @@ async function loadCloudData() {
   const currentOrderBeforeLoad = normalizeCurrentOrderDraft(currentOrder);
   const localDeletedOrderIds = readDeletedOrderIds();
   const localPendingOrders = localOrdersBeforeLoad.filter(
-    (order) => needsCloudSync(order) && !localDeletedOrderIds.includes(order.id)
-  );
+  (order) =>
+    needsCloudSync(order) &&
+    !localDeletedOrderIds.includes(order.id)
+);
+
 let syncPendingAfterLoad = false;
-  try {
+
+/*
+ * POS LOCAL-FIRST:
+ * nunca esperamos a Supabase para mostrar
+ * el menú y los pedidos que ya existen
+ * en este dispositivo.
+ */
+renderCurrencySettings();
+renderCategories();
+renderMenu();
+renderOrder();
+renderHistory();
+
+try {
     try {
   await withCloudTimeout(ensureMinimumDatabaseVersion());
 } catch (error) {
