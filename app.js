@@ -1450,10 +1450,77 @@ function pendingOrdersCount() {
 }
 
 function readDeletedOrderIds() {
+  const raw =
+    localStorage.getItem(
+      STORAGE_KEYS.deletedOrders
+    );
+
+  /*
+   * No existe ninguna eliminación pendiente.
+   */
+  if (!raw) {
+    return [];
+  }
+
   try {
-    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEYS.deletedOrders) || "[]");
-    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
-  } catch {
+    const parsed =
+      JSON.parse(raw);
+
+    /*
+     * Nunca interpretamos un objeto,
+     * string u otro tipo como una cola válida.
+     *
+     * IMPORTANTE:
+     * no sobrescribimos el valor original.
+     */
+    if (!Array.isArray(parsed)) {
+      console.error(
+        "[RC ORDERA] La cola local de pedidos eliminados tiene un formato inválido. El valor original se conserva."
+      );
+
+      return [];
+    }
+
+    /*
+     * Los IDs de pedidos de RC ORDERA son strings.
+     *
+     * - eliminamos entradas inválidas
+     * - quitamos espacios
+     * - eliminamos vacíos
+     * - eliminamos duplicados
+     *
+     * No exigimos UUID porque existen IDs
+     * legacy/fallback que también son válidos.
+     */
+    return Array.from(
+      new Set(
+        parsed
+          .filter(
+            (id) =>
+              typeof id === "string"
+          )
+          .map(
+            (id) => id.trim()
+          )
+          .filter(Boolean)
+      )
+    );
+  } catch (error) {
+    /*
+     * Un JSON corrupto NO debe provocar:
+     *
+     * - crash de la caja
+     * - borrado de la cola
+     * - sobrescritura automática
+     *
+     * Conservamos intacto localStorage
+     * para poder diagnosticar o recuperar.
+     */
+    console.error(
+      "[RC ORDERA] No fue posible leer la cola local de pedidos eliminados. El dato original se conserva.",
+      error
+    );
+
     return [];
   }
 }
