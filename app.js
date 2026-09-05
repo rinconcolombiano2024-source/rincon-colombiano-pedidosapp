@@ -92,23 +92,81 @@ const LEGACY_STORAGE_KEYS = {
   deliveryMinimumFee: "rincon_colombiano_delivery_minimum_fee",
   currentOrderDraft: "rincon_colombiano_current_order_draft",
 };
-
 function migrateLegacyRestaurantStorage() {
   try {
     Object.entries(LEGACY_STORAGE_KEYS).forEach(([name, legacyKey]) => {
       const nextKey = STORAGE_KEYS[name];
-      if (!nextKey || nextKey === legacyKey) return;
-      const legacyValue = localStorage.getItem(legacyKey);
-      if (localStorage.getItem(nextKey) === null && legacyValue !== null) {
-        localStorage.setItem(nextKey, legacyValue);
+
+      if (!nextKey || nextKey === legacyKey) {
+        return;
       }
-      if (legacyValue !== null) localStorage.removeItem(legacyKey);
+
+      const legacyValue =
+        localStorage.getItem(legacyKey);
+
+      if (legacyValue === null) {
+        return;
+      }
+
+      const currentValue =
+        localStorage.getItem(nextKey);
+
+      /*
+       * Caso 1:
+       * No existe todavía el dato nuevo.
+       * Copiamos y verificamos antes de borrar.
+       */
+      if (currentValue === null) {
+        localStorage.setItem(
+          nextKey,
+          legacyValue
+        );
+
+        if (
+          localStorage.getItem(nextKey) ===
+          legacyValue
+        ) {
+          localStorage.removeItem(
+            legacyKey
+          );
+        } else {
+          console.warn(
+            `No se pudo verificar la migracion de ${nextKey}. El dato legacy se conserva.`
+          );
+        }
+
+        return;
+      }
+
+      /*
+       * Caso 2:
+       * Ambos valores ya son iguales.
+       * La clave antigua es redundante.
+       */
+      if (currentValue === legacyValue) {
+        localStorage.removeItem(
+          legacyKey
+        );
+
+        return;
+      }
+
+      /*
+       * Caso 3:
+       * Existen valores diferentes.
+       * No sobreescribimos ni eliminamos nada.
+       */
+      console.warn(
+        `Conflicto de almacenamiento en ${nextKey}. Se conservan ambos valores.`
+      );
     });
-  } catch {
-    // La app puede continuar cuando el navegador limita el almacenamiento local.
+  } catch (error) {
+    console.error(
+      "No fue posible completar la migracion segura del almacenamiento local:",
+      error
+    );
   }
 }
-
 migrateLegacyRestaurantStorage();
 
 const DEFAULT_BUSINESS_NAME = "MI RESTAURANTE";
