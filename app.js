@@ -4391,17 +4391,58 @@ const { data, error } = await cloudState.client.rpc(
     p_expected_revision: expectedRevision,
   }
 );
-
-    if (!error) {
+if (!error) {
   const result =
     Array.isArray(data)
       ? data[0]
       : data;
 
+  const confirmedOrderId =
+    result?.order_id ||
+    result?.orderId ||
+    null;
+
+  const confirmedRevision =
+    Number.parseInt(
+      result?.revision,
+      10
+    );
+
+  const confirmedCustomerOrderId =
+    result?.customer_order_id ||
+    result?.customerOrderId ||
+    null;
+
+  /*
+   * Un RPC sin error pero sin confirmación completa
+   * no demuestra que el pedido se haya guardado
+   * y publicado correctamente en las estaciones.
+   */
+  if (
+    String(confirmedOrderId || "") !==
+      String(order.id) ||
+    !Number.isFinite(confirmedRevision) ||
+    confirmedRevision < 1 ||
+    !confirmedCustomerOrderId
+  ) {
+    const confirmationError =
+      new Error(
+        "Supabase no confirmó completamente el guardado y la publicación del pedido."
+      );
+
+    confirmationError.code =
+      "RC_ORDERA_ORDER_NOT_CONFIRMED";
+
+    return {
+      data,
+      error: confirmationError,
+    };
+  }
+
   applyConfirmedCloudState(result);
 }
 
-    return { data, error };
+return { data, error };
   };
 
   let { error } = await saveOrderRow();
@@ -4493,7 +4534,32 @@ const { data, error } = await cloudState.client.rpc(
 
     const remoteRow =
       remoteOrderResponse.data;
+const remoteRevision =
+  Number.parseInt(
+    remoteRow?.revision,
+    10
+  );
 
+/*
+ * Si no recibimos una fila completa, no existe
+ * evidencia suficiente para declarar un conflicto.
+ * El pedido debe permanecer pendiente.
+ */
+if (
+  !remoteRow ||
+  !Number.isFinite(remoteRevision) ||
+  remoteRevision < 1
+) {
+  const unconfirmedReconciliationError =
+    new Error(
+      "Supabase no devolvió una versión válida del pedido durante la reconciliación."
+    );
+
+  unconfirmedReconciliationError.code =
+    "RC_ORDERA_RECONCILIATION_NOT_CONFIRMED";
+
+  throw unconfirmedReconciliationError;
+}
     const localUpdatedAt =
       String(
         order.updatedAt ||
@@ -4514,30 +4580,75 @@ const { data, error } = await cloudState.client.rpc(
      * Simplemente se perdió la confirmación.
      */
     if (
-      localUpdatedAt &&
-      remoteUpdatedAt === localUpdatedAt
-    ) {
-      applyConfirmedCloudState({
-        revision:
-          remoteRow.revision,
+  localUpdatedAt &&
+  remoteUpdatedAt === localUpdatedAt
+) {
+  /*
+   * La fila principal existe, pero también debemos
+   * confirmar que el pedido fue publicado para
+   * caja y estaciones.
+   */
+  if (remoteCustomerOrderResponse.error) {
+    throw remoteCustomerOrderResponse.error;
+  }
 
-        customer_order_id:
-          remoteCustomerOrderResponse
-            ?.data?.id ||
-          null,
-      });
+  const recoveredCustomerOrderId =
+    remoteCustomerOrderResponse
+      ?.data?.id ||
+    null;
 
-      console.info(
-        "[RC ORDERA] Pedido recuperado después de una confirmación perdida.",
-        {
-          orderId: order.id,
-          revision: remoteRow.revision,
-        }
-      );
+  if (recoveredCustomerOrderId) {
+    applyConfirmedCloudState({
+      revision:
+        remoteRow.revision,
 
-      return;
+      customer_order_id:
+        recoveredCustomerOrderId,
+    });
+
+    console.info(
+      "[RC ORDERA] Pedido recuperado después de una confirmación perdida.",
+      {
+        orderId: order.id,
+        revision: remoteRow.revision,
+        customerOrderId:
+          recoveredCustomerOrderId,
+      }
+    );
+
+    return;
+  }
+
+  /*
+   * La edición llegó a orders, pero no encontramos
+   * su publicación en customer_orders.
+   *
+   * Actualizamos únicamente la revisión confirmada
+   * y repetimos una sola vez la operación atómica.
+   */
+  applyConfirmedCloudState({
+    revision:
+      remoteRow.revision,
+  });
+
+  const publicationRetry =
+    await saveOrderRow();
+
+  if (publicationRetry.error) {
+    throw publicationRetry.error;
+  }
+
+  console.info(
+    "[RC ORDERA] Pedido republicado correctamente en las estaciones.",
+    {
+      orderId: order.id,
+      revision: remoteRow.revision,
     }
- } catch (reconciliationError) {
+  );
+
+  return;
+}
+  } catch (reconciliationError) {
   console.warn(
     "[RC ORDERA] No fue posible reconciliar automáticamente el conflicto.",
     reconciliationError
