@@ -622,6 +622,7 @@ let centralSyncInProgress = false;
 let centralSyncRefreshPending = false;
 let pendingDataSyncRequested = false;
 let pendingDataSyncRetryTimer = null;
+let pendingDataSyncRetryDueAt = 0;
 let pendingDataSyncInFlight = null;
 let pendingDataSyncRetryNotBefore = 0;
 let centralRealtimeReconnectTimer = null;
@@ -7010,13 +7011,58 @@ function syncPendingData(options = {}) {
 }
 
 function schedulePendingDataSyncRetry(delayMs = 5000) {
-  if (pendingDataSyncRetryTimer !== null) return;
-  pendingDataSyncRetryTimer = window.setTimeout(() => {
+  const normalizedDelay = Math.max(
+    0,
+    Number(delayMs) || 0
+  );
+
+  const requestedDueAt =
+    Date.now() + normalizedDelay;
+
+  /*
+   * Si ya existe un reintento igual o más próximo,
+   * no programamos otro.
+   */
+  if (
+    pendingDataSyncRetryTimer !== null &&
+    pendingDataSyncRetryDueAt > 0 &&
+    pendingDataSyncRetryDueAt <= requestedDueAt
+  ) {
+    return;
+  }
+
+  /*
+   * Si el nuevo reintento debe ejecutarse antes,
+   * reemplazamos el temporizador anterior.
+   */
+  if (pendingDataSyncRetryTimer !== null) {
+    window.clearTimeout(
+      pendingDataSyncRetryTimer
+    );
+
     pendingDataSyncRetryTimer = null;
-    syncPendingData({ silent: true }).catch((error) => {
-      console.error("No fue posible completar la sincronizacion pendiente.", error);
-    });
-  }, Math.max(0, delayMs));
+  }
+
+  pendingDataSyncRetryDueAt =
+    requestedDueAt;
+
+  pendingDataSyncRetryTimer =
+    window.setTimeout(() => {
+      pendingDataSyncRetryTimer = null;
+      pendingDataSyncRetryDueAt = 0;
+
+      syncPendingData({
+        silent: true,
+      }).catch((error) => {
+        console.error(
+          "No fue posible completar la sincronizacion pendiente.",
+          error
+        );
+      });
+    }, Math.max(
+      0,
+      requestedDueAt - Date.now()
+    ));
 }
 function schedulePendingOrderRecovery(error = null) {
   if (
@@ -7088,12 +7134,17 @@ if (
   pendingDataSyncRetryNotBefore = 0;
 
   if (pendingDataSyncRetryTimer !== null) {
-    clearTimeout(pendingDataSyncRetryTimer);
-    pendingDataSyncRetryTimer = null;
-  }
+  window.clearTimeout(
+    pendingDataSyncRetryTimer
+  );
 
-  updateCloudStatus();
-  return true;
+  pendingDataSyncRetryTimer = null;
+}
+
+pendingDataSyncRetryDueAt = 0;
+
+updateCloudStatus();
+return true;
 }
   cloudState.syncing = true;
   if (!silent) updateCloudStatus("Sincronizando...");
@@ -10924,22 +10975,23 @@ schedulePendingOrderRecovery(
 
 updateCloudStatus();
     }
-  } else if (shouldQueueForCloud()) {
-    currentOrder.syncStatus =
-      "pending";
+ } else if (shouldQueueForCloud()) {
+  currentOrder.syncStatus =
+    "pending";
 
-    setOrderSyncStatus(
-      currentOrder.id,
-      "pending"
-    );
+  setOrderSyncStatus(
+    currentOrder.id,
+    "pending"
+  );
 
-    saveOrders({
-      immediate: true,
-    });
+  saveOrders({
+    immediate: true,
+  });
 
-    updateCloudStatus();
-  }
+  schedulePendingOrderRecovery();
 
+  updateCloudStatus();
+}
   if (elements.dailyCloseDialog?.open) {
     renderDailyClose(
       elements.closeDayInput.value ||
