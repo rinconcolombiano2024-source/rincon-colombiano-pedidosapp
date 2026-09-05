@@ -3005,9 +3005,8 @@ try {
       console.warn("El modulo de pedidos de clientes necesita revision.", moduleError);
       setCloudError(moduleError, { moduleOnly: true });
     }
- stopClientOrdersRealtime();
-stopCentralRealtime();
-startClientOrdersPolling();
+startCentralRealtime();
+startClientOrdersRealtime();
 updateRestaurantStatusSync();
     if (restaurantOperationalMode === "schedule") {
   await withCloudTimeout(
