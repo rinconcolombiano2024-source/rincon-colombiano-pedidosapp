@@ -2980,21 +2980,9 @@ nextTicket =
     renderHistory();
 cloudState.ready = true;
 clearCloudErrors();
-
-/*
- * La carga inicial NUNCA debe quedar bloqueada
- * esperando pedidos pendientes.
- *
- * Primero dejamos la caja operativa.
- * La sincronizacion se ejecuta despues en segundo plano.
- */
-/*
- * EMERGENCIA:
- * no sincronizamos automáticamente los 32 pedidos
- * hasta estabilizar Supabase.
- */
-syncPendingAfterLoad = false;
-
+  
+syncPendingAfterLoad =
+  hasPendingDataToSync();
 try {
   await withCloudTimeout(
     refreshClientOrders({ silent: true }),
