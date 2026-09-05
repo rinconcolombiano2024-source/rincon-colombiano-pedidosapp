@@ -2606,8 +2606,11 @@ nextTicket =
       console.warn("El modulo de pedidos de clientes necesita revision.", moduleError);
       setCloudError(moduleError, { moduleOnly: true });
     }
-    startClientOrdersRealtime();
-startCentralRealtime();
+ stopClientOrdersRealtime();
+stopCentralRealtime();
+startClientOrdersPolling({
+  immediate: true,
+});
 updateRestaurantStatusSync();
     if (restaurantOperationalMode === "schedule") {
       await syncRestaurantOperationalStatus({ silent: true });
@@ -4486,7 +4489,10 @@ function scheduleClientOrdersRealtimeReconnect() {
           CLIENT_ORDERS_REALTIME_RECONNECT_MAX_MS
         );
 
-      startClientOrdersRealtime();
+    stopClientOrdersRealtime();
+startClientOrdersPolling({
+  immediate: true,
+});
     }, retryDelay);
 }
 function startClientOrdersRealtime() {
@@ -11354,13 +11360,9 @@ function recoverCloudConnection() {
     await refreshCentralCloudState();
     await refreshClientOrders({ silent: true });
 
-    if (!centralSyncChannel) {
-      startCentralRealtime();
-    }
-
-    if (!clientOrdersChannel) {
-      startClientOrdersRealtime();
-    }
+stopCentralRealtime();
+stopClientOrdersRealtime();
+startClientOrdersPolling();
 
     updateRestaurantStatusSync();
 
