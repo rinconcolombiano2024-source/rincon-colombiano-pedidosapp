@@ -7018,7 +7018,42 @@ function schedulePendingDataSyncRetry(delayMs = 5000) {
     });
   }, Math.max(0, delayMs));
 }
+function schedulePendingOrderRecovery(error = null) {
+  if (
+    !cloudState.client ||
+    !cloudState.user ||
+    !navigator.onLine
+  ) {
+    return;
+  }
 
+  /*
+   * Si Supabase está temporalmente saturado,
+   * respetamos el backoff para no bombardearlo.
+   */
+  if (
+    error &&
+    isTemporarySyncInfrastructureError(error)
+  ) {
+    pendingDataSyncRetryNotBefore =
+      Math.max(
+        pendingDataSyncRetryNotBefore,
+        Date.now() +
+          SYNC_INFRASTRUCTURE_BACKOFF_MS
+      );
+  }
+
+  const retryDelay =
+    Math.max(
+      5000,
+      pendingDataSyncRetryNotBefore -
+        Date.now()
+    );
+
+  schedulePendingDataSyncRetry(
+    retryDelay
+  );
+}
 async function runPendingDataSync(options = {}) {
   const { silent = false } = options;
   pendingDataSyncRequested = false;
@@ -10879,11 +10914,15 @@ async function upsertCurrentOrder(options = {}) {
         currentOrder.syncStatus
       );
 
-      saveOrders({
-        immediate: true,
-      });
+     saveOrders({
+  immediate: true,
+});
 
-      updateCloudStatus();
+schedulePendingOrderRecovery(
+  error
+);
+
+updateCloudStatus();
     }
   } else if (shouldQueueForCloud()) {
     currentOrder.syncStatus =
