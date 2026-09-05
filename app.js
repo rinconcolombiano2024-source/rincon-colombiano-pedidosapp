@@ -1526,16 +1526,243 @@ function readDeletedOrderIds() {
 }
 
 function saveDeletedOrderIds(ids) {
-  localStorage.setItem(STORAGE_KEYS.deletedOrders, JSON.stringify(Array.from(new Set(ids.filter(Boolean)))));
+  /*
+   * Normalizamos antes de persistir.
+   * La cola de eliminaciones solo acepta
+   * identificadores de texto válidos.
+   */
+  const normalizedIds =
+    Array.from(
+      new Set(
+        (Array.isArray(ids) ? ids : [])
+          .filter(
+            (id) =>
+              typeof id === "string"
+          )
+          .map(
+            (id) => id.trim()
+          )
+          .filter(Boolean)
+      )
+    );
+
+  try {
+    const serialized =
+      JSON.stringify(normalizedIds);
+
+    localStorage.setItem(
+      STORAGE_KEYS.deletedOrders,
+      serialized
+    );
+
+    /*
+     * Verificación posterior a la escritura.
+     *
+     * No damos por hecho que localStorage
+     * guardó correctamente.
+     */
+    const persisted =
+      localStorage.getItem(
+        STORAGE_KEYS.deletedOrders
+      );
+
+    if (persisted !== serialized) {
+      console.error(
+        "[RC ORDERA] No fue posible verificar la cola local de pedidos eliminados."
+      );
+
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    /*
+     * Nunca eliminamos ni limpiamos datos
+     * como reacción a un fallo de escritura.
+     */
+    console.error(
+      "[RC ORDERA] No fue posible guardar la cola local de pedidos eliminados.",
+      error
+    );
+
+    return false;
+  }
 }
 
 function queueDeletedOrderId(orderId) {
-  if (!orderId || !shouldQueueForCloud()) return;
-  saveDeletedOrderIds([...readDeletedOrderIds(), orderId]);
+  const normalizedId =
+    typeof orderId === "string"
+      ? orderId.trim()
+      : "";
+
+  /*
+   * Un ID inválido nunca entra
+   * en la cola de eliminaciones.
+   */
+  if (!normalizedId) {
+    return false;
+  }
+
+  /*
+   * Si este dispositivo no necesita
+   * sincronización cloud, no hay nada
+   * remoto que poner en cola.
+   */
+  if (!shouldQueueForCloud()) {
+    return true;
+  }
+
+  /*
+   * Antes de modificar la cola verificamos
+   * que el contenido existente sea válido.
+   *
+   * Esto evita sobrescribir una cola corrupta
+   * que podría contener eliminaciones todavía
+   * no sincronizadas.
+   */
+  const raw =
+    localStorage.getItem(
+      STORAGE_KEYS.deletedOrders
+    );
+
+  if (raw) {
+    try {
+      const parsed =
+        JSON.parse(raw);
+
+      if (!Array.isArray(parsed)) {
+        console.error(
+          "[RC ORDERA] No se agregó el pedido a la cola de eliminaciones porque la cola existente tiene un formato inválido."
+        );
+
+        return false;
+      }
+    } catch (error) {
+      console.error(
+        "[RC ORDERA] No se agregó el pedido a la cola de eliminaciones porque la cola existente no pudo leerse.",
+        error
+      );
+
+      return false;
+    }
+  }
+
+  const currentIds =
+    readDeletedOrderIds();
+
+  /*
+   * Operación idempotente:
+   * si ya estaba pendiente de eliminación,
+   * no escribimos nuevamente.
+   */
+  if (
+    currentIds.includes(
+      normalizedId
+    )
+  ) {
+    return true;
+  }
+
+  const saved =
+    saveDeletedOrderIds([
+      ...currentIds,
+      normalizedId,
+    ]);
+
+  if (!saved) {
+    console.error(
+      `[RC ORDERA] No fue posible poner el pedido ${normalizedId} en la cola de eliminaciones.`
+    );
+
+    return false;
+  }
+
+  return true;
 }
 
 function clearDeletedOrderId(orderId) {
-  saveDeletedOrderIds(readDeletedOrderIds().filter((id) => id !== orderId));
+  const normalizedId =
+    typeof orderId === "string"
+      ? orderId.trim()
+      : "";
+
+  if (!normalizedId) {
+    return false;
+  }
+
+  const raw =
+    localStorage.getItem(
+      STORAGE_KEYS.deletedOrders
+    );
+
+  /*
+   * Si no existe cola, el objetivo
+   * ya está cumplido.
+   */
+  if (!raw) {
+    return true;
+  }
+
+  /*
+   * Nunca modificamos una cola que
+   * no podamos interpretar con seguridad.
+   */
+  try {
+    const parsed =
+      JSON.parse(raw);
+
+    if (!Array.isArray(parsed)) {
+      console.error(
+        "[RC ORDERA] No se pudo retirar el pedido de la cola de eliminaciones porque la cola existente tiene un formato inválido."
+      );
+
+      return false;
+    }
+  } catch (error) {
+    console.error(
+      "[RC ORDERA] No se pudo retirar el pedido de la cola de eliminaciones porque la cola existente no pudo leerse.",
+      error
+    );
+
+    return false;
+  }
+
+  const currentIds =
+    readDeletedOrderIds();
+
+  /*
+   * Operación idempotente:
+   * si ya no existe, consideramos
+   * la limpieza completada.
+   */
+  if (
+    !currentIds.includes(
+      normalizedId
+    )
+  ) {
+    return true;
+  }
+
+  const nextIds =
+    currentIds.filter(
+      (id) =>
+        id !== normalizedId
+    );
+
+  const saved =
+    saveDeletedOrderIds(
+      nextIds
+    );
+
+  if (!saved) {
+    console.error(
+      `[RC ORDERA] No fue posible retirar el pedido ${normalizedId} de la cola de eliminaciones.`
+    );
+
+    return false;
+  }
+
+  return true;
 }
 
 function pendingDeletedOrdersCount() {
