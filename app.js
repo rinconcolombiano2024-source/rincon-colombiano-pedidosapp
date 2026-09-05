@@ -5772,12 +5772,25 @@ async function loadCurrentRestaurantDeliveryTracking() {
   if (clientOrdersTrackingInFlight) return clientOrdersTrackingInFlight;
   clientOrdersTrackingInFlight = (async () => {
     const { data, error } = await cloudState.client.rpc("get_current_restaurant_delivery_tracking");
-    if (error) {
-      if (!/PGRST202|could not find the function|42883/i.test(`${error.code || ""} ${error.message || ""}`)) {
-        console.error("No se pudo actualizar el seguimiento de domicilios:", error.code || error.message);
-      }
-      return new Map();
-    }
+   if (error) {
+  const missingFunction =
+    /PGRST202|could not find the function|42883/i.test(
+      `${error.code || ""} ${error.message || ""}`
+    );
+
+  if (missingFunction) {
+    return clientDeliveryTrackingByOrderId instanceof Map
+      ? clientDeliveryTrackingByOrderId
+      : new Map();
+  }
+
+  console.error(
+    "No se pudo actualizar el seguimiento de domicilios:",
+    error.code || error.message
+  );
+
+  throw error;
+}
     return new Map((Array.isArray(data) ? data : []).map((row) => [String(row.customer_order_id), row]));
   })();
   try {
