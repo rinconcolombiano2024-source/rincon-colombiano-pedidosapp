@@ -2486,7 +2486,7 @@ async function customerSignOut() {
     customerResetResolvedIdentity();
     customerHistoryRows = [];
     customerRenderAccount();
-    window.location.replace("index.html?app=v91.0.3");
+    window.location.replace("index.html?app=v91.0.4");
   }
 }
 
@@ -3256,7 +3256,7 @@ function customerClearRestaurantSelection(messageKey = "") {
 
   const nextUrl = new URL(window.location.href);
   nextUrl.searchParams.delete("store");
-  nextUrl.searchParams.set("app", "v91.0.3");
+  nextUrl.searchParams.set("app", "v91.0.4");
   window.history.replaceState({}, "", nextUrl.toString());
 
   customerApplyBusinessName();
@@ -3528,7 +3528,7 @@ async function customerSelectRestaurant(storeId, options = {}) {
   if (options.updateUrl !== false) {
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("store", customerStoreId);
-    nextUrl.searchParams.set("app", "v91.0.3");
+    nextUrl.searchParams.set("app", "v91.0.4");
     window.history.replaceState({}, "", nextUrl.toString());
   }
 
