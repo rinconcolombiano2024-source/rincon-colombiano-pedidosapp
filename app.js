@@ -5156,14 +5156,15 @@ async function acceptClientOrder(orderId) {
     return;
   }
 
-  currentOrder = normalizeCurrentOrderDraft({
-    ...result.accepted_order_json,
-    id: result.restaurant_order_id,
-    ticketNumber: result.ticket_number,
-    businessDate: result.business_date,
-    saved: true,
-    syncStatus: "synced",
-  });
+currentOrder = normalizeCurrentOrderDraft({
+  ...result.accepted_order_json,
+  id: result.restaurant_order_id,
+  ticketNumber: result.ticket_number,
+  businessDate: result.business_date,
+  _syncRevision: 1,
+  saved: true,
+  syncStatus: "synced",
+});
   nextTicket = Math.max(nextTicket, Number(result.ticket_number) + 1);
   savedOrders = mergeOrders([structuredCloneOrder(currentOrder)], savedOrders);
   saveOrders();
