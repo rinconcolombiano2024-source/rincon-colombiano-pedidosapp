@@ -2228,7 +2228,7 @@ async function loadCloudData() {
   const localPendingOrders = localOrdersBeforeLoad.filter(
     (order) => needsCloudSync(order) && !localDeletedOrderIds.includes(order.id)
   );
-
+let syncPendingAfterLoad = false;
   try {
     try {
   await withCloudTimeout(ensureMinimumDatabaseVersion());
@@ -2639,11 +2639,24 @@ nextTicket =
     renderMenu();
     renderOrder();
     renderHistory();
-    cloudState.ready = true;
-    clearCloudErrors();
-    await syncPendingData({ silent: true, allowWhileLoading: true });
-    try {
-      await refreshClientOrders({ silent: true });
+cloudState.ready = true;
+clearCloudErrors();
+
+/*
+ * La carga inicial NUNCA debe quedar bloqueada
+ * esperando pedidos pendientes.
+ *
+ * Primero dejamos la caja operativa.
+ * La sincronizacion se ejecuta despues en segundo plano.
+ */
+syncPendingAfterLoad = hasPendingDataToSync();
+
+try {
+  await withCloudTimeout(
+    refreshClientOrders({ silent: true }),
+    "Los pedidos de clientes tardaron demasiado en actualizarse.",
+    8000
+  );
     } catch (moduleError) {
       console.warn("El modulo de pedidos de clientes necesita revision.", moduleError);
       setCloudError(moduleError, { moduleOnly: true });
@@ -2653,8 +2666,17 @@ stopCentralRealtime();
 startClientOrdersPolling();
 updateRestaurantStatusSync();
     if (restaurantOperationalMode === "schedule") {
-      await syncRestaurantOperationalStatus({ silent: true });
-    }
+  await withCloudTimeout(
+    syncRestaurantOperationalStatus({ silent: true }),
+    "El estado del restaurante tardó demasiado en actualizarse.",
+    8000
+  ).catch((error) => {
+    console.warn(
+      "No se pudo actualizar el estado operativo durante la carga.",
+      error
+    );
+  });
+}
     updateCloudStatus();
     maybeAskShiftServer();
     return { ok: true, warning: cloudState.moduleWarning };
@@ -2664,9 +2686,24 @@ updateRestaurantStatusSync();
     elements.authMessage.textContent = friendlyMessage;
     return { ok: false, error, message: friendlyMessage };
   } finally {
-    cloudState.loading = false;
-    updateCloudStatus();
+  cloudState.loading = false;
+  updateCloudStatus();
+
+  /*
+   * Solo DESPUES de liberar la carga inicial
+   * intentamos enviar lo pendiente.
+   *
+   * Si Supabase esta lento, la caja sigue funcionando.
+   */
+  if (
+    syncPendingAfterLoad &&
+    cloudState.client &&
+    cloudState.user &&
+    navigator.onLine
+  ) {
+    schedulePendingDataSyncRetry(500);
   }
+}
 }
 
 function closureReportRange(periodType, periodValue) {
