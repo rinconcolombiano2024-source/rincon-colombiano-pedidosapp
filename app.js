@@ -2284,18 +2284,92 @@ try {
       .eq("user_id", cloudState.user.id)
       .order("created_at", { ascending: false })
       .limit(LOCAL_ORDER_CACHE_LIMIT);
-    const [settingsResponse, profileResponse, ownerRoleResponse, ordersResponse] = await withCloudTimeout(
-      Promise.all([
-        settingsRequest,
-        profileRequest,
-        ownerRoleRequest,
-        ordersRequest,
-      ])
+    /*
+ * EMERGENCIA POS:
+ * cargamos primero el menú.
+ * Los pedidos y demás datos nunca pueden impedir
+ * que la caja muestre los productos.
+ */
+const settingsResponse = await withCloudTimeout(
+  settingsRequest,
+  "El menú tardó demasiado en responder.",
+  8000
+);
+
+const {
+  data: settingsRow,
+  error: settingsError,
+} = settingsResponse;
+
+if (
+  !settingsError &&
+  menuProductCount(settingsRow?.menu) > 0
+) {
+  const startupMenu =
+    normalizeMenuCatalog(
+      settingsRow.menu
     );
-    const { data: settingsRow, error: settingsError } = settingsResponse;
-    const { data: publicProfileRow, error: publicProfileError } = profileResponse;
-    const { data: ownerRole, error: ownerRoleError } = ownerRoleResponse;
-    const { data: cloudOrders, error: ordersError } = ordersResponse;
+
+  menuCatalog = startupMenu;
+
+  saveMenuCache({
+    immediate: true,
+  });
+
+  storeConfirmedCloudMenu(
+    startupMenu
+  );
+
+  if (
+    settingsRow?.menu_revision !==
+    undefined
+  ) {
+    storeCloudRevision(
+      STORAGE_KEYS.menuRevision,
+      settingsRow.menu_revision
+    );
+  }
+
+  activeCategory =
+    Object.keys(menuCatalog)[0] ||
+    activeCategory;
+
+  renderCategories();
+  renderMenu();
+}
+
+/*
+ * Después del menú intentamos cargar
+ * lo demás. Si falla, el menú ya está visible.
+ */
+const [
+  profileResponse,
+  ownerRoleResponse,
+  ordersResponse,
+] = await withCloudTimeout(
+  Promise.all([
+    profileRequest,
+    ownerRoleRequest,
+    ordersRequest,
+  ]),
+  "Los demás datos de nube tardaron demasiado.",
+  10000
+);
+
+const {
+  data: publicProfileRow,
+  error: publicProfileError,
+} = profileResponse;
+
+const {
+  data: ownerRole,
+  error: ownerRoleError,
+} = ownerRoleResponse;
+
+const {
+  data: cloudOrders,
+  error: ordersError,
+} = ordersResponse;
     const temporaryLoadSyncError = [settingsError, ordersError]
       .find((error) => error && isTemporarySyncInfrastructureError(error));
     if (temporaryLoadSyncError) {
@@ -2665,7 +2739,12 @@ clearCloudErrors();
  * Primero dejamos la caja operativa.
  * La sincronizacion se ejecuta despues en segundo plano.
  */
-syncPendingAfterLoad = hasPendingDataToSync();
+/*
+ * EMERGENCIA:
+ * no sincronizamos automáticamente los 32 pedidos
+ * hasta estabilizar Supabase.
+ */
+syncPendingAfterLoad = false;
 
 try {
   await withCloudTimeout(
