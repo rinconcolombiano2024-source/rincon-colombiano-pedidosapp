@@ -4537,12 +4537,22 @@ const { data, error } = await cloudState.client.rpc(
 
       return;
     }
-  } catch (reconciliationError) {
-    console.warn(
-      "[RC ORDERA] No fue posible reconciliar automáticamente el conflicto.",
-      reconciliationError
-    );
-  }
+ } catch (reconciliationError) {
+  console.warn(
+    "[RC ORDERA] No fue posible reconciliar automáticamente el conflicto.",
+    reconciliationError
+  );
+
+  /*
+   * Si no pudimos consultar Supabase con certeza,
+   * NO podemos afirmar que exista un conflicto real.
+   *
+   * Propagamos el error original para que
+   * runPendingDataSync() lo clasifique correctamente
+   * como red, timeout, infraestructura, etc.
+   */
+  throw reconciliationError;
+}
 
   /*
    * Si updatedAt es diferente, entonces sí existe
