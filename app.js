@@ -5671,10 +5671,7 @@ function scheduleClientOrdersRealtimeReconnect() {
           CLIENT_ORDERS_REALTIME_RECONNECT_MAX_MS
         );
 
-    stopClientOrdersRealtime();
-startClientOrdersPolling({
-  immediate: true,
-});
+startClientOrdersRealtime();
     }, retryDelay);
 }
 function startClientOrdersRealtime() {
