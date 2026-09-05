@@ -550,6 +550,7 @@ const cloudState = {
   syncing: false,
   recoveringPassword: false,
   lastError: "",
+  lastErrorDetails: "",
   moduleWarning: "",
   schemaVersion: null,
 };
@@ -1573,11 +1574,11 @@ function setCloudError(error, options = {}) {
     .join(" | ");
 
   if (options.moduleOnly) {
-    cloudState.moduleWarning = friendlyMessage;
-  } else {
-    cloudState.lastError = friendlyMessage;
-  }
-
+  cloudState.moduleWarning = friendlyMessage;
+} else {
+  cloudState.lastError = friendlyMessage;
+  cloudState.lastErrorDetails = technicalDetails;
+}
   updateCloudStatus(
     options.moduleOnly
       ? "Nube parcial"
@@ -1604,8 +1605,12 @@ function setCloudError(error, options = {}) {
 }
 function clearCloudErrors() {
   cloudState.lastError = "";
+  cloudState.lastErrorDetails = "";
   cloudState.moduleWarning = "";
-  if (elements.cloudStatus) elements.cloudStatus.title = "";
+
+  if (elements.cloudStatus) {
+    elements.cloudStatus.title = "";
+  }
 }
 
 function currentSettingsPayload() {
@@ -2011,10 +2016,15 @@ function updateCloudStatus(message = "") {
   }
 
   if (cloudState.lastError) {
-    elements.cloudStatus.textContent = "Revisar nube";
-    elements.cloudStatus.title = cloudState.lastError;
-    return;
-  }
+  elements.cloudStatus.textContent = "Revisar nube";
+
+  elements.cloudStatus.title =
+    cloudState.lastErrorDetails
+      ? `${cloudState.lastError}\n${cloudState.lastErrorDetails}`
+      : cloudState.lastError;
+
+  return;
+}
 
   if (pending || hasPendingSettings() || hasPendingMenu() || pendingTicketCounter()) {
     elements.cloudStatus.textContent = pending ? `Pendiente nube (${pending})` : "Pendiente nube";
