@@ -5859,11 +5859,24 @@ const hasMorePendingOrders =
   const menuPendingToken = currentMenuPendingToken();
   const shouldSyncMenu = Boolean(menuPendingToken);
   const shouldSyncTicketCounter = pendingTicketCounter();
-  if (!pendingOrders.length && !pendingDeletedOrderIds.length && !shouldSyncSettings && !shouldSyncMenu && !shouldSyncTicketCounter) {
-    updateCloudStatus();
-    return true;
+if (
+  !pendingOrders.length &&
+  !pendingDeletedOrderIds.length &&
+  !shouldSyncSettings &&
+  !shouldSyncMenu &&
+  !shouldSyncTicketCounter
+) {
+  cloudState.lastError = "";
+  pendingDataSyncRetryNotBefore = 0;
+
+  if (pendingDataSyncRetryTimer !== null) {
+    clearTimeout(pendingDataSyncRetryTimer);
+    pendingDataSyncRetryTimer = null;
   }
 
+  updateCloudStatus();
+  return true;
+}
   cloudState.syncing = true;
   if (!silent) updateCloudStatus("Sincronizando...");
 
