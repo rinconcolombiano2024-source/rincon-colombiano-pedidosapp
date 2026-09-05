@@ -92,23 +92,81 @@ const LEGACY_STORAGE_KEYS = {
   deliveryMinimumFee: "rincon_colombiano_delivery_minimum_fee",
   currentOrderDraft: "rincon_colombiano_current_order_draft",
 };
-
 function migrateLegacyRestaurantStorage() {
   try {
     Object.entries(LEGACY_STORAGE_KEYS).forEach(([name, legacyKey]) => {
       const nextKey = STORAGE_KEYS[name];
-      if (!nextKey || nextKey === legacyKey) return;
-      const legacyValue = localStorage.getItem(legacyKey);
-      if (localStorage.getItem(nextKey) === null && legacyValue !== null) {
-        localStorage.setItem(nextKey, legacyValue);
+
+      if (!nextKey || nextKey === legacyKey) {
+        return;
       }
-      if (legacyValue !== null) localStorage.removeItem(legacyKey);
+
+      const legacyValue =
+        localStorage.getItem(legacyKey);
+
+      if (legacyValue === null) {
+        return;
+      }
+
+      const currentValue =
+        localStorage.getItem(nextKey);
+
+      /*
+       * Caso 1:
+       * No existe todavía el dato nuevo.
+       * Copiamos y verificamos antes de borrar.
+       */
+      if (currentValue === null) {
+        localStorage.setItem(
+          nextKey,
+          legacyValue
+        );
+
+        if (
+          localStorage.getItem(nextKey) ===
+          legacyValue
+        ) {
+          localStorage.removeItem(
+            legacyKey
+          );
+        } else {
+          console.warn(
+            `No se pudo verificar la migracion de ${nextKey}. El dato legacy se conserva.`
+          );
+        }
+
+        return;
+      }
+
+      /*
+       * Caso 2:
+       * Ambos valores ya son iguales.
+       * La clave antigua es redundante.
+       */
+      if (currentValue === legacyValue) {
+        localStorage.removeItem(
+          legacyKey
+        );
+
+        return;
+      }
+
+      /*
+       * Caso 3:
+       * Existen valores diferentes.
+       * No sobreescribimos ni eliminamos nada.
+       */
+      console.warn(
+        `Conflicto de almacenamiento en ${nextKey}. Se conservan ambos valores.`
+      );
     });
-  } catch {
-    // La app puede continuar cuando el navegador limita el almacenamiento local.
+  } catch (error) {
+    console.error(
+      "No fue posible completar la migracion segura del almacenamiento local:",
+      error
+    );
   }
 }
-
 migrateLegacyRestaurantStorage();
 
 const DEFAULT_BUSINESS_NAME = "MI RESTAURANTE";
@@ -154,24 +212,75 @@ const RESTAURANT_REGIONS = {
 };
 
 function renderRestaurantRegionSuggestions(countryCode) {
-  const datalist = document.querySelector("#restaurantRegionOptions");
+  const datalist =
+    document.querySelector(
+      "#restaurantRegionOptions"
+    );
+
   if (!datalist) return;
-  datalist.innerHTML = (RESTAURANT_REGIONS[countryCode] || [])
-    .map((region) => `<option value="${escapeHtml(region)}"></option>`)
-    .join("");
+
+  datalist.textContent = "";
+
+  const regions =
+    RESTAURANT_REGIONS[countryCode] || [];
+
+  const fragment =
+    document.createDocumentFragment();
+
+  regions.forEach((region) => {
+    const option =
+      document.createElement("option");
+
+    option.value = region;
+
+    fragment.appendChild(option);
+  });
+
+  datalist.appendChild(fragment);
 }
 
 function normalizedRestaurantRegion(countryCode, value) {
-  const cleanValue = normalizeTextSetting(value);
-  if (!cleanValue) return "";
-  const comparable = (text) => String(text || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/\b(wojewodztwo|voivodeship|departamento|department)\b/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-  const match = (RESTAURANT_REGIONS[countryCode] || []).find((region) => comparable(region) === comparable(cleanValue));
+  const cleanValue =
+    normalizeTextSetting(value);
+
+  if (!cleanValue) {
+    return "";
+  }
+
+  const comparable = (text) =>
+    String(text || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(
+        /\b(wojewodztwo|voivodeship|departamento|department)\b/g,
+        ""
+      )
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+
+  const cleanComparable =
+    comparable(cleanValue);
+
+  /*
+   * Si después de normalizar no queda
+   * contenido significativo, conservamos
+   * lo que escribió el usuario.
+   */
+  if (!cleanComparable) {
+    return cleanValue;
+  }
+
+  const match =
+    (
+      RESTAURANT_REGIONS[countryCode] ||
+      []
+    ).find(
+      (region) =>
+        comparable(region) ===
+        cleanComparable
+    );
+
   return match || cleanValue;
 }
 
@@ -513,6 +622,7 @@ let centralSyncInProgress = false;
 let centralSyncRefreshPending = false;
 let pendingDataSyncRequested = false;
 let pendingDataSyncRetryTimer = null;
+let pendingDataSyncRetryDueAt = 0;
 let pendingDataSyncInFlight = null;
 let pendingDataSyncRetryNotBefore = 0;
 let centralRealtimeReconnectTimer = null;
@@ -550,6 +660,7 @@ const cloudState = {
   syncing: false,
   recoveringPassword: false,
   lastError: "",
+  lastErrorDetails: "",
   moduleWarning: "",
   schemaVersion: null,
 };
@@ -975,12 +1086,85 @@ function buildMonthlyClose(month) {
 function persistOrdersCache() {
   orderCachePersistHandle = null;
   orderCachePersistMode = "";
-  localStorage.setItem(
-    STORAGE_KEYS.orders,
-    JSON.stringify(savedOrders.slice(0, LOCAL_ORDER_CACHE_LIMIT))
-  );
-}
 
+  /*
+   * Los pedidos que todavía dependen
+   * del almacenamiento local tienen prioridad.
+   */
+  const criticalOrders =
+    savedOrders.filter((order) =>
+      order?.saved &&
+      (
+        order.syncStatus === "pending" ||
+        order.syncStatus === "local" ||
+        order.id === currentOrder?.id
+      )
+    );
+
+  const criticalIds =
+    new Set(
+      criticalOrders.map(
+        (order) => order.id
+      )
+    );
+
+  /*
+   * Completamos el cache con pedidos ya
+   * sincronizados, sin desplazar pedidos críticos.
+   */
+  const availableSlots =
+    Math.max(
+      0,
+      LOCAL_ORDER_CACHE_LIMIT -
+        criticalOrders.length
+    );
+
+  const remainingOrders =
+    savedOrders
+      .filter(
+        (order) =>
+          !criticalIds.has(order.id)
+      )
+      .slice(0, availableSlots);
+
+  /*
+   * Conservamos el orden cronológico habitual
+   * de la aplicación.
+   */
+  const ordersToPersist =
+    [
+      ...criticalOrders,
+      ...remainingOrders,
+    ].sort(
+      (a, b) =>
+        new Date(b.createdAt || 0) -
+        new Date(a.createdAt || 0)
+    );
+
+  try {
+    localStorage.setItem(
+      STORAGE_KEYS.orders,
+      JSON.stringify(
+        ordersToPersist
+      )
+    );
+
+    return true;
+  } catch (error) {
+    /*
+     * MUY IMPORTANTE:
+     * no eliminamos pedidos,
+     * no borramos currentOrderDraft
+     * y no hacemos podas destructivas.
+     */
+    console.error(
+      "No fue posible persistir el cache local de pedidos. Los datos en memoria se conservan.",
+      error
+    );
+
+    return false;
+  }
+}
 function saveOrders(options = {}) {
   const { immediate = false } = options;
   if (immediate) {
@@ -1023,36 +1207,104 @@ function shouldQueueForCloud() {
   return cloudState.configured && (Boolean(cloudState.user) || hasKnownCloudSession());
 }
 
-function withCloudTimeout(promise, message = "La nube no respondio a tiempo.", timeoutMs = 20000) {
+function withCloudTimeout(
+  operation,
+  message =
+    "La nube no respondio a tiempo.",
+  timeoutMs = 20000
+) {
   let timerId = null;
-  const timeout = new Promise((_, reject) => {
-    timerId = window.setTimeout(() => reject(new Error(message)), timeoutMs);
-  });
-  return Promise.race([promise, timeout]).finally(() => {
-    if (timerId) window.clearTimeout(timerId);
-  });
-}
+  let abortController = null;
+  let pendingOperation = operation;
 
-function isTemporarySyncInfrastructureError(error) {
-  const status = Number(error?.status ?? error?.statusCode ?? error?.cause?.status);
-  const code = String(error?.code || error?.cause?.code || "").toUpperCase();
-  const details = [
-    error?.message,
-    error?.details,
-    error?.hint,
-    error?.cause?.message,
-  ].filter(Boolean).join(" ");
-  return status === 503
-    || code === "PGRST002"
-    || code === "PGRST003"
-    || /\b503\b|schema cache|connection pool|timed?\s*out|timeout|failed to fetch|network error|network request failed/i.test(details);
+  /*
+   * Las consultas PostgREST de Supabase
+   * permiten AbortSignal.
+   *
+   * Si esta operación lo soporta,
+   * el timeout cancela también la
+   * solicitud real y no solamente
+   * deja de esperarla.
+   */
+  if (
+    operation &&
+    typeof operation.abortSignal ===
+      "function" &&
+    typeof AbortController !==
+      "undefined"
+  ) {
+    abortController =
+      new AbortController();
+
+    pendingOperation =
+      operation.abortSignal(
+        abortController.signal
+      );
+  }
+
+  const timeout =
+    new Promise((_, reject) => {
+      timerId = window.setTimeout(
+        () => {
+          /*
+           * Cancelamos la petición
+           * únicamente si esta operación
+           * admite cancelación.
+           */
+          if (
+            abortController &&
+            !abortController.signal.aborted
+          ) {
+            abortController.abort();
+          }
+
+          const error =
+            new Error(message);
+
+          error.name = "TimeoutError";
+          error.code =
+            "RC_ORDERA_CLOUD_TIMEOUT";
+
+          reject(error);
+        },
+        timeoutMs
+      );
+    });
+
+  return Promise.race([
+    Promise.resolve(
+      pendingOperation
+    ),
+    timeout,
+  ]).finally(() => {
+    if (timerId !== null) {
+      window.clearTimeout(timerId);
+    }
+  });
 }
-function isOrderRevisionConflictError(error) {
+function isTemporarySyncInfrastructureError(error) {
+  const status = Number(
+    error?.status ??
+    error?.statusCode ??
+    error?.cause?.status ??
+    error?.cause?.statusCode
+  );
+
   const code = String(
     error?.code ||
     error?.cause?.code ||
     ""
-  ).trim();
+  )
+    .trim()
+    .toUpperCase();
+
+  const name = String(
+    error?.name ||
+    error?.cause?.name ||
+    ""
+  )
+    .trim()
+    .toUpperCase();
 
   const details = [
     error?.message,
@@ -1060,13 +1312,134 @@ function isOrderRevisionConflictError(error) {
     error?.hint,
     error?.cause?.message,
     error?.cause?.details,
+    error?.cause?.hint,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  /*
+   * Timeout controlado por RC ORDERA.
+   */
+  if (
+    code ===
+    "RC_ORDERA_CLOUD_TIMEOUT"
+  ) {
+    return true;
+  }
+
+  /*
+   * Una petición abortada por nuestro
+   * timeout también es un fallo temporal.
+   */
+  if (name === "ABORTERROR") {
+    return true;
+  }
+
+  /*
+   * Errores HTTP típicamente transitorios.
+   *
+   * 408 = request timeout
+   * 429 = rate limit
+   * 502/503/504 = infraestructura upstream
+   */
+  if (
+    status === 408 ||
+    status === 429 ||
+    status === 502 ||
+    status === 503 ||
+    status === 504
+  ) {
+    return true;
+  }
+
+  /*
+   * Errores PostgREST asociados a
+   * disponibilidad/conexiones.
+   */
+  if (
+    code === "PGRST002" ||
+    code === "PGRST003"
+  ) {
+    return true;
+  }
+
+  /*
+   * Última defensa para errores de red
+   * que no entregan status ni código fiable.
+   */
+  return (
+    /\b502\b|\b503\b|\b504\b/i.test(
+      details
+    ) ||
+    /schema cache/i.test(details) ||
+    /connection pool/i.test(details) ||
+    /timed?\s*out/i.test(details) ||
+    /\btimeout\b/i.test(details) ||
+    /failed to fetch/i.test(details) ||
+    /fetch failed/i.test(details) ||
+    /network error/i.test(details) ||
+    /network request failed/i.test(
+      details
+    ) ||
+    /load failed/i.test(details) ||
+    /econnreset/i.test(details) ||
+    /etimedout/i.test(details)
+  );
+}
+function isOrderRevisionConflictError(error) {
+  if (!error) {
+    return false;
+  }
+
+  const codes = [
+    error?.code,
+    error?.cause?.code,
+  ]
+    .filter(Boolean)
+    .map((value) =>
+      String(value)
+        .trim()
+        .toUpperCase()
+    );
+
+  /*
+   * En RC ORDERA un conflicto verdadero
+   * debe llegar normalizado con este código.
+   *
+   * saveCloudOrder() ya se encarga antes de
+   * distinguir entre:
+   *
+   * - confirmación perdida
+   * - revisión requerida
+   * - conflicto real entre dispositivos
+   */
+  if (
+    codes.includes(
+      "ORDER_REVISION_CONFLICT"
+    )
+  ) {
+    return true;
+  }
+
+  /*
+   * Defensa para errores serializados donde
+   * el código pudiera venir dentro del mensaje,
+   * details o hint.
+   */
+  const details = [
+    error?.message,
+    error?.details,
+    error?.hint,
+    error?.cause?.message,
+    error?.cause?.details,
+    error?.cause?.hint,
   ]
     .filter(Boolean)
     .join(" ");
 
   return (
-    code === "ORDER_REVISION_CONFLICT" ||
-    /ORDER_REVISION_(?:CONFLICT|REQUIRED)/i.test(details)
+    /\bORDER_REVISION_CONFLICT\b/i
+      .test(details)
   );
 }
 function needsCloudSync(order) {
@@ -1078,25 +1451,319 @@ function pendingOrdersCount() {
 }
 
 function readDeletedOrderIds() {
+  const raw =
+    localStorage.getItem(
+      STORAGE_KEYS.deletedOrders
+    );
+
+  /*
+   * No existe ninguna eliminación pendiente.
+   */
+  if (!raw) {
+    return [];
+  }
+
   try {
-    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEYS.deletedOrders) || "[]");
-    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
-  } catch {
+    const parsed =
+      JSON.parse(raw);
+
+    /*
+     * Nunca interpretamos un objeto,
+     * string u otro tipo como una cola válida.
+     *
+     * IMPORTANTE:
+     * no sobrescribimos el valor original.
+     */
+    if (!Array.isArray(parsed)) {
+      console.error(
+        "[RC ORDERA] La cola local de pedidos eliminados tiene un formato inválido. El valor original se conserva."
+      );
+
+      return [];
+    }
+
+    /*
+     * Los IDs de pedidos de RC ORDERA son strings.
+     *
+     * - eliminamos entradas inválidas
+     * - quitamos espacios
+     * - eliminamos vacíos
+     * - eliminamos duplicados
+     *
+     * No exigimos UUID porque existen IDs
+     * legacy/fallback que también son válidos.
+     */
+    return Array.from(
+      new Set(
+        parsed
+          .filter(
+            (id) =>
+              typeof id === "string"
+          )
+          .map(
+            (id) => id.trim()
+          )
+          .filter(Boolean)
+      )
+    );
+  } catch (error) {
+    /*
+     * Un JSON corrupto NO debe provocar:
+     *
+     * - crash de la caja
+     * - borrado de la cola
+     * - sobrescritura automática
+     *
+     * Conservamos intacto localStorage
+     * para poder diagnosticar o recuperar.
+     */
+    console.error(
+      "[RC ORDERA] No fue posible leer la cola local de pedidos eliminados. El dato original se conserva.",
+      error
+    );
+
     return [];
   }
 }
 
 function saveDeletedOrderIds(ids) {
-  localStorage.setItem(STORAGE_KEYS.deletedOrders, JSON.stringify(Array.from(new Set(ids.filter(Boolean)))));
+  /*
+   * Normalizamos antes de persistir.
+   * La cola de eliminaciones solo acepta
+   * identificadores de texto válidos.
+   */
+  const normalizedIds =
+    Array.from(
+      new Set(
+        (Array.isArray(ids) ? ids : [])
+          .filter(
+            (id) =>
+              typeof id === "string"
+          )
+          .map(
+            (id) => id.trim()
+          )
+          .filter(Boolean)
+      )
+    );
+
+  try {
+    const serialized =
+      JSON.stringify(normalizedIds);
+
+    localStorage.setItem(
+      STORAGE_KEYS.deletedOrders,
+      serialized
+    );
+
+    /*
+     * Verificación posterior a la escritura.
+     *
+     * No damos por hecho que localStorage
+     * guardó correctamente.
+     */
+    const persisted =
+      localStorage.getItem(
+        STORAGE_KEYS.deletedOrders
+      );
+
+    if (persisted !== serialized) {
+      console.error(
+        "[RC ORDERA] No fue posible verificar la cola local de pedidos eliminados."
+      );
+
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    /*
+     * Nunca eliminamos ni limpiamos datos
+     * como reacción a un fallo de escritura.
+     */
+    console.error(
+      "[RC ORDERA] No fue posible guardar la cola local de pedidos eliminados.",
+      error
+    );
+
+    return false;
+  }
 }
 
 function queueDeletedOrderId(orderId) {
-  if (!orderId || !shouldQueueForCloud()) return;
-  saveDeletedOrderIds([...readDeletedOrderIds(), orderId]);
+  const normalizedId =
+    typeof orderId === "string"
+      ? orderId.trim()
+      : "";
+
+  /*
+   * Un ID inválido nunca entra
+   * en la cola de eliminaciones.
+   */
+  if (!normalizedId) {
+    return false;
+  }
+
+  /*
+   * Si este dispositivo no necesita
+   * sincronización cloud, no hay nada
+   * remoto que poner en cola.
+   */
+  if (!shouldQueueForCloud()) {
+    return true;
+  }
+
+  /*
+   * Antes de modificar la cola verificamos
+   * que el contenido existente sea válido.
+   *
+   * Esto evita sobrescribir una cola corrupta
+   * que podría contener eliminaciones todavía
+   * no sincronizadas.
+   */
+  const raw =
+    localStorage.getItem(
+      STORAGE_KEYS.deletedOrders
+    );
+
+  if (raw) {
+    try {
+      const parsed =
+        JSON.parse(raw);
+
+      if (!Array.isArray(parsed)) {
+        console.error(
+          "[RC ORDERA] No se agregó el pedido a la cola de eliminaciones porque la cola existente tiene un formato inválido."
+        );
+
+        return false;
+      }
+    } catch (error) {
+      console.error(
+        "[RC ORDERA] No se agregó el pedido a la cola de eliminaciones porque la cola existente no pudo leerse.",
+        error
+      );
+
+      return false;
+    }
+  }
+
+  const currentIds =
+    readDeletedOrderIds();
+
+  /*
+   * Operación idempotente:
+   * si ya estaba pendiente de eliminación,
+   * no escribimos nuevamente.
+   */
+  if (
+    currentIds.includes(
+      normalizedId
+    )
+  ) {
+    return true;
+  }
+
+  const saved =
+    saveDeletedOrderIds([
+      ...currentIds,
+      normalizedId,
+    ]);
+
+  if (!saved) {
+    console.error(
+      `[RC ORDERA] No fue posible poner el pedido ${normalizedId} en la cola de eliminaciones.`
+    );
+
+    return false;
+  }
+
+  return true;
 }
 
 function clearDeletedOrderId(orderId) {
-  saveDeletedOrderIds(readDeletedOrderIds().filter((id) => id !== orderId));
+  const normalizedId =
+    typeof orderId === "string"
+      ? orderId.trim()
+      : "";
+
+  if (!normalizedId) {
+    return false;
+  }
+
+  const raw =
+    localStorage.getItem(
+      STORAGE_KEYS.deletedOrders
+    );
+
+  /*
+   * Si no existe cola, el objetivo
+   * ya está cumplido.
+   */
+  if (!raw) {
+    return true;
+  }
+
+  /*
+   * Nunca modificamos una cola que
+   * no podamos interpretar con seguridad.
+   */
+  try {
+    const parsed =
+      JSON.parse(raw);
+
+    if (!Array.isArray(parsed)) {
+      console.error(
+        "[RC ORDERA] No se pudo retirar el pedido de la cola de eliminaciones porque la cola existente tiene un formato inválido."
+      );
+
+      return false;
+    }
+  } catch (error) {
+    console.error(
+      "[RC ORDERA] No se pudo retirar el pedido de la cola de eliminaciones porque la cola existente no pudo leerse.",
+      error
+    );
+
+    return false;
+  }
+
+  const currentIds =
+    readDeletedOrderIds();
+
+  /*
+   * Operación idempotente:
+   * si ya no existe, consideramos
+   * la limpieza completada.
+   */
+  if (
+    !currentIds.includes(
+      normalizedId
+    )
+  ) {
+    return true;
+  }
+
+  const nextIds =
+    currentIds.filter(
+      (id) =>
+        id !== normalizedId
+    );
+
+  const saved =
+    saveDeletedOrderIds(
+      nextIds
+    );
+
+  if (!saved) {
+    console.error(
+      `[RC ORDERA] No fue posible retirar el pedido ${normalizedId} de la cola de eliminaciones.`
+    );
+
+    return false;
+  }
+
+  return true;
 }
 
 function pendingDeletedOrdersCount() {
@@ -1560,20 +2227,56 @@ function friendlyCloudError(error) {
 
 function setCloudError(error, options = {}) {
   const friendlyMessage = friendlyCloudError(error);
+
+  const technicalDetails = [
+    error?.code,
+    error?.status,
+    error?.message,
+    error?.details,
+    error?.hint,
+    error?.cause?.message,
+  ]
+    .filter(Boolean)
+    .join(" | ");
+
   if (options.moduleOnly) {
-    cloudState.moduleWarning = friendlyMessage;
-  } else {
-    cloudState.lastError = friendlyMessage;
+  cloudState.moduleWarning = friendlyMessage;
+} else {
+  cloudState.lastError = friendlyMessage;
+  cloudState.lastErrorDetails = technicalDetails;
+}
+  updateCloudStatus(
+    options.moduleOnly
+      ? "Nube parcial"
+      : "Revisar nube"
+  );
+
+  if (elements.cloudStatus) {
+    elements.cloudStatus.title =
+      technicalDetails
+        ? `${friendlyMessage}\n${technicalDetails}`
+        : friendlyMessage;
   }
-  updateCloudStatus(options.moduleOnly ? "Nube parcial" : "Revisar nube");
-  if (elements.cloudStatus) elements.cloudStatus.title = friendlyMessage;
+
+  console.error(
+    "[RC ORDERA CLOUD ERROR]",
+    {
+      friendlyMessage,
+      technicalDetails,
+      originalError: error,
+    }
+  );
+
   return friendlyMessage;
 }
-
 function clearCloudErrors() {
   cloudState.lastError = "";
+  cloudState.lastErrorDetails = "";
   cloudState.moduleWarning = "";
-  if (elements.cloudStatus) elements.cloudStatus.title = "";
+
+  if (elements.cloudStatus) {
+    elements.cloudStatus.title = "";
+  }
 }
 
 function currentSettingsPayload() {
@@ -1979,10 +2682,15 @@ function updateCloudStatus(message = "") {
   }
 
   if (cloudState.lastError) {
-    elements.cloudStatus.textContent = "Revisar nube";
-    elements.cloudStatus.title = cloudState.lastError;
-    return;
-  }
+  elements.cloudStatus.textContent = "Revisar nube";
+
+  elements.cloudStatus.title =
+    cloudState.lastErrorDetails
+      ? `${cloudState.lastError}\n${cloudState.lastErrorDetails}`
+      : cloudState.lastError;
+
+  return;
+}
 
   if (pending || hasPendingSettings() || hasPendingMenu() || pendingTicketCounter()) {
     elements.cloudStatus.textContent = pending ? `Pendiente nube (${pending})` : "Pendiente nube";
@@ -2184,10 +2892,93 @@ async function loadCloudData() {
   const currentOrderBeforeLoad = normalizeCurrentOrderDraft(currentOrder);
   const localDeletedOrderIds = readDeletedOrderIds();
   const localPendingOrders = localOrdersBeforeLoad.filter(
-    (order) => needsCloudSync(order) && !localDeletedOrderIds.includes(order.id)
-  );
+  (order) =>
+    needsCloudSync(order) &&
+    !localDeletedOrderIds.includes(order.id)
+);
 
+let syncPendingAfterLoad = false;
+
+/*
+ * POS LOCAL-FIRST:
+ * nunca esperamos a Supabase para mostrar
+ * el menú y los pedidos que ya existen
+ * en este dispositivo.
+ */
+renderCurrencySettings();
+renderCategories();
+renderMenu();
+renderOrder();
+renderHistory();
+
+/*
+ * ARRANQUE DE EMERGENCIA:
+ * si esta tablet no tiene menu local,
+ * recuperamos SOLO el menu de Supabase
+ * antes de cargar pedidos, perfil o cualquier otra cosa.
+ */
+if (menuProductCount(menuCatalog) === 0) {
   try {
+    const {
+      data: startupSettingsRow,
+      error: startupMenuError,
+    } = await withCloudTimeout(
+      cloudState.client
+        .from("app_settings")
+        .select("menu, menu_revision")
+        .eq("user_id", cloudState.user.id)
+        .maybeSingle(),
+      "El menu tardo demasiado en cargar.",
+      8000
+    );
+
+    if (startupMenuError) {
+      throw startupMenuError;
+    }
+
+    const startupMenu =
+      normalizeMenuCatalog(
+        startupSettingsRow?.menu ||
+        EMPTY_MENU_CATALOG
+      );
+
+    if (menuProductCount(startupMenu) > 0) {
+      menuCatalog = startupMenu;
+
+      activeCategory =
+        Object.keys(menuCatalog)[0] || "";
+
+      saveMenuCache({
+        immediate: true,
+      });
+
+      storeConfirmedCloudMenu(
+        menuCatalog
+      );
+
+      if (
+        startupSettingsRow?.menu_revision !==
+        undefined
+      ) {
+        storeCloudRevision(
+          STORAGE_KEYS.menuRevision,
+          startupSettingsRow.menu_revision
+        );
+      }
+
+      renderCategories();
+      renderMenu();
+    }
+  } catch (error) {
+    console.error(
+      "No fue posible recuperar el menu durante el arranque.",
+      error
+    );
+  }
+}
+
+
+try {
     try {
   await withCloudTimeout(ensureMinimumDatabaseVersion());
 } catch (error) {
@@ -2226,18 +3017,93 @@ async function loadCloudData() {
       .eq("user_id", cloudState.user.id)
       .order("created_at", { ascending: false })
       .limit(LOCAL_ORDER_CACHE_LIMIT);
-    const [settingsResponse, profileResponse, ownerRoleResponse, ordersResponse] = await withCloudTimeout(
-      Promise.all([
-        settingsRequest,
-        profileRequest,
-        ownerRoleRequest,
-        ordersRequest,
-      ])
+    /*
+ * EMERGENCIA POS:
+ * cargamos primero el menú.
+ * Los pedidos y demás datos nunca pueden impedir
+ * que la caja muestre los productos.
+ */
+const settingsResponse = await withCloudTimeout(
+  settingsRequest,
+  "El menú tardó demasiado en responder.",
+  8000
+);
+
+const {
+  data: settingsRow,
+  error: settingsError,
+} = settingsResponse;
+
+if (
+  !settingsError &&
+  !hasPendingMenu() &&
+  menuProductCount(settingsRow?.menu) > 0
+) {
+  const startupMenu =
+    normalizeMenuCatalog(
+      settingsRow.menu
     );
-    const { data: settingsRow, error: settingsError } = settingsResponse;
-    const { data: publicProfileRow, error: publicProfileError } = profileResponse;
-    const { data: ownerRole, error: ownerRoleError } = ownerRoleResponse;
-    const { data: cloudOrders, error: ordersError } = ordersResponse;
+
+  menuCatalog = startupMenu;
+
+  saveMenuCache({
+    immediate: true,
+  });
+
+  storeConfirmedCloudMenu(
+    startupMenu
+  );
+
+  if (
+    settingsRow?.menu_revision !==
+    undefined
+  ) {
+    storeCloudRevision(
+      STORAGE_KEYS.menuRevision,
+      settingsRow.menu_revision
+    );
+  }
+
+  activeCategory =
+    Object.keys(menuCatalog)[0] ||
+    activeCategory;
+
+  renderCategories();
+  renderMenu();
+}
+
+/*
+ * Después del menú intentamos cargar
+ * lo demás. Si falla, el menú ya está visible.
+ */
+const [
+  profileResponse,
+  ownerRoleResponse,
+  ordersResponse,
+] = await withCloudTimeout(
+  Promise.all([
+    profileRequest,
+    ownerRoleRequest,
+    ordersRequest,
+  ]),
+  "Los demás datos de nube tardaron demasiado.",
+  10000
+);
+
+const {
+  data: publicProfileRow,
+  error: publicProfileError,
+} = profileResponse;
+
+const {
+  data: ownerRole,
+  error: ownerRoleError,
+} = ownerRoleResponse;
+
+const {
+  data: cloudOrders,
+  error: ordersError,
+} = ordersResponse;
     const temporaryLoadSyncError = [settingsError, ordersError]
       .find((error) => error && isTemporarySyncInfrastructureError(error));
     if (temporaryLoadSyncError) {
@@ -2597,22 +3463,36 @@ nextTicket =
     renderMenu();
     renderOrder();
     renderHistory();
-    cloudState.ready = true;
-    clearCloudErrors();
-    await syncPendingData({ silent: true, allowWhileLoading: true });
-    try {
-      await refreshClientOrders({ silent: true });
+cloudState.ready = true;
+clearCloudErrors();
+  
+syncPendingAfterLoad =
+  hasPendingDataToSync();
+try {
+  await withCloudTimeout(
+    refreshClientOrders({ silent: true }),
+    "Los pedidos de clientes tardaron demasiado en actualizarse.",
+    8000
+  );
     } catch (moduleError) {
       console.warn("El modulo de pedidos de clientes necesita revision.", moduleError);
       setCloudError(moduleError, { moduleOnly: true });
     }
- stopClientOrdersRealtime();
-stopCentralRealtime();
-startClientOrdersPolling();
+startCentralRealtime();
+startClientOrdersRealtime();
 updateRestaurantStatusSync();
     if (restaurantOperationalMode === "schedule") {
-      await syncRestaurantOperationalStatus({ silent: true });
-    }
+  await withCloudTimeout(
+    syncRestaurantOperationalStatus({ silent: true }),
+    "El estado del restaurante tardó demasiado en actualizarse.",
+    8000
+  ).catch((error) => {
+    console.warn(
+      "No se pudo actualizar el estado operativo durante la carga.",
+      error
+    );
+  });
+}
     updateCloudStatus();
     maybeAskShiftServer();
     return { ok: true, warning: cloudState.moduleWarning };
@@ -2620,11 +3500,31 @@ updateRestaurantStatusSync();
     console.error(error);
     const friendlyMessage = navigator.onLine ? setCloudError(error) : "Sin internet. Los datos locales siguen disponibles.";
     elements.authMessage.textContent = friendlyMessage;
+  renderCurrencySettings();
+renderCategories();
+renderMenu();
+renderOrder();
+renderHistory();
     return { ok: false, error, message: friendlyMessage };
   } finally {
-    cloudState.loading = false;
-    updateCloudStatus();
+  cloudState.loading = false;
+  updateCloudStatus();
+
+  /*
+   * Solo DESPUES de liberar la carga inicial
+   * intentamos enviar lo pendiente.
+   *
+   * Si Supabase esta lento, la caja sigue funcionando.
+   */
+  if (
+    syncPendingAfterLoad &&
+    cloudState.client &&
+    cloudState.user &&
+    navigator.onLine
+  ) {
+    schedulePendingDataSyncRetry(500);
   }
+}
 }
 
 function closureReportRange(periodType, periodValue) {
@@ -3413,20 +4313,59 @@ async function setCloudNextTicket(number) {
 async function saveCloudOrder(order) {
   if (!cloudState.client || !cloudState.user || !order.saved) return;
 
-  const applyConfirmedRevision = (revision) => {
-    const parsedRevision = Number.parseInt(revision, 10);
-    if (!Number.isFinite(parsedRevision) || parsedRevision < 1) return;
+ const applyConfirmedCloudState = (result = {}) => {
+  const parsedRevision = Number.parseInt(
+    result?.revision,
+    10
+  );
 
-    order._syncRevision = parsedRevision;
-    savedOrders = savedOrders.map((savedOrder) => (
+  const customerOrderId =
+    result?.customer_order_id ||
+    result?.customerOrderId ||
+    null;
+
+  const patch = {};
+
+  if (
+    Number.isFinite(parsedRevision) &&
+    parsedRevision > 0
+  ) {
+    patch._syncRevision = parsedRevision;
+  }
+
+  if (customerOrderId) {
+    patch.customerOrderId = customerOrderId;
+  }
+
+  if (!Object.keys(patch).length) {
+    return;
+  }
+
+  Object.assign(order, patch);
+
+  savedOrders = savedOrders.map(
+    (savedOrder) =>
       savedOrder.id === order.id
-        ? { ...savedOrder, _syncRevision: parsedRevision }
+        ? {
+            ...savedOrder,
+            ...patch,
+          }
         : savedOrder
-    ));
-    if (currentOrder.id === order.id) currentOrder._syncRevision = parsedRevision;
-    saveCurrentOrderDraft();
-  };
+  );
 
+  if (currentOrder.id === order.id) {
+    Object.assign(
+      currentOrder,
+      patch
+    );
+  }
+
+  saveOrders({
+    immediate: true,
+  });
+
+  saveCurrentOrderDraft();
+};
   const saveOrderRow = async () => {
     const orderForCloud = structuredCloneOrder(order);
     orderForCloud.syncStatus = "synced";
@@ -3453,13 +4392,58 @@ const { data, error } = await cloudState.client.rpc(
     p_expected_revision: expectedRevision,
   }
 );
+if (!error) {
+  const result =
+    Array.isArray(data)
+      ? data[0]
+      : data;
 
-    if (!error) {
-      const result = Array.isArray(data) ? data[0] : data;
-      applyConfirmedRevision(result?.revision);
-    }
+  const confirmedOrderId =
+    result?.order_id ||
+    result?.orderId ||
+    null;
 
-    return { data, error };
+  const confirmedRevision =
+    Number.parseInt(
+      result?.revision,
+      10
+    );
+
+  const confirmedCustomerOrderId =
+    result?.customer_order_id ||
+    result?.customerOrderId ||
+    null;
+
+  /*
+   * Un RPC sin error pero sin confirmación completa
+   * no demuestra que el pedido se haya guardado
+   * y publicado correctamente en las estaciones.
+   */
+  if (
+    String(confirmedOrderId || "") !==
+      String(order.id) ||
+    !Number.isFinite(confirmedRevision) ||
+    confirmedRevision < 1 ||
+    !confirmedCustomerOrderId
+  ) {
+    const confirmationError =
+      new Error(
+        "Supabase no confirmó completamente el guardado y la publicación del pedido."
+      );
+
+    confirmationError.code =
+      "RC_ORDERA_ORDER_NOT_CONFIRMED";
+
+    return {
+      data,
+      error: confirmationError,
+    };
+  }
+
+  applyConfirmedCloudState(result);
+}
+
+return { data, error };
   };
 
   let { error } = await saveOrderRow();
@@ -3488,20 +4472,220 @@ const { data, error } = await cloudState.client.rpc(
 
   if (error) {
     if (
-      error.code === "40001"
-      || /ORDER_REVISION_(?:CONFLICT|REQUIRED)/i.test(String(error.message || ""))
-    ) {
-      const conflictError = new Error(
-        appUiText(
-          "Este pedido cambio en otro dispositivo. Actualiza la nube antes de volver a modificarlo."
-        )
-      );
+  error.code === "40001" ||
+  /ORDER_REVISION_(?:CONFLICT|REQUIRED)/i.test(
+    String(error.message || "")
+  )
+) {
+  /*
+   * Antes de declarar un conflicto real comprobamos
+   * si el servidor ya contiene exactamente la misma
+   * edición local.
+   *
+   * Esto cubre el caso:
+   *
+   * servidor guarda correctamente
+   * -> respuesta se pierde / timeout
+   * -> navegador conserva revision anterior
+   * -> siguiente intento recibe conflicto.
+   */
 
-      conflictError.code = "ORDER_REVISION_CONFLICT";
-      conflictError.cause = error;
-      throw conflictError;
+  try {
+    const [
+      remoteOrderResponse,
+      remoteCustomerOrderResponse,
+    ] = await withCloudTimeout(
+      Promise.all([
+        cloudState.client
+          .from("orders")
+          .select(
+            "order_json, revision, updated_at"
+          )
+          .eq(
+            "id",
+            order.id
+          )
+          .eq(
+            "user_id",
+            cloudState.user.id
+          )
+          .maybeSingle(),
+
+        cloudState.client
+          .from("customer_orders")
+          .select("id")
+          .eq(
+            "user_id",
+            cloudState.user.id
+          )
+          .eq(
+            "restaurant_order_id",
+            order.id
+          )
+          .limit(1)
+          .maybeSingle(),
+      ]),
+      "No fue posible verificar el pedido en nube a tiempo.",
+      8000
+    );
+
+    if (remoteOrderResponse.error) {
+      throw remoteOrderResponse.error;
     }
 
+    const remoteRow =
+      remoteOrderResponse.data;
+const remoteRevision =
+  Number.parseInt(
+    remoteRow?.revision,
+    10
+  );
+
+/*
+ * Si no recibimos una fila completa, no existe
+ * evidencia suficiente para declarar un conflicto.
+ * El pedido debe permanecer pendiente.
+ */
+if (
+  !remoteRow ||
+  !Number.isFinite(remoteRevision) ||
+  remoteRevision < 1
+) {
+  const unconfirmedReconciliationError =
+    new Error(
+      "Supabase no devolvió una versión válida del pedido durante la reconciliación."
+    );
+
+  unconfirmedReconciliationError.code =
+    "RC_ORDERA_RECONCILIATION_NOT_CONFIRMED";
+
+  throw unconfirmedReconciliationError;
+}
+    const localUpdatedAt =
+      String(
+        order.updatedAt ||
+        ""
+      );
+
+    const remoteUpdatedAt =
+      String(
+        remoteRow?.order_json?.updatedAt ||
+        ""
+      );
+
+    /*
+     * Si updatedAt coincide, es la misma edición que
+     * esta tablet intentó enviar anteriormente.
+     *
+     * Por tanto NO es un conflicto real.
+     * Simplemente se perdió la confirmación.
+     */
+    if (
+  localUpdatedAt &&
+  remoteUpdatedAt === localUpdatedAt
+) {
+  /*
+   * La fila principal existe, pero también debemos
+   * confirmar que el pedido fue publicado para
+   * caja y estaciones.
+   */
+  if (remoteCustomerOrderResponse.error) {
+    throw remoteCustomerOrderResponse.error;
+  }
+
+  const recoveredCustomerOrderId =
+    remoteCustomerOrderResponse
+      ?.data?.id ||
+    null;
+
+  if (recoveredCustomerOrderId) {
+    applyConfirmedCloudState({
+      revision:
+        remoteRow.revision,
+
+      customer_order_id:
+        recoveredCustomerOrderId,
+    });
+
+    console.info(
+      "[RC ORDERA] Pedido recuperado después de una confirmación perdida.",
+      {
+        orderId: order.id,
+        revision: remoteRow.revision,
+        customerOrderId:
+          recoveredCustomerOrderId,
+      }
+    );
+
+    return;
+  }
+
+  /*
+   * La edición llegó a orders, pero no encontramos
+   * su publicación en customer_orders.
+   *
+   * Actualizamos únicamente la revisión confirmada
+   * y repetimos una sola vez la operación atómica.
+   */
+  applyConfirmedCloudState({
+    revision:
+      remoteRow.revision,
+  });
+
+  const publicationRetry =
+    await saveOrderRow();
+
+  if (publicationRetry.error) {
+    throw publicationRetry.error;
+  }
+
+  console.info(
+    "[RC ORDERA] Pedido republicado correctamente en las estaciones.",
+    {
+      orderId: order.id,
+      revision: remoteRow.revision,
+    }
+  );
+
+  return;
+}
+  } catch (reconciliationError) {
+  console.warn(
+    "[RC ORDERA] No fue posible reconciliar automáticamente el conflicto.",
+    reconciliationError
+  );
+
+  /*
+   * Si no pudimos consultar Supabase con certeza,
+   * NO podemos afirmar que exista un conflicto real.
+   *
+   * Propagamos el error original para que
+   * runPendingDataSync() lo clasifique correctamente
+   * como red, timeout, infraestructura, etc.
+   */
+  throw reconciliationError;
+}
+
+  /*
+   * Si updatedAt es diferente, entonces sí existe
+   * una modificación verdadera de otro dispositivo.
+   * No sobrescribimos nada.
+   */
+  const conflictError =
+    new Error(
+      appUiText(
+        "Este pedido cambio en otro dispositivo. Actualiza la nube antes de volver a modificarlo."
+      )
+    );
+
+  conflictError.code =
+    "ORDER_REVISION_CONFLICT";
+
+  conflictError.cause =
+    error;
+
+  throw conflictError;
+}
     throw error;
   }
 }
@@ -5827,15 +7011,95 @@ function syncPendingData(options = {}) {
 }
 
 function schedulePendingDataSyncRetry(delayMs = 5000) {
-  if (pendingDataSyncRetryTimer !== null) return;
-  pendingDataSyncRetryTimer = window.setTimeout(() => {
-    pendingDataSyncRetryTimer = null;
-    syncPendingData({ silent: true }).catch((error) => {
-      console.error("No fue posible completar la sincronizacion pendiente.", error);
-    });
-  }, Math.max(0, delayMs));
-}
+  const normalizedDelay = Math.max(
+    0,
+    Number(delayMs) || 0
+  );
 
+  const requestedDueAt =
+    Date.now() + normalizedDelay;
+
+  /*
+   * Si ya existe un reintento igual o más próximo,
+   * no programamos otro.
+   */
+  if (
+    pendingDataSyncRetryTimer !== null &&
+    pendingDataSyncRetryDueAt > 0 &&
+    pendingDataSyncRetryDueAt <= requestedDueAt
+  ) {
+    return;
+  }
+
+  /*
+   * Si el nuevo reintento debe ejecutarse antes,
+   * reemplazamos el temporizador anterior.
+   */
+  if (pendingDataSyncRetryTimer !== null) {
+    window.clearTimeout(
+      pendingDataSyncRetryTimer
+    );
+
+    pendingDataSyncRetryTimer = null;
+  }
+
+  pendingDataSyncRetryDueAt =
+    requestedDueAt;
+
+  pendingDataSyncRetryTimer =
+    window.setTimeout(() => {
+      pendingDataSyncRetryTimer = null;
+      pendingDataSyncRetryDueAt = 0;
+
+      syncPendingData({
+        silent: true,
+      }).catch((error) => {
+        console.error(
+          "No fue posible completar la sincronizacion pendiente.",
+          error
+        );
+      });
+    }, Math.max(
+      0,
+      requestedDueAt - Date.now()
+    ));
+}
+function schedulePendingOrderRecovery(error = null) {
+  if (
+    !cloudState.client ||
+    !cloudState.user ||
+    !navigator.onLine
+  ) {
+    return;
+  }
+
+  /*
+   * Si Supabase está temporalmente saturado,
+   * respetamos el backoff para no bombardearlo.
+   */
+  if (
+    error &&
+    isTemporarySyncInfrastructureError(error)
+  ) {
+    pendingDataSyncRetryNotBefore =
+      Math.max(
+        pendingDataSyncRetryNotBefore,
+        Date.now() +
+          SYNC_INFRASTRUCTURE_BACKOFF_MS
+      );
+  }
+
+  const retryDelay =
+    Math.max(
+      5000,
+      pendingDataSyncRetryNotBefore -
+        Date.now()
+    );
+
+  schedulePendingDataSyncRetry(
+    retryDelay
+  );
+}
 async function runPendingDataSync(options = {}) {
   const { silent = false } = options;
   pendingDataSyncRequested = false;
@@ -5870,47 +7134,364 @@ if (
   pendingDataSyncRetryNotBefore = 0;
 
   if (pendingDataSyncRetryTimer !== null) {
-    clearTimeout(pendingDataSyncRetryTimer);
-    pendingDataSyncRetryTimer = null;
-  }
+  window.clearTimeout(
+    pendingDataSyncRetryTimer
+  );
 
-  updateCloudStatus();
-  return true;
+  pendingDataSyncRetryTimer = null;
 }
 
+pendingDataSyncRetryDueAt = 0;
+
+updateCloudStatus();
+return true;
+}
   cloudState.syncing = true;
   if (!silent) updateCloudStatus("Sincronizando...");
 
   try {
-    if (shouldSyncSettings) {
-      await saveCloudSettings();
-      clearSettingsPending(settingsPendingToken);
+  let deferredSyncError = null;
+
+if (shouldSyncSettings) {
+  try {
+    await saveCloudSettings();
+
+    const cleared =
+      clearSettingsPending(
+        settingsPendingToken
+      );
+
+    if (!cleared) {
+      /*
+       * Los ajustes cambiaron mientras
+       * esta sincronización estaba en curso.
+       */
+      pendingDataSyncRequested = true;
     }
-    if (shouldSyncMenu) {
-      await saveCloudMenu();
-      clearMenuPending(menuPendingToken);
-    }
-    if (shouldSyncTicketCounter) {
-      await setCloudNextTicket(shouldSyncTicketCounter);
-      clearPendingTicketCounter(shouldSyncTicketCounter);
+  } catch (settingsSyncError) {
+    /*
+     * Un fallo temporal de Supabase debe detener
+     * inmediatamente la ronda y aplicar backoff.
+     */
+    if (
+      isTemporarySyncInfrastructureError(
+        settingsSyncError
+      )
+    ) {
+      throw settingsSyncError;
     }
 
-    for (const orderId of pendingDeletedOrderIds) {
-      try {
-        await voidCloudOrder(orderId);
-        setOrderSyncStatus(orderId, "synced");
+    /*
+     * Un error lógico de ajustes no debe impedir
+     * que los pedidos continúen sincronizándose.
+     * El pendiente de ajustes se conserva.
+     */
+    deferredSyncError =
+      settingsSyncError;
+
+    console.error(
+      "No fue posible sincronizar los ajustes. Los pedidos continuarán.",
+      settingsSyncError
+    );
+  }
+}
+
+if (shouldSyncMenu) {
+  try {
+    await saveCloudMenu();
+
+    const cleared =
+      clearMenuPending(
+        menuPendingToken
+      );
+
+    if (!cleared) {
+      /*
+       * El menú cambió mientras se estaba
+       * sincronizando y necesita otra ronda.
+       */
+      pendingDataSyncRequested = true;
+    }
+  } catch (menuSyncError) {
+    /*
+     * Un fallo temporal indica que Supabase
+     * no está disponible. Detenemos la ronda
+     * para no generar más llamadas.
+     */
+    if (
+      isTemporarySyncInfrastructureError(
+        menuSyncError
+      )
+    ) {
+      throw menuSyncError;
+    }
+
+    /*
+     * Un error lógico del menú no puede impedir
+     * que los pedidos pendientes se guarden.
+     * El menú permanece marcado como pendiente.
+     */
+    if (!deferredSyncError) {
+      deferredSyncError =
+        menuSyncError;
+    }
+
+    console.error(
+      "No fue posible sincronizar el menú. Los pedidos continuarán.",
+      menuSyncError
+    );
+  }
+}
+
+if (shouldSyncTicketCounter) {
+  try {
+    await setCloudNextTicket(
+      shouldSyncTicketCounter
+    );
+
+    const cleared =
+      clearPendingTicketCounter(
+        shouldSyncTicketCounter
+      );
+
+    if (!cleared) {
+      /*
+       * El contador cambió durante la operación
+       * y necesita una nueva ronda.
+       */
+      pendingDataSyncRequested = true;
+    }
+  } catch (ticketCounterSyncError) {
+    /*
+     * Si Supabase no está disponible, detenemos
+     * la ronda para aplicar el backoff general.
+     */
+    if (
+      isTemporarySyncInfrastructureError(
+        ticketCounterSyncError
+      )
+    ) {
+      throw ticketCounterSyncError;
+    }
+
+    /*
+     * Un error lógico del contador no debe impedir
+     * que los pedidos pendientes se guarden.
+     * El contador permanece pendiente.
+     */
+    if (!deferredSyncError) {
+      deferredSyncError =
+        ticketCounterSyncError;
+    }
+
+    console.error(
+      "No fue posible sincronizar el contador diario. Los pedidos continuarán.",
+      ticketCounterSyncError
+    );
+  }
+}
+   for (const orderId of pendingDeletedOrderIds) {
+  try {
+    /*
+     * Primero confirmamos la anulación
+     * en Supabase.
+     */
+    await voidCloudOrder(orderId);
+
+    /*
+     * Después retiramos la intención
+     * de anulación de la cola local.
+     *
+     * Si localStorage falla, NO fingimos
+     * que la operación quedó cerrada.
+     */
+    const cleared =
+      clearDeletedOrderId(orderId);
+
+    if (!cleared) {
+      const queueError =
+        new Error(
+          `No fue posible confirmar localmente la anulación del pedido ${orderId}.`
+        );
+
+      queueError.code =
+        "RC_ORDERA_DELETED_ORDER_QUEUE_WRITE_FAILED";
+
+      throw queueError;
+    }
+
+    /*
+     * Solo cuando nube + cola local están
+     * confirmadas marcamos el pedido synced.
+     */
+    setOrderSyncStatus(
+      orderId,
+      "synced"
+    );
+  } catch (error) {
+    /*
+     * Si el pedido ya no existe en Supabase,
+     * el objetivo remoto ya está cumplido.
+     * Aun así debemos confirmar la limpieza local.
+     */
+    if (
+      /order not found|pedido no encontrado/i.test(
+        String(error?.message || "")
+      )
+    ) {
+      const cleared =
         clearDeletedOrderId(orderId);
-      } catch (error) {
-        if (/order not found|pedido no encontrado/i.test(String(error?.message || ""))) {
-          clearDeletedOrderId(orderId);
-          continue;
-        }
-        throw error;
+
+      if (!cleared) {
+        const queueError =
+          new Error(
+            `El pedido ${orderId} ya no existe en nube, pero no fue posible limpiar su anulación local.`
+          );
+
+        queueError.code =
+          "RC_ORDERA_DELETED_ORDER_QUEUE_WRITE_FAILED";
+
+        throw queueError;
       }
+
+      setOrderSyncStatus(
+        orderId,
+        "synced"
+      );
+
+      continue;
     }
 
-    let pendingOrderSyncError = null;
-    for (const order of pendingOrders) {
+    throw error;
+  }
+}
+
+let pendingOrderSyncError = null;
+
+/*
+ * Antes de volver a escribir un pedido pendiente,
+ * comprobamos si esa misma edición ya existe
+ * en Supabase.
+ *
+ * Esto evita reenviar pedidos que sí fueron
+ * guardados pero cuya confirmación se perdió.
+ */
+let pendingOrdersToUpload = pendingOrders;
+
+if (pendingOrders.length) {
+  const pendingIds = pendingOrders
+    .map((order) => order.id)
+    .filter(Boolean);
+
+  const { data: remotePendingRows, error: remotePendingError } =
+    await withCloudTimeout(
+      cloudState.client
+        .from("orders")
+        .select("id, order_json, revision")
+        .eq("user_id", cloudState.user.id)
+        .in("id", pendingIds),
+      "No fue posible comprobar los pedidos pendientes en nube a tiempo.",
+      8000
+    );
+
+  if (remotePendingError) {
+    throw remotePendingError;
+  }
+
+  const remoteById = new Map(
+    (remotePendingRows || []).map(
+      (row) => [String(row.id), row]
+    )
+  );
+
+  pendingOrdersToUpload = [];
+
+  for (const order of pendingOrders) {
+    const remoteRow =
+      remoteById.get(String(order.id));
+
+    const localUpdatedAt =
+      String(order.updatedAt || "");
+
+    const remoteUpdatedAt =
+      String(
+        remoteRow?.order_json?.updatedAt ||
+        ""
+      );
+
+    /*
+     * Mismo ID + mismo updatedAt:
+     * es exactamente la edición local que
+     * ya consiguió llegar a la nube.
+     */
+    if (
+      remoteRow &&
+      localUpdatedAt &&
+      remoteUpdatedAt === localUpdatedAt
+    ) {
+      const parsedRevision =
+        Number.parseInt(
+          remoteRow.revision,
+          10
+        );
+
+      const patch = {
+        syncStatus: "synced",
+      };
+
+      if (
+        Number.isFinite(parsedRevision) &&
+        parsedRevision > 0
+      ) {
+        patch._syncRevision =
+          parsedRevision;
+      }
+
+      Object.assign(
+        order,
+        patch
+      );
+
+      savedOrders =
+        savedOrders.map(
+          (savedOrder) =>
+            savedOrder.id === order.id
+              ? {
+                  ...savedOrder,
+                  ...patch,
+                }
+              : savedOrder
+        );
+
+      if (
+        currentOrder.id === order.id
+      ) {
+        Object.assign(
+          currentOrder,
+          patch
+        );
+      }
+
+      continue;
+    }
+
+    /*
+     * No existe en nube o es una edición
+     * diferente: sí necesita sincronización.
+     */
+    pendingOrdersToUpload.push(
+      order
+    );
+  }
+
+  saveOrders({
+    immediate: true,
+  });
+
+  saveCurrentOrderDraft();
+}
+
+for (const order of pendingOrdersToUpload) {
       try {
         const expectedUpdatedAt = order.updatedAt;
         await saveCloudOrder(order);
@@ -5932,9 +7513,15 @@ if (
 }
     }
 
-    if (pendingOrderSyncError) throw pendingOrderSyncError;
+if (pendingOrderSyncError) {
+  throw pendingOrderSyncError;
+}
 
-    const highestLocalTicketToday = savedOrders
+if (deferredSyncError) {
+  throw deferredSyncError;
+}
+
+const highestLocalTicketToday = savedOrders
       .filter((order) => orderBusinessDate(order) === todayKey)
       .reduce((highest, order) => Math.max(highest, Number(order.ticketNumber) || 0), 0);
     const minimumNextTicket = Math.max(nextTicket, highestLocalTicketToday + 1);
@@ -9378,28 +10965,33 @@ async function upsertCurrentOrder(options = {}) {
         currentOrder.syncStatus
       );
 
-      saveOrders({
-        immediate: true,
-      });
+     saveOrders({
+  immediate: true,
+});
 
-      updateCloudStatus();
+schedulePendingOrderRecovery(
+  error
+);
+
+updateCloudStatus();
     }
-  } else if (shouldQueueForCloud()) {
-    currentOrder.syncStatus =
-      "pending";
+ } else if (shouldQueueForCloud()) {
+  currentOrder.syncStatus =
+    "pending";
 
-    setOrderSyncStatus(
-      currentOrder.id,
-      "pending"
-    );
+  setOrderSyncStatus(
+    currentOrder.id,
+    "pending"
+  );
 
-    saveOrders({
-      immediate: true,
-    });
+  saveOrders({
+    immediate: true,
+  });
 
-    updateCloudStatus();
-  }
+  schedulePendingOrderRecovery();
 
+  updateCloudStatus();
+}
   if (elements.dailyCloseDialog?.open) {
     renderDailyClose(
       elements.closeDayInput.value ||
@@ -10791,6 +12383,16 @@ elements.cancelRecoveryButton.addEventListener("click", () => hidePasswordRecove
 if (elements.refreshAppButton) {
   elements.refreshAppButton.addEventListener("click", refreshRestaurantApp);
 }
+elements.cloudStatus?.addEventListener("click", () => {
+  const message =
+    elements.cloudStatus?.title ||
+    cloudState.lastError ||
+    cloudState.moduleWarning;
+
+  if (message) {
+    alert(message);
+  }
+});
 elements.openSignInButton.addEventListener("click", openSignInScreen);
 elements.signOutButton.addEventListener("click", signOut);
 elements.closeRestaurantButton?.addEventListener("click", toggleRestaurantOperationalOpen);
@@ -11372,11 +12974,9 @@ function recoverCloudConnection() {
     await syncPendingData({ silent: true });
     await refreshCentralCloudState();
     await refreshClientOrders({ silent: true });
-
-stopCentralRealtime();
-stopClientOrdersRealtime();
-startClientOrdersPolling();
-
+startCentralRealtime();
+startClientOrdersRealtime();
+    
     updateRestaurantStatusSync();
 
     await syncRestaurantOperationalStatus({
@@ -11449,4 +13049,3 @@ initializeCloud().catch((error) => {
   const friendlyMessage = navigator.onLine ? setCloudError(error) : "Sin internet. Puedes continuar con los datos guardados.";
   elements.authMessage.textContent = friendlyMessage;
 });
-
