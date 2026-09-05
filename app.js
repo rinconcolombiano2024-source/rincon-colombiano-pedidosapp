@@ -6942,18 +6942,59 @@ if (
   if (!silent) updateCloudStatus("Sincronizando...");
 
   try {
-    if (shouldSyncSettings) {
-      await saveCloudSettings();
-      clearSettingsPending(settingsPendingToken);
-    }
-    if (shouldSyncMenu) {
-      await saveCloudMenu();
-      clearMenuPending(menuPendingToken);
-    }
-    if (shouldSyncTicketCounter) {
-      await setCloudNextTicket(shouldSyncTicketCounter);
-      clearPendingTicketCounter(shouldSyncTicketCounter);
-    }
+   if (shouldSyncSettings) {
+  await saveCloudSettings();
+
+  const cleared =
+    clearSettingsPending(
+      settingsPendingToken
+    );
+
+  if (!cleared) {
+    /*
+     * Los ajustes cambiaron mientras
+     * esta sincronización estaba en curso.
+     * Debemos ejecutar otra pasada.
+     */
+    pendingDataSyncRequested = true;
+  }
+}
+
+if (shouldSyncMenu) {
+  await saveCloudMenu();
+
+  const cleared =
+    clearMenuPending(
+      menuPendingToken
+    );
+
+  if (!cleared) {
+    /*
+     * El menú volvió a cambiar mientras
+     * estábamos sincronizando.
+     */
+    pendingDataSyncRequested = true;
+  }
+}
+
+if (shouldSyncTicketCounter) {
+  await setCloudNextTicket(
+    shouldSyncTicketCounter
+  );
+
+  const cleared =
+    clearPendingTicketCounter(
+      shouldSyncTicketCounter
+    );
+
+  if (!cleared) {
+    /*
+     * El contador cambió mientras
+     * esta sincronización estaba activa.
+     */
+    pendingDataSyncRequested = true;
+  }
+}
 
     for (const orderId of pendingDeletedOrderIds) {
       try {
