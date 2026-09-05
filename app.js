@@ -3035,6 +3035,7 @@ const {
 
 if (
   !settingsError &&
+  !hasPendingMenu() &&
   menuProductCount(settingsRow?.menu) > 0
 ) {
   const startupMenu =
