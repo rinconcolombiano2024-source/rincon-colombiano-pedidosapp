@@ -7158,24 +7158,52 @@ if (shouldSyncMenu) {
 }
 
 if (shouldSyncTicketCounter) {
-  await setCloudNextTicket(
-    shouldSyncTicketCounter
-  );
-
-  const cleared =
-    clearPendingTicketCounter(
+  try {
+    await setCloudNextTicket(
       shouldSyncTicketCounter
     );
 
-  if (!cleared) {
+    const cleared =
+      clearPendingTicketCounter(
+        shouldSyncTicketCounter
+      );
+
+    if (!cleared) {
+      /*
+       * El contador cambió durante la operación
+       * y necesita una nueva ronda.
+       */
+      pendingDataSyncRequested = true;
+    }
+  } catch (ticketCounterSyncError) {
     /*
-     * El contador cambió mientras
-     * esta sincronización estaba activa.
+     * Si Supabase no está disponible, detenemos
+     * la ronda para aplicar el backoff general.
      */
-    pendingDataSyncRequested = true;
+    if (
+      isTemporarySyncInfrastructureError(
+        ticketCounterSyncError
+      )
+    ) {
+      throw ticketCounterSyncError;
+    }
+
+    /*
+     * Un error lógico del contador no debe impedir
+     * que los pedidos pendientes se guarden.
+     * El contador permanece pendiente.
+     */
+    if (!deferredSyncError) {
+      deferredSyncError =
+        ticketCounterSyncError;
+    }
+
+    console.error(
+      "No fue posible sincronizar el contador diario. Los pedidos continuarán.",
+      ticketCounterSyncError
+    );
   }
 }
-
    for (const orderId of pendingDeletedOrderIds) {
   try {
     /*
