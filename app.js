@@ -2608,9 +2608,7 @@ nextTicket =
     }
  stopClientOrdersRealtime();
 stopCentralRealtime();
-startClientOrdersPolling({
-  immediate: true,
-});
+startClientOrdersPolling();
 updateRestaurantStatusSync();
     if (restaurantOperationalMode === "schedule") {
       await syncRestaurantOperationalStatus({ silent: true });
