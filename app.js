@@ -52,7 +52,7 @@ const CLIENT_ORDERS_REALTIME_STABLE_MS = 30_000;
 const CENTRAL_REALTIME_RECONNECT_MIN_MS = 1_500;
 const CENTRAL_REALTIME_RECONNECT_MAX_MS = 60_000;
 const CENTRAL_REALTIME_STABLE_MS = 30_000;
-const CLOUD_RECOVERY_DEDUP_MS = 2_000;
+const CLOUD_RECOVERY_DEDUP_MS = 30_000;
 const SYNC_INFRASTRUCTURE_BACKOFF_MS = 5 * 60_000;
 const SYNC_ORDER_CONFLICT_BACKOFF_MS = 5 * 60_000;
 const SYNC_ORDER_BATCH_SIZE = 5;
@@ -1318,11 +1318,16 @@ function isTemporarySyncInfrastructureError(error) {
     .join(" ");
 
   /*
-   * Timeout controlado por RC ORDERA.
+   * Timeout o confirmación remota incompleta.
+   * Se conserva el pendiente y se reintenta con el
+   * mismo backoff de infraestructura, sin crear un bucle.
    */
   if (
-    code ===
-    "RC_ORDERA_CLOUD_TIMEOUT"
+    [
+      "RC_ORDERA_CLOUD_TIMEOUT",
+      "RC_ORDERA_ORDER_NOT_CONFIRMED",
+      "RC_ORDERA_RECONCILIATION_NOT_CONFIRMED",
+    ].includes(code)
   ) {
     return true;
   }
@@ -3027,7 +3032,10 @@ const settingsResponse = await withCloudTimeout(
   settingsRequest,
   "El menú tardó demasiado en responder.",
   8000
-);
+).catch((error) => ({
+  data: null,
+  error,
+}));
 
 const {
   data: settingsRow,
@@ -3080,15 +3088,23 @@ const [
   profileResponse,
   ownerRoleResponse,
   ordersResponse,
-] = await withCloudTimeout(
-  Promise.all([
+] = await Promise.all([
+  withCloudTimeout(
     profileRequest,
+    "El perfil del restaurante tardó demasiado en responder.",
+    10000
+  ).catch((error) => ({ data: null, error })),
+  withCloudTimeout(
     ownerRoleRequest,
+    "El rol del restaurante tardó demasiado en responder.",
+    10000
+  ).catch((error) => ({ data: null, error })),
+  withCloudTimeout(
     ordersRequest,
-  ]),
-  "Los demás datos de nube tardaron demasiado.",
-  10000
-);
+    "Los pedidos tardaron demasiado en responder.",
+    10000
+  ).catch((error) => ({ data: null, error })),
+]);
 
 const {
   data: publicProfileRow,
@@ -3104,7 +3120,12 @@ const {
   data: cloudOrders,
   error: ordersError,
 } = ordersResponse;
-    const temporaryLoadSyncError = [settingsError, ordersError]
+    const temporaryLoadSyncError = [
+      settingsError,
+      publicProfileError,
+      ownerRoleError,
+      ordersError,
+    ]
       .find((error) => error && isTemporarySyncInfrastructureError(error));
     if (temporaryLoadSyncError) {
       pendingDataSyncRetryNotBefore = Date.now() + SYNC_INFRASTRUCTURE_BACKOFF_MS;
@@ -3465,6 +3486,18 @@ nextTicket =
     renderHistory();
 cloudState.ready = true;
 clearCloudErrors();
+const partialLoadError = [
+  settingsError,
+  publicProfileError,
+  ownerRoleError,
+  ordersError,
+].find(Boolean);
+
+if (partialLoadError) {
+  setCloudError(partialLoadError, {
+    moduleOnly: true,
+  });
+}
   
 syncPendingAfterLoad =
   hasPendingDataToSync();
@@ -5208,59 +5241,72 @@ centralSyncRefreshPending = false;
   settingsResponse,
   profileResponse,
   ordersResponse,
-] = await withCloudTimeout(Promise.all([
+] = await Promise.all([
   settings
-    ? cloudState.client
-        .from("app_settings")
-        .select(
-          "menu, settings, menu_revision, settings_revision, menu_updated_at, settings_updated_at"
-        )
-        .eq("user_id", cloudState.user.id)
-        .maybeSingle()
+    ? withCloudTimeout(
+        cloudState.client
+          .from("app_settings")
+          .select(
+            "menu, settings, menu_revision, settings_revision, menu_updated_at, settings_updated_at"
+          )
+          .eq("user_id", cloudState.user.id)
+          .maybeSingle(),
+        "Los ajustes tardaron demasiado en actualizarse.",
+        8000
+      ).catch((error) => ({ data: null, error }))
     : Promise.resolve({
         data: null,
         error: null,
       }),
 
   profile
-    ? cloudState.client
-        .from("restaurant_profiles")
-        .select(
-          "business_name, logo_url, public_address, phone, active, operational_open, operational_mode, opening_hours, latitude, longitude, country_code, city, region, postal_code, timezone, preferred_language, deleted_at"
-        )
-        .eq("user_id", cloudState.user.id)
-        .maybeSingle()
+    ? withCloudTimeout(
+        cloudState.client
+          .from("restaurant_profiles")
+          .select(
+            "business_name, logo_url, public_address, phone, active, operational_open, operational_mode, opening_hours, latitude, longitude, country_code, city, region, postal_code, timezone, preferred_language, deleted_at"
+          )
+          .eq("user_id", cloudState.user.id)
+          .maybeSingle(),
+        "El perfil tardó demasiado en actualizarse.",
+        8000
+      ).catch((error) => ({ data: null, error }))
     : Promise.resolve({
         data: null,
         error: null,
       }),
 
   orders
-    ? cloudState.client
-        .from("orders")
-        .select("order_json, revision")
-        .eq("user_id", cloudState.user.id)
-        .order("created_at", {
-          ascending: false,
-        })
-        .limit(LOCAL_ORDER_CACHE_LIMIT)
+    ? withCloudTimeout(
+        cloudState.client
+          .from("orders")
+          .select("order_json, revision")
+          .eq("user_id", cloudState.user.id)
+          .order("created_at", {
+            ascending: false,
+          })
+          .limit(LOCAL_ORDER_CACHE_LIMIT),
+        "Los pedidos tardaron demasiado en actualizarse.",
+        8000
+      ).catch((error) => ({ data: null, error }))
     : Promise.resolve({
         data: [],
         error: null,
       }),
-]));
+]);
 
-    if (settingsResponse.error) {
-      throw settingsResponse.error;
-    }
+    const refreshErrors = [
+      settingsResponse.error,
+      profileResponse.error,
+      ordersResponse.error,
+    ].filter(Boolean);
 
-    if (profileResponse.error) {
-      throw profileResponse.error;
-    }
-
-    if (ordersResponse.error) {
-      throw ordersResponse.error;
-    }
+    refreshErrors.forEach((error) => {
+      console.warn(
+        "Una parte de la actualización central no pudo confirmarse. Se conservarán los datos locales de ese módulo.",
+        error
+      );
+    });
 
     const settingsRow = settingsResponse.data;
     const profileRow = profileResponse.data;
@@ -5384,7 +5430,7 @@ if (
      * Conservamos pedidos locales pendientes
      * y adoptamos los confirmados de Supabase.
      */
-    if (orders) {
+    if (orders && !ordersResponse.error) {
   const deletedIds =
     readDeletedOrderIds();
 
@@ -5437,7 +5483,7 @@ if (orders) {
 
 updateCloudStatus();
 
-    return true;
+    return refreshErrors.length === 0;
   } catch (error) {
     console.error(
       "Fallo de sincronización central.",
@@ -5495,6 +5541,13 @@ function scheduleCentralRealtimeReconnect() {
   }, retryDelay);
 }
 function startCentralRealtime() {
+  if (
+    centralSyncChannel &&
+    ["connecting", "SUBSCRIBED"].includes(centralSyncStatus)
+  ) {
+    return;
+  }
+
   stopCentralRealtime();
 
   if (
@@ -5675,6 +5728,13 @@ startClientOrdersRealtime();
     }, retryDelay);
 }
 function startClientOrdersRealtime() {
+  if (
+    clientOrdersChannel &&
+    ["connecting", "SUBSCRIBED"].includes(clientOrdersRealtimeStatus)
+  ) {
+    return;
+  }
+
   stopClientOrdersRealtime();
   if (!canUseCustomerModule()) return;
  clientOrdersRealtimeStatus = "connecting";
@@ -5768,7 +5828,11 @@ clientOrdersRealtimeStableTimer = setTimeout(() => {
 }
 
 async function loadCurrentRestaurantDeliveryTracking() {
-  if (!cloudState.client || !cloudState.user || !navigator.onLine) return new Map();
+  if (!cloudState.client || !cloudState.user || !navigator.onLine) {
+    return clientDeliveryTrackingByOrderId instanceof Map
+      ? clientDeliveryTrackingByOrderId
+      : new Map();
+  }
   if (clientOrdersTrackingInFlight) return clientOrdersTrackingInFlight;
   clientOrdersTrackingInFlight = (async () => {
     const { data, error } = await cloudState.client.rpc("get_current_restaurant_delivery_tracking");
@@ -5849,9 +5913,19 @@ async function performClientOrdersRefresh(options = {}) {
     .in("status", ["pending", "accepted", "sent"])
     .order("created_at", { ascending: false })
     .limit(100);
+  const trackingRequest = loadCurrentRestaurantDeliveryTracking().catch((trackingError) => {
+    console.warn(
+      "No fue posible confirmar el seguimiento de domicilios. Se conservara el ultimo estado valido.",
+      trackingError
+    );
+
+    return clientDeliveryTrackingByOrderId instanceof Map
+      ? clientDeliveryTrackingByOrderId
+      : new Map();
+  });
   const [ordersResponse, tracking] = await Promise.all([
     ordersRequest,
-    loadCurrentRestaurantDeliveryTracking(),
+    trackingRequest,
   ]);
   const { data, error } = ordersResponse;
 
@@ -7393,24 +7467,51 @@ if (pendingOrders.length) {
     .map((order) => order.id)
     .filter(Boolean);
 
-  const { data: remotePendingRows, error: remotePendingError } =
+  const [remoteOrdersResponse, remotePublicationsResponse] =
     await withCloudTimeout(
-      cloudState.client
-        .from("orders")
-        .select("id, order_json, revision")
-        .eq("user_id", cloudState.user.id)
-        .in("id", pendingIds),
+      Promise.all([
+        cloudState.client
+          .from("orders")
+          .select("id, order_json, revision")
+          .eq("user_id", cloudState.user.id)
+          .in("id", pendingIds),
+        cloudState.client
+          .from("customer_orders")
+          .select("id, restaurant_order_id")
+          .eq("user_id", cloudState.user.id)
+          .in("restaurant_order_id", pendingIds),
+      ]),
       "No fue posible comprobar los pedidos pendientes en nube a tiempo.",
       8000
     );
+
+  const {
+    data: remotePendingRows,
+    error: remotePendingError,
+  } = remoteOrdersResponse;
+
+  const {
+    data: remotePublicationRows,
+    error: remotePublicationsError,
+  } = remotePublicationsResponse;
 
   if (remotePendingError) {
     throw remotePendingError;
   }
 
+  if (remotePublicationsError) {
+    throw remotePublicationsError;
+  }
+
   const remoteById = new Map(
     (remotePendingRows || []).map(
       (row) => [String(row.id), row]
+    )
+  );
+
+  const publicationByRestaurantOrderId = new Map(
+    (remotePublicationRows || []).map(
+      (row) => [String(row.restaurant_order_id), row]
     )
   );
 
@@ -7439,15 +7540,15 @@ if (pendingOrders.length) {
       localUpdatedAt &&
       remoteUpdatedAt === localUpdatedAt
     ) {
+      const publicationRow =
+        publicationByRestaurantOrderId.get(String(order.id));
       const parsedRevision =
         Number.parseInt(
           remoteRow.revision,
           10
         );
 
-      const patch = {
-        syncStatus: "synced",
-      };
+      const patch = {};
 
       if (
         Number.isFinite(parsedRevision) &&
@@ -7455,6 +7556,11 @@ if (pendingOrders.length) {
       ) {
         patch._syncRevision =
           parsedRevision;
+      }
+
+      if (publicationRow?.id) {
+        patch.customerOrderId = publicationRow.id;
+        patch.syncStatus = "synced";
       }
 
       Object.assign(
@@ -7482,6 +7588,16 @@ if (pendingOrders.length) {
         );
       }
 
+      if (publicationRow?.id) {
+        continue;
+      }
+
+      /*
+       * La fila principal existe, pero la estación todavía
+       * no tiene su publicación. Conservamos el pendiente y
+       * reutilizamos la revisión confirmada en el RPC atómico.
+       */
+      pendingOrdersToUpload.push(order);
       continue;
     }
 
@@ -11558,18 +11674,25 @@ async function updateTicketPaymentStatus(orderId, status) {
   const nextStatus = normalizePaymentStatus(status, "pending");
   savedOrders[index].paymentStatus = nextStatus;
   savedOrders[index].updatedAt = new Date().toISOString();
-  saveOrders();
+  savedOrders[index].syncStatus = shouldQueueForCloud()
+    ? "pending"
+    : "local";
+  saveOrders({ immediate: true });
   if (currentOrder.id === orderId) currentOrder = structuredCloneOrder(savedOrders[index]);
   if (cloudState.user && navigator.onLine) {
+    const expectedUpdatedAt = savedOrders[index].updatedAt;
     try {
       await saveCloudOrder(savedOrders[index]);
-      savedOrders[index].syncStatus = "synced";
+      confirmOrderSyncedIfUnchanged(orderId, expectedUpdatedAt);
     } catch (error) {
       console.error(error);
-      savedOrders[index].syncStatus = "pending";
+      const currentIndex = savedOrders.findIndex((order) => order.id === orderId);
+      if (currentIndex >= 0) savedOrders[currentIndex].syncStatus = "pending";
+      schedulePendingOrderRecovery(error);
     }
-    saveOrders();
+    saveOrders({ immediate: true });
   }
+  updateCloudStatus();
   renderHistory();
   renderTicketHistory();
   renderOrder();
