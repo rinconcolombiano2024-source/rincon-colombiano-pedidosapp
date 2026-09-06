@@ -9,6 +9,8 @@ const courier = read("colaborador.js");
 const waiter = read("mesero.js");
 const migration = read("MIGRACION-V91-01-RENDIMIENTO-INTEGRIDAD-Y-CIERRES.sql");
 const stationContractMigration = read("MIGRACION-V91-03-CONTRATO-MULTIESTACION-Y-REALTIME.sql");
+const syncLoadMigration = read("MIGRACION-V91-04-CONTROL-CARGA-SINCRONIZACION.sql");
+const syncContractMigration = read("MIGRACION-V91-07-CONTRATO-COMPATIBILIDAD-SINCRONIZACION.sql");
 const marketplaceCheckout = read("supabase/functions/marketplace-checkout/index.ts");
 const sw = read("service-worker.js");
 const failures = [];
@@ -25,6 +27,12 @@ check(app.includes('rpc("void_restaurant_order"'), "cancelacion historica por RP
 check(!app.includes("deleteCloudOrder"), "sin borrado fisico de pedidos guardados");
 check(courier.includes('courierDeliveryRealtimeStatus === "SUBSCRIBED"'), "colaborador usa polling solo como respaldo");
 check(migration.includes("get_rc_ordera_schema_version"), "control de version de esquema");
+check(app.includes('rpc(\n    "get_rc_ordera_sync_contract"'), "frontend verifica contrato de sincronizacion");
+check(app.includes("MINIMUM_SYNC_CONTRACT_VERSION = 6"), "frontend exige contrato V91-02 a V91-06");
+check(app.includes('"RC_ORDERA_SCHEMA_OUTDATED", "RC_ORDERA_SCHEMA_INCOMPLETE"'), "carga inicial bloquea esquema incompleto");
+check(syncContractMigration.includes("get_rc_ordera_sync_contract"), "RPC de contrato de sincronizacion disponible");
+check(syncContractMigration.includes("missing_components"), "contrato informa componentes faltantes");
+check(syncContractMigration.includes("jsonb_object_length") && syncContractMigration.includes("v_groups <> ''{}''::jsonb"), "contrato distingue correccion V91-06");
 check(migration.includes("get_restaurant_closure_report"), "RPC de cierres");
 check(migration.includes("void_restaurant_order"), "RPC de anulacion");
 check(migration.includes("process_expired_delivery_offers"), "mantenimiento de ofertas separado");
@@ -44,10 +52,14 @@ check(criticalCodeBlock.includes('status: 503'), "PWA responde 503 sin red ni ca
 check(app.includes("requestIdleCallback(persistMenuCatalogCache"), "cache del menu fuera del hilo principal");
 check(app.includes("menuSearchTimer = window.setTimeout"), "busqueda del restaurante con debounce");
 check(courier.includes('courierDeliveryRealtimeStatus === "SUBSCRIBED"'), "seguimiento de colaborador sin sondeo duplicado");
-check(/finally\s*\{\s*cloudState\.loading\s*=\s*false;\s*updateCloudStatus\(\);\s*\}/s.test(app), "estado de nube siempre finaliza");
+check(/finally\s*\{[\s\S]*?cloudState\.loading\s*=\s*false;[\s\S]*?updateCloudStatus\(\);[\s\S]*?\}/s.test(app), "estado de nube siempre finaliza");
 check(app.includes("withCloudTimeout(cloudState.client.auth.getSession())"), "sesion de nube con tiempo maximo");
 check(app.includes("await withCloudTimeout(ensureMinimumDatabaseVersion())"), "version de nube con tiempo maximo");
-check(/await withCloudTimeout\(\s*Promise\.all\(\[\s*settingsRequest,/s.test(app), "carga inicial de nube con tiempo maximo");
+check(
+  /const settingsResponse\s*=\s*await withCloudTimeout\([\s\S]*?settingsRequest[\s\S]*?8000[\s\S]*?\.catch/s.test(app)
+    && /Promise\.all\(\[[\s\S]*?withCloudTimeout\([\s\S]*?profileRequest[\s\S]*?withCloudTimeout\([\s\S]*?ordersRequest/s.test(app),
+  "carga inicial de nube con tiempo maximo"
+);
 check(customer.includes("const requestedStoreId = customerStoreId;"), "menu conserva el restaurante solicitado");
 check(customer.includes("if (requestedStoreId !== customerStoreId) return;"), "respuesta tardia no reemplaza otro menu");
 check(/function saveMenuCatalog\(\)\s*\{[\s\S]*?markMenuPending\(\);[\s\S]*?saveMenuCache\(\{ immediate: true \}\);/.test(app), "menu local protegido antes de sincronizar");
@@ -59,6 +71,13 @@ check(waiter.includes("remaining.push(...queue.slice(index + 1))"), "mesero cort
 check(waiter.includes('if (!confirmedOrder?.id)'), "mesero solo confirma pedidos con respuesta real del servidor");
 check(waiter.includes('waiterOrdersRealtimeStatus === "SUBSCRIBED"') && waiter.includes("WAITER_STATION_POLL_MAX_MS"), "estaciones sondean solo como respaldo de Realtime");
 check(!waiter.includes("window.setInterval(() => waiterLoadStationOrders"), "estaciones no mantienen sondeo fijo con Realtime activo");
+check(waiter.includes("waiterMenuLoadInFlight") && waiter.includes("waiterStationLoadInFlight") && waiter.includes("waiterSentOrdersLoadInFlight"), "mesero evita lecturas simultaneas duplicadas");
+check(app.includes('centralSyncChannel &&') && app.includes('clientOrdersChannel &&'), "recuperacion no reinicia canales Realtime sanos");
+check(app.includes('.from("customer_orders")') && app.includes("publicationByRestaurantOrderId") && app.includes("publicationRow?.id"), "pedido pendiente exige publicacion confirmada para estaciones");
+check(courier.includes("courierDeliveryRealtimeRetryDelay") && courier.includes("courierScheduleDeliveryRealtimeReconnect"), "colaborador reconecta Realtime con backoff");
+check(!/courierLoadDeliveryOffers\(\{ silent: true \}\);\s*if \(courierAvailable && courierLastLocation\)/s.test(courier), "polling de ofertas no duplica escritura GPS");
+check(syncLoadMigration.includes("created_at >= now() - interval '24 hours'") && syncLoadMigration.includes("interval '2 minutes'"), "cola de domicilios limita antiguedad y frecuencia");
+check(syncLoadMigration.includes("cron.alter_job") && !syncLoadMigration.includes("active => true"), "ajuste cron conserva su estado activo o inactivo");
 check(stationContractMigration.includes("get_my_restaurant_stations"), "contrato multiestacion disponible en SQL");
 check(stationContractMigration.includes("list_my_station_orders(uuid, text)"), "lectura de estacion acepta la estacion seleccionada");
 check(stationContractMigration.includes("update_my_station_order(uuid, uuid, text, text)"), "avance de estacion acepta la estacion seleccionada");
@@ -82,7 +101,7 @@ const pendingSyncEnd = app.indexOf("async function signInWithEmail()", pendingSy
 const pendingSyncBlock = pendingSyncStart >= 0 && pendingSyncEnd > pendingSyncStart
   ? app.slice(pendingSyncStart, pendingSyncEnd)
   : "";
-const pendingOrderLoopStart = pendingSyncBlock.indexOf("for (const order of pendingOrders)");
+const pendingOrderLoopStart = pendingSyncBlock.indexOf("for (const order of pendingOrdersToUpload)");
 const pendingOrderLoopEnd = pendingSyncBlock.indexOf("if (pendingOrderSyncError)", pendingOrderLoopStart);
 const pendingOrderLoop = pendingOrderLoopStart >= 0 && pendingOrderLoopEnd > pendingOrderLoopStart
   ? pendingSyncBlock.slice(pendingOrderLoopStart, pendingOrderLoopEnd)
@@ -115,15 +134,15 @@ check(
   "settings 503 no ejecuta saveCloudMenu automaticamente"
 );
 check(
-  /await saveCloudMenu\(\);\s*clearMenuPending\(menuPendingToken\);/s.test(pendingSyncBlock),
+  /await saveCloudMenu\(\);[\s\S]*?clearMenuPending\(\s*menuPendingToken\s*\)/s.test(pendingSyncBlock),
   "menuPending solo se limpia tras confirmacion"
 );
 check(
-  /await saveCloudSettings\(\);\s*clearSettingsPending\(settingsPendingToken\);/s.test(pendingSyncBlock),
+  /await saveCloudSettings\(\);[\s\S]*?clearSettingsPending\(\s*settingsPendingToken\s*\)/s.test(pendingSyncBlock),
   "settingsPending solo se limpia tras confirmacion"
 );
 check(
-  /await setCloudNextTicket\(shouldSyncTicketCounter\);\s*clearPendingTicketCounter\(shouldSyncTicketCounter\);/s.test(pendingSyncBlock)
+  /await setCloudNextTicket\(\s*shouldSyncTicketCounter\s*\);[\s\S]*?clearPendingTicketCounter\(\s*shouldSyncTicketCounter\s*\)/s.test(pendingSyncBlock)
     && app.includes("pendingTicketCounter() !== expectedValue"),
   "ticketCounterPending solo se limpia tras confirmacion"
 );
@@ -146,7 +165,7 @@ check(
   "llamada simultanea no programa otra ronda vacia"
 );
 check(
-  pendingOrderLoop.includes("if (isTemporarySyncInfrastructureError(error)) break;")
+  /if\s*\(isTemporarySyncInfrastructureError\(error\)\)\s*\{[\s\S]*?break;/.test(pendingOrderLoop)
     && pendingSyncBlock.includes("SYNC_INFRASTRUCTURE_BACKOFF_MS"),
   "error general 503 corta la ronda y aplica backoff"
 );
@@ -170,13 +189,14 @@ check(
   "Realtime central aplica backoff exponencial"
 );
 check(
-  centralRealtimeSubscribeBlock.includes("centralRealtimeReconnectDelay = CENTRAL_REALTIME_RECONNECT_MIN_MS;")
-    && /if \(status === "SUBSCRIBED"\)[\s\S]*?scheduleCentralRefresh\(\{[\s\S]*?settings: true,[\s\S]*?profile: true,[\s\S]*?orders: true,/s.test(centralRealtimeSubscribeBlock),
+  /centralRealtimeReconnectDelay\s*=\s*CENTRAL_REALTIME_RECONNECT_MIN_MS;/.test(centralRealtimeSubscribeBlock)
+    && centralRealtimeSubscribeBlock.includes('status === "SUBSCRIBED"')
+    && /scheduleCentralRefresh\(\{[\s\S]*?settings: true,[\s\S]*?profile: true,[\s\S]*?orders: true,/s.test(centralRealtimeSubscribeBlock),
   "Realtime central recupera datos y reinicia backoff al reconectar"
 );
 check(
-  pendingOrderLoop.includes("if (!pendingOrderSyncError) pendingOrderSyncError = error;")
-    && pendingOrderLoop.includes("if (isTemporarySyncInfrastructureError(error)) break;"),
+  /if\s*\(!pendingOrderSyncError\)\s*\{?\s*pendingOrderSyncError\s*=\s*error;/.test(pendingOrderLoop)
+    && /if\s*\(isTemporarySyncInfrastructureError\(error\)\)\s*\{[\s\S]*?break;/.test(pendingOrderLoop),
   "fallo logico aislado no borra otros pendientes"
 );
 check(
