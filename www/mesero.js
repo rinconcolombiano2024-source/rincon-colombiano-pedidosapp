@@ -81,6 +81,11 @@ let waiterOrdersRealtimeStatus = "idle";
 let waiterStationPollingDelay = WAITER_STATION_POLL_MIN_MS;
 let waiterAuthorizeInFlight = null;
 let waiterAuthorizeLastCompletedAt = 0;
+let waiterMenuLoadInFlight = null;
+let waiterStationLoadInFlight = null;
+let waiterStationLoadPending = false;
+let waiterSentOrdersLoadInFlight = null;
+let waiterSentOrdersLoadPending = false;
 let waiterToastTimer = null;
 let waiterSyncingQueue = false;
 let waiterBusinessContext = null;
@@ -662,6 +667,17 @@ function waiterAddCustomItem() {
   waiterShowToast(`${name.toUpperCase()} agregado al pedido.`);
 }
 async function waiterLoadMenu() {
+  if (waiterMenuLoadInFlight) return waiterMenuLoadInFlight;
+  const operation = waiterLoadMenuNow();
+  waiterMenuLoadInFlight = operation;
+  try {
+    return await operation;
+  } finally {
+    if (waiterMenuLoadInFlight === operation) waiterMenuLoadInFlight = null;
+  }
+}
+
+async function waiterLoadMenuNow() {
   if (!waiterClient || !waiterStoreId) return;
   waiterSetStatus(navigator.onLine ? "Actualizando menu..." : "Sin internet", navigator.onLine ? "" : "offline");
   const { data, error } = await waiterClient.rpc("get_public_restaurant_menu", { p_user_id: waiterStoreId });
@@ -764,6 +780,24 @@ function waiterRenderStationOrders(orders = []) {
 }
 
 async function waiterLoadStationOrders() {
+  if (waiterStationLoadInFlight) {
+    waiterStationLoadPending = true;
+    return waiterStationLoadInFlight;
+  }
+  const operation = waiterLoadStationOrdersNow();
+  waiterStationLoadInFlight = operation;
+  try {
+    return await operation;
+  } finally {
+    if (waiterStationLoadInFlight === operation) waiterStationLoadInFlight = null;
+    if (waiterStationLoadPending) {
+      waiterStationLoadPending = false;
+      waiterLoadStationOrders().catch(console.error);
+    }
+  }
+}
+
+async function waiterLoadStationOrdersNow() {
   if (!waiterClient || !waiterUser || !waiterMembership || !waiterElements.stationOrders) return;
   const cachedOrders = waiterReadJson(waiterStationCacheKey(), []);
   if (!navigator.onLine) {
@@ -808,6 +842,24 @@ async function waiterAdvanceStationOrder(orderId, nextStatus, button) {
 }
 
 async function waiterLoadSentOrders() {
+  if (waiterSentOrdersLoadInFlight) {
+    waiterSentOrdersLoadPending = true;
+    return waiterSentOrdersLoadInFlight;
+  }
+  const operation = waiterLoadSentOrdersNow();
+  waiterSentOrdersLoadInFlight = operation;
+  try {
+    return await operation;
+  } finally {
+    if (waiterSentOrdersLoadInFlight === operation) waiterSentOrdersLoadInFlight = null;
+    if (waiterSentOrdersLoadPending) {
+      waiterSentOrdersLoadPending = false;
+      waiterLoadSentOrders().catch(console.error);
+    }
+  }
+}
+
+async function waiterLoadSentOrdersNow() {
   if (!waiterClient || !waiterUser) return;
   await waiterRefreshBusinessContext();
   const businessDate = waiterBusinessDateKey();
