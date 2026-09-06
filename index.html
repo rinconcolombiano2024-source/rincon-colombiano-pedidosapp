@@ -1,1115 +1,275 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>RC ORDERA - Plataforma de pedidos</title>
-    <meta name="theme-color" content="#1f8f4d" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="RC ORDERA" />
-    <meta name="format-detection" content="telephone=no" />
-    <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="icon" href="app-icon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="app-icon-192.png" />
-    <link rel="stylesheet" href="styles.css?v=91.0.4" />
-  </head>
-  <body class="auth-checking">
-    <section class="auth-screen" id="authScreen" hidden>
-      <div class="auth-landing" aria-label="Acceso a la plataforma">
-        <img class="brand-logo auth-brand-logo" id="authLogoImage" alt="Logo del restaurante" hidden />
-        <div class="colombia-flag" aria-label="Bandera de Colombia">
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
-        <label class="app-language-inline">
-          <span>Idioma</span>
-          <select id="autoLanguageSelect">
-            <option value="es">Español</option>
-            <option value="pl">Polski</option>
-            <option value="en">English</option>
-          </select>
-        </label>
-        <p class="eyebrow">Plataforma de pedidos</p>
-        <h1 id="authBusinessName">RC ORDERA</h1>
-        <p class="auth-tagline">Tu comida favorita, cerca de ti.</p>
-        <div class="role-access-grid">
-          <section class="role-access-card">
-            <h2>Restaurante</h2>
-            <button id="openRestaurantSignInButton" type="button">Iniciar sesion como restaurante</button>
-            <button id="openRestaurantSignupButton" type="button">Registrarse como restaurante</button>
-          </section>
-          <section class="role-access-card">
-            <h2>Cliente</h2>
-            <a href="cliente.html?auth=login">Iniciar sesion como cliente</a>
-            <a href="cliente.html?auth=register">Registrarse como cliente</a>
-          </section>
-          <section class="role-access-card">
-            <h2>Colaborador</h2>
-            <a href="colaborador.html?auth=login">Iniciar sesion como colaborador</a>
-            <a href="colaborador.html?auth=register">Registrarse como colaborador</a>
-          </section>
-        </div>
-      </div>
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  />
 
-      <dialog id="restaurantAuthDialog" class="auth-dialog">
-        <form class="auth-card" id="authForm" data-mode="login">
-          <div class="monthly-dialog-header">
-            <div>
-              <p class="eyebrow">Restaurante</p>
-              <h2 id="restaurantAuthTitle">Iniciar sesion</h2>
-            </div>
-            <button class="icon-button" id="restaurantAuthCloseButton" type="button" title="Cerrar" aria-label="Cerrar">
-              <span aria-hidden="true">x</span>
-            </button>
-          </div>
-          <label>
-            Correo electronico
-            <input id="authEmail" type="email" autocomplete="email" placeholder="name@example.com" />
-          </label>
-          <label>
-            Contrasena
-            <input id="authPassword" type="password" autocomplete="current-password" placeholder="Minimo 6 caracteres" />
-          </label>
-          <section class="restaurant-signup-panel" aria-label="Registro profesional del restaurante">
-            <h2>Datos del restaurante</h2>
-            <p>Completa estos datos solo cuando vayas a crear una cuenta nueva.</p>
-            <label>
-              Nombre comercial
-              <input id="authRestaurantNameInput" type="text" placeholder="Nombre que vera el cliente" autocomplete="organization" />
-            </label>
-            <label>
-              Razon social / empresa
-              <input id="authLegalNameInput" type="text" placeholder="Nombre legal de la empresa" autocomplete="organization" />
-            </label>
-            <label>
-              NIP / identificacion fiscal
-              <input id="authTaxIdInput" type="text" placeholder="NIP, VAT o identificacion fiscal" autocomplete="off" />
-            </label>
-            <label>
-              Direccion legal / punto
-              <input id="authLegalAddressInput" type="text" placeholder="Direccion completa del restaurante" autocomplete="street-address" />
-            </label>
-            <label>
-              Pais
-              <select id="authCountryCodeInput">
-                <option value="">Seleccionar</option>
-                <option value="PL">Polonia</option>
-                <option value="CO">Colombia</option>
-              </select>
-            </label>
-            <label>
-              Localidad
-              <input id="authCityInput" type="text" placeholder="Ciudad, municipio, pueblo, corregimiento o vereda" autocomplete="address-level2" />
-            </label>
-            <label>
-              Provincia / region
-              <input id="authRegionInput" type="text" list="restaurantRegionOptions" placeholder="Provincia, departamento o voivodato" autocomplete="address-level1" />
-            </label>
-            <label>
-              Codigo postal
-              <input id="authPostalCodeInput" type="text" placeholder="Codigo postal" autocomplete="postal-code" />
-            </label>
-            <label>
-              Telefono del restaurante
-              <input id="authBusinessPhoneInput" type="tel" placeholder="Telefono de contacto" autocomplete="tel" />
-            </label>
-            <label>
-              Responsable
-              <input id="authOwnerNameInput" type="text" placeholder="Nombre del administrador" autocomplete="name" />
-            </label>
-            <label class="legal-checkbox">
-              <input id="authLegalConsentInput" type="checkbox" />
-              Confirmo que puedo administrar este restaurante y acepto usar la app guardando datos de pedidos, clientes y cookies/localStorage necesarios para operar.
-            </label>
-          </section>
-          <div class="auth-actions">
-            <button id="signInButton" type="submit">Iniciar sesion</button>
-            <button id="signUpButton" type="button">Registrar restaurante</button>
-            <button id="resetPasswordButton" type="button">Recuperar contrasena</button>
-            <button id="resendVerificationButton" type="button">Reenviar verificacion</button>
-          </div>
-          <p class="auth-message" id="authMessage"></p>
-          <div class="password-recovery-panel" id="passwordRecoveryPanel" hidden>
-            <label>
-              Nueva contrasena
-              <input id="newPasswordInput" type="password" autocomplete="new-password" placeholder="Minimo 6 caracteres" />
-            </label>
-            <div class="auth-actions">
-              <button id="updatePasswordButton" type="button">Guardar nueva contrasena</button>
-              <button id="cancelRecoveryButton" type="button">Cancelar</button>
-            </div>
-          </div>
-        </form>
-      </dialog>
+  <title>RC ORDERA</title>
+
+  <meta
+    name="description"
+    content="RC ORDERA - Pedidos, restaurantes y entregas en una sola plataforma."
+  />
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      font-family:
+        Inter,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+      background:
+        radial-gradient(circle at top left, #fff4ec 0, transparent 35%),
+        linear-gradient(135deg, #f8fafc 0%, #eef4f0 100%);
+      color: #172033;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 18px;
+    }
+
+    .portal {
+      width: 100%;
+      max-width: 1120px;
+    }
+
+    .brand {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    .brand-mark {
+      width: 74px;
+      height: 74px;
+      margin: 0 auto 16px;
+      border-radius: 22px;
+      display: grid;
+      place-items: center;
+      background: #ff4b19;
+      color: white;
+      font-size: 31px;
+      font-weight: 900;
+      box-shadow: 0 14px 35px rgba(255, 75, 25, 0.25);
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(36px, 7vw, 60px);
+      letter-spacing: -2px;
+      font-weight: 900;
+    }
+
+    .brand p {
+      margin: 10px auto 0;
+      max-width: 650px;
+      color: #667085;
+      font-size: 17px;
+      line-height: 1.55;
+    }
+
+    .apps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .app-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      min-height: 330px;
+      padding: 28px;
+      border-radius: 26px;
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 16px 45px rgba(17, 24, 39, 0.08);
+      text-decoration: none;
+      color: inherit;
+      transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease;
+    }
+
+    .app-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 22px 55px rgba(17, 24, 39, 0.12);
+    }
+
+    .app-card.client {
+      border: 2px solid #ff4b19;
+    }
+
+    .recommended {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: #fff0ea;
+      color: #e23d10;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .icon {
+      width: 60px;
+      height: 60px;
+      display: grid;
+      place-items: center;
+      border-radius: 18px;
+      background: #f3f4f6;
+      font-size: 29px;
+      margin-bottom: 24px;
+    }
+
+    .client .icon {
+      background: #fff0ea;
+    }
+
+    .app-card h2 {
+      margin: 0;
+      font-size: 25px;
+      font-weight: 850;
+    }
+
+    .app-card p {
+      margin: 12px 0 24px;
+      color: #667085;
+      line-height: 1.6;
+      flex: 1;
+    }
+
+    .button {
+      width: 100%;
+      min-height: 52px;
+      border-radius: 15px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: 800;
+      background: #172033;
+      color: white;
+    }
+
+    .client .button {
+      background: #ff4b19;
+    }
+
+    .footer {
+      margin-top: 28px;
+      text-align: center;
+      color: #98a2b3;
+      font-size: 13px;
+    }
+
+    @media (max-width: 820px) {
+      .apps {
+        grid-template-columns: 1fr;
+      }
+
+      .app-card {
+        min-height: 250px;
+      }
+
+      body {
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="portal">
+
+    <header class="brand">
+      <div class="brand-mark">RC</div>
+
+      <h1>RC ORDERA</h1>
+
+      <p>
+        Elige cómo quieres utilizar RC ORDERA.
+        Pide comida, administra tu restaurante o realiza entregas.
+      </p>
+    </header>
+
+    <section class="apps">
+
+      <!-- CLIENTE -->
+      <a class="app-card client" href="cliente.html">
+        <span class="recommended">Recomendado</span>
+
+        <div class="icon">🛍️</div>
+
+        <h2>Soy cliente</h2>
+
+        <p>
+          Encuentra restaurantes, consulta el menú,
+          realiza tu pedido y sigue su estado.
+        </p>
+
+        <div class="button">
+          Pedir comida
+        </div>
+      </a>
+
+      <!-- RESTAURANTE -->
+      <a class="app-card" href="restaurante.html">
+
+        <div class="icon">🍽️</div>
+
+        <h2>Soy restaurante</h2>
+
+        <p>
+          Gestiona pedidos, menú, cocina,
+          estaciones, personal y operación.
+        </p>
+
+        <div class="button">
+          Administrar restaurante
+        </div>
+      </a>
+
+      <!-- COLABORADOR -->
+      <a class="app-card" href="colaborador.html">
+
+        <div class="icon">🛵</div>
+
+        <h2>Soy colaborador</h2>
+
+        <p>
+          Consulta entregas disponibles,
+          administra tu disponibilidad y realiza domicilios.
+        </p>
+
+        <div class="button">
+          Realizar entregas
+        </div>
+      </a>
+
     </section>
 
-    <main class="app-shell">
-      <header class="topbar">
-        <div class="brand-lockup">
-          <img class="brand-logo" id="appLogoImage" alt="Logo del restaurante" hidden />
-          <div>
-            <p class="eyebrow">Sistema de pedidos</p>
-            <h1 id="appBusinessName">MI RESTAURANTE</h1>
-          </div>
-        </div>
-        <div class="topbar-actions">
-          <span class="cloud-status" id="cloudStatus">Modo local</span>
-          <button class="sign-in-top-button" id="refreshAppButton" type="button">Actualizar</button>
-          <button class="sign-in-top-button" id="openSignInButton" type="button">Iniciar sesion</button>
-          <button class="sign-out-button" id="signOutButton" type="button" hidden>Cerrar sesion</button>
-          <button class="sign-in-top-button" id="qrButton" type="button">QR cliente</button>
-          <button class="sign-in-top-button" id="waiterTeamButton" type="button">Estaciones</button>
-          <button class="sign-in-top-button" id="clientAlarmButton" type="button">Activar alarma</button>
-          <button class="sign-in-top-button client-orders-button" id="clientOrdersButton" type="button">
-            Pedidos recibidos <span id="clientOrdersBadge" hidden>0</span>
-          </button>
-          <button class="install-button" id="installAppButton" type="button">Descargar app</button>
-          <div class="ticket-counter" aria-live="polite">
-            <span>Proximo ticket</span>
-            <strong id="nextTicketLabel">#0001</strong>
-          </div>
-        </div>
-      </header>
+    <footer class="footer">
+      RC ORDERA · Plataforma de pedidos y entregas
+    </footer>
 
-      <section class="restaurant-service-bar" aria-label="Estado de atencion al cliente" aria-live="polite">
-        <div class="restaurant-service-summary">
-          <span class="restaurant-service-indicator" id="mainRestaurantStatusIndicator" aria-hidden="true"></span>
-          <div>
-            <p class="eyebrow">Atencion al cliente</p>
-            <strong id="mainRestaurantStatusText">Comprobando estado...</strong>
-            <span id="mainRestaurantStatusDetail">El estado se confirma en la nube.</span>
-          </div>
-        </div>
-        <label class="restaurant-schedule-toggle" for="restaurantScheduleModeInput">
-          <input id="restaurantScheduleModeInput" type="checkbox" />
-          <span>Automatico segun horario</span>
-        </label>
-        <button class="restaurant-service-action" id="mainRestaurantToggleButton" type="button">Abrir atencion</button>
-      </section>
-
-      <section class="restaurant-dashboard-summary" aria-labelledby="restaurantDashboardTitle">
-        <div class="restaurant-dashboard-heading">
-          <div>
-            <p class="eyebrow">Operacion en tiempo real</p>
-            <h2 id="restaurantDashboardTitle">Resumen de hoy</h2>
-          </div>
-          <span id="restaurantDashboardDate" aria-live="polite"></span>
-        </div>
-        <div class="restaurant-dashboard-metrics">
-          <button type="button" data-restaurant-dashboard-action="orders">
-            <span>Pedidos recibidos</span>
-            <strong id="restaurantMetricReceived">0</strong>
-          </button>
-          <button type="button" data-restaurant-dashboard-action="orders">
-            <span>Nuevos</span>
-            <strong id="restaurantMetricPending">0</strong>
-          </button>
-          <button type="button" data-restaurant-dashboard-action="orders">
-            <span>En preparacion</span>
-            <strong id="restaurantMetricPreparing">0</strong>
-          </button>
-          <button type="button" data-restaurant-dashboard-action="orders">
-            <span>Listos / reparto</span>
-            <strong id="restaurantMetricReady">0</strong>
-          </button>
-          <button type="button" data-restaurant-dashboard-action="statistics">
-            <span>Ventas de hoy</span>
-            <strong id="restaurantMetricSales">0</strong>
-          </button>
-        </div>
-        <nav class="restaurant-module-nav" aria-label="Modulos del restaurante">
-          <button type="button" data-restaurant-dashboard-action="orders" aria-current="page">Pedidos</button>
-          <button type="button" data-restaurant-dashboard-action="menu">Menu</button>
-          <button type="button" data-restaurant-dashboard-action="kitchen">Cocina</button>
-          <button type="button" data-restaurant-dashboard-action="statistics">Estadisticas</button>
-          <button type="button" data-restaurant-dashboard-action="staff">Personal</button>
-        </nav>
-      </section>
-
-      <section class="workspace" aria-label="Pedidos del restaurante">
-        <aside class="panel menu-panel" aria-label="Menu">
-          <div class="panel-header">
-            <div>
-              <p class="eyebrow">Menu rapido</p>
-              <h2>Agregar platos</h2>
-            </div>
-            <div class="header-actions">
-              <button class="close-month-button" id="editMenuButton" type="button">Editar información</button>
-              <button class="icon-button" id="clearOrderButton" type="button" title="Limpiar pedido" aria-label="Limpiar pedido">
-                <span aria-hidden="true">x</span>
-              </button>
-            </div>
-          </div>
-
-          <div class="menu-search-row">
-            <label>
-              Buscar producto
-              <input id="menuSearchInput" type="search" placeholder="Ej: bandeja paisa" autocomplete="off" />
-            </label>
-            <button id="menuSearchClearButton" type="button" hidden>Limpiar</button>
-          </div>
-
-          <div class="category-tabs" id="categoryTabs" role="tablist" aria-label="Categorias"></div>
-          <div class="menu-grid" id="menuGrid" aria-label="Platos disponibles"></div>
-
-          <form class="custom-item" id="customItemForm">
-            <label>
-              Producto especial
-              <input id="customItemName" type="text" placeholder="Ej: Jugo de lulo" autocomplete="off" />
-            </label>
-            <label>
-              Precio
-              <input id="customItemPrice" type="number" min="0" step="0.01" placeholder="0.00" />
-            </label>
-            <button type="submit">Agregar</button>
-          </form>
-        </aside>
-
-        <section class="panel order-panel" aria-label="Pedido actual">
-          <div class="panel-header">
-            <div>
-              <p class="eyebrow">Pedido actual</p>
-              <h2 id="activeTicketTitle">Ticket sin guardar</h2>
-            </div>
-            <div class="status-pill" id="orderStatus">Nuevo</div>
-          </div>
-
-          <div class="order-info">
-            <label>
-              Tipo de pedido
-              <select id="orderType">
-                <option value="Comer en el punto">Comer en el punto</option>
-                <option value="Recoger en el punto">Para llevar / recoger en el punto</option>
-                <option value="Domicilio">Envio a domicilio</option>
-              </select>
-            </label>
-            <label>
-              Metodo de pago
-              <select id="paymentMethod">
-                <option value="Pago en caja">Pago en caja</option>
-                <option value="Efectivo">Efectivo</option>
-                <option value="Transferencia">Transferencia</option>
-                <option value="Datafono">Datafono / tarjeta</option>
-              </select>
-            </label>
-            <label>
-              Mesa / Cliente
-              <div class="customer-field-row">
-                <input id="customerName" type="text" placeholder="Ej: Mesa 4 o Juan Perez" autocomplete="off" />
-                <button class="customer-button" id="customerButton" type="button">Cliente</button>
-              </div>
-            </label>
-            <label>
-              Tomo el pedido
-              <div class="customer-field-row">
-                <input id="serverName" type="text" placeholder="Nombre del empleado" autocomplete="off" />
-                <button class="customer-button" id="shiftButton" type="button">Turno</button>
-              </div>
-            </label>
-          </div>
-
-          <div class="line-items" id="lineItems" aria-live="polite"></div>
-
-          <label class="notes-field">
-            Notas para cocina
-            <textarea id="orderNotes" rows="3" placeholder="Sin cebolla, salsa aparte, termino de carne..."></textarea>
-          </label>
-
-          <div class="totals-row">
-            <span>Total estimado</span>
-            <strong id="orderTotal">$0.00</strong>
-          </div>
-
-          <div class="action-row">
-            <button class="secondary-action" id="newOrderButton" type="button">Nuevo</button>
-            <button class="secondary-action" id="correctOrderButton" type="button">Corregir</button>
-            <button class="secondary-action" id="saveOrderButton" type="button">Guardar pedido</button>
-            <button class="primary-action" id="printOrderButton" type="button">Imprimir cocina</button>
-            <button class="secondary-action" id="downloadTicketPdfButton" type="button">PDF recibo</button>
-            <button class="danger-action" id="cancelOrderButton" type="button">Cancelar pedido</button>
-          </div>
-        </section>
-
-        <aside class="panel history-panel" aria-label="Historial">
-          <div class="panel-header">
-            <div>
-              <p class="eyebrow">Turno</p>
-              <h2>Tickets de hoy</h2>
-            </div>
-            <div class="header-actions">
-              <button class="close-month-button" id="dailyCloseButton" type="button">Cierre dia</button>
-              <button class="close-month-button" id="monthlyCloseButton" type="button">Cierre mes</button>
-              <button class="close-month-button" id="annualCloseButton" type="button">Cierre anual</button>
-              <button class="close-month-button" id="ticketHistoryButton" type="button">Historial</button>
-              <button class="icon-button" id="counterButton" type="button" title="Cambiar proximo numero" aria-label="Cambiar proximo numero">
-                <span aria-hidden="true">#</span>
-              </button>
-            </div>
-          </div>
-          <div class="history-list" id="historyList"></div>
-        </aside>
-      </section>
-    </main>
-
-    <section class="print-ticket" id="printTicket" aria-label="Ticket para cocina"></section>
-
-    <dialog id="counterDialog">
-      <form method="dialog" class="counter-form">
-        <h2>Cambiar proximo ticket</h2>
-        <p>Usa esto solo si necesitas corregir la secuencia del dia.</p>
-        <label>
-          Proximo numero
-          <input id="counterInput" type="number" min="1" step="1" />
-        </label>
-        <div class="dialog-actions">
-          <button value="cancel" type="submit">Cancelar</button>
-          <button id="confirmCounterButton" value="default" type="button">Guardar</button>
-        </div>
-      </form>
-    </dialog>
-
-    <dialog id="itemNoteDialog">
-      <form method="dialog" class="counter-form">
-        <h2>Nota del plato</h2>
-        <p id="itemNoteTitle">Producto</p>
-        <label>
-          Nota para cocina
-          <textarea id="itemNoteTextarea" rows="5" placeholder="Ej: sin cebolla, salsa aparte, bien asado..."></textarea>
-        </label>
-        <div class="dialog-actions">
-          <button value="cancel" type="submit">Cancelar</button>
-          <button id="saveItemNoteButton" value="default" type="button">Guardar nota</button>
-        </div>
-      </form>
-    </dialog>
-
-    <dialog id="shiftDialog">
-      <form method="dialog" class="counter-form">
-        <h2>Responsable del turno</h2>
-        <p>Este nombre se pondra automaticamente en cada pedido nuevo.</p>
-        <label>
-          Quien tomara pedidos
-          <input id="shiftServerInput" type="text" placeholder="Nombre del empleado" autocomplete="off" />
-        </label>
-        <div class="dialog-actions">
-          <button value="cancel" type="submit">Cancelar</button>
-          <button id="saveShiftButton" value="default" type="button">Guardar turno</button>
-        </div>
-      </form>
-    </dialog>
-
-    <dialog id="customerDialog">
-      <form method="dialog" class="counter-form">
-        <h2>Nombre del cliente</h2>
-        <p>Este nombre sale en el pedido y en el ticket de cocina.</p>
-        <label>
-          Cliente / Mesa
-          <input id="customerDialogInput" type="text" placeholder="Ej: Juan Perez - Mesa 4" autocomplete="off" />
-        </label>
-        <div class="dialog-actions">
-          <button value="cancel" type="submit">Cancelar</button>
-          <button id="saveCustomerButton" value="default" type="button">Guardar cliente</button>
-        </div>
-      </form>
-    </dialog>
-
-    <dialog id="menuEditorDialog" class="menu-editor-dialog">
-      <form method="dialog" class="menu-editor-form">
-        <div class="monthly-dialog-header">
-          <div>
-            <p class="eyebrow">Administracion</p>
-            <h2>Editar información</h2>
-          </div>
-          <button class="icon-button" value="cancel" type="submit" title="Cerrar" aria-label="Cerrar">
-            <span aria-hidden="true">x</span>
-          </button>
-        </div>
-<nav class="restaurant-edit-tabs" aria-label="Secciones de edición del restaurante">
-  <button
-    id="restaurantInfoTabButton"
-    class="restaurant-edit-tab is-active"
-    type="button"
-    data-edit-section="restaurant-info"
-  >
-    Información del restaurante
-  </button>
-
-  <button
-    id="restaurantHoursTabButton"
-    class="restaurant-edit-tab"
-    type="button"
-    data-edit-section="restaurant-hours"
-  >
-    Horarios de atención
-  </button>
-
-  <button
-    id="restaurantMenuTabButton"
-    class="restaurant-edit-tab"
-    type="button"
-    data-edit-section="restaurant-menu"
-  >
-    Editar menú
-  </button>
-</nav>
-       <div
-  id="restaurantInfoSection"
-  class="restaurant-edit-section is-active"
-  data-edit-panel="restaurant-info"
->
-        <section class="settings-card">
-          <div>
-            <h3>Restaurante y moneda</h3>
-            <p>Estos datos se usan en la app, QR, tickets, reportes y pantalla del cliente.</p>
-          </div>
-          <label class="settings-wide-field">
-            Nombre del restaurante
-            <input id="businessNameInput" type="text" placeholder="Nombre del restaurante" autocomplete="organization" />
-          </label>
-          <label class="settings-wide-field">
-            Logo del restaurante
-            <input id="businessLogoUrlInput" type="text" placeholder="Link del logo o carga una imagen" autocomplete="off" />
-          </label>
-          <label class="settings-wide-field">
-            Cargar logo
-            <input id="businessLogoFileInput" type="file" accept="image/*" />
-          </label>
-          <label class="settings-wide-field">
-            Razon social / empresa
-            <input id="legalBusinessNameInput" type="text" placeholder="Nombre legal de la empresa" autocomplete="organization" />
-          </label>
-          <label>
-            NIP / fiscal
-            <input id="taxIdInput" type="text" placeholder="NIP / VAT" autocomplete="off" />
-          </label>
-          <label>
-            Telefono
-            <input id="businessPhoneInput" type="tel" placeholder="Telefono" autocomplete="tel" />
-          </label>
-          <label class="settings-wide-field">
-            Correo empresa
-            <input id="businessEmailInput" type="email" placeholder="correo@empresa.com" autocomplete="email" />
-          </label>
-          <label class="settings-wide-field">
-            Direccion legal
-            <input id="legalAddressInput" type="text" placeholder="Direccion legal o fiscal" autocomplete="street-address" />
-          </label>
-          <label>
-            Simbolo
-            <input id="currencySymbolInput" type="text" maxlength="8" placeholder="zł" autocomplete="off" />
-          </label>
-          <label>
-            Posicion
-            <select id="currencyPositionSelect">
-              <option value="before">Antes</option>
-              <option value="after">Despues</option>
-            </select>
-          </label>
-          <label>
-            Formato
-            <select id="moneyFormatSelect">
-              <option value="us">1,234.56</option>
-              <option value="eu">1 234,56</option>
-            </select>
-          </label>
-          <label>
-            Ancho ticket mm
-            <input id="receiptWidthInput" type="number" min="50" max="120" step="1" placeholder="80" />
-          </label>
-          <div class="thermal-printer-control settings-wide-field">
-            <button id="connectThermalPrinterButton" type="button">Conectar impresora termica</button>
-            <span id="thermalPrinterStatus" role="status">Impresion del sistema; configura el corte en el controlador.</span>
-          </div>
-          <button id="saveCurrencyButton" type="button">Guardar ajustes</button>
-        </section>
-
-        <section class="settings-card customer-settings-card">
-          <div>
-            <h3>Pedidos cliente</h3>
-            <p>Usado en QR, domicilio y pagos en caja.</p>
-          </div>
-          <label>
-            Recargo fijo opcional
-            <input id="deliveryFeeInput" type="number" min="0" step="0.01" placeholder="0.00" />
-          </label>
-          <label>
-            Minimo domicilio
-            <input id="deliveryMinimumFeeInput" type="number" min="0" step="0.01" placeholder="20.00" />
-          </label>
-          <label class="settings-wide-field">
-            Direccion restaurante
-            <input id="restaurantAddressInput" type="text" placeholder="Direccion completa del restaurante" autocomplete="street-address" />
-          </label>
-          <label>
-            Pais
-            <select id="restaurantCountryCodeInput">
-              <option value="">Seleccionar</option>
-              <option value="PL">Polonia</option>
-              <option value="CO">Colombia</option>
-            </select>
-          </label>
-          <label>
-            Localidad
-            <input id="restaurantCityInput" type="text" placeholder="Ciudad, municipio, pueblo, corregimiento o vereda" autocomplete="address-level2" />
-          </label>
-          <label>
-            Provincia / region
-            <input id="restaurantRegionInput" type="text" list="restaurantRegionOptions" placeholder="Provincia, departamento o voivodato" autocomplete="address-level1" />
-          </label>
-          <label>
-            Codigo postal
-            <input id="restaurantPostalCodeInput" type="text" placeholder="Codigo postal" autocomplete="postal-code" />
-          </label>
-          <button id="useRestaurantLocationButton" type="button">Usar ubicacion actual</button>
-          <p class="settings-location-status" id="restaurantLocationStatus" hidden></p>
-          <label class="settings-wide-field">
-            Google Maps API key
-            <input id="googleMapsApiKeyInput" type="text" placeholder="AIza..." autocomplete="off" />
-          </label>
-          <label class="settings-wide-field">
-            Cuenta transferencia
-            <input id="bankAccountInput" type="text" placeholder="IBAN / numero de cuenta de la empresa" autocomplete="off" />
-          </label>
-          <label class="settings-wide-field">
-            Texto transferencia
-            <input id="bankTransferNoteInput" type="text" placeholder="Ej: Enviar comprobante por WhatsApp" autocomplete="off" />
-          </label>
-          <label>
-            Pago en linea
-            <select id="onlinePaymentProviderSelect">
-              <option value="disabled">Desactivado</option>
-              <option value="stripe">Stripe Connect (Polonia)</option>
-            </select>
-          </label>
-          <label class="settings-wide-field">
-            Nota / link de pago
-            <input id="onlinePaymentNoteInput" type="text" placeholder="Pendiente de conectar proveedor real" autocomplete="off" />
-          </label>
-          <div class="settings-wide-field marketplace-account-control">
-            <div>
-              <strong>Cuenta para recibir pagos</strong>
-              <span id="marketplaceAccountStatus">Sin verificar</span>
-            </div>
-            <button id="marketplaceAccountButton" type="button">Configurar pagos</button>
-          </div>
-          <button id="saveCustomerSettingsButton" type="button">Guardar cliente</button>
-        </section>
-</div>
-        <div
-  id="restaurantHoursSection"
-  class="restaurant-edit-section"
-  data-edit-panel="restaurant-hours"
-  hidden
->
-        <section class="settings-card restaurant-hours-card">
-          <div>
-            <h3>Horario de atencion</h3>
-            <p>Define el horario habitual. Activa el modo automatico en la pantalla principal para abrir y cerrar segun este horario.</p>
-          </div>
-          <div class="restaurant-hours-grid" id="restaurantHoursGrid" aria-label="Horario semanal"></div>
-          <button id="saveRestaurantHoursButton" type="button">Guardar horario</button>
-        </section>
-</div>
-        <section class="settings-card restaurant-danger-card">
-          <div>
-            <h3>Estado del restaurante</h3>
-            <p id="restaurantStatusText">Cargando estado operativo...</p>
-          </div>
-          <button id="closeRestaurantButton" type="button">Abrir atencion</button>
-          <button id="requestRestaurantDeletionButton" type="button">Eliminar restaurante</button>
-        </section>
-<div
-  id="restaurantMenuSection"
-  class="restaurant-edit-section"
-  data-edit-panel="restaurant-menu"
-  hidden
->
-        <div class="menu-editor-layout">
-          <section class="editor-section">
-            <h3>Categorias</h3>
-            <div class="editor-category-list" id="editorCategoryList"></div>
-            <label>
-              Nombre de categoria
-              <input id="categoryNameInput" type="text" placeholder="Ej: Sopas" autocomplete="off" />
-            </label>
-            <div class="editor-actions">
-              <button id="addCategoryButton" type="button">Agregar</button>
-              <button id="renameCategoryButton" type="button">Cambiar nombre</button>
-              <button id="deleteCategoryButton" type="button">Eliminar</button>
-            </div>
-          </section>
-
-          <section class="editor-section">
-            <div class="product-section-header">
-              <div>
-                <h3>Productos</h3>
-                <p id="activeProductCategoryLabel">Selecciona una categoria</p>
-              </div>
-              <button id="newProductButton" type="button">+ Agregar producto</button>
-            </div>
-            <div class="product-form-grid">
-              <label>
-                Categoria
-                <select id="productCategorySelect"></select>
-              </label>
-              <label>
-                Precio
-                <input id="productPriceInput" type="number" min="0" step="0.01" placeholder="0.00" />
-              </label>
-              <label>
-                Estacion de preparacion
-                <select id="productStationSelect">
-                  <option value="kitchen">Cocina</option>
-                  <option value="grill">Parrilla</option>
-                  <option value="drinks">Bebidas</option>
-                  <option value="fast_food">Comidas rapidas</option>
-                  <option value="starters">Entradas</option>
-                  <option value="salads">Ensaladas</option>
-                </select>
-              </label>
-              <!-- ESPAÑOL -->
-<label class="product-name-field">
-  🇪🇸 Nombre ES
-  <input
-    id="productNameInput"
-    type="text"
-    placeholder="Ej: Jugo de guanábana"
-    autocomplete="off"
-  />
-</label>
-
-<label class="product-name-field">
-  🇪🇸 Descripción ES
-  <textarea
-    id="productDescriptionInput"
-    rows="3"
-    placeholder="Ej: Pulpa natural, agua o leche, azúcar al gusto"
-  ></textarea>
-</label>
-
-<!-- POLACO -->
-<label class="product-name-field">
-  🇵🇱 Nazwa PL
-  <input
-    id="productNamePlInput"
-    type="text"
-    placeholder="Np.: Sok z guanábany"
-    autocomplete="off"
-  />
-</label>
-
-<label class="product-name-field">
-  🇵🇱 Opis PL
-  <textarea
-    id="productDescriptionPlInput"
-    rows="3"
-    placeholder="Opis produktu po polsku"
-  ></textarea>
-</label>
-
-<!-- INGLÉS -->
-<label class="product-name-field">
-  🇬🇧 Name EN
-  <input
-    id="productNameEnInput"
-    type="text"
-    placeholder="Example: Soursop juice"
-    autocomplete="off"
-  />
-</label>
-
-<label class="product-name-field">
-  🇬🇧 Description EN
-  <textarea
-    id="productDescriptionEnInput"
-    rows="3"
-    placeholder="Product description in English"
-  ></textarea>
-</label>
-              <label class="product-name-field">
-                Foto del producto
-                <input id="productImageUrlInput" type="text" placeholder="Pega link de foto o carga una foto pequena" autocomplete="off" />
-              </label>
-              <label class="product-name-field">
-                Cargar foto pequena
-                <input id="productImageFileInput" type="file" accept="image/*" />
-              </label>
-              <label class="product-available-field">
-                <input id="productAvailableInput" type="checkbox" checked />
-                Disponible para vender
-              </label>
-            </div>
-            <div class="editor-actions">
-              <button id="saveProductButton" type="button">Agregar producto</button>
-              <button id="cancelEditProductButton" type="button">Cancelar edicion</button>
-            </div>
-            <div class="product-list" id="productList"></div>
-          </section>
-        </div>
-
-       <div class="dialog-actions">
-  <button id="resetMenuButton" value="default" type="button">
-    Vaciar menu
-  </button>
-</div>
-
-</div>
-
-<div class="dialog-actions">
-  <button value="cancel" type="submit">Cerrar</button>
-</div>
-      </form>
-    </dialog>
-
-    <dialog id="installHelpDialog" class="install-help-dialog">
-      <form method="dialog" class="counter-form">
-        <h2>Descargar app</h2>
-        <p>Android: menu de Chrome y Agregar a pantalla principal. iPhone/iPad: Safari, compartir y Agregar a pantalla de inicio. Windows/Mac: boton Instalar del navegador o guardar acceso directo.</p>
-        <div class="dialog-actions">
-          <button value="cancel" type="submit">Cerrar</button>
-        </div>
-      </form>
-    </dialog>
-
-    <dialog id="dailyCloseDialog" class="monthly-dialog">
-      <form method="dialog" class="monthly-form">
-        <div class="monthly-dialog-header">
-          <div>
-            <p class="eyebrow">Caja</p>
-            <h2>Cierre de caja diario</h2>
-          </div>
-          <button class="icon-button" value="cancel" type="submit" title="Cerrar" aria-label="Cerrar">
-            <span aria-hidden="true">x</span>
-          </button>
-        </div>
-        <label>
-          Dia
-          <input id="closeDayInput" type="date" />
-        </label>
-        <div class="monthly-close-content" id="dailyCloseContent"></div>
-        <div class="dialog-actions">
-          <button value="cancel" type="submit">Cerrar</button>
-          <button id="printDailyCloseButton" value="default" type="button">Imprimir cierre dia</button>
-        </div>
-      </form>
-    </dialog>
-
-    <dialog id="monthlyCloseDialog" class="monthly-dialog">
-      <form method="dialog" class="monthly-form">
-        <div class="monthly-dialog-header">
-          <div>
-            <p class="eyebrow">Reporte</p>
-            <h2>Cierre de mes</h2>
-          </div>
-          <button class="icon-button" value="cancel" type="submit" title="Cerrar" aria-label="Cerrar">
-            <span aria-hidden="true">x</span>
-          </button>
-        </div>
-        <label>
-          Mes
-          <input id="closeMonthInput" type="month" />
-        </label>
-        <div class="monthly-close-content" id="monthlyCloseContent"></div>
-        <div class="dialog-actions">
-          <button value="cancel" type="submit">Cerrar</button>
-          <button id="printCloseButton" value="default" type="button">Imprimir cierre</button>
-        </div>
-      </form>
-    </dialog>
-
-    <dialog id="annualCloseDialog" class="monthly-dialog">
-      <form method="dialog" class="monthly-form">
-        <div class="monthly-dialog-header">
-          <div>
-            <p class="eyebrow">Reporte</p>
-            <h2>Cierre anual</h2>
-          </div>
-          <button class="icon-button" value="cancel" type="submit" title="Cerrar" aria-label="Cerrar">
-            <span aria-hidden="true">x</span>
-          </button>
-        </div>
-        <label>
-          Ano
-          <input id="closeYearInput" type="number" min="2020" max="2200" step="1" />
-        </label>
-        <div class="monthly-close-content" id="annualCloseContent"></div>
-        <div class="dialog-actions">
-          <button value="cancel" type="submit">Cerrar</button>
-          <button id="printAnnualCloseButton" value="default" type="button">Guardar e imprimir cierre anual</button>
-        </div>
-      </form>
-    </dialog>
-
-    <dialog id="qrDialog" class="monthly-dialog">
-      <form method="dialog" class="monthly-form">
-        <div class="monthly-dialog-header">
-          <div>
-            <p class="eyebrow">Cliente QR</p>
-            <h2>Codigo para pedir</h2>
-          </div>
-          <button class="icon-button" value="cancel" type="submit" title="Cerrar" aria-label="Cerrar">
-            <span aria-hidden="true">x</span>
-          </button>
-        </div>
-        <label>
-          Mesa o ubicacion opcional
-          <input id="qrTableInput" type="text" placeholder="Dejalo vacio para QR general" autocomplete="off" />
-        </label>
-        <div class="qr-preview">
-          <img id="qrImage" alt="Codigo QR para clientes" />
-        </div>
-        <label>
-          Link del cliente
-          <input id="qrLinkInput" type="text" readonly />
-        </label>
-        <p id="qrHint" class="auth-message"></p>
-        <div class="dialog-actions">
-          <button id="copyQrLinkButton" value="default" type="button">Copiar link</button>
-          <button id="openClientPageButton" value="default" type="button">Abrir cliente</button>
-          <button value="cancel" type="submit">Cerrar</button>
-        </div>
-      </form>
-    </dialog>
-
-    <dialog id="clientOrdersDialog" class="monthly-dialog">
-      <form method="dialog" class="monthly-form">
-        <div class="monthly-dialog-header">
-          <div>
-            <p class="eyebrow">Pedidos recibidos</p>
-            <h2>Pedidos de clientes</h2>
-          </div>
-          <button class="icon-button" value="cancel" type="submit" title="Cerrar" aria-label="Cerrar">
-            <span aria-hidden="true">x</span>
-          </button>
-        </div>
-        <div class="client-orders-list" id="clientOrdersList"></div>
-        <div class="dialog-actions">
-          <button id="refreshClientOrdersButton" value="default" type="button">Actualizar</button>
-          <button value="cancel" type="submit">Cerrar</button>
-        </div>
-      </form>
-    </dialog>
-
-    <dialog id="waiterTeamDialog" class="monthly-dialog">
-      <form method="dialog" class="monthly-form waiter-team-form">
-        <div class="monthly-dialog-header">
-          <div>
-            <p class="eyebrow">Equipo del restaurante</p>
-            <h2>Personal y estaciones</h2>
-          </div>
-          <button class="icon-button" value="cancel" type="submit" title="Cerrar" aria-label="Cerrar">
-            <span aria-hidden="true">x</span>
-          </button>
-        </div>
-        <p>Autoriza el correo y comparte el enlace. Si la cuenta todavia no existe, la invitacion queda pendiente y se activa automaticamente cuando el empleado crea o confirma su cuenta.</p>
-        <label class="settings-wide-field">
-          Enlace para telefonos del personal
-          <div class="waiter-link-row">
-            <input id="waiterLinkInput" type="text" readonly />
-            <button id="copyWaiterLinkButton" type="button">Copiar</button>
-            <button id="openWaiterLinkButton" type="button">Abrir</button>
-          </div>
-        </label>
-        <div class="waiter-member-fields">
-          <label>
-            Correo del empleado
-            <input id="waiterMemberEmailInput" type="email" placeholder="mesero@correo.com" autocomplete="off" />
-          </label>
-          <label>
-            Nombre visible
-            <input id="waiterMemberNameInput" type="text" placeholder="Nombre del mesero" autocomplete="off" />
-          </label>
-          <label>
-            Estacion
-            <select id="waiterStationSelect">
-              <option value="waiter">Mesero</option>
-              <option value="cashier">Caja</option>
-              <option value="kitchen">Cocina</option>
-              <option value="grill">Parrilla</option>
-              <option value="drinks">Bebidas</option>
-              <option value="fast_food">Comidas rapidas</option>
-              <option value="starters">Entradas</option>
-              <option value="salads">Ensaladas</option>
-              <option value="packing">Empaque</option>
-              <option value="dispatch">Despacho</option>
-              <option value="manager">Encargado</option>
-            </select>
-          </label>
-          <button id="authorizeWaiterButton" type="button">Autorizar personal</button>
-        </div>
-        <p class="auth-message" id="waiterTeamMessage"></p>
-        <div class="waiter-members-list" id="waiterMembersList"></div>
-        <section class="employee-hours-panel" aria-labelledby="employeeHoursTitle">
-          <div>
-            <h3 id="employeeHoursTitle">Registro de horarios</h3>
-            <p>Horas registradas por el personal durante la semana y el mes actuales.</p>
-          </div>
-          <div class="employee-hours-list" id="employeeHoursList">
-            <div class="monthly-empty">Cargando horarios...</div>
-          </div>
-        </section>
-        <div class="dialog-actions">
-          <button id="refreshWaiterMembersButton" value="default" type="button">Actualizar</button>
-          <button value="cancel" type="submit">Cerrar</button>
-        </div>
-      </form>
-    </dialog>
-
-    <dialog id="ticketHistoryDialog" class="monthly-dialog ticket-history-dialog">
-      <form method="dialog" class="monthly-form">
-        <div class="monthly-dialog-header">
-          <div>
-            <p class="eyebrow">Archivo operativo</p>
-            <h2>Historial de tickets</h2>
-          </div>
-          <button class="icon-button" value="cancel" type="submit" title="Cerrar" aria-label="Cerrar">
-            <span aria-hidden="true">x</span>
-          </button>
-        </div>
-        <div class="ticket-history-filters">
-          <label>
-            Buscar
-            <input id="ticketHistorySearchInput" type="search" placeholder="Numero, cliente o producto" autocomplete="off" />
-          </label>
-          <label>
-            Fecha
-            <input id="ticketHistoryDateInput" type="date" />
-          </label>
-          <label>
-            Cobro
-            <select id="ticketHistoryPaymentFilter">
-              <option value="all">Todos</option>
-              <option value="pending">Por cobrar</option>
-              <option value="paid">Cobrados</option>
-              <option value="unverified">Sin confirmar</option>
-            </select>
-          </label>
-        </div>
-        <div class="ticket-history-list" id="ticketHistoryList"></div>
-        <div class="dialog-actions">
-          <button id="refreshTicketHistoryButton" value="default" type="button">Actualizar</button>
-          <button value="cancel" type="submit">Cerrar</button>
-        </div>
-      </form>
-    </dialog>
-<!-- =========================================================
-     SEGURIDAD PARA VACIAR MENU
-     ========================================================= -->
-<dialog id="menuClearSecurityDialog" class="monthly-dialog">
-  <form method="dialog" class="monthly-form">
-
-    <div class="monthly-dialog-header">
-      <div>
-        <p class="eyebrow">Seguridad del menú</p>
-        <h2>Vaciar menú completo</h2>
-      </div>
-
-      <button
-        id="closeMenuClearSecurityButton"
-        class="icon-button"
-        value="cancel"
-        type="submit"
-        title="Cerrar"
-        aria-label="Cerrar"
-      >
-        <span aria-hidden="true">x</span>
-      </button>
-    </div>
-
-    <p>
-      Esta acción eliminará todas las categorías y todos los productos
-      del menú actual.
-    </p>
-
-    <p>
-      <strong>
-        Antes de borrar el menú se creará automáticamente un respaldo
-        de seguridad en la nube.
-      </strong>
-    </p>
-
-    <p>
-      El menú no será eliminado si la contraseña es incorrecta
-      o si la frase de confirmación no coincide.
-    </p>
-
-    <label>
-      Escribe exactamente:
-      <strong>VACIAR MENU</strong>
-
-      <input
-        id="menuClearConfirmationInput"
-        type="text"
-        autocomplete="off"
-        placeholder="VACIAR MENU"
-      />
-    </label>
-
-    <label>
-      Contraseña actual de la cuenta
-      <input
-        id="menuClearPasswordInput"
-        type="password"
-        autocomplete="current-password"
-        placeholder="Confirma tu contraseña"
-      />
-    </label>
-
-    <p
-      class="customer-map-result"
-      id="menuClearSecurityMessage"
-      hidden
-    ></p>
-
-    <div class="dialog-actions">
-      <button
-        id="cancelMenuClearButton"
-        type="button"
-      >
-        Cancelar
-      </button>
-
-      <button
-        id="confirmMenuClearButton"
-        type="button"
-      >
-        Continuar con el vaciado
-      </button>
-    </div>
-
-  </form>
-</dialog>
-    <dialog id="restaurantDeletionDialog" class="monthly-dialog restaurant-deletion-dialog">
-      <form method="dialog">
-        <h2>Eliminar cuenta del restaurante</h2>
-        <p>Esta accion elimina la cuenta de acceso, el menu, los pedidos, los reportes y los datos asociados. No se puede deshacer.</p>
-        <label>
-          Contrasena actual
-          <input id="restaurantDeletionPasswordInput" type="password" autocomplete="current-password" placeholder="Confirma tu contrasena" />
-        </label>
-        <label>
-          Escribe ELIMINAR
-          <input id="restaurantDeletionConfirmationInput" type="text" autocomplete="off" placeholder="ELIMINAR" />
-        </label>
-        <p class="customer-map-result" id="restaurantDeletionMessage" hidden></p>
-        <div class="dialog-actions">
-          <button id="cancelRestaurantDeletionButton" type="button">Cancelar</button>
-          <button id="confirmRestaurantDeletionButton" type="button">Eliminar definitivamente</button>
-        </div>
-      </form>
-    </dialog>
-
-    <div class="toast-notice" id="toastNotice" role="status" aria-live="polite" hidden></div>
-    <datalist id="restaurantRegionOptions"></datalist>
-
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4"></script>
-    <script src="supabase-config.js?v=91.0.4"></script>
-    <script src="offline-i18n.js?v=91.0.4"></script>
-    <script src="auto-translate.js?v=91.0.4"></script>
-    <script src="app.js?v=91.0.4"></script>
-  </body>
+  </main>
+</body>
 </html>
-
