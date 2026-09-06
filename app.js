@@ -1507,8 +1507,30 @@ function isOrderRevisionConflictError(error) {
       .test(details)
   );
 }
+function isCancelledOrderOverwriteError(error) {
+  if (!error) return false;
+
+  const code = String(error?.code || error?.cause?.code || "").trim();
+  const details = [
+    error?.message,
+    error?.details,
+    error?.hint,
+    error?.cause?.message,
+    error?.cause?.details,
+    error?.cause?.hint,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return code === "40001" && /cancelled order cannot be overwritten/i.test(details);
+}
+
 function needsCloudSync(order) {
-  return Boolean(order?.saved && order.syncStatus === "pending");
+  return Boolean(
+    order?.saved &&
+    order.syncStatus === "pending" &&
+    !isCancelledSavedOrder(order)
+  );
 }
 
 function pendingOrdersCount() {
@@ -4568,6 +4590,29 @@ return { data, error };
   }
 
   if (error) {
+        if (isCancelledOrderOverwriteError(error)) {
+      const cancellationPatch = {
+        status: "cancelled",
+        canonicalStatus: "cancelled",
+        syncStatus: "synced",
+      };
+
+      Object.assign(order, cancellationPatch);
+
+      savedOrders = savedOrders.map((savedOrder) =>
+        savedOrder.id === order.id
+          ? { ...savedOrder, ...cancellationPatch }
+          : savedOrder
+      );
+
+      if (currentOrder.id === order.id) {
+        Object.assign(currentOrder, cancellationPatch);
+      }
+
+      saveOrders({ immediate: true });
+      saveCurrentOrderDraft();
+      return;
+    }
     if (
   error.code === "40001" ||
   /ORDER_REVISION_(?:CONFLICT|REQUIRED)/i.test(
