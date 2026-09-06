@@ -60,6 +60,7 @@ const WAITER_STATION_POLL_MAX_MS = 120_000;
 const WAITER_REALTIME_RECONNECT_MIN_MS = 2_000;
 const WAITER_REALTIME_RECONNECT_MAX_MS = 60_000;
 const WAITER_REALTIME_STABLE_MS = 30_000;
+const WAITER_RECOVERY_DEDUP_MS = 30_000;
 
 let waiterClient = null;
 let waiterUser = null;
@@ -78,6 +79,8 @@ let waiterRealtimeReconnectDelay =
   WAITER_REALTIME_RECONNECT_MIN_MS;
 let waiterOrdersRealtimeStatus = "idle";
 let waiterStationPollingDelay = WAITER_STATION_POLL_MIN_MS;
+let waiterAuthorizeInFlight = null;
+let waiterAuthorizeLastCompletedAt = 0;
 let waiterToastTimer = null;
 let waiterSyncingQueue = false;
 let waiterBusinessContext = null;
@@ -1226,6 +1229,13 @@ function waiterScheduleRealtimeReconnect() {
   }, retryDelay);
 }
 function waiterStartRealtime() {
+  if (
+    waiterOrdersChannel &&
+    ["connecting", "SUBSCRIBED"].includes(waiterOrdersRealtimeStatus)
+  ) {
+    return;
+  }
+
   waiterStopRealtime();
   if (!waiterClient || !waiterStoreId || !waiterUser) return;
   const canTakeOrders = ["waiter", "cashier", "manager"].includes(waiterMembership?.station);
@@ -1446,8 +1456,18 @@ function waiterChangeStation() {
 
   waiterShowToast(`Estación cambiada a ${stationLabel}.`);
 }
-async function waiterAuthorize() {
-  if (!waiterClient || !waiterUser || !waiterStoreId) return;
+function waiterAuthorize(options = {}) {
+  const { force = false } = options;
+  if (!waiterClient || !waiterUser || !waiterStoreId) return Promise.resolve(false);
+  if (waiterAuthorizeInFlight) return waiterAuthorizeInFlight;
+  if (
+    !force &&
+    Date.now() - waiterAuthorizeLastCompletedAt < WAITER_RECOVERY_DEDUP_MS
+  ) {
+    return Promise.resolve(true);
+  }
+
+  const operation = (async () => {
   waiterSetStatus("Verificando autorizacion...");
   const claimResult = await waiterClient.rpc("claim_my_restaurant_staff_invitation", {
     p_restaurant_user_id: waiterStoreId,
@@ -1547,13 +1567,23 @@ waiterElements.shiftBar.hidden = false;
   }
   await waiterLoadShiftStatus();
   waiterStartRealtime();
+  return true;
+  })();
+
+  waiterAuthorizeInFlight = operation;
+  operation.then((confirmed) => {
+    if (confirmed === true) waiterAuthorizeLastCompletedAt = Date.now();
+  }).finally(() => {
+    if (waiterAuthorizeInFlight === operation) waiterAuthorizeInFlight = null;
+  });
+  return operation;
 }
 
 async function waiterActivateAuthorization() {
   waiterElements.retryAccessButton.disabled = true;
   waiterElements.retryAccessButton.textContent = "Activando...";
   try {
-    await waiterAuthorize();
+    await waiterAuthorize({ force: true });
     if (waiterMembership?.active) waiterShowToast("Autorizacion confirmada. Bienvenido a tu estacion.");
   } finally {
     waiterElements.retryAccessButton.disabled = false;

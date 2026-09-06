@@ -431,6 +431,12 @@ let courierCurrentView = "profile";
 let courierApprovalChannel = null;
 let courierDeliveryChannel = null;
 let courierDeliveryRealtimeStatus = "idle";
+const COURIER_REALTIME_RECONNECT_MIN_MS = 2_000;
+const COURIER_REALTIME_RECONNECT_MAX_MS = 60_000;
+const COURIER_REALTIME_STABLE_MS = 30_000;
+let courierDeliveryRealtimeRetryTimer = null;
+let courierDeliveryRealtimeStableTimer = null;
+let courierDeliveryRealtimeRetryDelay = COURIER_REALTIME_RECONNECT_MIN_MS;
 let courierLocationWatchId = null;
 let courierLastLocationWriteAt = 0;
 let courierResumePromise = null;
@@ -1696,7 +1702,6 @@ function courierSyncOffersPolling() {
     if (!courierUser || courierProfile?.status !== "approved" || courierDeliveryRealtimeStatus === "SUBSCRIBED") return;
     try {
       await courierLoadDeliveryOffers({ silent: true });
-      if (courierAvailable && courierLastLocation) await courierPersistLiveLocation(true);
       courierOffersPollingDelay = 15_000;
     } catch (error) {
       courierLogError("delivery_poll_fallback", error);
@@ -1716,6 +1721,14 @@ function courierStopOffersPolling() {
 }
 
 function courierStopDeliveryRealtime() {
+  if (courierDeliveryRealtimeRetryTimer) {
+    window.clearTimeout(courierDeliveryRealtimeRetryTimer);
+    courierDeliveryRealtimeRetryTimer = null;
+  }
+  if (courierDeliveryRealtimeStableTimer) {
+    window.clearTimeout(courierDeliveryRealtimeStableTimer);
+    courierDeliveryRealtimeStableTimer = null;
+  }
   const channel = courierDeliveryChannel;
   courierDeliveryChannel = null;
   courierDeliveryRealtimeStatus = "idle";
@@ -1724,12 +1737,35 @@ function courierStopDeliveryRealtime() {
   }
 }
 
+function courierScheduleDeliveryRealtimeReconnect() {
+  if (
+    courierDeliveryRealtimeRetryTimer ||
+    !window.navigator.onLine ||
+    !courierClient?.channel ||
+    !courierUser ||
+    courierProfile?.status !== "approved"
+  ) {
+    return;
+  }
+
+  const retryDelay = courierDeliveryRealtimeRetryDelay;
+  courierDeliveryRealtimeRetryDelay = Math.min(
+    retryDelay * 2,
+    COURIER_REALTIME_RECONNECT_MAX_MS
+  );
+
+  courierDeliveryRealtimeRetryTimer = window.setTimeout(() => {
+    courierDeliveryRealtimeRetryTimer = null;
+    courierStartDeliveryRealtime();
+  }, retryDelay);
+}
+
 function courierStartDeliveryRealtime() {
   if (!courierClient?.channel || !courierUser || courierProfile?.status !== "approved") return;
   if (courierDeliveryChannel) return;
 
   courierDeliveryRealtimeStatus = "connecting";
-  courierDeliveryChannel = courierClient
+  const channel = courierClient
     .channel(`courier-deliveries-${courierUser.id}`)
     .on(
       "postgres_changes",
@@ -1755,17 +1791,46 @@ function courierStartDeliveryRealtime() {
           courierLoadHistory().catch((error) => courierLogError("realtime_history_reload", error));
         }
       }
-    )
-    .subscribe((status) => {
+    );
+
+  courierDeliveryChannel = channel;
+
+  channel.subscribe((status) => {
+      if (channel !== courierDeliveryChannel) return;
       courierDeliveryRealtimeStatus = status;
       if (status === "SUBSCRIBED") {
+        if (courierDeliveryRealtimeRetryTimer) {
+          window.clearTimeout(courierDeliveryRealtimeRetryTimer);
+          courierDeliveryRealtimeRetryTimer = null;
+        }
+        if (courierDeliveryRealtimeStableTimer) {
+          window.clearTimeout(courierDeliveryRealtimeStableTimer);
+        }
+        courierDeliveryRealtimeStableTimer = window.setTimeout(() => {
+          courierDeliveryRealtimeStableTimer = null;
+          if (
+            channel === courierDeliveryChannel &&
+            courierDeliveryRealtimeStatus === "SUBSCRIBED"
+          ) {
+            courierDeliveryRealtimeRetryDelay = COURIER_REALTIME_RECONNECT_MIN_MS;
+          }
+        }, COURIER_REALTIME_STABLE_MS);
         courierStopOffersPolling();
         courierOffersPollingDelay = 15_000;
         courierLoadDeliveryOffers({ silent: true }).catch((error) => courierLogError("realtime_delivery_resync", error));
         return;
       }
       if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)) {
+        if (courierDeliveryRealtimeStableTimer) {
+          window.clearTimeout(courierDeliveryRealtimeStableTimer);
+          courierDeliveryRealtimeStableTimer = null;
+        }
+        courierDeliveryChannel = null;
+        if (courierClient?.removeChannel) {
+          courierClient.removeChannel(channel).catch((error) => courierLogError("close_failed_delivery_realtime", error));
+        }
         courierSyncOffersPolling();
+        courierScheduleDeliveryRealtimeReconnect();
       }
     });
   courierSyncOffersPolling();

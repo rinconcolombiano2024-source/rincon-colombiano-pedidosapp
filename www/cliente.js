@@ -112,7 +112,7 @@ const CUSTOMER_MENU_CACHE_KEY_PREFIX = "rc_ordera_customer_menu_cache_v1";
 const CUSTOMER_REALTIME_RECONNECT_MIN_MS = 2_000;
 const CUSTOMER_REALTIME_RECONNECT_MAX_MS = 60_000;
 const CUSTOMER_REALTIME_STABLE_MS = 30_000;
-const CUSTOMER_RECOVERY_DEDUP_MS = 2_000;
+const CUSTOMER_RECOVERY_DEDUP_MS = 30_000;
 const CUSTOMER_DIRECTORY_POLL_MIN_MS = 300_000;
 const CUSTOMER_DIRECTORY_POLL_MAX_MS = 600_000;
 const CUSTOMER_CHAT_POLL_MIN_MS = 15_000;
@@ -3100,6 +3100,13 @@ function customerScheduleDirectoryPoll(delayMs = customerDirectoryPollingDelay) 
 }
 
 function customerStartDirectoryRealtime() {
+  if (
+    customerDirectoryRealtimeChannel &&
+    ["connecting", "SUBSCRIBED"].includes(customerDirectoryRealtimeStatus)
+  ) {
+    return;
+  }
+
   if (!customerDirectoryPollTimer) {
     customerScheduleDirectoryPoll(customerDirectoryPollingDelay);
   }
