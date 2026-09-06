@@ -434,6 +434,7 @@ let courierDeliveryRealtimeStatus = "idle";
 const COURIER_REALTIME_RECONNECT_MIN_MS = 2_000;
 const COURIER_REALTIME_RECONNECT_MAX_MS = 60_000;
 const COURIER_REALTIME_STABLE_MS = 30_000;
+const COURIER_LOCATION_WRITE_MIN_MS = 30_000;
 let courierDeliveryRealtimeRetryTimer = null;
 let courierDeliveryRealtimeStableTimer = null;
 let courierDeliveryRealtimeRetryDelay = COURIER_REALTIME_RECONNECT_MIN_MS;
@@ -1508,7 +1509,7 @@ function courierSyncLocationWatch() {
       };
       if (courierElements.openGpsButton) courierElements.openGpsButton.disabled = !courierHasValidCoordinates();
       const now = Date.now();
-      if (now - courierLastLocationWriteAt >= 15000) {
+      if (now - courierLastLocationWriteAt >= COURIER_LOCATION_WRITE_MIN_MS) {
         courierLastLocationWriteAt = now;
         courierPersistLiveLocation(true).catch((error) => {
           courierSetMessage(courierElements.locationMessage, courierFriendlyDeliveryError(error), "error");
@@ -2354,11 +2355,16 @@ async function courierLoadProfile() {
     .eq("user_id", courierUser.id)
     .maybeSingle();
 
-  if (error || !data) {
+  if (error) {
+    courierLogError("load_profile", error);
+    return false;
+  }
+
+  if (!data) {
     courierProfile = null;
     courierApplyProfileFields(courierMetadataProfile());
     courierRender();
-    return;
+    return false;
   }
 
   const { data: approvalRows, error: approvalError } = await courierClient.rpc("get_my_courier_approval");
@@ -2383,6 +2389,7 @@ if (data.status === "approved") {
   courierLoadHistory().catch(() => {});
   courierRefreshPayoutState("status").catch(() => {});
 }
+return true;
 }
 
 function courierStopApprovalRealtime() {

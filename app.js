@@ -58,6 +58,7 @@ const SYNC_ORDER_CONFLICT_BACKOFF_MS = 5 * 60_000;
 const SYNC_ORDER_BATCH_SIZE = 5;
 const SYNC_ORDER_BATCH_DELAY_MS = 15_000;
 const MINIMUM_DATABASE_SCHEMA_VERSION = 91;
+const MINIMUM_SYNC_CONTRACT_VERSION = 6;
 
 const LEGACY_STORAGE_KEYS = {
   nextTicket: "rincon_colombiano_next_ticket",
@@ -663,10 +664,16 @@ const cloudState = {
   lastErrorDetails: "",
   moduleWarning: "",
   schemaVersion: null,
+  schemaContractVersion: null,
+  schemaCompatible: false,
 };
 
 async function ensureMinimumDatabaseVersion() {
-  if (Number(cloudState.schemaVersion) >= MINIMUM_DATABASE_SCHEMA_VERSION) {
+  if (
+    Number(cloudState.schemaVersion) >= MINIMUM_DATABASE_SCHEMA_VERSION
+    && Number(cloudState.schemaContractVersion) >= MINIMUM_SYNC_CONTRACT_VERSION
+    && cloudState.schemaCompatible === true
+  ) {
     return cloudState.schemaVersion;
   }
   const { data, error } = await cloudState.client.rpc("get_rc_ordera_schema_version");
@@ -714,7 +721,60 @@ if (error) {
     schemaError.code = "RC_ORDERA_SCHEMA_OUTDATED";
     throw schemaError;
   }
+
+  const { data: contractData, error: contractError } = await cloudState.client.rpc(
+    "get_rc_ordera_sync_contract"
+  );
+  if (contractError) {
+    if (["42883", "PGRST202"].includes(String(contractError?.code || ""))) {
+      const schemaError = new Error(
+        appUiText("La base de datos no tiene completo el contrato de sincronizacion V91.")
+      );
+      schemaError.code = "RC_ORDERA_SCHEMA_INCOMPLETE";
+      schemaError.cause = contractError;
+      throw schemaError;
+    }
+    if (isTemporarySyncInfrastructureError(contractError)) {
+      const cloudError = new Error(
+        appUiText(
+          "La nube de RC ORDERA no está respondiendo temporalmente. Intenta nuevamente en unos momentos."
+        )
+      );
+      cloudError.code = "RC_ORDERA_CLOUD_TEMPORARILY_UNAVAILABLE";
+      cloudError.cause = contractError;
+      throw cloudError;
+    }
+    const schemaError = new Error(
+      appUiText("No fue posible verificar la versión de la base de datos.")
+    );
+    schemaError.code = "RC_ORDERA_SCHEMA_CHECK_FAILED";
+    schemaError.cause = contractError;
+    throw schemaError;
+  }
+
+  const contractRow = Array.isArray(contractData) ? contractData[0] : contractData;
+  const contractVersion = Number(contractRow?.contract_version);
+  const contractSchemaVersion = Number(contractRow?.schema_version);
+  if (
+    contractRow?.compatible !== true
+    || !Number.isFinite(contractVersion)
+    || contractVersion < MINIMUM_SYNC_CONTRACT_VERSION
+    || !Number.isFinite(contractSchemaVersion)
+    || contractSchemaVersion < MINIMUM_DATABASE_SCHEMA_VERSION
+  ) {
+    const schemaError = new Error(
+      appUiText("La base de datos no tiene completo el contrato de sincronizacion V91.")
+    );
+    schemaError.code = "RC_ORDERA_SCHEMA_INCOMPLETE";
+    schemaError.missingComponents = Array.isArray(contractRow?.missing_components)
+      ? contractRow.missing_components
+      : [];
+    throw schemaError;
+  }
+
   cloudState.schemaVersion = version;
+  cloudState.schemaContractVersion = contractVersion;
+  cloudState.schemaCompatible = true;
   return version;
 }
 
@@ -2875,6 +2935,8 @@ renderCloudState();
       await loadCloudData();
     } else {
       cloudState.schemaVersion = null;
+      cloudState.schemaContractVersion = null;
+      cloudState.schemaCompatible = false;
       pendingClientOrders = [];
       clearConfirmedCloudMenu();
       clearConfirmedCloudSettings();
@@ -2988,7 +3050,7 @@ try {
   await withCloudTimeout(ensureMinimumDatabaseVersion());
 } catch (error) {
   if (
-    error?.code === "RC_ORDERA_SCHEMA_OUTDATED"
+    ["RC_ORDERA_SCHEMA_OUTDATED", "RC_ORDERA_SCHEMA_INCOMPLETE"].includes(error?.code)
   ) {
     throw error;
   }
@@ -4461,7 +4523,9 @@ if (!error) {
   ) {
     const confirmationError =
       new Error(
-        "Supabase no confirmó completamente el guardado y la publicación del pedido."
+        appUiText(
+          "La nube no confirmo completamente el pedido. Permanecera pendiente."
+        )
       );
 
     confirmationError.code =
@@ -4586,7 +4650,9 @@ if (
 ) {
   const unconfirmedReconciliationError =
     new Error(
-      "Supabase no devolvió una versión válida del pedido durante la reconciliación."
+      appUiText(
+        "La nube no devolvio una confirmacion valida. El pedido permanecera pendiente."
+      )
     );
 
   unconfirmedReconciliationError.code =
@@ -7395,7 +7461,9 @@ if (shouldSyncTicketCounter) {
     if (!cleared) {
       const queueError =
         new Error(
-          `No fue posible confirmar localmente la anulación del pedido ${orderId}.`
+          appUiText(
+            "No fue posible confirmar localmente la sincronizacion. Se intentara nuevamente."
+          )
         );
 
       queueError.code =
@@ -7429,7 +7497,9 @@ if (shouldSyncTicketCounter) {
       if (!cleared) {
         const queueError =
           new Error(
-            `El pedido ${orderId} ya no existe en nube, pero no fue posible limpiar su anulación local.`
+            appUiText(
+              "No fue posible confirmar localmente la sincronizacion. Se intentara nuevamente."
+            )
           );
 
         queueError.code =
