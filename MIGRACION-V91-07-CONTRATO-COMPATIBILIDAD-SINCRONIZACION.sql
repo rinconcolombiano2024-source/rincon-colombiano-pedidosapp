@@ -71,7 +71,31 @@ begin
   ) then
     v_missing := array_append(v_missing, 'V91-03.customer_orders_replica_identity');
   end if;
+if not exists (
+  select 1
+  from pg_catalog.pg_publication_tables
+  where pubname = 'supabase_realtime'
+    and schemaname = 'public'
+    and tablename = 'orders'
+) then
+  v_missing := array_append(
+    v_missing,
+    'V91-08.orders_realtime'
+  );
+end if;
 
+if not exists (
+  select 1
+  from pg_catalog.pg_publication_tables
+  where pubname = 'supabase_realtime'
+    and schemaname = 'public'
+    and tablename = 'customer_order_messages'
+) then
+  v_missing := array_append(
+    v_missing,
+    'V91-08.customer_order_messages_realtime'
+  );
+end if;
   -- V91-04: revision y guardado/publicacion atomicos.
   if not exists (
     select 1
@@ -145,7 +169,7 @@ begin
   return query
   select
     91,
-    6,
+    7,
     cardinality(v_missing) = 0,
     v_missing;
 end;
