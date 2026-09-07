@@ -5714,22 +5714,38 @@ function startCentralRealtime() {
           })
       )
 
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "orders",
-          filter:
-            `user_id=eq.${cloudState.user.id}`,
-        },
-        () =>
-          scheduleCentralRefresh({
-            settings: false,
-            profile: false,
-            orders: true,
-          })
-      )
+     .on(
+  "postgres_changes",
+  {
+    event: "INSERT",
+    schema: "public",
+    table: "orders",
+    filter:
+      `user_id=eq.${cloudState.user.id}`,
+  },
+  () =>
+    scheduleCentralRefresh({
+      settings: false,
+      profile: false,
+      orders: true,
+    })
+)
+.on(
+  "postgres_changes",
+  {
+    event: "UPDATE",
+    schema: "public",
+    table: "orders",
+    filter:
+      `user_id=eq.${cloudState.user.id}`,
+  },
+  () =>
+    scheduleCentralRefresh({
+      settings: false,
+      profile: false,
+      orders: true,
+    })
+)
 
       .on(
         "postgres_changes",
