@@ -5792,14 +5792,27 @@ function startCentralRealtime() {
     }
   }, CENTRAL_REALTIME_STABLE_MS);
 
- if (centralRealtimeNeedsCatchup) {
-  centralRealtimeNeedsCatchup = false;
-
-  scheduleCentralRefresh({
+if (centralRealtimeNeedsCatchup) {
+  refreshCentralCloudState({
     settings: true,
     profile: true,
     orders: true,
-  });
+  })
+    .then((recovered) => {
+      if (
+        recovered &&
+        channel === centralSyncChannel &&
+        centralSyncStatus === "SUBSCRIBED"
+      ) {
+        centralRealtimeNeedsCatchup = false;
+      }
+    })
+    .catch((error) => {
+      console.error(
+        "No fue posible resincronizar el estado central al reconectar Realtime.",
+        error
+      );
+    });
 }
 
 return;
@@ -5942,15 +5955,22 @@ clientOrdersRealtimeStableTimer = setTimeout(() => {
 
   stopClientOrdersPolling();
   clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;
-        if (clientOrdersRealtimeNeedsCatchup) {
-  clientOrdersRealtimeNeedsCatchup = false;
-
-  refreshClientOrders({ silent: true }).catch((error) => {
-    console.error(
-      "No fue posible resincronizar los pedidos al reconectar Realtime.",
-      error
-    );
-  });
+      if (clientOrdersRealtimeNeedsCatchup) {
+  refreshClientOrders({ silent: true })
+    .then(() => {
+      if (
+        channel === clientOrdersChannel &&
+        clientOrdersRealtimeStatus === "SUBSCRIBED"
+      ) {
+        clientOrdersRealtimeNeedsCatchup = false;
+      }
+    })
+    .catch((error) => {
+      console.error(
+        "No fue posible resincronizar los pedidos al reconectar Realtime.",
+        error
+      );
+    });
 }
         return;
       }
@@ -13249,15 +13269,25 @@ function recoverCloudConnection() {
       return false;
     }
 
-    await syncPendingData({ silent: true });
-    await refreshCentralCloudState();
-    await refreshClientOrders({ silent: true });
+await syncPendingData({ silent: true });
+
+const centralRefreshSucceeded =
+  await refreshCentralCloudState();
+
+if (!centralRefreshSucceeded) {
+  updateCloudStatus();
+  return false;
+}
+
+await refreshClientOrders({ silent: true });
+
+centralRealtimeNeedsCatchup = false;
+clientOrdersRealtimeNeedsCatchup = false;
+
 startCentralRealtime();
 startClientOrdersRealtime();
-    
-    updateRestaurantStatusSync();
 
-    await syncRestaurantOperationalStatus({
+updateRestaurantStatusSync();   await syncRestaurantOperationalStatus({
       silent: true,
     });
 
