@@ -629,10 +629,13 @@ let pendingDataSyncRetryNotBefore = 0;
 let centralRealtimeReconnectTimer = null;
 let centralRealtimeStableTimer = null;
 let centralRealtimeReconnectDelay = CENTRAL_REALTIME_RECONNECT_MIN_MS;
+let centralRealtimeNeedsCatchup = false;
+
 let clientOrdersRealtimeReconnectTimer = null;
 let clientOrdersRealtimeStableTimer = null;
 let clientOrdersRealtimeReconnectDelay =
   CLIENT_ORDERS_REALTIME_RECONNECT_MIN_MS;
+let clientOrdersRealtimeNeedsCatchup = false;
 let clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;
 let clientOrdersRefreshInFlight = null;
 let clientOrdersRefreshPending = false;
@@ -5773,20 +5776,26 @@ function startCentralRealtime() {
     }
   }, CENTRAL_REALTIME_STABLE_MS);
 
+ if (centralRealtimeNeedsCatchup) {
+  centralRealtimeNeedsCatchup = false;
+
   scheduleCentralRefresh({
     settings: true,
     profile: true,
     orders: true,
   });
-
-  return;
 }
 
-    if (
+return;
+   
+}
+
+  if (
   status === "CHANNEL_ERROR" ||
   status === "TIMED_OUT" ||
   status === "CLOSED"
 ) {
+  centralRealtimeNeedsCatchup = true;
         if (centralRealtimeStableTimer) {
     clearTimeout(centralRealtimeStableTimer);
     centralRealtimeStableTimer = null;
@@ -5889,7 +5898,6 @@ const channel = cloudState.client
         if (channel !== clientOrdersChannel) {
       return;
     }
-      const previousStatus = clientOrdersRealtimeStatus;
       clientOrdersRealtimeStatus = status;
       if (status === "SUBSCRIBED") {
   if (clientOrdersRealtimeReconnectTimer) {
@@ -5918,16 +5926,22 @@ clientOrdersRealtimeStableTimer = setTimeout(() => {
 
   stopClientOrdersPolling();
   clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;
-        if (previousStatus !== "SUBSCRIBED") {
-          refreshClientOrders({ silent: true }).catch((error) => {
-            console.error("No fue posible resincronizar los pedidos al reconectar Realtime.", error);
-          });
-        }
+        if (clientOrdersRealtimeNeedsCatchup) {
+  clientOrdersRealtimeNeedsCatchup = false;
+
+  refreshClientOrders({ silent: true }).catch((error) => {
+    console.error(
+      "No fue posible resincronizar los pedidos al reconectar Realtime.",
+      error
+    );
+  });
+}
         return;
       }
      if (
   ["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)
 ) {
+       clientOrdersRealtimeNeedsCatchup = true;
   startClientOrdersPolling({
     immediate: true
   });
