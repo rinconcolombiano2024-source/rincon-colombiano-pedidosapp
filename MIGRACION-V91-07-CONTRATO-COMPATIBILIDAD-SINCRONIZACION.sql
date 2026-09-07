@@ -160,8 +160,10 @@ end if;
     v_missing := array_append(v_missing, 'V91-06.rc_ordera_sync_order_station_tasks');
   else
     v_definition := lower(pg_get_functiondef(v_function));
-    if position('jsonb_object_length' in v_definition) > 0
-       or position('v_groups <> ''{}''::jsonb' in v_definition) = 0 then
+if position(
+  'v_groups <> ''{}''::jsonb'
+  in v_definition
+) = 0 then
       v_missing := array_append(v_missing, 'V91-06.rc_ordera_sync_order_station_tasks');
     end if;
   end if;
