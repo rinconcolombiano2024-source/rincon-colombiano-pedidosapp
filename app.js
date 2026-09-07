@@ -13287,7 +13287,9 @@ clientOrdersRealtimeNeedsCatchup = false;
 startCentralRealtime();
 startClientOrdersRealtime();
 
-updateRestaurantStatusSync();   await syncRestaurantOperationalStatus({
+updateRestaurantStatusSync();
+    
+await syncRestaurantOperationalStatus({
       silent: true,
     });
 
