@@ -2945,32 +2945,70 @@ async function initializeCloud() {
   if (cloudState.user) rememberCloudSession(cloudState.user);
   renderCloudState();
 
-  cloudState.client.auth.onAuthStateChange(async (event, session) => {
-    cloudState.user = session?.user || null;
-    if (cloudState.user) rememberCloudSession(cloudState.user);
-    if (event === "PASSWORD_RECOVERY") {
-  showPasswordRecoveryForm();
-  return;
-}
+cloudState.client.auth.onAuthStateChange((event, session) => {
+  const previousUserId =
+    cloudState.user?.id || null;
 
-if (event === "INITIAL_SESSION") return;
+  const nextUser =
+    session?.user || null;
 
-renderCloudState();
-    if (cloudState.user) {
-      await loadCloudData();
-    } else {
-      cloudState.schemaVersion = null;
-      cloudState.schemaContractVersion = null;
-      cloudState.schemaCompatible = false;
-      pendingClientOrders = [];
-      clearConfirmedCloudMenu();
-      clearConfirmedCloudSettings();
-      stopClientOrdersPolling();
-      stopClientOrdersRealtime();
-      stopClientAlarm();
-      updateClientOrdersBadge();
+  const nextUserId =
+    nextUser?.id || null;
+
+  const userActuallyChanged =
+    Boolean(nextUserId) &&
+    nextUserId !== previousUserId;
+
+  cloudState.user = nextUser;
+
+  if (cloudState.user) {
+    rememberCloudSession(cloudState.user);
+  }
+
+  if (event === "PASSWORD_RECOVERY") {
+    showPasswordRecoveryForm();
+    return;
+  }
+
+  if (event === "INITIAL_SESSION") {
+    return;
+  }
+
+  renderCloudState();
+
+  if (cloudState.user) {
+    if (userActuallyChanged) {
+      window.setTimeout(() => {
+        loadCloudData().catch((error) => {
+          console.error(
+            "No fue posible cargar la nube despues del inicio de sesion.",
+            error
+          );
+
+          setCloudError(error);
+          renderCloudState();
+        });
+      }, 0);
     }
-  });
+
+    return;
+  }
+
+  cloudState.schemaVersion = null;
+  cloudState.schemaContractVersion = null;
+  cloudState.schemaCompatible = false;
+
+  pendingClientOrders = [];
+
+  clearConfirmedCloudMenu();
+  clearConfirmedCloudSettings();
+
+  stopClientOrdersPolling();
+  stopClientOrdersRealtime();
+  stopClientAlarm();
+
+  updateClientOrdersBadge();
+});
 
   if (cloudState.user) await loadCloudData();
 }
