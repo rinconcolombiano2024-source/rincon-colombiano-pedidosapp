@@ -24,11 +24,11 @@ Esta entrega conserva el ZIP original y contiene los cambios de rendimiento e in
 - Se retiro el guardado del menu mediante rutas antiguas que podian sobrescribir revisiones nuevas.
 - Se agregaron respuestas tactiles inmediatas a los botones.
 
-## Migracion incluida
+## Migraciones requeridas (actualizado 8 de septiembre de 2026)
 
 `MIGRACION-V91-01-RENDIMIENTO-INTEGRIDAD-Y-CIERRES.sql`
 
-La aplicacion modificada requiere ejecutar esa migracion en Supabase antes de desplegarla. La migracion es incremental: no borra tablas, usuarios ni pedidos. No fue ejecutada contra la base de datos productiva desde este entorno.
+V91-01 sola NO basta. El frontend requiere schema_version 91 y contrato 7 compatible. Aplicar las migraciones pendientes en el orden indicado abajo; no se han ejecutado en produccion desde este entorno.
 
 ## Comprobaciones realizadas
 
@@ -48,10 +48,20 @@ La aplicacion modificada requiere ejecutar esa migracion en Supabase antes de de
 
 ## Orden de instalacion
 
-1. Ejecutar `MIGRACION-V91-01-RENDIMIENTO-INTEGRIDAD-Y-CIERRES.sql` una sola vez en Supabase SQL Editor.
-2. Ejecutar `VALIDACION-V91-RENDIMIENTO-INTEGRIDAD-Y-CIERRES.sql` y comprobar resultados verdaderos y version 91.
-3. Desplegar el contenido de este paquete en Vercel.
-4. Abrir la app con `?app=v91.0.0` o recargarla dos veces para activar el nuevo service worker.
+1. Respaldar la base y probar en un entorno de ensayo con el esquema previo instalado.
+2. Aplicar las migraciones pendientes, en este orden:
+   - `MIGRACION-V91-01-RENDIMIENTO-INTEGRIDAD-Y-CIERRES.sql`
+   - `MIGRACION-V91-02-SINCRONIZACION-CANCELACION-PEDIDOS.sql`
+   - `MIGRACION-V91-03-CONTRATO-MULTIESTACION-Y-REALTIME.sql`
+   - `MIGRACION-V91-04-GUARDADO-ATOMICO-PEDIDOS.sql`
+   - `MIGRACION-V91-04-CONTROL-CARGA-SINCRONIZACION.sql` (es distinta de la anterior).
+   - `MIGRACION-V91-05-POS-SINCRONIZA-CERRADO.sql`
+   - `MIGRACION-V91-06-CORREGIR-SYNC-ESTACIONES.sql`
+   - `MIGRACION-V91-07-CONTRATO-COMPATIBILIDAD-SINCRONIZACION.sql`
+3. Volver a ejecutar V91-07 de ESTE paquete aunque ya se hubiera aplicado la version anterior: agrega de forma idempotente orders y customer_order_messages a Realtime. No requiere V91-08 ni desactiva RLS.
+4. En SQL Editor con rol postgres ejecutar `select * from public.get_rc_ordera_sync_contract();`. Exigir schema_version=91, contract_version=7, compatible=true y missing_components vacio. Si falla, no desplegar: resolver los componentes indicados.
+5. Desplegar la funcion Supabase `marketplace-checkout` de este paquete; subir solo Vercel no actualiza las Edge Functions.
+6. Desplegar el frontend y comprobar con dos dispositivos pedidos, estaciones y chat. No borrar almacenamiento local con pendientes.
 
 ## Validacion externa pendiente
 
