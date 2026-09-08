@@ -4,6 +4,28 @@
 
 begin;
 
+-- Instalacion idempotente de las publicaciones requeridas por el contrato 7.
+do $publication$
+declare
+  v_table text;
+begin
+  if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    raise exception 'Falta supabase_realtime: configurar Realtime antes de V91-07';
+  end if;
+  foreach v_table in array array['orders', 'customer_order_messages'] loop
+    if to_regclass(format('public.%I', v_table)) is null then
+      raise exception 'Falta public.%: aplicar migraciones anteriores', v_table;
+    end if;
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = v_table
+    ) then
+      execute format('alter publication supabase_realtime add table public.%I', v_table);
+    end if;
+  end loop;
+end;
+$publication$;
+
 create or replace function public.get_rc_ordera_sync_contract()
 returns table (
   schema_version integer,
@@ -80,7 +102,7 @@ if not exists (
 ) then
   v_missing := array_append(
     v_missing,
-    'V91-08.orders_realtime'
+    'V91-07.orders_realtime'
   );
 end if;
 
@@ -93,7 +115,7 @@ if not exists (
 ) then
   v_missing := array_append(
     v_missing,
-    'V91-08.customer_order_messages_realtime'
+    'V91-07.customer_order_messages_realtime'
   );
 end if;
   -- V91-04: revision y guardado/publicacion atomicos.

@@ -27,8 +27,9 @@ check(app.includes('rpc("void_restaurant_order"'), "cancelacion historica por RP
 check(!app.includes("deleteCloudOrder"), "sin borrado fisico de pedidos guardados");
 check(courier.includes('courierDeliveryRealtimeStatus === "SUBSCRIBED"'), "colaborador usa polling solo como respaldo");
 check(migration.includes("get_rc_ordera_schema_version"), "control de version de esquema");
-check(app.includes('rpc(\n    "get_rc_ordera_sync_contract"'), "frontend verifica contrato de sincronizacion");
-check(app.includes("MINIMUM_SYNC_CONTRACT_VERSION = 6"), "frontend exige contrato V91-02 a V91-06");
+check(/rpc\(\s*"get_rc_ordera_sync_contract"/.test(app), "frontend verifica contrato de sincronizacion");
+check(/MINIMUM_SYNC_CONTRACT_VERSION\s*=\s*7\b/.test(app), "frontend exige contrato 7");
+check(!syncContractMigration.includes("V91-08") && syncContractMigration.includes("array['orders', 'customer_order_messages']") && syncContractMigration.includes("alter publication supabase_realtime add table public.%I"), "contrato 7 instala publicaciones sin V91-08");
 check(app.includes('"RC_ORDERA_SCHEMA_OUTDATED", "RC_ORDERA_SCHEMA_INCOMPLETE"'), "carga inicial bloquea esquema incompleto");
 check(syncContractMigration.includes("get_rc_ordera_sync_contract"), "RPC de contrato de sincronizacion disponible");
 check(syncContractMigration.includes("missing_components"), "contrato informa componentes faltantes");
