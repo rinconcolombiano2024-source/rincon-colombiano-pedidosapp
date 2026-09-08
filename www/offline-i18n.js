@@ -1,5 +1,18 @@
 (function () {
   const rows = [
+    ["portal.mark","RC","RC","RC"],
+    ["portal.intro","Elige cómo quieres utilizar RC ORDERA. Pide comida, administra tu restaurante o realiza entregas.","Wybierz, jak chcesz korzystać z RC ORDERA. Zamawiaj jedzenie, zarządzaj restauracją lub realizuj dostawy.","Choose how to use RC ORDERA. Order food, manage your restaurant or make deliveries."],
+    ["portal.recommended","Recomendado","Polecane","Recommended"],
+    ["portal.client","Soy cliente","Jestem klientem","I am a customer"],
+    ["portal.clientDescription","Encuentra restaurantes, consulta el menú, realiza tu pedido y sigue su estado.","Znajdź restauracje, przeglądaj menu, złóż zamówienie i śledź jego status.","Find restaurants, browse menus, place your order and track its status."],
+    ["portal.order","Pedir comida","Zamów jedzenie","Order food"],
+    ["portal.restaurant","Soy restaurante","Prowadzę restaurację","I run a restaurant"],
+    ["portal.restaurantDescription","Gestiona pedidos, menú, cocina, estaciones, personal y operación.","Zarządzaj zamówieniami, menu, kuchnią, stanowiskami, personelem i działalnością.","Manage orders, menus, kitchen, stations, staff and operations."],
+    ["portal.manage","Administrar restaurante","Zarządzaj restauracją","Manage restaurant"],
+    ["portal.courier","Soy colaborador","Jestem kurierem","I am a courier"],
+    ["portal.courierDescription","Consulta entregas disponibles, administra tu disponibilidad y realiza domicilios.","Sprawdzaj dostępne dostawy, zarządzaj swoją dostępnością i dostarczaj zamówienia.","View available deliveries, manage your availability and deliver orders."],
+    ["portal.deliver","Realizar entregas","Realizuj dostawy","Make deliveries"],
+    ["portal.footer","RC ORDERA · Plataforma de pedidos y entregas","RC ORDERA · Platforma zamówień i dostaw","RC ORDERA · Ordering and delivery platform"],
     ["app.restaurantTitle", "RC ORDERA - Plataforma de pedidos", "RC ORDERA - Platforma zamówień", "RC ORDERA - Ordering platform"],
     ["app.waiterTitle", "RC ORDERA - Estacion de restaurante", "RC ORDERA - Stanowisko restauracji", "RC ORDERA - Restaurant station"],
     ["app.courierTitle", "RC ORDERA - Colaborador", "RC ORDERA - Kurier", "RC ORDERA - Courier"],
