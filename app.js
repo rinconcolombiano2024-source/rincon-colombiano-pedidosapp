@@ -3005,6 +3005,7 @@ cloudState.client.auth.onAuthStateChange((event, session) => {
 
   stopClientOrdersPolling();
   stopClientOrdersRealtime();
+  stopCentralRealtime();
   stopClientAlarm();
 
   updateClientOrdersBadge();
@@ -5274,7 +5275,45 @@ function handleClientMessageRealtimePayload(payload) {
     showRestaurantNotification("Mensaje de cliente", "Hay una respuesta o comprobante en un pedido.");
   }
 }
+let centralOrderRenderTimer = null;
+function handleCentralOrderRealtimePayload(payload) {
+  if (!["INSERT", "UPDATE"].includes(payload?.eventType)) return;
+  const row = payload.new;
+  if (!cloudState.user || row?.user_id !== cloudState.user.id) return;
+  const revision = Number(row.revision);
+  if (
+    centralSyncInProgress || cloudState.loading ||
+    !row.id || !row.order_json || row.order_json.id !== row.id ||
+    !Number.isSafeInteger(revision) || revision < 1
+  ) {
+    scheduleCentralRefresh({ orders: true });
+    return;
+  }
+  if (readDeletedOrderIds().includes(row.id)) return;
+  const current = savedOrders.find((order) => order.id === row.id);
+  // Never acknowledge or overwrite a local pending edit from a notification.
+  if (current && (needsCloudSync(current) || Number(current._syncRevision) >= revision)) return;
+  const incoming = normalizeOrderNotes({
+    ...row.order_json,
+    type: normalizeOrderType(row.order_json.type),
+    businessDate: orderBusinessDate(row.order_json),
+    _syncRevision: revision,
+    syncStatus: "synced",
+  });
+  savedOrders = mergeOrders([incoming], savedOrders.filter((order) => order.id !== row.id));
+  saveOrders();
+  if (centralOrderRenderTimer !== null) return;
+  centralOrderRenderTimer = setTimeout(() => {
+    centralOrderRenderTimer = null;
+    renderHistory();
+    updateCloudStatus();
+  }, 100);
+}
 function stopCentralRealtime() {
+  if (centralOrderRenderTimer !== null) {
+    clearTimeout(centralOrderRenderTimer);
+    centralOrderRenderTimer = null;
+  }
   if (centralSyncTimer) {
     clearTimeout(centralSyncTimer);
     centralSyncTimer = null;
@@ -5612,6 +5651,7 @@ if (
           orderBusinessDate(
             row.order_json
           ),
+        _syncRevision: Number.parseInt(row.revision, 10) || null,
         syncStatus: "synced",
       }))
       .filter(
@@ -5769,12 +5809,7 @@ function startCentralRealtime() {
     filter:
       `user_id=eq.${cloudState.user.id}`,
   },
-  () =>
-    scheduleCentralRefresh({
-      settings: false,
-      profile: false,
-      orders: true,
-    })
+  handleCentralOrderRealtimePayload
 )
 .on(
   "postgres_changes",
@@ -5785,12 +5820,7 @@ function startCentralRealtime() {
     filter:
       `user_id=eq.${cloudState.user.id}`,
   },
-  () =>
-    scheduleCentralRefresh({
-      settings: false,
-      profile: false,
-      orders: true,
-    })
+  handleCentralOrderRealtimePayload
 )
 
       .on(
@@ -8266,6 +8296,7 @@ async function signOut() {
   pendingClientOrders = [];
   stopClientOrdersPolling();
   stopClientOrdersRealtime();
+  stopCentralRealtime();
   stopClientAlarm();
   clearRememberedCloudSession();
   clearRestaurantLocalData();
