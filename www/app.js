@@ -5307,6 +5307,9 @@ function stopCentralRealtime() {
   }
 }
 
+// Bound full-list reads during bursts without postponing them indefinitely.
+const CENTRAL_REFRESH_MIN_INTERVAL_MS = 5000;
+let centralRefreshLastStartedAt = 0;
 let centralSyncRequestedScopes = {
   settings: false,
   profile: false,
@@ -5325,11 +5328,16 @@ function scheduleCentralRefresh(options = {}) {
   centralSyncRequestedScopes.orders ||= orders;
 
   if (centralSyncTimer) {
-    clearTimeout(centralSyncTimer);
+    return;
   }
 
+  const delayMs = Math.max(
+    250,
+    CENTRAL_REFRESH_MIN_INTERVAL_MS - (Date.now() - centralRefreshLastStartedAt)
+  );
   centralSyncTimer = setTimeout(() => {
     centralSyncTimer = null;
+    centralRefreshLastStartedAt = Date.now();
 
     const requestedScopes = {
       ...centralSyncRequestedScopes,
@@ -5359,7 +5367,7 @@ function scheduleCentralRefresh(options = {}) {
         error
       );
     });
-  }, 250);
+  }, delayMs);
 }
 async function refreshCentralCloudState(options = {}) {
   const {
