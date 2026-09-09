@@ -55,7 +55,7 @@ check(app.includes("menuSearchTimer = window.setTimeout"), "busqueda del restaur
 check(courier.includes('courierDeliveryRealtimeStatus === "SUBSCRIBED"'), "seguimiento de colaborador sin sondeo duplicado");
 check(/finally\s*\{[\s\S]*?cloudState\.loading\s*=\s*false;[\s\S]*?updateCloudStatus\(\);[\s\S]*?\}/s.test(app), "estado de nube siempre finaliza");
 check(app.includes("withCloudTimeout(cloudState.client.auth.getSession())"), "sesion de nube con tiempo maximo");
-check(app.includes("await withCloudTimeout(ensureMinimumDatabaseVersion())"), "version de nube con tiempo maximo");
+check(app.includes("await withCloudTimeout((signal) => ensureMinimumDatabaseVersion(signal))"), "version de nube con tiempo maximo y signal");
 check(
   /const settingsResponse\s*=\s*await withCloudTimeout\([\s\S]*?settingsRequest[\s\S]*?8000[\s\S]*?\.catch/s.test(app)
     && /Promise\.all\(\[[\s\S]*?withCloudTimeout\([\s\S]*?profileRequest[\s\S]*?withCloudTimeout\([\s\S]*?ordersRequest/s.test(app),
