@@ -671,7 +671,7 @@ const cloudState = {
   schemaCompatible: false,
 };
 
-async function ensureMinimumDatabaseVersion() {
+async function ensureMinimumDatabaseVersion(signal) {
   if (
     Number(cloudState.schemaVersion) >= MINIMUM_DATABASE_SCHEMA_VERSION
     && Number(cloudState.schemaContractVersion) >= MINIMUM_SYNC_CONTRACT_VERSION
@@ -679,7 +679,7 @@ async function ensureMinimumDatabaseVersion() {
   ) {
     return cloudState.schemaVersion;
   }
-  const { data, error } = await cloudState.client.rpc("get_rc_ordera_schema_version");
+  const { data, error } = await cloudState.client.rpc("get_rc_ordera_schema_version").abortSignal(signal);
 if (error) {
   const code = String(error?.code || "");
   const message = String(error?.message || "");
@@ -727,7 +727,7 @@ if (error) {
 
   const { data: contractData, error: contractError } = await cloudState.client.rpc(
     "get_rc_ordera_sync_contract"
-  );
+  ).abortSignal(signal);
   if (contractError) {
     if (["42883", "PGRST202"].includes(String(contractError?.code || ""))) {
       const schemaError = new Error(
@@ -1290,19 +1290,26 @@ function withCloudTimeout(
    * deja de esperarla.
    */
   if (
-    operation &&
-    typeof operation.abortSignal ===
-      "function" &&
     typeof AbortController !==
       "undefined"
   ) {
     abortController =
       new AbortController();
 
-    pendingOperation =
-      operation.abortSignal(
-        abortController.signal
-      );
+  }
+  const attachSignal = (request) =>
+    abortController && typeof request?.abortSignal === "function"
+      ? request.abortSignal(abortController.signal)
+      : request;
+  try {
+    pendingOperation = typeof operation === "function"
+      ? operation(abortController?.signal)
+      : operation;
+    pendingOperation = Array.isArray(pendingOperation)
+      ? Promise.all(pendingOperation.map(attachSignal))
+      : attachSignal(pendingOperation);
+  } catch (error) {
+    return Promise.reject(error);
   }
 
   const timeout =
@@ -1314,13 +1321,6 @@ function withCloudTimeout(
            * únicamente si esta operación
            * admite cancelación.
            */
-          if (
-            abortController &&
-            !abortController.signal.aborted
-          ) {
-            abortController.abort();
-          }
-
           const error =
             new Error(message);
 
@@ -1329,6 +1329,9 @@ function withCloudTimeout(
             "RC_ORDERA_CLOUD_TIMEOUT";
 
           reject(error);
+          if (abortController && !abortController.signal.aborted) {
+            abortController.abort();
+          }
         },
         timeoutMs
       );
@@ -3111,7 +3114,7 @@ if (menuProductCount(menuCatalog) === 0) {
 
 try {
     try {
-  await withCloudTimeout(ensureMinimumDatabaseVersion());
+  await withCloudTimeout((signal) => ensureMinimumDatabaseVersion(signal));
 } catch (error) {
   if (
     ["RC_ORDERA_SCHEMA_OUTDATED", "RC_ORDERA_SCHEMA_INCOMPLETE"].includes(error?.code)
@@ -3714,7 +3717,7 @@ function closureReportRange(periodType, periodValue) {
 async function loadCloudOrdersForReport(periodType, periodValue) {
   if (!cloudState.client || !cloudState.user || !navigator.onLine) return 0;
   closureReportRange(periodType, periodValue);
-  await ensureMinimumDatabaseVersion();
+  await withCloudTimeout((signal) => ensureMinimumDatabaseVersion(signal));
   const { data, error } = await cloudState.client.rpc("get_restaurant_closure_report", {
     p_period_type: periodType,
     p_period_value: String(periodValue || ""),
@@ -4679,7 +4682,7 @@ return { data, error };
       remoteOrderResponse,
       remoteCustomerOrderResponse,
     ] = await withCloudTimeout(
-      Promise.all([
+      [
         cloudState.client
           .from("orders")
           .select(
@@ -4708,7 +4711,7 @@ return { data, error };
           )
           .limit(1)
           .maybeSingle(),
-      ]),
+      ],
       "No fue posible verificar el pedido en nube a tiempo.",
       8000
     );
@@ -7710,7 +7713,7 @@ if (pendingOrders.length) {
 
   const [remoteOrdersResponse, remotePublicationsResponse] =
     await withCloudTimeout(
-      Promise.all([
+      [
         cloudState.client
           .from("orders")
           .select("id, order_json, revision")
@@ -7721,7 +7724,7 @@ if (pendingOrders.length) {
           .select("id, restaurant_order_id")
           .eq("user_id", cloudState.user.id)
           .in("restaurant_order_id", pendingIds),
-      ]),
+      ],
       "No fue posible comprobar los pedidos pendientes en nube a tiempo.",
       8000
     );
@@ -13317,6 +13320,8 @@ window.addEventListener("beforeunload", () => {
 
 
 window.addEventListener("offline", () => {
+  centralRealtimeNeedsCatchup = true;
+  clientOrdersRealtimeNeedsCatchup = true;
   renderCloudState();
 });
 function recoverCloudConnection() {
@@ -13346,9 +13351,17 @@ function recoverCloudConnection() {
       return false;
     }
 
-await syncPendingData({ silent: true });
+if (hasPendingDataToSync()) {
+  await syncPendingData({ silent: true });
+}
 
-const centralRefreshSucceeded =
+const needsCentralCatchup = centralRealtimeNeedsCatchup ||
+  !centralSyncChannel || centralSyncStatus !== "SUBSCRIBED";
+const needsClientCatchup = canUseCustomerModule() && (
+  clientOrdersRealtimeNeedsCatchup || !clientOrdersChannel ||
+  clientOrdersRealtimeStatus !== "SUBSCRIBED"
+);
+const centralRefreshSucceeded = !needsCentralCatchup ||
   await refreshCentralCloudState();
 
 if (!centralRefreshSucceeded) {
@@ -13356,7 +13369,7 @@ if (!centralRefreshSucceeded) {
   return false;
 }
 
-await refreshClientOrders({ silent: true });
+if (needsClientCatchup) await refreshClientOrders({ silent: true });
 
 centralRealtimeNeedsCatchup = false;
 clientOrdersRealtimeNeedsCatchup = false;
