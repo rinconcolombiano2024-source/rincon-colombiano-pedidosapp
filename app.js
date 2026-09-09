@@ -5352,6 +5352,14 @@ function stopCentralRealtime() {
 // Bound full-list reads during bursts without postponing them indefinitely.
 const CENTRAL_REFRESH_MIN_INTERVAL_MS = 5000;
 let centralRefreshLastStartedAt = 0;
+let centralRefreshRetryNotBefore = 0;
+function deferCentralRefreshAfterError(error, scopes) {
+  if (!isTemporarySyncInfrastructureError(error)) return;
+  centralRefreshRetryNotBefore = Math.max(
+    centralRefreshRetryNotBefore, Date.now() + 30000
+  );
+  scheduleCentralRefresh(scopes);
+}
 let centralSyncRequestedScopes = {
   settings: false,
   profile: false,
@@ -5375,11 +5383,11 @@ function scheduleCentralRefresh(options = {}) {
 
   const delayMs = Math.max(
     250,
-    CENTRAL_REFRESH_MIN_INTERVAL_MS - (Date.now() - centralRefreshLastStartedAt)
+    CENTRAL_REFRESH_MIN_INTERVAL_MS - (Date.now() - centralRefreshLastStartedAt),
+    centralRefreshRetryNotBefore - Date.now()
   );
   centralSyncTimer = setTimeout(() => {
     centralSyncTimer = null;
-    centralRefreshLastStartedAt = Date.now();
 
     const requestedScopes = {
       ...centralSyncRequestedScopes,
@@ -5425,6 +5433,14 @@ async function refreshCentralCloudState(options = {}) {
   return false;
 }
 
+if (Date.now() < Math.max(
+  centralRefreshLastStartedAt + CENTRAL_REFRESH_MIN_INTERVAL_MS,
+  centralRefreshRetryNotBefore
+)) {
+  scheduleCentralRefresh({ settings, profile, orders });
+  return false;
+}
+
 if (centralSyncInProgress) {
   centralSyncRefreshPending = true;
 
@@ -5437,6 +5453,7 @@ if (centralSyncInProgress) {
 
 centralSyncInProgress = true;
 centralSyncRefreshPending = false;
+centralRefreshLastStartedAt = Date.now();
 
   try {
     const [
@@ -5502,6 +5519,17 @@ centralSyncRefreshPending = false;
       profileResponse.error,
       ordersResponse.error,
     ].filter(Boolean);
+
+    if (refreshErrors.some(isTemporarySyncInfrastructureError)) {
+      deferCentralRefreshAfterError(
+        refreshErrors.find(isTemporarySyncInfrastructureError),
+        {
+          settings: Boolean(settings && settingsResponse.error),
+          profile: Boolean(profile && profileResponse.error),
+          orders: Boolean(orders && ordersResponse.error),
+        }
+      );
+    }
 
     refreshErrors.forEach((error) => {
       console.warn(
@@ -5693,6 +5721,7 @@ updateCloudStatus();
       error
     );
 
+    deferCentralRefreshAfterError(error, { settings, profile, orders });
     return false;
   } finally {
   centralSyncInProgress = false;
@@ -5904,10 +5933,7 @@ return;
   status === "CLOSED"
 ) {
   centralRealtimeNeedsCatchup = true;
-        if (centralRealtimeStableTimer) {
-    clearTimeout(centralRealtimeStableTimer);
-    centralRealtimeStableTimer = null;
-  }
+  stopCentralRealtime();
   console.warn(
     "Canal central Realtime:",
     status
