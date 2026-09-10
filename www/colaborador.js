@@ -424,6 +424,8 @@ let courierOffersTimer = null;
 let courierOffersPollingDelay = 15_000;
 let courierOffersLoadInFlight = null;
 let courierOffersLoadPending = false;
+let courierOffersRetryNotBefore = 0;
+let courierOffersRetryTimer = null;
 let courierAlarmContext = null;
 let courierAlarmTimer = null;
 let courierAlarmArmed = false;
@@ -1621,23 +1623,65 @@ function courierSyncOfferAlarm() {
   }
 }
 
+function courierOffersPollDelay() {
+  return Math.min(120000, Math.round(courierOffersPollingDelay * (1 + Math.random() * 0.2)));
+}
+
+function courierScheduleOffersRetry() {
+  if (courierOffersRetryTimer || !courierUser || courierProfile?.status !== "approved") return;
+  courierOffersRetryTimer = window.setTimeout(() => {
+    courierOffersRetryTimer = null;
+    if (!navigator.onLine || !courierUser || courierProfile?.status !== "approved") return;
+    courierLoadDeliveryOffers({ silent: true })
+      .catch((error) => courierLogError("delivery_retry", error))
+      .finally(() => courierSyncOffersPolling());
+  }, Math.max(0, courierOffersRetryNotBefore - Date.now()));
+}
+
+function courierDeferOffersRetry() {
+  courierOffersPollingDelay = Math.min(courierOffersPollingDelay * 2, 120000);
+  courierOffersRetryNotBefore = Date.now() + courierOffersPollDelay();
+  courierScheduleOffersRetry();
+}
+
 async function courierLoadDeliveryOffers(options = {}) {
   if (courierOffersLoadInFlight) {
-    courierOffersLoadPending = true;
+    if (options.reconcileAfterInFlight) courierOffersLoadPending = true;
     return courierOffersLoadInFlight;
   }
+  if (!navigator.onLine) return false;
+  if (Date.now() < courierOffersRetryNotBefore) {
+    courierScheduleOffersRetry();
+    return false;
+  }
   courierOffersLoadInFlight = courierLoadDeliveryOffersNow(options);
+  let succeeded = false;
   try {
-    return await courierOffersLoadInFlight;
+    const loaded = await courierOffersLoadInFlight;
+    succeeded = loaded === true;
+    if (loaded === false) {
+      courierDeferOffersRetry();
+    } else if (succeeded) {
+      courierOffersPollingDelay = 15000;
+      courierOffersRetryNotBefore = 0;
+      if (courierOffersRetryTimer) window.clearTimeout(courierOffersRetryTimer);
+      courierOffersRetryTimer = null;
+    }
+    return loaded;
+  } catch (error) {
+    courierDeferOffersRetry();
+    throw error;
   } finally {
     courierOffersLoadInFlight = null;
     if (courierOffersLoadPending) {
       courierOffersLoadPending = false;
+      if (succeeded) {
       queueMicrotask(() => {
         courierLoadDeliveryOffers({ silent: true }).catch((error) => {
           courierLogError("coalesced_delivery_reload", error);
         });
       });
+      }
     }
   }
 }
@@ -1653,10 +1697,12 @@ async function courierLoadDeliveryOffersNow(options = {}) {
 }
 
   if (!silent) courierSetMessage(courierElements.locationMessage, "Actualizando pedidos disponibles...");
+  const requestedUserId = courierUser.id;
   const { data, error } = await client.rpc("get_courier_delivery_offers");
+  if (courierUser?.id !== requestedUserId) return;
   if (error) {
     courierSetMessage(courierElements.locationMessage, courierFriendlyDeliveryError(error), "error");
-    return;
+    return false;
   }
 
   const previousOffered = new Set(courierAssignments.filter((assignment) => assignment.status === "offered").map((assignment) => assignment.assignment_id));
@@ -1688,6 +1734,7 @@ courierRender();
   } else if (!silent) {
     courierSetMessage(courierElements.locationMessage, "Pedidos actualizados.", "ok");
   }
+  return true;
 }
 
 function courierSyncOffersPolling() {
@@ -1696,23 +1743,21 @@ function courierSyncOffersPolling() {
     courierStopOffersPolling();
     return;
   }
-  if (courierOffersTimer) return;
+  if (courierOffersTimer || courierOffersRetryTimer) return;
 
   const poll = async () => {
     courierOffersTimer = null;
     if (!courierUser || courierProfile?.status !== "approved" || courierDeliveryRealtimeStatus === "SUBSCRIBED") return;
     try {
       await courierLoadDeliveryOffers({ silent: true });
-      courierOffersPollingDelay = 15_000;
     } catch (error) {
       courierLogError("delivery_poll_fallback", error);
-      courierOffersPollingDelay = Math.min(courierOffersPollingDelay * 2, 120_000);
     }
-    if (courierDeliveryRealtimeStatus !== "SUBSCRIBED") {
-      courierOffersTimer = window.setTimeout(poll, courierOffersPollingDelay);
+    if (courierDeliveryRealtimeStatus !== "SUBSCRIBED" && !courierOffersRetryTimer) {
+      courierOffersTimer = window.setTimeout(poll, courierOffersPollDelay());
     }
   };
-  courierOffersTimer = window.setTimeout(poll, courierOffersPollingDelay);
+  courierOffersTimer = window.setTimeout(poll, courierOffersPollDelay());
 }
 
 function courierStopOffersPolling() {
@@ -1722,6 +1767,9 @@ function courierStopOffersPolling() {
 }
 
 function courierStopDeliveryRealtime() {
+  if (courierOffersRetryTimer) window.clearTimeout(courierOffersRetryTimer);
+  courierOffersRetryTimer = null;
+  courierOffersLoadPending = false;
   if (courierDeliveryRealtimeRetryTimer) {
     window.clearTimeout(courierDeliveryRealtimeRetryTimer);
     courierDeliveryRealtimeRetryTimer = null;
@@ -1786,7 +1834,7 @@ function courierStartDeliveryRealtime() {
           courierRender();
           courierSyncOfferAlarm();
         } else {
-          courierLoadDeliveryOffers({ silent: true }).catch((error) => courierLogError("realtime_delivery_reload", error));
+          courierLoadDeliveryOffers({ silent: true, reconcileAfterInFlight: true }).catch((error) => courierLogError("realtime_delivery_reload", error));
         }
         if (["delivered", "cancelled", "rejected", "expired"].includes(assignment.status)) {
           courierLoadHistory().catch((error) => courierLogError("realtime_history_reload", error));
@@ -1817,8 +1865,7 @@ function courierStartDeliveryRealtime() {
           }
         }, COURIER_REALTIME_STABLE_MS);
         courierStopOffersPolling();
-        courierOffersPollingDelay = 15_000;
-        courierLoadDeliveryOffers({ silent: true }).catch((error) => courierLogError("realtime_delivery_resync", error));
+        courierLoadDeliveryOffers({ silent: true, reconcileAfterInFlight: true }).catch((error) => courierLogError("realtime_delivery_resync", error));
         return;
       }
       if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)) {
