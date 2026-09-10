@@ -30,7 +30,7 @@ Deno.serve(async (request) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const { data, error } = await client.rpc("process_delivery_dispatch_queue", {
-    p_limit: 100,
+    p_limit: 20,
   });
 
   if (error) {
@@ -46,7 +46,7 @@ Deno.serve(async (request) => {
     });
   }
 
-  return new Response(JSON.stringify({ processed: data || 0 }), {
+  return new Response(JSON.stringify({ processed: data ?? 0 }), {
     status: 200,
     headers: jsonHeaders,
   });
