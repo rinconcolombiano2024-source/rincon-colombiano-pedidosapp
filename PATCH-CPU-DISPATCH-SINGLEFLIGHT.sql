@@ -1,6 +1,36 @@
--- RC ORDERA V91.0.4
--- Control conservador de carga para la cola de domicilios.
--- No activa trabajos cron desactivados y no elimina datos.
+-- RC ORDERA: parche exclusivo de CPU/SQL, sin activar ni reprogramar cron.
+-- Ejecutar como propietario de la funcion (por ejemplo postgres), primero en pruebas.
+-- Si la definicion instalada es diferente, ABORTA sin reemplazarla.
+-- No ejecutar la migracion V91-04 completa para aplicar solamente este parche.
+begin;
+set local lock_timeout = '3s';
+set local statement_timeout = '10s';
+
+do $preflight$
+declare
+  v_body text;
+  v_hash text;
+begin
+  select p.prosrc into v_body
+  from pg_catalog.pg_proc p
+  where p.oid = pg_catalog.to_regprocedure('public.rc_ordera_process_delivery_queue(integer)');
+
+  if v_body is null then
+    raise exception 'Falta rc_ordera_process_delivery_queue(integer). Parche no aplicado.';
+  end if;
+
+  v_hash := pg_catalog.md5(
+    pg_catalog.btrim(pg_catalog.regexp_replace(v_body, '\s+', ' ', 'g'))
+  );
+  if v_hash not in (
+    '377a2fcb7d4a0b8c34575889c3f4a0fb', -- cuerpo V91-04 original
+    '82a643d8fde7d48221b134a59c7c3987' -- cuerpo con este parche (reaplicacion segura)
+  ) then
+    raise exception 'La cola instalada difiere de la base comprobada. Parche no aplicado.'
+      using hint = 'Conservar la definicion instalada y revisar pg_get_functiondef antes de continuar.';
+  end if;
+end;
+$preflight$;
 
 create or replace function public.rc_ordera_process_delivery_queue(p_limit integer default 20)
 returns integer
@@ -84,31 +114,6 @@ begin
 end;
 $$;
 
-revoke all on function public.rc_ordera_process_delivery_queue(integer)
-from public, anon, authenticated;
-
--- Ajusta frecuencia y lote sin cambiar active. Si el trabajo está desactivado,
--- permanece desactivado después de ejecutar esta migración.
-do $schedule$
-declare
-  v_job_id bigint;
-begin
-  if exists (select 1 from pg_extension where extname = 'pg_cron') then
-    for v_job_id in
-      select jobid
-      from cron.job
-      where jobname = 'rc-ordera-delivery-dispatch-v83'
-    loop
-      perform cron.alter_job(
-        v_job_id,
-        schedule => '*/2 * * * *',
-        command => 'select public.rc_ordera_process_delivery_queue(20);'
-      );
-    end loop;
-  end if;
-exception when others then
-  raise notice 'No fue posible ajustar el cron de domicilios: %', sqlerrm;
-end;
-$schedule$;
-
+-- CREATE OR REPLACE mantiene propietario y permisos existentes.
 notify pgrst, 'reload schema';
+commit;
