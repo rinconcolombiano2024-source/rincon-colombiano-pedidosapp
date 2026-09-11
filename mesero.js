@@ -1298,21 +1298,21 @@ if (canTakeOrders) {
     .channel(
       `waiter-live-${waiterStoreId}-${waiterUser.id}`
     )
-    .on(
-      "postgres_changes",
-      {
-        event: "UPDATE",
-        schema: "public",
-        table: "app_settings",
-        filter: `user_id=eq.${waiterStoreId}`,
-      },
-      () => {
-        waiterLoadMenu().catch(console.error);
-        waiterShowToast(
-          "Menu actualizado por el restaurante."
-        );
-      }
-    )
+.on(
+  "postgres_changes",
+  {
+    event: "*",
+    schema: "public",
+    table: "restaurant_public_catalogs",
+    filter: `restaurant_user_id=eq.${waiterStoreId}`,
+  },
+  () => {
+    waiterLoadMenu().catch(console.error);
+    waiterShowToast(
+      "Menu actualizado por el restaurante."
+    );
+  }
+)
     .on(
       "postgres_changes",
       {
