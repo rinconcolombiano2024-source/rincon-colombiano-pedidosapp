@@ -1,3 +1,12 @@
+function createLocalOrderUuid() {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 15) | 64;
+  bytes[8] = (bytes[8] & 63) | 128;
+  const hex = Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+  return [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20)].join("-");
+}
+
 const STORAGE_KEYS = {
   nextTicket: "rc_ordera_next_ticket",
   ticketDate: "rc_ordera_ticket_date",
@@ -2905,7 +2914,7 @@ function loadSupabaseLibrary() {
     }
 
     const script = document.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4";
+    script.src = "vendor/supabase-2.57.4.js";
     script.async = true;
     script.dataset.supabaseLoader = "true";
     script.addEventListener("load", () => finish(window.supabase?.createClient), { once: true });
@@ -3014,7 +3023,16 @@ cloudState.client.auth.onAuthStateChange((event, session) => {
   updateClientOrdersBadge();
 });
 
-  if (cloudState.user) await loadCloudData();
+  if (cloudState.user) {
+    await loadCloudData();
+    const paymentsReturn = new URLSearchParams(window.location.search).get("payments");
+    if (paymentsReturn === "return" || paymentsReturn === "refresh") {
+      const returnUrl = new URL(window.location.href);
+      returnUrl.searchParams.delete("payments");
+      window.history.replaceState(window.history.state, "", returnUrl.href);
+      await refreshMarketplaceAccountState(paymentsReturn === "refresh" ? "onboarding" : "status");
+    }
+  }
 }
 
 async function loadCloudData() {
@@ -6654,7 +6672,7 @@ async function acceptClientOrder(orderId) {
     return;
   }
 
-  const acceptedOrderId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+  const acceptedOrderId = createLocalOrderUuid();
   const serverName = clientOrder.source === "waiter"
     ? String(clientOrder.server_name || clientOrder.order_json?.serverName || "Mesero").trim()
     : shiftServerName || elements.serverName.value.trim() || "Caja";
@@ -11195,10 +11213,7 @@ async function upsertCurrentOrder(options = {}) {
    * para conservar un pedido.
    */
   if (!currentOrder.saved) {
-    currentOrder.id =
-      crypto.randomUUID
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random()}`;
+    currentOrder.id = createLocalOrderUuid();
 
     currentOrder.syncStatus =
       shouldQueueForCloud()

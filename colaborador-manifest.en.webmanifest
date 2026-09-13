@@ -3,7 +3,7 @@
   "short_name": "RC Courier",
   "id": "./courier-app-en",
   "description": "Delivery assignments and tracking for RC ORDERA couriers.",
-  "start_url": "./colaborador.html?app=v91.0.3&lang=en",
+  "start_url": "./colaborador.html?app=v91.0.4&lang=en",
   "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],
