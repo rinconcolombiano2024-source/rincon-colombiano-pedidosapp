@@ -1716,7 +1716,7 @@ const CUSTOMER_DELIVERY_RATES = {
 };
 
 function customerSetView(view, options = {}) {
-  const allowedViews = new Set(["home", "store", "orders", "reservations", "profile"]);
+  const allowedViews = new Set(["home", "store", "orders", "profile"]);
   let nextView = allowedViews.has(view) ? view : "home";
   if (nextView === "store" && !customerStoreId) nextView = "home";
   customerCurrentView = nextView;
