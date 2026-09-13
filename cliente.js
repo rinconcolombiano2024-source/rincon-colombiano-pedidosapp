@@ -55,9 +55,16 @@ const customerElements = {
   topLocation: document.querySelector("#customerTopLocation"),
   greeting: document.querySelector("#customerGreeting"),
   greetingName: document.querySelector("#customerGreetingName"),
-  profileAvatarInitials:
-  document.querySelector("#customerProfileAvatarInitials"),
-  views: Array.from(document.querySelectorAll("[data-customer-view]")),
+profileAvatarInitials:
+document.querySelector("#customerProfileAvatarInitials"),
+
+headerCartButton:
+document.querySelector("#customerHeaderCartButton"),
+
+headerCartBadge:
+document.querySelector("#customerHeaderCartBadge"),
+
+views: Array.from(document.querySelectorAll("[data-customer-view]")),
   viewButtons: Array.from(document.querySelectorAll("[data-customer-view-target]")),
   backToRestaurantsButton: document.querySelector("#customerBackToRestaurantsButton"),
   selectedRestaurantDescription: document.querySelector("#customerSelectedRestaurantDescription"),
@@ -125,7 +132,7 @@ const CUSTOMER_I18N = {
     documentTitleSuffix: "Menú del cliente",
     profileSaved: "Tus datos fueron guardados correctamente.",
     profileSaveError: "No se pudo guardar el perfil.",
-    notificationsAria: "Notificaciones",
+    cartAria: "Carrito",
     profileAria: "Perfil",
     heroEyebrow: "Pedido del cliente",
     languageLabel: "Idioma",
@@ -435,7 +442,7 @@ const CUSTOMER_I18N = {
     documentTitleSuffix: "Menu klienta",
     profileSaved: "Twoje dane zostały zapisane.",
     profileSaveError: "Nie udało się zapisać profilu.",
-    notificationsAria: "Powiadomienia",
+    cartAria: "Koszyk",
     profileAria: "Profil",
     heroEyebrow: "Zamowienie klienta",
     languageLabel: "Jezyk",
@@ -745,7 +752,7 @@ const CUSTOMER_I18N = {
     documentTitleSuffix: "Customer menu",
     profileSaved: "Your details were saved successfully.",
     profileSaveError: "The profile could not be saved.",
-    notificationsAria: "Notifications",
+    cartAria: "Cart",
     profileAria: "Profile",
     heroEyebrow: "Customer order",
     languageLabel: "Language",
@@ -5398,7 +5405,54 @@ function customerRenderMenu() {
     )
     .join("");
 }
+function customerCartItemCount() {
+  return customerCart.reduce(
+    (total, item) =>
+      total +
+      Math.max(
+        1,
+        Number.parseInt(item?.qty, 10) || 1
+      ),
+    0
+  );
+}
 
+function customerRenderHeaderCart() {
+  if (
+    !customerElements.headerCartBadge ||
+    !customerElements.headerCartButton
+  ) {
+    return;
+  }
+
+  const count = customerCartItemCount();
+
+  customerElements.headerCartBadge.textContent =
+    count > 99 ? "99+" : String(count);
+
+  customerElements.headerCartBadge.hidden =
+    count === 0;
+}
+
+function customerOpenHeaderCart() {
+  if (!customerStoreId) {
+    customerSetView("home");
+    return;
+  }
+
+  customerSetView("store", {
+    keepScroll: true,
+  });
+
+  window.requestAnimationFrame(() => {
+    customerElements.cartItems
+      ?.closest(".customer-cart-panel")
+      ?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+  });
+}
 function customerRenderCart() {
   if (!customerCart.length) {
     customerElements.cartItems.innerHTML = `<div class="customer-empty">${customerEscapeHtml(customerT("emptyCart"))}</div>`;
@@ -5429,8 +5483,12 @@ function customerRenderCart() {
   customerElements.cartTotal.textContent = customerFormatMoney(customerCartTotal());
   customerElements.deliveryFeeRow.hidden = customerElements.orderType.value !== "Domicilio";
   customerElements.deliveryFeeLabel.textContent = customerFormatMoney(customerDeliveryFee());
-  customerElements.sendButton.disabled = customerCart.length === 0;
-  customerRenderSelectedRestaurantDetails();
+customerElements.sendButton.disabled =
+  customerCart.length === 0;
+
+customerRenderHeaderCart();
+
+customerRenderSelectedRestaurantDetails();
 }
 
 function customerAddItem(dish) {
@@ -6138,6 +6196,10 @@ customerElements.favoriteRestaurantButton?.addEventListener("click", () => {
     customerRenderFavoriteRestaurantButton();
   });
 });
+customerElements.headerCartButton?.addEventListener(
+  "click",
+  customerOpenHeaderCart
+);
 customerElements.notifyButton.addEventListener("click", () => {
   customerRequestNotificationPermission().catch(() => {
     customerSetTrackingStatus(customerT("notificationEnableError"), "error");
