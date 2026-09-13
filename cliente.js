@@ -67,6 +67,7 @@ document.querySelector("#customerHeaderCartBadge"),
 views: Array.from(document.querySelectorAll("[data-customer-view]")),
   viewButtons: Array.from(document.querySelectorAll("[data-customer-view-target]")),
   backToRestaurantsButton: document.querySelector("#customerBackToRestaurantsButton"),
+  
   selectedRestaurantDescription: document.querySelector("#customerSelectedRestaurantDescription"),
   selectedRestaurantAddress: document.querySelector("#customerSelectedRestaurantAddress"),
   selectedRestaurantDelivery: document.querySelector("#customerSelectedRestaurantDelivery"),
@@ -79,9 +80,20 @@ editProfileButton: document.querySelector("#customerEditProfileButton"),
   menuSearchInput: document.querySelector("#customerMenuSearchInput"),
   menuSearchClearButton: document.querySelector("#customerMenuSearchClearButton"),
   menuGrid: document.querySelector("#customerMenuGrid"),
-  cartItems: document.querySelector("#customerCartItems"),
-  cartTotal: document.querySelector("#customerCartTotal"),
-  notifyButton: document.querySelector("#customerNotifyButton"),
+cartItems: document.querySelector("#customerCartItems"),
+cartTotal: document.querySelector("#customerCartTotal"),
+
+cartModal:
+  document.querySelector("#customerCartModal"),
+
+cartSheet:
+  document.querySelector("#customerCartSheet"),
+
+cartCloseButton:
+  document.querySelector("#customerCartCloseButton"),
+
+notifyButton:
+  document.querySelector("#customerNotifyButton"),
   orderType: document.querySelector("#customerOrderType"),
   paymentMethod: document.querySelector("#customerPaymentMethod"),
   onlinePaymentOption: document.querySelector("#customerOnlinePaymentOption"),
@@ -133,6 +145,8 @@ const CUSTOMER_I18N = {
     profileSaved: "Tus datos fueron guardados correctamente.",
     profileSaveError: "No se pudo guardar el perfil.",
     cartAria: "Carrito",
+    closeCartAria: "Cerrar carrito",
+    editProfile: "Editar perfil",
     profileAria: "Perfil",
     heroEyebrow: "Pedido del cliente",
     languageLabel: "Idioma",
@@ -443,6 +457,8 @@ const CUSTOMER_I18N = {
     profileSaved: "Twoje dane zostały zapisane.",
     profileSaveError: "Nie udało się zapisać profilu.",
     cartAria: "Koszyk",
+    closeCartAria: "Zamknij koszyk",
+    editProfile: "Edytuj profil",
     profileAria: "Profil",
     heroEyebrow: "Zamowienie klienta",
     languageLabel: "Jezyk",
@@ -610,7 +626,7 @@ const CUSTOMER_I18N = {
     enableNotifications: "Wlacz powiadomienia",
     orderTypeLabel: "Typ zamowienia",
     eatHere: "Na miejscu",
-    pickup: "Na wynos / odbior w lokalu",
+    pickup: "Na wynos / odbiór w lokalu",
     delivery: "Dostawa",
     nameLabel: "Imie",
     namePlaceholder: "Twoje imie",
@@ -753,6 +769,8 @@ const CUSTOMER_I18N = {
     profileSaved: "Your details were saved successfully.",
     profileSaveError: "The profile could not be saved.",
     cartAria: "Cart",
+    closeCartAria: "Close cart",
+    editProfile: "Edit profile",
     profileAria: "Profile",
     heroEyebrow: "Customer order",
     languageLabel: "Language",
@@ -1580,9 +1598,19 @@ function customerSetLanguage(language) {
 }
 
 function customerOrderTypeText(value) {
-  if (value === "Recoger en el punto") return customerT("pickup");
-  if (value === "Domicilio") return customerT("delivery");
-  return customerT("eatHere");
+  if (value === "Recoger en el punto") {
+    return customerT("pickup");
+  }
+
+  if (value === "Domicilio") {
+    return customerT("delivery");
+  }
+
+  if (value === "Comer en el punto") {
+    return customerT("eatHere");
+  }
+
+  return String(value || "");
 }
 
 function customerPaymentMethodText(value) {
@@ -2767,7 +2795,7 @@ function customerRenderHistory() {
           <div class="customer-history-meta">
             <span data-type="${customerEscapeHtml(statusType)}">${customerEscapeHtml(customerStatusText(row))}</span>
             <span>${customerEscapeHtml(ticketText)}</span>
-            <span>${customerEscapeHtml(row.order_type || "")}</span>
+            <span>${customerEscapeHtml(customerOrderTypeText(row.order_type))}</span>
             <span>${customerEscapeHtml(itemsText)}</span>
           </div>
           <div class="customer-history-total">
