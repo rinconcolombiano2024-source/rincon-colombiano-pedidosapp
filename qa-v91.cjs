@@ -48,7 +48,7 @@ const criticalCodeBlock = criticalCodeStart >= 0 && criticalCodeEnd > criticalCo
   : "";
 check(criticalCodeBlock.includes("fetch(event.request)"), "PWA intenta primero la red para codigo critico");
 check(criticalCodeBlock.includes("cache.put(event.request, responseClone)"), "PWA actualiza cache con respuesta valida");
-check(criticalCodeBlock.includes("caches.match(event.request)"), "PWA usa cache cuando falla la red");
+check(criticalCodeBlock.includes("await cachedRuntimeResource(event.request)") && sw.includes("cache.match(request, { ignoreSearch: true })"), "PWA usa cache cuando falla la red");
 check(criticalCodeBlock.includes('status: 503'), "PWA responde 503 sin red ni cache");
 check(app.includes("requestIdleCallback(persistMenuCatalogCache"), "cache del menu fuera del hilo principal");
 check(app.includes("menuSearchTimer = window.setTimeout"), "busqueda del restaurante con debounce");

@@ -4,7 +4,7 @@
   "private": true,
   "description": "RC ORDERA multi-restaurante",
   "scripts": {
-    "qa": "node qa-v91.cjs && node qa-i18n-v87.cjs",
+    "qa": "node qa-v91.cjs && node qa-i18n-v87.cjs && node --test tests/*.test.cjs",
     "qa:i18n": "node qa-i18n-v87.cjs",
     "qa:e2e": "playwright test",
     "qa:integration": "node --test tests/integration/supabase-isolation.test.cjs tests/integration/concurrency-harness.test.cjs",
@@ -19,10 +19,10 @@
   },
   "devDependencies": {
     "@capacitor/cli": "8.5.0",
+    "@electric-sql/pglite": "0.5.8",
     "@playwright/test": "1.62.1"
   },
   "engines": {
     "node": ">=22.0.0"
   }
 }
-
