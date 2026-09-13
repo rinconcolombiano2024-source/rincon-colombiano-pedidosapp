@@ -1,20 +1,19 @@
 {
-  "name": "RC ORDERA Administration",
-  "short_name": "RC Admin",
-  "id": "./admin-app-en",
-  "description": "Private RC ORDERA administration panel.",
-  "start_url": "./admin.html?app=v91.0.4&lang=en",
-  "scope": "./",
+  "name": "RC ORDERA Restaurant",
+  "short_name": "RC Restaurant",
+  "id": "./restaurant-app-en",
+  "description": "Restaurant orders, internal tickets, menu, staff, history, and closing reports.",
+  "start_url": "./restaurante.html?app=v91.0.4&lang=en",
+  "scope": ".",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],
-  "background_color": "#f3f6f8",
+  "background_color": "#f4f6f9",
   "theme_color": "#1f8f4d",
   "orientation": "any",
-  "categories": ["business", "productivity"],
+  "categories": ["food", "business", "productivity"],
   "icons": [
     { "src": "app-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
     { "src": "app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
     { "src": "app-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
   ]
 }
-

@@ -565,7 +565,7 @@ function courierLoadSupabaseLibrary() {
     }
 
     const script = document.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4";
+    script.src = "vendor/supabase-2.57.4.js";
     script.async = true;
     script.dataset.supabaseLoader = "true";
     script.addEventListener("load", () => resolve(Boolean(window.supabase?.createClient)), { once: true });
@@ -2434,7 +2434,13 @@ if (data.status === "approved") {
   courierStartDeliveryRealtime();
   courierLoadDeliveryOffers({ silent: true }).catch(() => {});
   courierLoadHistory().catch(() => {});
-  courierRefreshPayoutState("status").catch(() => {});
+  const paymentsReturn = new URLSearchParams(window.location.search).get("payments");
+  if (paymentsReturn === "return" || paymentsReturn === "refresh") {
+    const returnUrl = new URL(window.location.href);
+    returnUrl.searchParams.delete("payments");
+    window.history.replaceState(window.history.state, "", returnUrl.href);
+  }
+  courierRefreshPayoutState(paymentsReturn === "refresh" ? "onboarding" : "status").catch(() => {});
 }
 return true;
 }

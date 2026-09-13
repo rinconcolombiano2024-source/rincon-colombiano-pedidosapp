@@ -1,3 +1,12 @@
+function createLocalOrderUuid() {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 15) | 64;
+  bytes[8] = (bytes[8] & 63) | 128;
+  const hex = Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+  return [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20)].join("-");
+}
+
 const waiterParams = new URLSearchParams(window.location.search);
 const waiterStoreId = String(waiterParams.get("store") || "").trim();
 
@@ -1074,7 +1083,7 @@ async function waiterToggleShift() {
 
 function waiterOrderPayload() {
   return {
-    p_id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+    p_id: createLocalOrderUuid(),
     p_restaurant_user_id: waiterStoreId,
     p_table_label: waiterElements.tableInput.value.trim(),
     p_customer_name: waiterElements.customerInput.value.trim(),
@@ -1303,8 +1312,8 @@ if (canTakeOrders) {
       {
         event: "UPDATE",
         schema: "public",
-        table: "app_settings",
-        filter: `user_id=eq.${waiterStoreId}`,
+        table: "restaurant_public_catalogs",
+        filter: `restaurant_user_id=eq.${waiterStoreId}`,
       },
       () => {
         waiterLoadMenu().catch(console.error);

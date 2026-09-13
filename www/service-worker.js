@@ -1,7 +1,8 @@
-const CACHE_NAME = "rc-ordera-v91-0-4-performance-core";
+const CACHE_NAME = "rc-ordera-v91-0-4-offline-r2";
 const APP_FILES = [
   "./",
   "./index.html",
+  "./restaurante.html",
   "./cliente.html",
   "./colaborador.html",
   "./mesero.html",
@@ -15,7 +16,11 @@ const APP_FILES = [
   "./offline-i18n.js",
   "./auto-translate.js",
   "./supabase-config.js",
+  "./vendor/supabase-2.57.4.js",
   "./manifest.webmanifest",
+  "./restaurante-manifest.webmanifest",
+  "./restaurante-manifest.pl.webmanifest",
+  "./restaurante-manifest.en.webmanifest",
   "./cliente-manifest.webmanifest",
   "./colaborador-manifest.webmanifest",
   "./admin-manifest.webmanifest",
@@ -46,10 +51,21 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
+      .then((keys) => Promise.all(keys.filter((key) => key.startsWith("rc-ordera-") && key !== CACHE_NAME).map((key) => caches.delete(key))))
   );
   self.clients.claim();
 });
+
+async function cachedRuntimeResource(request) {
+  const cache = await caches.open(CACHE_NAME);
+  const exact = await cache.match(request);
+  if (exact) return exact;
+  // Precache stores unversioned files; HTML requests scripts with ?v=.
+  // Ignore the query only for known static runtime assets, never for API data.
+  const pathname = new URL(request.url).pathname;
+  const known = APP_FILES.some((file) => new URL(file, self.location.href).pathname === pathname);
+  return known ? cache.match(request, { ignoreSearch: true }) : undefined;
+}
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
@@ -73,14 +89,14 @@ self.addEventListener("fetch", (event) => {
 
         event.waitUntil(
           caches.open(CACHE_NAME).then((cache) => {
-            return cache.put(event.request, responseClone);
+            return cache.put(event.request, responseClone).catch(() => {});
           })
         );
 
         return response;
       })
       .catch(async () => {
-        const cachedResponse = await caches.match(event.request);
+        const cachedResponse = await cachedRuntimeResource(event.request);
 
         if (cachedResponse) {
           return cachedResponse;
@@ -96,19 +112,22 @@ self.addEventListener("fetch", (event) => {
   return;
 }
 const updateCache = fetch(event.request).then(async (response) => {
+  if (!response || !response.ok) throw new Error("Document fetch failed");
   if (response && response.ok) {
     const cache = await caches.open(CACHE_NAME);
-    await cache.put(event.request, response.clone());
+    await cache.put(event.request, response.clone()).catch(() => {});
   }
   return response;
 });
   event.respondWith(
     updateCache.catch(async () => {
-      const cachedRequest = await caches.match(event.request, { ignoreSearch: true });
+      const cachedRequest = await cachedRuntimeResource(event.request);
       if (cachedRequest) return cachedRequest;
       const pageName = requestUrl.pathname.split("/").pop() || "index.html";
-      const pageFallbacks = new Set(["index.html", "cliente.html", "colaborador.html", "mesero.html", "admin.html"]);
-      return caches.match(pageFallbacks.has(pageName) ? `./${pageName}` : "./index.html");
+      const pageFallbacks = new Set(["index.html", "restaurante.html", "cliente.html", "colaborador.html", "mesero.html", "admin.html"]);
+      const cache = await caches.open(CACHE_NAME);
+      return (await cache.match(pageFallbacks.has(pageName) ? `./${pageName}` : "./index.html"))
+        || new Response("Página no disponible sin conexión.", { status: 503 });
     })
   );
 });
