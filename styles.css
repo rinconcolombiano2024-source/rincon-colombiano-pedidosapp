@@ -5492,8 +5492,27 @@ body.auth-checking > :not(script) {
 }
 
 .customer-notification-icon {
-  font-size: 28px;
+  width: 28px;
+  height: 28px;
+
+  display: grid;
+  place-items: center;
+
   line-height: 1;
+}
+
+.customer-notification-icon svg {
+  display: block;
+
+  width: 27px;
+  height: 27px;
+
+  fill: none;
+  stroke: currentColor;
+
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .customer-notification-badge {
