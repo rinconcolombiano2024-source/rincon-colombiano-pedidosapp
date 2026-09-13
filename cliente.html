@@ -570,14 +570,52 @@
             <div class="customer-menu-grid" id="customerMenuGrid"></div>
           </section>
 
-          <aside class="customer-cart-panel" aria-label="Pedido del cliente" data-i18n-aria-label="cartPanelAria">
-            <div class="customer-cart-heading">
-              <h2 data-i18n="yourOrder">Tu pedido</h2>
-              <button class="customer-icon-action" id="customerNotifyButton" type="button" title="Activar notificaciones" aria-label="Activar notificaciones" data-i18n-aria-label="enableNotifications">
-                <span aria-hidden="true">!</span>
-              </button>
-            </div>
+         <div class="customer-cart-modal" id="customerCartModal" hidden>
+  <div class="customer-cart-modal-backdrop" data-cart-close="true"></div>
 
+  <section
+    class="customer-cart-panel customer-cart-sheet"
+    id="customerCartSheet"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="customerCartModalTitle"
+    tabindex="-1"
+  >
+
+    <div class="customer-cart-handle" aria-hidden="true"></div>
+           <div class="customer-cart-heading">
+
+  <h2 id="customerCartModalTitle" data-i18n="yourOrder">
+    Tu pedido
+  </h2>
+
+  <div class="customer-cart-heading-actions">
+
+    <button
+      class="customer-icon-action"
+      id="customerNotifyButton"
+      type="button"
+      title="Activar notificaciones"
+      aria-label="Activar notificaciones"
+      data-i18n-aria-label="enableNotifications"
+    >
+      <span aria-hidden="true">!</span>
+    </button>
+
+    <button
+      class="customer-cart-close"
+      id="customerCartCloseButton"
+      type="button"
+      aria-label="Cerrar carrito"
+      data-i18n-aria-label="closeCartAria"
+    >
+      <span aria-hidden="true">×</span>
+    </button>
+
+  </div>
+
+</div> 
+    
             <label>
               <span data-i18n="orderTypeLabel">Tipo de pedido</span>
               <select id="customerOrderType">
@@ -651,8 +689,17 @@
               <strong id="customerDeliveryFeeLabel">$0.00</strong>
             </div>
 
-            <button class="customer-submit-button" id="sendCustomerOrderButton" type="button" data-i18n="sendOrder">Enviar pedido</button>
-          </aside>
+            <button
+  class="customer-submit-button"
+  id="sendCustomerOrderButton"
+  type="button"
+  data-i18n="sendOrder"
+>
+  Enviar pedido
+</button>
+
+  </section>
+</div>
         </section>
       </section>
 
