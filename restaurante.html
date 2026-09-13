@@ -35,24 +35,26 @@
         <p class="eyebrow">Plataforma de pedidos</p>
         <h1 id="authBusinessName">RC ORDERA</h1>
         <p class="auth-tagline">Tu comida favorita, cerca de ti.</p>
-        <div class="role-access-grid">
-          <section class="role-access-card">
-            <h2>Restaurante</h2>
-            <button id="openRestaurantSignInButton" type="button">Iniciar sesion como restaurante</button>
-            <button id="openRestaurantSignupButton" type="button">Registrarse como restaurante</button>
-          </section>
-          <section class="role-access-card">
-            <h2>Cliente</h2>
-            <a href="cliente.html?auth=login">Iniciar sesion como cliente</a>
-            <a href="cliente.html?auth=register">Registrarse como cliente</a>
-          </section>
-          <section class="role-access-card">
-            <h2>Colaborador</h2>
-            <a href="colaborador.html?auth=login">Iniciar sesion como colaborador</a>
-            <a href="colaborador.html?auth=register">Registrarse como colaborador</a>
-          </section>
-        </div>
-      </div>
+       <div class="role-access-grid restaurant-access-grid">
+  <section class="role-access-card">
+    <h2>Restaurante</h2>
+
+    <button
+      id="openRestaurantSignInButton"
+      type="button"
+    >
+      Iniciar sesion como restaurante
+    </button>
+
+    <button
+      id="openRestaurantSignupButton"
+      type="button"
+    >
+      Registrarse como restaurante
+    </button>
+  </section>
+</div>
+</div>
 
       <dialog id="restaurantAuthDialog" class="auth-dialog">
         <form class="auth-card" id="authForm" data-mode="login">
