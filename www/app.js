@@ -4564,11 +4564,65 @@ async function setCloudNextTicket(number) {
   if (error) throw error;
 
 }
-
 async function saveCloudOrder(order) {
-  if (!cloudState.client || !cloudState.user || !order.saved) return;
+  if (
+    !cloudState.client ||
+    !cloudState.user ||
+    !order.saved
+  ) {
+    return;
+  }
 
- const applyConfirmedCloudState = (result = {}) => {
+  /*
+   * PROTECCIÓN CENTRAL CONTRA CONFLICTOS DE REVISIÓN.
+   *
+   * Un pedido cuya revisión local quedó obsoleta
+   * NO puede volver a llamar al RPC hasta que exista
+   * una reconciliación real con Supabase.
+   *
+   * Esto protege todas las rutas:
+   * - Guardar
+   * - Imprimir
+   * - PDF
+   * - Cambio de estado de pago
+   * - Cola automática
+   */
+  if (isOrderRevisionSyncBlocked(order)) {
+    const blockedError = new Error(
+      appUiText(
+        "Este pedido cambió en otro dispositivo y requiere reconciliación antes de volver a sincronizarse."
+      )
+    );
+
+    blockedError.code =
+      "ORDER_REVISION_CONFLICT";
+
+    const remoteRevision =
+      Number.parseInt(
+        order._syncRemoteRevision,
+        10
+      );
+
+    blockedError.remoteRevision =
+      Number.isFinite(remoteRevision)
+        ? remoteRevision
+        : null;
+
+    console.warn(
+      "[RC ORDERA] RPC bloqueado: pedido con conflicto de revisión.",
+      {
+        orderId: order.id,
+        localRevision:
+          order._syncRevision || null,
+        remoteRevision:
+          blockedError.remoteRevision,
+      }
+    );
+
+    throw blockedError;
+  }
+
+  const applyConfirmedCloudState = (result = {}) => {
   const parsedRevision = Number.parseInt(
     result?.revision,
     10
