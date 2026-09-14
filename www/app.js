@@ -61,6 +61,7 @@ const CLIENT_ORDERS_REALTIME_STABLE_MS = 30_000;
 const CENTRAL_REALTIME_RECONNECT_MIN_MS = 1_500;
 const CENTRAL_REALTIME_RECONNECT_MAX_MS = 60_000;
 const CENTRAL_REALTIME_STABLE_MS = 30_000;
+const CENTRAL_REALTIME_ENABLED = false;
 const CLOUD_RECOVERY_DEDUP_MS = 30_000;
 const SYNC_INFRASTRUCTURE_BACKOFF_MS = 5 * 60_000;
 const SYNC_ORDER_BATCH_SIZE = 5;
@@ -4564,7 +4565,59 @@ async function setCloudNextTicket(number) {
   if (error) throw error;
 
 }
-async function saveCloudOrder(order) {
+
+const cloudOrderSaveInFlight = new Map();
+let cloudOrderSaveQueue = Promise.resolve();
+
+async function saveCloudOrder(order, signal = null) {
+  const orderId =
+    String(order?.id || "");
+
+  if (
+    orderId &&
+    cloudOrderSaveInFlight.has(orderId)
+  ) {
+    return cloudOrderSaveInFlight.get(orderId);
+  }
+
+  const operation =
+    cloudOrderSaveQueue
+      .catch(() => {})
+      .then(() =>
+        saveCloudOrderInternal(
+          order,
+          signal
+        )
+      );
+
+  if (orderId) {
+    cloudOrderSaveInFlight.set(
+      orderId,
+      operation
+    );
+  }
+
+  cloudOrderSaveQueue =
+    operation.catch(() => {});
+
+  try {
+    return await operation;
+  } finally {
+    if (
+      orderId &&
+      cloudOrderSaveInFlight.get(orderId) ===
+        operation
+    ) {
+      cloudOrderSaveInFlight.delete(
+        orderId
+      );
+    }
+  }
+}
+async function saveCloudOrderInternal(
+  order,
+  signal = null
+) {
   if (
     !cloudState.client ||
     !cloudState.user ||
@@ -4691,19 +4744,36 @@ const expectedRevision =
   Number.isFinite(parsedRevision) && parsedRevision > 0
     ? parsedRevision
     : null;
-const { data, error } = await cloudState.client.rpc(
-  "save_and_publish_restaurant_order_atomic",
-  {
-    p_id: order.id,
-    p_ticket_number: order.ticketNumber,
-    p_business_date: orderBusinessDate(order),
-    p_order_json: orderForCloud,
-    p_total: orderTotal(order),
-    p_created_at: order.createdAt || null,
-    p_customer_order_id: order.customerOrderId || null,
-    p_expected_revision: expectedRevision,
-  }
-);
+const rpcRequest =
+  cloudState.client.rpc(
+    "save_and_publish_restaurant_order_atomic",
+    {
+      p_id: order.id,
+      p_ticket_number:
+        order.ticketNumber,
+      p_business_date:
+        orderBusinessDate(order),
+      p_order_json:
+        orderForCloud,
+      p_total:
+        orderTotal(order),
+      p_created_at:
+        order.createdAt || null,
+      p_customer_order_id:
+        order.customerOrderId || null,
+      p_expected_revision:
+        expectedRevision,
+    }
+  );
+
+const { data, error } =
+  await (
+    signal &&
+    typeof rpcRequest.abortSignal ===
+      "function"
+      ? rpcRequest.abortSignal(signal)
+      : rpcRequest
+  );
 if (!error) {
   const result =
     Array.isArray(data)
@@ -5936,6 +6006,17 @@ function scheduleCentralRealtimeReconnect() {
   }, retryDelay);
 }
 function startCentralRealtime() {
+  if (!CENTRAL_REALTIME_ENABLED) {
+    stopCentralRealtime();
+    return;
+  }
+
+  if (
+    centralSyncChannel &&
+    ["connecting", "SUBSCRIBED"].includes(centralSyncStatus)
+  ) {
+    return;
+  }
   if (
     centralSyncChannel &&
     ["connecting", "SUBSCRIBED"].includes(centralSyncStatus)
@@ -11512,11 +11593,15 @@ async function upsertCurrentOrder(options = {}) {
    */
   if (canTryCloud) {
     try {
-      await withCloudTimeout(
-        saveCloudOrder(currentOrder),
-        "La nube tardó demasiado en guardar el pedido.",
-        cloudTimeoutMs
-      );
+await withCloudTimeout(
+  (signal) =>
+    saveCloudOrder(
+      currentOrder,
+      signal
+    ),
+  "La nube tardó demasiado en guardar el pedido.",
+  cloudTimeoutMs
+);
 
       currentOrder.syncStatus =
         "synced";
@@ -13596,9 +13681,15 @@ function recoverCloudConnection() {
 if (hasPendingDataToSync()) {
   await syncPendingData({ silent: true });
 }
-
-const needsCentralCatchup = centralRealtimeNeedsCatchup ||
-  !centralSyncChannel || centralSyncStatus !== "SUBSCRIBED";
+const needsCentralCatchup =
+  centralRealtimeNeedsCatchup ||
+  (
+    CENTRAL_REALTIME_ENABLED &&
+    (
+      !centralSyncChannel ||
+      centralSyncStatus !== "SUBSCRIBED"
+    )
+  );
 const needsClientCatchup = canUseCustomerModule() && (
   clientOrdersRealtimeNeedsCatchup || !clientOrdersChannel ||
   clientOrdersRealtimeStatus !== "SUBSCRIBED"
