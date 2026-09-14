@@ -88,11 +88,16 @@ let waiterRealtimeReconnectDelay =
   WAITER_REALTIME_RECONNECT_MIN_MS;
 let waiterOrdersRealtimeStatus = "idle";
 let waiterStationPollingDelay = WAITER_STATION_POLL_MIN_MS;
+let waiterStationPollGeneration = 0;
 let waiterAuthorizeInFlight = null;
 let waiterAuthorizeLastCompletedAt = 0;
 let waiterMenuLoadInFlight = null;
 let waiterStationLoadInFlight = null;
 let waiterStationLoadPending = false;
+let waiterStationRetryTimer = null;
+let waiterStationRetryNotBefore = 0;
+let waiterStationRetryDelay = WAITER_STATION_POLL_MIN_MS;
+let waiterStationRetryContext = "";
 let waiterSentOrdersLoadInFlight = null;
 let waiterSentOrdersLoadPending = false;
 let waiterToastTimer = null;
@@ -788,25 +793,89 @@ function waiterRenderStationOrders(orders = []) {
     .join("");
 }
 
-async function waiterLoadStationOrders() {
+function waiterStationLoadContext() {
+  return waiterClient && waiterUser && waiterMembership
+    ? `${waiterStoreId}:${waiterUser.id}:${waiterMembership.station}`
+    : "";
+}
+
+function waiterScheduleStationRetry() {
+  const context = waiterStationLoadContext();
+  if (waiterStationRetryTimer !== null || waiterStationPollTimer !== null || !context) return;
+  waiterStationRetryTimer = window.setTimeout(async () => {
+    waiterStationRetryTimer = null;
+    if (context !== waiterStationLoadContext() || !navigator.onLine || document.visibilityState !== "visible") return;
+    try {
+      await waiterLoadStationOrders();
+    } catch (error) {
+      console.error(error);
+    }
+  }, Math.max(250, waiterStationRetryNotBefore - Date.now()));
+}
+
+function waiterDeferStationRetry() {
+  waiterStationRetryDelay = Math.min(waiterStationRetryDelay * 2, WAITER_STATION_POLL_MAX_MS);
+  const delay = Math.min(WAITER_STATION_POLL_MAX_MS, Math.max(
+    WAITER_STATION_POLL_MIN_MS, waiterStationRetryDelay * (0.9 + Math.random() * 0.2)
+  ));
+  waiterStationRetryNotBefore = Date.now() + delay;
+  waiterScheduleStationRetry();
+}
+
+async function waiterLoadStationOrders(options = {}) {
   if (waiterStationLoadInFlight) {
-    waiterStationLoadPending = true;
+    if (options.reconcileAfterInFlight !== false) waiterStationLoadPending = true;
     return waiterStationLoadInFlight;
   }
-  const operation = waiterLoadStationOrdersNow();
+  const context = waiterStationLoadContext();
+  if (context !== waiterStationRetryContext) {
+    waiterStationRetryContext = context;
+    waiterStationRetryNotBefore = 0;
+    waiterStationRetryDelay = WAITER_STATION_POLL_MIN_MS;
+    if (waiterStationRetryTimer !== null) window.clearTimeout(waiterStationRetryTimer);
+    waiterStationRetryTimer = null;
+  }
+  if (!context || !navigator.onLine) return waiterLoadStationOrdersNow();
+  if (Date.now() < waiterStationRetryNotBefore) {
+    waiterScheduleStationRetry();
+    return false;
+  }
+  if (waiterStationRetryTimer !== null) window.clearTimeout(waiterStationRetryTimer);
+  waiterStationRetryTimer = null;
+  waiterStationLoadPending = false;
+  let loadError = null;
+  const operation = waiterLoadStationOrdersNow(error => { loadError = error; });
   waiterStationLoadInFlight = operation;
   try {
-    return await operation;
+    const loaded = await operation;
+    if (context === waiterStationLoadContext()) {
+      if (loaded === false && waiterIsTemporarySyncError(loadError)) waiterDeferStationRetry();
+      else if (loaded === true) {
+        waiterStationRetryNotBefore = 0;
+        waiterStationRetryDelay = WAITER_STATION_POLL_MIN_MS;
+      }
+    }
+    return loaded;
+  } catch (error) {
+    loadError = error;
+    if (context === waiterStationLoadContext() && waiterIsTemporarySyncError(error)) waiterDeferStationRetry();
+    throw error;
   } finally {
     if (waiterStationLoadInFlight === operation) waiterStationLoadInFlight = null;
+    if (context === waiterStationLoadContext() && loadError && !waiterIsTemporarySyncError(loadError)) {
+      waiterStationLoadPending = false;
+      if (waiterStationRetryTimer !== null) window.clearTimeout(waiterStationRetryTimer);
+      waiterStationRetryTimer = null;
+      waiterStopStationPolling();
+    }
     if (waiterStationLoadPending) {
       waiterStationLoadPending = false;
-      waiterLoadStationOrders().catch(console.error);
+      waiterScheduleStationRetry();
     }
   }
 }
 
-async function waiterLoadStationOrdersNow() {
+async function waiterLoadStationOrdersNow(onError) {
   if (!waiterClient || !waiterUser || !waiterMembership || !waiterElements.stationOrders) return;
   const cachedOrders = waiterReadJson(waiterStationCacheKey(), []);
   if (!navigator.onLine) {
@@ -823,6 +892,7 @@ async function waiterLoadStationOrdersNow() {
     if (Array.isArray(cachedOrders) && cachedOrders.length) waiterRenderStationOrders(cachedOrders);
     else waiterElements.stationOrders.innerHTML = `<div class="waiter-empty">No fue posible cargar esta estacion. Contacta al propietario e intenta nuevamente.</div>`;
     waiterSetStatus("Error de estacion", "error");
+    if (onError) onError(error);
     return false;
   }
   const orders = Array.isArray(data) ? data : [];
@@ -1133,7 +1203,11 @@ function waiterIsTemporarySyncError(error) {
   const code = String(error?.code || "").toUpperCase();
   const status = Number(error?.status || error?.statusCode || 0);
   const message = String(error?.message || error || "");
-  return status === 503
+  if (/^(22|28)/.test(code)
+    || ["42501", "42883", "PGRST102", "PGRST202", "PGRST203"].includes(code)
+    || [400, 401, 403, 404, 405, 422].includes(status)) return false;
+  return [429, 502, 503].includes(status)
+    || ["429", "502", "503"].includes(code)
     || code === "PGRST002"
     || code === "PGRST003"
     || /fetch|network|timeout|timed out|service unavailable|schema cache|connection pool/i.test(message);
@@ -1210,6 +1284,7 @@ async function waiterSendOrder() {
 }
 
 function waiterStopStationPolling() {
+  waiterStationPollGeneration++;
   if (waiterStationPollTimer) {
     window.clearTimeout(waiterStationPollTimer);
     waiterStationPollTimer = null;
@@ -1220,24 +1295,41 @@ function waiterStartStationPolling(options = {}) {
   const { immediate = false } = options;
   waiterStopStationPolling();
   if (waiterOrdersRealtimeStatus === "SUBSCRIBED") return;
+  if (waiterStationRetryTimer !== null) window.clearTimeout(waiterStationRetryTimer);
+  waiterStationRetryTimer = null;
+  const generation = waiterStationPollGeneration;
+  const pollDelay = () => Math.min(WAITER_STATION_POLL_MAX_MS, Math.max(
+    WAITER_STATION_POLL_MIN_MS, waiterStationPollingDelay * (0.9 + Math.random() * 0.2)
+  ));
   const poll = async () => {
+    if (generation !== waiterStationPollGeneration) return;
     waiterStationPollTimer = null;
     if (waiterOrdersRealtimeStatus === "SUBSCRIBED" || !waiterUser || !waiterMembership) return;
     if (document.visibilityState === "visible" && navigator.onLine) {
-      const loaded = await waiterLoadStationOrders();
+      let loaded = false;
+      try {
+        loaded = await waiterLoadStationOrders({ reconcileAfterInFlight: false });
+      } catch (error) {
+        console.error(error);
+      }
+      if (generation !== waiterStationPollGeneration) return;
       waiterStationPollingDelay = loaded
         ? WAITER_STATION_POLL_MIN_MS
         : Math.min(waiterStationPollingDelay * 2, WAITER_STATION_POLL_MAX_MS);
     }
-    if (waiterOrdersRealtimeStatus !== "SUBSCRIBED") {
-      waiterStationPollTimer = window.setTimeout(poll, waiterStationPollingDelay);
+    if (generation === waiterStationPollGeneration && waiterUser && waiterMembership && waiterOrdersRealtimeStatus !== "SUBSCRIBED") {
+      if (waiterStationRetryTimer !== null) window.clearTimeout(waiterStationRetryTimer);
+      waiterStationRetryTimer = null;
+      waiterStationPollTimer = window.setTimeout(poll, Math.max(pollDelay(), waiterStationRetryNotBefore - Date.now()));
     }
   };
-  waiterStationPollTimer = window.setTimeout(poll, immediate ? 0 : waiterStationPollingDelay);
+  waiterStationPollTimer = window.setTimeout(poll, Math.max(immediate ? 0 : pollDelay(), waiterStationRetryNotBefore - Date.now()));
 }
 
 function waiterStopRealtime() {
   waiterStopStationPolling();
+  if (waiterStationRetryTimer !== null) window.clearTimeout(waiterStationRetryTimer);
+  waiterStationRetryTimer = null;
     if (waiterRealtimeReconnectTimer) {
     window.clearTimeout(waiterRealtimeReconnectTimer);
     waiterRealtimeReconnectTimer = null;
@@ -1247,12 +1339,13 @@ function waiterStopRealtime() {
     window.clearTimeout(waiterRealtimeStableTimer);
     waiterRealtimeStableTimer = null;
   }
- new Set([waiterMenuChannel, waiterOrdersChannel]).forEach((channel) => {
-    if (channel && waiterClient?.removeChannel) waiterClient.removeChannel(channel).catch(() => {});
-  });
+ const channels = new Set([waiterMenuChannel, waiterOrdersChannel]);
   waiterMenuChannel = null;
   waiterOrdersChannel = null;
   waiterOrdersRealtimeStatus = "idle";
+  channels.forEach((channel) => {
+    if (channel && waiterClient?.removeChannel) waiterClient.removeChannel(channel).catch(() => {});
+  });
 }
 function waiterScheduleRealtimeReconnect() {
   if (
@@ -1438,8 +1531,9 @@ if (canTakeOrders) {
       waiterRealtimeStableTimer = null;
     }
 
+    waiterStopRealtime();
     waiterStartStationPolling({
-      immediate: true,
+      immediate: waiterStationPollingDelay === WAITER_STATION_POLL_MIN_MS,
     });
 
     waiterScheduleRealtimeReconnect();
