@@ -63,7 +63,6 @@ const CENTRAL_REALTIME_RECONNECT_MAX_MS = 60_000;
 const CENTRAL_REALTIME_STABLE_MS = 30_000;
 const CLOUD_RECOVERY_DEDUP_MS = 30_000;
 const SYNC_INFRASTRUCTURE_BACKOFF_MS = 5 * 60_000;
-const SYNC_ORDER_CONFLICT_BACKOFF_MS = 5 * 60_000;
 const SYNC_ORDER_BATCH_SIZE = 5;
 const SYNC_ORDER_BATCH_DELAY_MS = 15_000;
 const MINIMUM_DATABASE_SCHEMA_VERSION = 91;
@@ -1548,7 +1547,80 @@ function needsCloudSync(order) {
     !isCancelledSavedOrder(order)
   );
 }
+function isOrderRevisionSyncBlocked(order) {
+  return Boolean(
+    order?._syncBlockedReason === "revision_conflict"
+  );
+}
 
+function needsAutomaticCloudSync(order) {
+  return (
+    needsCloudSync(order) &&
+    !isOrderRevisionSyncBlocked(order)
+  );
+}
+
+function blockOrderRevisionSync(
+  order,
+  remoteRevision = null
+) {
+  if (!order?.id) return;
+
+  const parsedRemoteRevision =
+    Number.parseInt(remoteRevision, 10);
+
+  const patch = {
+    syncStatus: "pending",
+    _syncBlockedReason:
+      "revision_conflict",
+    _syncBlockedAt:
+      new Date().toISOString(),
+  };
+
+  if (
+    Number.isFinite(parsedRemoteRevision) &&
+    parsedRemoteRevision > 0
+  ) {
+    patch._syncRemoteRevision =
+      parsedRemoteRevision;
+  }
+
+  Object.assign(order, patch);
+
+  savedOrders = savedOrders.map(
+    (savedOrder) =>
+      savedOrder.id === order.id
+        ? {
+            ...savedOrder,
+            ...patch,
+          }
+        : savedOrder
+  );
+
+  if (currentOrder.id === order.id) {
+    Object.assign(
+      currentOrder,
+      patch
+    );
+  }
+
+  saveOrders({
+    immediate: true,
+  });
+
+  saveCurrentOrderDraft();
+
+  console.warn(
+    "[RC ORDERA] Sincronización automática bloqueada por conflicto de revisión.",
+    {
+      orderId: order.id,
+      localRevision:
+        order._syncRevision || null,
+      remoteRevision:
+        parsedRemoteRevision || null,
+    }
+  );
+}
 function pendingOrdersCount() {
   return savedOrders.filter(needsCloudSync).length;
 }
@@ -1878,7 +1950,9 @@ function hasPendingDataToSync() {
     || hasPendingMenu()
     || pendingTicketCounter() > 0
     || pendingDeletedOrdersCount() > 0
-    || savedOrders.some(needsCloudSync);
+    || savedOrders.some(
+      needsAutomaticCloudSync
+    );
 }
 
 function hasPendingSettings() {
@@ -4506,6 +4580,9 @@ async function saveCloudOrder(order) {
     null;
 
   const patch = {};
+   patch._syncBlockedReason = null;
+patch._syncBlockedAt = null;
+patch._syncRemoteRevision = null;
 
   if (
     Number.isFinite(parsedRevision) &&
@@ -4879,21 +4956,26 @@ if (
    * una modificación verdadera de otro dispositivo.
    * No sobrescribimos nada.
    */
-  const conflictError =
-    new Error(
-      appUiText(
-        "Este pedido cambio en otro dispositivo. Actualiza la nube antes de volver a modificarlo."
-      )
-    );
+blockOrderRevisionSync(
+  order,
+  remoteRevision
+);
 
-  conflictError.code =
-    "ORDER_REVISION_CONFLICT";
+const conflictError =
+  new Error(
+    appUiText(
+      "Este pedido cambio en otro dispositivo. Actualiza la nube antes de volver a modificarlo."
+    )
+  );
 
-  conflictError.cause =
-    error;
+conflictError.code =
+  "ORDER_REVISION_CONFLICT";
 
-  throw conflictError;
-}
+conflictError.cause =
+  error;
+
+throw conflictError;
+    }
     throw error;
   }
 }
@@ -7452,8 +7534,27 @@ function schedulePendingOrderRecovery(error = null) {
   }
 
   /*
-   * Si Supabase está temporalmente saturado,
-   * respetamos el backoff para no bombardearlo.
+   * Un conflicto de revisión NO es un error
+   * temporal.
+   *
+   * Reintentarlo automáticamente solamente
+   * volvería a ejecutar el mismo RPC con una
+   * revisión obsoleta.
+   */
+  if (
+    error &&
+    isOrderRevisionConflictError(error)
+  ) {
+    console.warn(
+      "[RC ORDERA] Conflicto de revisión: no se programa reintento automático."
+    );
+
+    return;
+  }
+
+  /*
+   * Los fallos reales de infraestructura sí
+   * pueden recuperarse automáticamente.
    */
   if (
     error &&
@@ -7485,7 +7586,7 @@ async function runPendingDataSync(options = {}) {
   const pendingDeletedOrderIds = readDeletedOrderIds();
 const allPendingOrders = savedOrders.filter(
   (order) =>
-    needsCloudSync(order) &&
+    needsAutomaticCloudSync(order) &&
     !pendingDeletedOrderIds.includes(order.id)
 );
 
@@ -7899,13 +8000,52 @@ if (pendingOrders.length) {
       continue;
     }
 
-    /*
-     * No existe en nube o es una edición
-     * diferente: sí necesita sincronización.
-     */
-    pendingOrdersToUpload.push(
-      order
+/*
+ * Si existe una edición remota diferente,
+ * comprobamos también las revisiones.
+ *
+ * Una revisión remota mayor significa que
+ * otro dispositivo ya avanzó el pedido.
+ * No podemos volver a enviar nuestra
+ * revisión antigua.
+ */
+if (remoteRow) {
+  const remoteRevision =
+    Number.parseInt(
+      remoteRow.revision,
+      10
     );
+
+  const localRevision =
+    Number.parseInt(
+      order._syncRevision,
+      10
+    );
+
+  if (
+    Number.isFinite(remoteRevision) &&
+    remoteRevision > 0 &&
+    Number.isFinite(localRevision) &&
+    localRevision > 0 &&
+    remoteRevision > localRevision
+  ) {
+    blockOrderRevisionSync(
+      order,
+      remoteRevision
+    );
+
+    continue;
+  }
+}
+
+/*
+ * No existe una versión remota más nueva.
+ * El pedido todavía puede intentar
+ * sincronizarse normalmente.
+ */
+pendingOrdersToUpload.push(
+  order
+);
   }
 
   saveOrders({
@@ -7970,23 +8110,21 @@ renderOrder();
     renderHistory();
     updateCloudStatus();
     return true;
-  } catch (error) {
-    console.error(error);
-    if (isTemporarySyncInfrastructureError(error)) {
-  pendingDataSyncRetryNotBefore =
-    Date.now() + SYNC_INFRASTRUCTURE_BACKOFF_MS;
+ } catch (error) {
+  console.error(error);
 
-  pendingDataSyncRequested = true;
-} else if (isOrderRevisionConflictError(error)) {
-  pendingDataSyncRetryNotBefore =
-    Date.now() + SYNC_ORDER_CONFLICT_BACKOFF_MS;
+  if (isTemporarySyncInfrastructureError(error)) {
+    pendingDataSyncRetryNotBefore =
+      Date.now() + SYNC_INFRASTRUCTURE_BACKOFF_MS;
 
-  pendingDataSyncRequested = true;
-}
-    saveOrders({ immediate: true });
-    setCloudError(error);
-    return false;
-  } finally {
+    pendingDataSyncRequested = true;
+  }
+
+  saveOrders({ immediate: true });
+  setCloudError(error);
+  return false;
+
+} finally {
     cloudState.syncing = false;
     if (
       pendingDataSyncRequested &&
