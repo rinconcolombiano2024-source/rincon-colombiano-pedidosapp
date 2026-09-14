@@ -3778,7 +3778,13 @@ renderHistory();
     cloudState.user &&
     navigator.onLine
   ) {
-    schedulePendingDataSyncRetry(500);
+   schedulePendingDataSyncRetry(
+  Math.max(
+    500,
+    pendingDataSyncRetryNotBefore -
+      Date.now()
+  )
+);
   }
 }
 }
@@ -4897,11 +4903,13 @@ return { data, error };
    * -> siguiente intento recibe conflicto.
    */
 
-  try {
-    const [
-      remoteOrderResponse,
-      remoteCustomerOrderResponse,
-    ] = await withCloudTimeout(
+ let remoteRevision = null;
+
+try {
+  const [
+    remoteOrderResponse,
+    remoteCustomerOrderResponse,
+  ] = await withCloudTimeout(
       [
         cloudState.client
           .from("orders")
@@ -4942,7 +4950,7 @@ return { data, error };
 
     const remoteRow =
       remoteOrderResponse.data;
-const remoteRevision =
+remoteRevision =
   Number.parseInt(
     remoteRow?.revision,
     10
@@ -5586,8 +5594,18 @@ function stopCentralRealtime() {
 const CENTRAL_REFRESH_MIN_INTERVAL_MS = 5000;
 let centralRefreshLastStartedAt = 0;
 let centralRefreshRetryNotBefore = 0;
-function deferCentralRefreshAfterError(error, scopes) {
-  if (!isTemporarySyncInfrastructureError(error)) return;
+function deferCentralRefreshAfterError(
+  error,
+  scopes
+) {
+  if (
+    !CENTRAL_REALTIME_ENABLED ||
+    !isTemporarySyncInfrastructureError(
+      error
+    )
+  ) {
+    return;
+  }
   centralRefreshRetryNotBefore = Math.max(
     centralRefreshRetryNotBefore, Date.now() + 30000
   );
@@ -5600,6 +5618,10 @@ let centralSyncRequestedScopes = {
 };
 
 function scheduleCentralRefresh(options = {}) {
+  if (!CENTRAL_REALTIME_ENABLED) {
+    return;
+  }
+
   const {
     settings = false,
     profile = false,
@@ -6007,6 +6029,7 @@ function scheduleCentralRealtimeReconnect() {
 }
 function startCentralRealtime() {
   if (!CENTRAL_REALTIME_ENABLED) {
+    centralRealtimeNeedsCatchup = false;
     stopCentralRealtime();
     return;
   }
@@ -13647,8 +13670,11 @@ window.addEventListener("beforeunload", () => {
 
 
 window.addEventListener("offline", () => {
-  centralRealtimeNeedsCatchup = true;
+  centralRealtimeNeedsCatchup =
+    CENTRAL_REALTIME_ENABLED;
+
   clientOrdersRealtimeNeedsCatchup = true;
+
   renderCloudState();
 });
 function recoverCloudConnection() {
@@ -13682,13 +13708,11 @@ if (hasPendingDataToSync()) {
   await syncPendingData({ silent: true });
 }
 const needsCentralCatchup =
-  centralRealtimeNeedsCatchup ||
+  CENTRAL_REALTIME_ENABLED &&
   (
-    CENTRAL_REALTIME_ENABLED &&
-    (
-      !centralSyncChannel ||
-      centralSyncStatus !== "SUBSCRIBED"
-    )
+    centralRealtimeNeedsCatchup ||
+    !centralSyncChannel ||
+    centralSyncStatus !== "SUBSCRIBED"
   );
 const needsClientCatchup = canUseCustomerModule() && (
   clientOrdersRealtimeNeedsCatchup || !clientOrdersChannel ||
