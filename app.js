@@ -646,6 +646,7 @@ let clientOrdersRealtimeReconnectDelay =
   CLIENT_ORDERS_REALTIME_RECONNECT_MIN_MS;
 let clientOrdersRealtimeNeedsCatchup = false;
 let clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;
+let clientOrdersPollGeneration = 0;
 let clientOrdersRefreshInFlight = null;
 let clientOrdersRefreshPending = false;
 let clientOrdersTrackingInFlight = null;
@@ -5125,15 +5126,22 @@ function startClientOrdersPolling(options = {}) {
   stopClientOrdersPolling();
   if (!canUseCustomerModule() || clientOrdersRealtimeStatus === "SUBSCRIBED") return;
 
+  const generation = clientOrdersPollGeneration;
+  const pollDelay = () => Math.min(CLIENT_ORDERS_POLL_MAX_MS, Math.max(
+    CLIENT_ORDERS_POLL_MIN_MS, clientOrdersPollingDelay * (0.9 + Math.random() * 0.2)
+  ));
   const poll = async () => {
+    if (generation !== clientOrdersPollGeneration) return;
     clientOrdersTimer = null;
     if (!canUseCustomerModule() || clientOrdersRealtimeStatus === "SUBSCRIBED") return;
 
     if (document.visibilityState === "visible" && navigator.onLine) {
       try {
-        await refreshClientOrders({ silent: true });
+        await refreshClientOrders({ silent: true, reconcileAfterInFlight: false });
+        if (generation !== clientOrdersPollGeneration) return;
         clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;
       } catch (error) {
+        if (generation !== clientOrdersPollGeneration) return;
         console.error("No fue posible actualizar los pedidos mediante el respaldo temporal.", error);
         clientOrdersPollingDelay = Math.min(
           clientOrdersPollingDelay * 2,
@@ -5142,15 +5150,16 @@ function startClientOrdersPolling(options = {}) {
       }
     }
 
-    if (clientOrdersRealtimeStatus !== "SUBSCRIBED") {
-      clientOrdersTimer = window.setTimeout(poll, clientOrdersPollingDelay);
+    if (generation === clientOrdersPollGeneration && canUseCustomerModule() && clientOrdersRealtimeStatus !== "SUBSCRIBED") {
+      clientOrdersTimer = window.setTimeout(poll, pollDelay());
     }
   };
 
-  clientOrdersTimer = window.setTimeout(poll, immediate ? 0 : clientOrdersPollingDelay);
+  clientOrdersTimer = window.setTimeout(poll, immediate ? 0 : pollDelay());
 }
 
 function stopClientOrdersPolling() {
+  clientOrdersPollGeneration++;
   if (clientOrdersTimer) {
     window.clearTimeout(clientOrdersTimer);
     clientOrdersTimer = null;
@@ -6101,8 +6110,9 @@ clientOrdersRealtimeStableTimer = setTimeout(() => {
   ["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)
 ) {
        clientOrdersRealtimeNeedsCatchup = true;
+  stopClientOrdersRealtime();
   startClientOrdersPolling({
-    immediate: true
+    immediate: clientOrdersPollingDelay === CLIENT_ORDERS_POLL_MIN_MS
   });
 
   scheduleClientOrdersRealtimeReconnect();
@@ -6150,7 +6160,7 @@ async function loadCurrentRestaurantDeliveryTracking() {
 
 async function refreshClientOrders(options = {}) {
   if (clientOrdersRefreshInFlight) {
-    clientOrdersRefreshPending = true;
+    if (options.reconcileAfterInFlight !== false) clientOrdersRefreshPending = true;
     return clientOrdersRefreshInFlight;
   }
 
