@@ -6413,20 +6413,56 @@ async function loadCurrentRestaurantDeliveryTracking() {
 
 async function refreshClientOrders(options = {}) {
   if (clientOrdersRefreshInFlight) {
-    if (options.reconcileAfterInFlight !== false) clientOrdersRefreshPending = true;
+    if (
+      options.reconcileAfterInFlight !== false
+    ) {
+      clientOrdersRefreshPending = true;
+    }
+
     return clientOrdersRefreshInFlight;
   }
 
-  clientOrdersRefreshInFlight = performClientOrdersRefresh(options);
+  clientOrdersRefreshInFlight =
+    performClientOrdersRefresh(options);
+
+  let refreshSucceeded = false;
+
   try {
-    return await clientOrdersRefreshInFlight;
+    const result =
+      await clientOrdersRefreshInFlight;
+
+    refreshSucceeded = true;
+
+    return result;
   } finally {
     clientOrdersRefreshInFlight = null;
-    if (clientOrdersRefreshPending) {
-      clientOrdersRefreshPending = false;
+
+    const shouldReconcile =
+      clientOrdersRefreshPending;
+
+    clientOrdersRefreshPending = false;
+
+    /*
+     * Solo reconciliamos inmediatamente si
+     * la consulta anterior terminó correctamente.
+     *
+     * Si Supabase falló o está saturado,
+     * NO lanzamos otra consulta inmediatamente.
+     * El polling/reconnect existente se encargará
+     * del siguiente intento con su propio intervalo.
+     */
+    if (
+      shouldReconcile &&
+      refreshSucceeded
+    ) {
       queueMicrotask(() => {
-        refreshClientOrders({ silent: true }).catch((error) => {
-          console.error("No fue posible completar la actualizacion pendiente de pedidos.", error);
+        refreshClientOrders({
+          silent: true,
+        }).catch((error) => {
+          console.error(
+            "No fue posible completar la actualizacion pendiente de pedidos.",
+            error
+          );
         });
       });
     }
@@ -12298,7 +12334,15 @@ async function updateTicketPaymentStatus(orderId, status) {
   if (cloudState.user && navigator.onLine) {
     const expectedUpdatedAt = savedOrders[index].updatedAt;
     try {
-      await saveCloudOrder(savedOrders[index]);
+await withCloudTimeout(
+  (signal) =>
+    saveCloudOrder(
+      savedOrders[index],
+      signal
+    ),
+  "La nube tardó demasiado en actualizar el estado de pago.",
+  10000
+);
       confirmOrderSyncedIfUnchanged(orderId, expectedUpdatedAt);
     } catch (error) {
       console.error(error);
