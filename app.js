@@ -3026,6 +3026,19 @@ async function initializeCloud() {
     },
   }
 );
+  if (
+  typeof cloudState.client.removeAllChannels ===
+  "function"
+) {
+  await cloudState.client
+    .removeAllChannels()
+    .catch((error) => {
+      console.warn(
+        "[RC ORDERA] No fue posible limpiar canales Realtime anteriores.",
+        error
+      );
+    });
+}
   const { data, error } = await withCloudTimeout(cloudState.client.auth.getSession());
   if (error) throw error;
   cloudState.user = data.session?.user || null;
@@ -8215,7 +8228,15 @@ pendingOrdersToUpload.push(
 for (const order of pendingOrdersToUpload) {
       try {
         const expectedUpdatedAt = order.updatedAt;
-        await saveCloudOrder(order);
+        await withCloudTimeout(
+  (signal) =>
+    saveCloudOrder(
+      order,
+      signal
+    ),
+  "La nube tardó demasiado en sincronizar el pedido pendiente.",
+  10000
+);
         confirmOrderSyncedIfUnchanged(order.id, expectedUpdatedAt);
      } catch (error) {
   console.error(
