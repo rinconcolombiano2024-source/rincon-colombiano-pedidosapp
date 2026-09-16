@@ -528,6 +528,7 @@ declare
   v_order public.orders%rowtype;
   v_customer_order_id uuid;
   v_items jsonb;
+v_customer_order_written boolean := false;
 begin
   if v_owner_id is null then raise exception 'Not authenticated'; end if;
   select o.* into v_order from public.orders o
@@ -547,7 +548,10 @@ begin
         updated_at = now()
     where co.id = p_customer_order_id and co.user_id = v_owner_id
     returning co.id into v_customer_order_id;
-    if v_customer_order_id is null then raise exception 'Customer order does not belong to this restaurant'; end if;
+    if v_customer_order_id is null then
+      raise exception 'Customer order does not belong to this restaurant'; 
+end if;
+v_customer_order_written := true;
   else
     select co.id into v_customer_order_id from public.customer_orders co
     where co.user_id = v_owner_id and co.restaurant_order_id = v_order.id limit 1;
@@ -569,11 +573,15 @@ begin
       set order_json = excluded.order_json, total = excluded.total,
           restaurant_order_id = excluded.restaurant_order_id, updated_at = now()
       returning customer_orders.id into v_customer_order_id;
+v_customer_order_written := true;
     end if;
   end if;
 
+if not v_customer_order_written then
   perform public.rc_ordera_sync_order_station_tasks(v_customer_order_id);
-  return v_customer_order_id;
+end if;
+
+return v_customer_order_id;
 end;
 $$;
 
