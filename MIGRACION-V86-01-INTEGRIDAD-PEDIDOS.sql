@@ -484,8 +484,6 @@ begin
       updated_at = v_now
   where co.id = v_customer.id;
 
-  perform public.rc_ordera_sync_order_station_tasks(v_customer.id);
-
   return query select
     v_customer.id,
     p_restaurant_order_id,
