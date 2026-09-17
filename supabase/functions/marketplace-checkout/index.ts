@@ -161,7 +161,10 @@ if (!unfinishedAttempt) {
     "payment_intent_data[metadata][transaction_id]": transactionId,
     "payment_intent_data[metadata][customer_order_id]": order.id,
   });
-  const stripeResult = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+let stripeResult: Response;
+
+try {
+  stripeResult = await fetch("https://api.stripe.com/v1/checkout/sessions", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${stripeKey}`,
@@ -169,17 +172,73 @@ if (!unfinishedAttempt) {
       "Idempotency-Key": idempotencyKey,
     },
     body: form,
+    signal: AbortSignal.timeout(15_000),
   });
-  const session = await stripeResult.json();
-  if (!stripeResult.ok) {
+} catch {
+  // No sabemos si Stripe recibió/procesó la solicitud.
+  // Conservamos pending y reutilizamos la misma idempotency key.
+  await admin.from("payment_transactions").update({
+    updated_at: new Date().toISOString(),
+  }).eq("id", transactionId);
+
+  return response(503, {
+    error: "Payment provider response is pending. Retry safely.",
+    retryable: true,
+  });
+}
+
+let session: any = {};
+
+try {
+  session = await stripeResult.json();
+} catch {
+  session = {};
+}
+
+if (!stripeResult.ok) {
+const stripeShouldRetry =
+  stripeResult.headers.get("Stripe-Should-Retry");
+
+const indeterminate =
+  stripeShouldRetry === "true" ||
+  (
+    stripeShouldRetry !== "false" &&
+    (
+      stripeResult.status === 409 ||
+      stripeResult.status === 429 ||
+      stripeResult.status >= 500
+    )
+  );
+
+  if (indeterminate) {
+    // 429 / 5xx NO se marcan como failed.
+    // Stripe puede haber procesado la operación.
     await admin.from("payment_transactions").update({
-      status: "failed",
-      failed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }).eq("id", transactionId);
-    return response(502, { error: session?.error?.message || "Payment provider error" });
+
+    return response(503, {
+      error:
+        session?.error?.message ||
+        "Payment provider response is pending. Retry safely.",
+      retryable: true,
+    });
   }
 
+  // Solo errores definitivos 4xx pasan a failed.
+  await admin.from("payment_transactions").update({
+    status: "failed",
+    failed_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }).eq("id", transactionId);
+
+  return response(502, {
+    error:
+      session?.error?.message ||
+      "Payment provider error",
+    retryable: false,
+  });
+}
   const { error } = await admin.from("payment_transactions").update({
     provider_session_id: session.id,
     status: "pending",
