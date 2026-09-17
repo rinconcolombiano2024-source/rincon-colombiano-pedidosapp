@@ -5468,18 +5468,24 @@ function customerOpenHeaderCart() {
     return;
   }
 
-  customerSetView("store", {
-    keepScroll: true,
-  });
+  customerSetView("store", { keepScroll: true });
+
+  if (!customerElements.cartModal) return;
+
+  customerElements.cartModal.hidden = false;
+  document.body.classList.add("customer-cart-open");
 
   window.requestAnimationFrame(() => {
-    customerElements.cartItems
-      ?.closest(".customer-cart-panel")
-      ?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
+    customerElements.cartSheet?.focus();
   });
+}
+
+function customerCloseHeaderCart() {
+  if (!customerElements.cartModal || customerElements.cartModal.hidden) return;
+
+  customerElements.cartModal.hidden = true;
+  document.body.classList.remove("customer-cart-open");
+  customerElements.headerCartButton?.focus();
 }
 function customerRenderCart() {
   if (!customerCart.length) {
@@ -5864,9 +5870,10 @@ async function customerSendOrder() {
   }
   customerRenderPaymentBox(insertedOrder.id, total, insertedOrder.payload);
   customerRenderCart();
-  customerSetStatus(customerT("orderSent"), "ok");
-  customerLoadHistory().catch(() => {});
-  customerSetView("orders");
+ customerSetStatus(customerT("orderSent"), "ok");
+customerLoadHistory().catch(() => {});
+customerCloseHeaderCart();
+customerSetView("orders");
   if (paymentMethod === "Online" && insertedOrder.publicToken) {
     await customerStartOnlinePayment(insertedOrder.id, insertedOrder.publicToken);
   }
@@ -6228,6 +6235,27 @@ customerElements.headerCartButton?.addEventListener(
   "click",
   customerOpenHeaderCart
 );
+customerElements.cartCloseButton?.addEventListener(
+  "click",
+  customerCloseHeaderCart
+);
+
+customerElements.cartModal?.addEventListener("click", (event) => {
+  if (event.target.closest('[data-cart-close="true"]')) {
+    customerCloseHeaderCart();
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (
+    event.key === "Escape" &&
+    customerElements.cartModal &&
+    !customerElements.cartModal.hidden
+  ) {
+    event.preventDefault();
+    customerCloseHeaderCart();
+  }
+});
 customerElements.notifyButton.addEventListener("click", () => {
   customerRequestNotificationPermission().catch(() => {
     customerSetTrackingStatus(customerT("notificationEnableError"), "error");
