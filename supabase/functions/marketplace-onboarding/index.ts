@@ -117,7 +117,7 @@ Deno.serve(async (request) => {
     });
   }
 
-  const returnPath = accountType === "restaurant" ? "index.html?payments=return" : "colaborador.html?payments=return";
+  const returnPath = accountType === "restaurant" ? "restaurante.html?payments=return" : "colaborador.html?payments=return";
   const link = await stripeRequest("account_links", {
     account: accountId,
     refresh_url: `${appBaseUrl}/${returnPath}`,
