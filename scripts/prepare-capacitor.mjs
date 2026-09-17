@@ -12,6 +12,7 @@ if (!output.startsWith(`${root}\\`) && !output.startsWith(`${root}/`)) {
 
 const runtimeFiles = [
   "index.html",
+  "restaurante.html",
   "cliente.html",
   "colaborador.html",
   "mesero.html",
@@ -25,13 +26,17 @@ const runtimeFiles = [
   "offline-i18n.js",
   "auto-translate.js",
   "supabase-config.js",
+  "vendor/supabase-2.57.4.js",
   "service-worker.js",
   "manifest.webmanifest",
+  "restaurante-manifest.webmanifest",
   "cliente-manifest.webmanifest",
   "colaborador-manifest.webmanifest",
   "admin-manifest.webmanifest",
   "manifest.pl.webmanifest",
+  "restaurante-manifest.pl.webmanifest",
   "manifest.en.webmanifest",
+  "restaurante-manifest.en.webmanifest",
   "cliente-manifest.pl.webmanifest",
   "cliente-manifest.en.webmanifest",
   "colaborador-manifest.pl.webmanifest",
@@ -45,7 +50,6 @@ const runtimeFiles = [
   "app-icon-192.png",
   "app-icon-512.png"
 ];
-
 const publicConfig = readFileSync(join(root, "supabase-config.js"), "utf8");
 if (/service[_-]?role|sb_secret|STRIPE_SECRET|WEBHOOK_SECRET/i.test(publicConfig)) {
   throw new Error("A private secret was detected in the public frontend configuration");
