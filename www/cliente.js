@@ -55,11 +55,19 @@ const customerElements = {
   topLocation: document.querySelector("#customerTopLocation"),
   greeting: document.querySelector("#customerGreeting"),
   greetingName: document.querySelector("#customerGreetingName"),
-  profileAvatarInitials:
-  document.querySelector("#customerProfileAvatarInitials"),
-  views: Array.from(document.querySelectorAll("[data-customer-view]")),
+profileAvatarInitials:
+document.querySelector("#customerProfileAvatarInitials"),
+
+headerCartButton:
+document.querySelector("#customerHeaderCartButton"),
+
+headerCartBadge:
+document.querySelector("#customerHeaderCartBadge"),
+
+views: Array.from(document.querySelectorAll("[data-customer-view]")),
   viewButtons: Array.from(document.querySelectorAll("[data-customer-view-target]")),
   backToRestaurantsButton: document.querySelector("#customerBackToRestaurantsButton"),
+  
   selectedRestaurantDescription: document.querySelector("#customerSelectedRestaurantDescription"),
   selectedRestaurantAddress: document.querySelector("#customerSelectedRestaurantAddress"),
   selectedRestaurantDelivery: document.querySelector("#customerSelectedRestaurantDelivery"),
@@ -72,9 +80,20 @@ editProfileButton: document.querySelector("#customerEditProfileButton"),
   menuSearchInput: document.querySelector("#customerMenuSearchInput"),
   menuSearchClearButton: document.querySelector("#customerMenuSearchClearButton"),
   menuGrid: document.querySelector("#customerMenuGrid"),
-  cartItems: document.querySelector("#customerCartItems"),
-  cartTotal: document.querySelector("#customerCartTotal"),
-  notifyButton: document.querySelector("#customerNotifyButton"),
+cartItems: document.querySelector("#customerCartItems"),
+cartTotal: document.querySelector("#customerCartTotal"),
+
+cartModal:
+  document.querySelector("#customerCartModal"),
+
+cartSheet:
+  document.querySelector("#customerCartSheet"),
+
+cartCloseButton:
+  document.querySelector("#customerCartCloseButton"),
+
+notifyButton:
+  document.querySelector("#customerNotifyButton"),
   orderType: document.querySelector("#customerOrderType"),
   paymentMethod: document.querySelector("#customerPaymentMethod"),
   onlinePaymentOption: document.querySelector("#customerOnlinePaymentOption"),
@@ -125,7 +144,9 @@ const CUSTOMER_I18N = {
     documentTitleSuffix: "Menú del cliente",
     profileSaved: "Tus datos fueron guardados correctamente.",
     profileSaveError: "No se pudo guardar el perfil.",
-    notificationsAria: "Notificaciones",
+    cartAria: "Carrito",
+    closeCartAria: "Cerrar carrito",
+    editProfile: "Editar perfil",
     profileAria: "Perfil",
     heroEyebrow: "Pedido del cliente",
     languageLabel: "Idioma",
@@ -435,7 +456,9 @@ const CUSTOMER_I18N = {
     documentTitleSuffix: "Menu klienta",
     profileSaved: "Twoje dane zostały zapisane.",
     profileSaveError: "Nie udało się zapisać profilu.",
-    notificationsAria: "Powiadomienia",
+    cartAria: "Koszyk",
+    closeCartAria: "Zamknij koszyk",
+    editProfile: "Edytuj profil",
     profileAria: "Profil",
     heroEyebrow: "Zamowienie klienta",
     languageLabel: "Jezyk",
@@ -603,7 +626,7 @@ const CUSTOMER_I18N = {
     enableNotifications: "Wlacz powiadomienia",
     orderTypeLabel: "Typ zamowienia",
     eatHere: "Na miejscu",
-    pickup: "Na wynos / odbior w lokalu",
+    pickup: "Na wynos / odbiór w lokalu",
     delivery: "Dostawa",
     nameLabel: "Imie",
     namePlaceholder: "Twoje imie",
@@ -745,7 +768,9 @@ const CUSTOMER_I18N = {
     documentTitleSuffix: "Customer menu",
     profileSaved: "Your details were saved successfully.",
     profileSaveError: "The profile could not be saved.",
-    notificationsAria: "Notifications",
+    cartAria: "Cart",
+    closeCartAria: "Close cart",
+    editProfile: "Edit profile",
     profileAria: "Profile",
     heroEyebrow: "Customer order",
     languageLabel: "Language",
@@ -1573,9 +1598,19 @@ function customerSetLanguage(language) {
 }
 
 function customerOrderTypeText(value) {
-  if (value === "Recoger en el punto") return customerT("pickup");
-  if (value === "Domicilio") return customerT("delivery");
-  return customerT("eatHere");
+  if (value === "Recoger en el punto") {
+    return customerT("pickup");
+  }
+
+  if (value === "Domicilio") {
+    return customerT("delivery");
+  }
+
+  if (value === "Comer en el punto") {
+    return customerT("eatHere");
+  }
+
+  return String(value || "");
 }
 
 function customerPaymentMethodText(value) {
@@ -1681,7 +1716,7 @@ const CUSTOMER_DELIVERY_RATES = {
 };
 
 function customerSetView(view, options = {}) {
-  const allowedViews = new Set(["home", "store", "orders", "reservations", "profile"]);
+  const allowedViews = new Set(["home", "store", "orders", "profile"]);
   let nextView = allowedViews.has(view) ? view : "home";
   if (nextView === "store" && !customerStoreId) nextView = "home";
   customerCurrentView = nextView;
@@ -2760,7 +2795,7 @@ function customerRenderHistory() {
           <div class="customer-history-meta">
             <span data-type="${customerEscapeHtml(statusType)}">${customerEscapeHtml(customerStatusText(row))}</span>
             <span>${customerEscapeHtml(ticketText)}</span>
-            <span>${customerEscapeHtml(row.order_type || "")}</span>
+            <span>${customerEscapeHtml(customerOrderTypeText(row.order_type))}</span>
             <span>${customerEscapeHtml(itemsText)}</span>
           </div>
           <div class="customer-history-total">
@@ -5398,7 +5433,60 @@ function customerRenderMenu() {
     )
     .join("");
 }
+function customerCartItemCount() {
+  return customerCart.reduce(
+    (total, item) =>
+      total +
+      Math.max(
+        1,
+        Number.parseInt(item?.qty, 10) || 1
+      ),
+    0
+  );
+}
 
+function customerRenderHeaderCart() {
+  if (
+    !customerElements.headerCartBadge ||
+    !customerElements.headerCartButton
+  ) {
+    return;
+  }
+
+  const count = customerCartItemCount();
+
+  customerElements.headerCartBadge.textContent =
+    count > 99 ? "99+" : String(count);
+
+  customerElements.headerCartBadge.hidden =
+    count === 0;
+}
+
+function customerOpenHeaderCart() {
+  if (!customerStoreId) {
+    customerSetView("home");
+    return;
+  }
+
+  customerSetView("store", { keepScroll: true });
+
+  if (!customerElements.cartModal) return;
+
+  customerElements.cartModal.hidden = false;
+  document.body.classList.add("customer-cart-open");
+
+  window.requestAnimationFrame(() => {
+    customerElements.cartSheet?.focus();
+  });
+}
+
+function customerCloseHeaderCart() {
+  if (!customerElements.cartModal || customerElements.cartModal.hidden) return;
+
+  customerElements.cartModal.hidden = true;
+  document.body.classList.remove("customer-cart-open");
+  customerElements.headerCartButton?.focus();
+}
 function customerRenderCart() {
   if (!customerCart.length) {
     customerElements.cartItems.innerHTML = `<div class="customer-empty">${customerEscapeHtml(customerT("emptyCart"))}</div>`;
@@ -5429,8 +5517,12 @@ function customerRenderCart() {
   customerElements.cartTotal.textContent = customerFormatMoney(customerCartTotal());
   customerElements.deliveryFeeRow.hidden = customerElements.orderType.value !== "Domicilio";
   customerElements.deliveryFeeLabel.textContent = customerFormatMoney(customerDeliveryFee());
-  customerElements.sendButton.disabled = customerCart.length === 0;
-  customerRenderSelectedRestaurantDetails();
+customerElements.sendButton.disabled =
+  customerCart.length === 0;
+
+customerRenderHeaderCart();
+
+customerRenderSelectedRestaurantDetails();
 }
 
 function customerAddItem(dish) {
@@ -5778,9 +5870,10 @@ async function customerSendOrder() {
   }
   customerRenderPaymentBox(insertedOrder.id, total, insertedOrder.payload);
   customerRenderCart();
-  customerSetStatus(customerT("orderSent"), "ok");
-  customerLoadHistory().catch(() => {});
-  customerSetView("orders");
+ customerSetStatus(customerT("orderSent"), "ok");
+customerLoadHistory().catch(() => {});
+customerCloseHeaderCart();
+customerSetView("orders");
   if (paymentMethod === "Online" && insertedOrder.publicToken) {
     await customerStartOnlinePayment(insertedOrder.id, insertedOrder.publicToken);
   }
@@ -6137,6 +6230,31 @@ customerElements.favoriteRestaurantButton?.addEventListener("click", () => {
     customerSetStatus(customerT("favoriteSaveError"), "error");
     customerRenderFavoriteRestaurantButton();
   });
+});
+customerElements.headerCartButton?.addEventListener(
+  "click",
+  customerOpenHeaderCart
+);
+customerElements.cartCloseButton?.addEventListener(
+  "click",
+  customerCloseHeaderCart
+);
+
+customerElements.cartModal?.addEventListener("click", (event) => {
+  if (event.target.closest('[data-cart-close="true"]')) {
+    customerCloseHeaderCart();
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (
+    event.key === "Escape" &&
+    customerElements.cartModal &&
+    !customerElements.cartModal.hidden
+  ) {
+    event.preventDefault();
+    customerCloseHeaderCart();
+  }
 });
 customerElements.notifyButton.addEventListener("click", () => {
   customerRequestNotificationPermission().catch(() => {
