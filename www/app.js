@@ -3791,7 +3791,7 @@ renderHistory();
     cloudState.user &&
     navigator.onLine
   ) {
-   schedulePendingDataSyncRetry(
+  schedulePendingDataSyncRetry(
   Math.max(
     500,
     pendingDataSyncRetryNotBefore -
@@ -4916,7 +4916,7 @@ return { data, error };
    * -> siguiente intento recibe conflicto.
    */
 
- let remoteRevision = null;
+  let remoteRevision = null;
 
 try {
   const [
@@ -4968,7 +4968,6 @@ remoteRevision =
     remoteRow?.revision,
     10
   );
-
 /*
  * Si no recibimos una fila completa, no existe
  * evidencia suficiente para declarar un conflicto.
@@ -5120,7 +5119,7 @@ conflictError.cause =
   error;
 
 throw conflictError;
-}
+    }
     throw error;
   }
 }
@@ -6468,7 +6467,6 @@ async function refreshClientOrders(options = {}) {
     }
   }
 }
-
 async function performClientOrdersRefresh(options = {}) {
   const { silent = false } = options;
   const previousIds = new Set(pendingClientOrders.filter((order) => order.status === "pending").map((order) => order.id));
@@ -8206,6 +8204,7 @@ if (pendingOrders.length) {
       pendingOrdersToUpload.push(order);
       continue;
     }
+
 /*
  * Si existe una edición remota diferente,
  * comprobamos también las revisiones.
@@ -8324,7 +8323,7 @@ renderOrder();
     renderHistory();
     updateCloudStatus();
     return true;
-  } catch (error) {
+ } catch (error) {
   console.error(error);
 
   if (isTemporarySyncInfrastructureError(error)) {
