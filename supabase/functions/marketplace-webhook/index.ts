@@ -217,7 +217,7 @@ Deno.serve(async (request) => {
 
     if (eventType === "refund.updated" && String(object?.status || "") === "succeeded") {
       if (!transactionId) throw new Error("Refund payment transaction was not found");
-      const refund = await admin.rpc("rc_ordera_record_payment_refund", {
+const refund = await admin.rpc("rc_ordera_record_verified_refund", {
         p_payment_transaction_id: transactionId,
         p_provider_refund_id: String(object?.id || event.id),
         p_amount: Number(object?.amount || 0) / 100,
@@ -233,7 +233,7 @@ Deno.serve(async (request) => {
       const refunds = Array.isArray(object?.refunds?.data) ? object.refunds.data : [];
       for (const entry of refunds) {
         if (String(entry?.status || "") !== "succeeded") continue;
-        const refund = await admin.rpc("rc_ordera_record_payment_refund", {
+     const refund = await admin.rpc("rc_ordera_record_verified_refund", {
           p_payment_transaction_id: transactionId,
           p_provider_refund_id: String(entry?.id || event.id),
           p_amount: Number(entry?.amount || 0) / 100,
