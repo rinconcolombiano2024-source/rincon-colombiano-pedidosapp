@@ -70,38 +70,66 @@ Deno.serve(async (request) => {
   let countryCode = "";
   let currency = "";
   if (accountType === "restaurant") {
-    const { data } = await admin.from("restaurant_profiles")
-      .select("country_code")
-      .eq("user_id", user.id).is("deleted_at", null).maybeSingle();
-    countryCode = String(data?.country_code || "").toUpperCase();
+ const { data, error } = await admin.from("restaurant_profiles")
+  .select("country_code")
+  .eq("user_id", user.id)
+  .is("deleted_at", null)
+  .maybeSingle();
+
+if (error) {
+  return response(500, { error: "Could not read restaurant profile" });
+}
+
+countryCode = String(data?.country_code || "").toUpperCase();
     currency = countryCode === "PL" ? "PLN" : countryCode === "CO" ? "COP" : "";
   } else {
-    const { data } = await admin.from("courier_profiles")
-      .select("country")
-      .eq("user_id", user.id).eq("status", "approved").maybeSingle();
-    countryCode = String(data?.country || "").toUpperCase().includes("POL") ? "PL" : String(data?.country || "").toUpperCase();
-    currency = countryCode === "PL" ? "PLN" : "";
+const { data, error } = await admin.from("courier_profiles")
+  .select("country")
+  .eq("user_id", user.id)
+  .eq("status", "approved")
+  .maybeSingle();
+
+if (error) {
+  return response(500, { error: "Could not read courier profile" });
+}
+
+countryCode = String(data?.country || "").toUpperCase().includes("POL")
+  ? "PL"
+  : String(data?.country || "").toUpperCase();    currency = countryCode === "PL" ? "PLN" : "";
   }
   if (countryCode !== "PL") {
     return response(409, { error: "Online marketplace payouts are not enabled for this country" });
   }
 
-  const { data: existing } = await admin.from("marketplace_accounts")
-    .select("provider_account_id")
-    .eq("owner_user_id", user.id).eq("account_type", accountType)
-    .eq("provider", "stripe_connect").maybeSingle();
+const { data: existing, error: existingError } = await admin.from("marketplace_accounts")
+  .select("provider_account_id")
+  .eq("owner_user_id", user.id).eq("account_type", accountType)
+  .eq("provider", "stripe_connect").maybeSingle();
+
+if (existingError) {
+  return response(500, { error: "Could not read payout account" });
+}
 
   let accountId = String(existing?.provider_account_id || "");
   if (!accountId) {
-    const account = await stripeRequest("accounts", {
-      type: "express",
-      country: "PL",
-      email: user.email || "",
-      "capabilities[transfers][requested]": "true",
-      "metadata[rc_ordera_user_id]": user.id,
-      "metadata[account_type]": accountType,
-    }, stripeKey, `rc-ordera-account:${user.id}:${accountType}`);
-    accountId = account.id;
+let account: any;
+
+try {
+  account = await stripeRequest("accounts", {
+    type: "express",
+    country: "PL",
+    email: user.email || "",
+    "capabilities[transfers][requested]": "true",
+    "metadata[rc_ordera_user_id]": user.id,
+    "metadata[account_type]": accountType,
+  }, stripeKey, `rc-ordera-account:${user.id}:${accountType}`);
+} catch {
+  return response(503, { error: "Could not create payout account" });
+}
+if (!/^acct_[A-Za-z0-9]+$/.test(String(account?.id || ""))) {
+  return response(502, { error: "Invalid payout account response" });
+}
+accountId = account.id;
     const { error } = await admin.from("marketplace_accounts").upsert({
       owner_user_id: user.id,
       account_type: accountType,
@@ -115,21 +143,43 @@ Deno.serve(async (request) => {
     if (error) return response(500, { error: "Could not save payout account" });
   }
 
-  const accountResult = await fetch(`https://api.stripe.com/v1/accounts/${encodeURIComponent(accountId)}`, {
-    headers: { Authorization: `Bearer ${stripeKey}` },
-    signal: AbortSignal.timeout(15_000),
-  });
+let accountResult: Response;
+
+try {
+  accountResult = await fetch(
+    `https://api.stripe.com/v1/accounts/${encodeURIComponent(accountId)}`,
+    {
+      headers: { Authorization: `Bearer ${stripeKey}` },
+      signal: AbortSignal.timeout(15_000),
+    },
+  );
+} catch {
+  return response(503, { error: "Could not reach payout provider" });
+}
   
   const accountState = await accountResult.json();
   if (!accountResult.ok) return response(502, { error: accountState?.error?.message || "Could not read payout account" });
-  const onboardingStatus = accountState.details_submitted && accountState.payouts_enabled ? "complete" : "pending";
-  await admin.from("marketplace_accounts").update({
+ const onboardingStatus =
+  accountState.details_submitted && accountState.payouts_enabled
+    ? "complete"
+    : "pending";
+
+const { error: accountUpdateError } = await admin
+  .from("marketplace_accounts")
+  .update({
     onboarding_status: onboardingStatus,
     charges_enabled: Boolean(accountState.charges_enabled),
     payouts_enabled: Boolean(accountState.payouts_enabled),
     details_submitted: Boolean(accountState.details_submitted),
     updated_at: new Date().toISOString(),
-  }).eq("owner_user_id", user.id).eq("account_type", accountType).eq("provider", "stripe_connect");
+  })
+  .eq("owner_user_id", user.id)
+  .eq("account_type", accountType)
+  .eq("provider", "stripe_connect");
+
+if (accountUpdateError) {
+  return response(500, { error: "Could not update payout account" });
+}
   if (payload.action === "status" || onboardingStatus === "complete") {
     return response(200, {
       accountType,
@@ -140,11 +190,18 @@ Deno.serve(async (request) => {
   }
 
   const returnPath = accountType === "restaurant" ? "restaurante.html?payments=return" : "colaborador.html?payments=return";
-  const link = await stripeRequest("account_links", {
+  let link: any;
+
+try {
+  link = await stripeRequest("account_links", {
     account: accountId,
     refresh_url: `${appBaseUrl}/${returnPath}`,
     return_url: `${appBaseUrl}/${returnPath}`,
     type: "account_onboarding",
   }, stripeKey);
-  return response(200, { url: link.url, accountType });
+} catch {
+  return response(503, { error: "Could not create payout onboarding link" });
+}
+
+return response(200, { url: link.url, accountType });
 });
