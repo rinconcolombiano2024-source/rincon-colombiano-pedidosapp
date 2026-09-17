@@ -26,16 +26,28 @@
     </div>
 
     <div class="customer-client-header-actions">
-      <button
-        class="customer-notification-button"
-        type="button"
-        aria-label="Notificaciones"
-        data-i18n-aria-label="notificationsAria"
-      >
-        <span class="customer-notification-icon">♧</span>
-        <span class="customer-notification-badge">2</span>
-      </button>
+<button
+  class="customer-notification-button"
+  id="customerHeaderCartButton"
+  type="button"
+  aria-label="Carrito"
+  data-i18n-aria-label="cartAria"
+>
+  <span class="customer-notification-icon" aria-hidden="true">
+    <svg viewBox="0 0 24 24">
+      <path d="M3 4h2l2.4 10.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.6L21 8H7"></path>
+      <circle cx="10" cy="20" r="1.5"></circle>
+      <circle cx="18" cy="20" r="1.5"></circle>
+    </svg>
+  </span>
 
+  <span
+    class="customer-notification-badge"
+    id="customerHeaderCartBadge"
+    aria-live="polite"
+    hidden
+  >0</span>
+</button>
       <button
         class="customer-profile-avatar"
         type="button"
@@ -558,14 +570,52 @@
             <div class="customer-menu-grid" id="customerMenuGrid"></div>
           </section>
 
-          <aside class="customer-cart-panel" aria-label="Pedido del cliente" data-i18n-aria-label="cartPanelAria">
-            <div class="customer-cart-heading">
-              <h2 data-i18n="yourOrder">Tu pedido</h2>
-              <button class="customer-icon-action" id="customerNotifyButton" type="button" title="Activar notificaciones" aria-label="Activar notificaciones" data-i18n-aria-label="enableNotifications">
-                <span aria-hidden="true">!</span>
-              </button>
-            </div>
+         <div class="customer-cart-modal" id="customerCartModal" hidden>
+  <div class="customer-cart-modal-backdrop" data-cart-close="true"></div>
 
+  <section
+    class="customer-cart-panel customer-cart-sheet"
+    id="customerCartSheet"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="customerCartModalTitle"
+    tabindex="-1"
+  >
+
+    <div class="customer-cart-handle" aria-hidden="true"></div>
+           <div class="customer-cart-heading">
+
+  <h2 id="customerCartModalTitle" data-i18n="yourOrder">
+    Tu pedido
+  </h2>
+
+  <div class="customer-cart-heading-actions">
+
+    <button
+      class="customer-icon-action"
+      id="customerNotifyButton"
+      type="button"
+      title="Activar notificaciones"
+      aria-label="Activar notificaciones"
+      data-i18n-aria-label="enableNotifications"
+    >
+      <span aria-hidden="true">!</span>
+    </button>
+
+    <button
+      class="customer-cart-close"
+      id="customerCartCloseButton"
+      type="button"
+      aria-label="Cerrar carrito"
+      data-i18n-aria-label="closeCartAria"
+    >
+      <span aria-hidden="true">×</span>
+    </button>
+
+  </div>
+
+</div> 
+    
             <label>
               <span data-i18n="orderTypeLabel">Tipo de pedido</span>
               <select id="customerOrderType">
@@ -639,8 +689,17 @@
               <strong id="customerDeliveryFeeLabel">$0.00</strong>
             </div>
 
-            <button class="customer-submit-button" id="sendCustomerOrderButton" type="button" data-i18n="sendOrder">Enviar pedido</button>
-          </aside>
+            <button
+  class="customer-submit-button"
+  id="sendCustomerOrderButton"
+  type="button"
+  data-i18n="sendOrder"
+>
+  Enviar pedido
+</button>
+
+  </section>
+</div>
         </section>
       </section>
 
@@ -684,14 +743,6 @@
         </section>
       </section>
 
-      <section class="customer-view" data-customer-view="reservations" hidden>
-        <div class="customer-view-heading">
-          <p class="eyebrow" data-i18n="reservationsEyebrow">Tus mesas</p>
-          <h2 data-i18n="navReservations">Reservas</h2>
-        </div>
-        <div class="customer-empty customer-empty-page" data-i18n="reservationsEmpty">No tienes reservas registradas.</div>
-      </section>
-
       <section class="customer-view" data-customer-view="profile" hidden>
         <div class="customer-view-heading">
           <p class="eyebrow" data-i18n="profileEyebrow">Cuenta y preferencias</p>
@@ -711,11 +762,16 @@
           </div>
           <div class="customer-profile-details" id="customerProfileDetails"></div>
 
-          <div class="customer-profile-edit-actions" id="customerProfileEditActions" hidden>
+<div
+  class="customer-profile-edit-actions"
+  id="customerProfileEditActions"
+  hidden
+>
   <button
     class="customer-map-button"
     id="customerEditProfileButton"
     type="button"
+    data-i18n="editProfile"
   >
     Editar perfil
   </button>
@@ -778,20 +834,6 @@
       </svg>
     </span>
     <span data-i18n="navOrders">Pedidos</span>
-  </button>
-
-  <button
-    class="customer-bottom-nav-item"
-    type="button"
-    data-customer-view-target="reservations"
-  >
-    <span class="customer-bottom-nav-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24">
-        <rect x="3" y="5" width="18" height="16" rx="2"/>
-        <path d="M8 3v4M16 3v4M3 10h18"/>
-      </svg>
-    </span>
-    <span data-i18n="navReservations">Reservas</span>
   </button>
 
   <button
