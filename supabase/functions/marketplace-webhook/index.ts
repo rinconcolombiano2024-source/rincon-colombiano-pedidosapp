@@ -245,18 +245,46 @@ const refund = await admin.rpc("rc_ordera_record_verified_refund", {
       return json(200, { received: true });
     }
 
-    if (["charge.dispute.created", "charge.dispute.updated"].includes(eventType)) {
-      if (!transactionId) throw new Error("Disputed payment transaction was not found");
-      const hold = await admin.rpc("rc_ordera_hold_payment_for_dispute", {
-        p_payment_transaction_id: transactionId,
-        p_dispute_status: String(object?.status || "open"),
-        p_reason: `Stripe dispute ${String(object?.id || "")}`,
-      });
-      if (hold.error) throw hold.error;
-      await markEvent("processed");
-      return json(200, { received: true });
-    }
+  if ([
+  "charge.dispute.created",
+  "charge.dispute.updated",
+  "charge.dispute.closed",
+].includes(eventType)) {
+  if (!transactionId) {
+    throw new Error("Disputed payment transaction was not found");
+  }
 
+  const disputeId = String(object?.id || "");
+  const disputeStatus = String(object?.status || "");
+  const eventCreated = Number(event?.created);
+
+  if (!/^du_[A-Za-z0-9]+$/.test(disputeId)) {
+    throw new Error("Invalid Stripe dispute id");
+  }
+
+  if (!Number.isSafeInteger(eventCreated) || eventCreated < 0) {
+    throw new Error("Invalid Stripe dispute event timestamp");
+  }
+
+  const dispute = await admin.rpc(
+    "rc_ordera_reconcile_payment_dispute",
+    {
+      p_payment_transaction_id: transactionId,
+      p_provider_dispute_id: disputeId,
+      p_status: disputeStatus,
+      p_event_created: eventCreated,
+    }
+  );
+
+  if (dispute.error) throw dispute.error;
+
+  await markEvent("processed");
+
+  return json(200, {
+    received: true,
+    dispute: dispute.data,
+  });
+}
     await markEvent("ignored");
     return json(200, { received: true, ignored: true });
   } catch (error) {
