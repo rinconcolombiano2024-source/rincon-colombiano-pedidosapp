@@ -100,13 +100,22 @@ Deno.serve(async (request) => {
   );
   if (reusable) return response(200, { url: reusable.checkout_url, transactionId: reusable.id });
 
+   const unfinishedAttempt = (attempts || []).find((attempt) =>
+    attempt.status === "pending" && !attempt.checkout_url && attempt.idempotency_key
+  );
+
   const attemptNumber = (attempts || []).length + 1;
-  const idempotencyKey = `stripe-checkout:${order.id}:${attemptNumber}`;
-  let transactionId = crypto.randomUUID();
+
+  const idempotencyKey = unfinishedAttempt?.idempotency_key
+    || `stripe-checkout:${order.id}:${attemptNumber}`;
+
+  let transactionId = unfinishedAttempt?.id || crypto.randomUUID();
+
   const amountMinor = Math.round(Number(order.total) * 100);
   const currency = String(order.currency || "PLN").toLowerCase();
   if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) return response(409, { error: "Invalid order total" });
 
+if (!unfinishedAttempt) {
   const pendingAttempt = {
     id: transactionId,
     customer_order_id: order.id,
@@ -136,7 +145,7 @@ Deno.serve(async (request) => {
   } else if (reserved?.id) {
     transactionId = reserved.id;
   }
-
+}
   const form = new URLSearchParams({
     mode: "payment",
     success_url: `${appBaseUrl}/cliente.html?store=${encodeURIComponent(order.user_id)}&payment=success&order=${encodeURIComponent(order.id)}`,
