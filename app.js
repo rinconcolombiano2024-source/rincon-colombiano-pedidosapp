@@ -45,6 +45,7 @@ settingsRevision: "rc_ordera_settings_revision",
   legalAddress: "rc_ordera_legal_address",
   deliveryMinimumFee: "rc_ordera_delivery_minimum_fee",
   currentOrderDraft: "rc_ordera_current_order_draft",
+  revisionConflictBackups: "rc_ordera_revision_conflict_backups",
   restaurantOperationalOpen: "rc_ordera_restaurant_operational_open",
   restaurantOperationalMode: "rc_ordera_restaurant_operational_mode",
   restaurantOpeningHours: "rc_ordera_restaurant_opening_hours",
@@ -1560,7 +1561,267 @@ function needsAutomaticCloudSync(order) {
     !isOrderRevisionSyncBlocked(order)
   );
 }
+const REVISION_CONFLICT_BACKUP_LIMIT = 10;
 
+function readRevisionConflictBackups() {
+  try {
+    const raw =
+      localStorage.getItem(
+        STORAGE_KEYS.revisionConflictBackups
+      );
+
+    if (!raw) {
+      return {
+        ok: true,
+        backups: [],
+      };
+    }
+
+    const parsed =
+      JSON.parse(raw);
+
+    /*
+     * Si el contenido existe pero está corrupto
+     * o no tiene el formato esperado, NO lo
+     * sobrescribimos automáticamente.
+     */
+    if (!Array.isArray(parsed)) {
+      console.error(
+        "[RC ORDERA] El almacenamiento de respaldos de conflictos tiene un formato inválido. El valor original se conserva."
+      );
+
+      return {
+        ok: false,
+        backups: [],
+      };
+    }
+
+    return {
+      ok: true,
+      backups: parsed,
+    };
+  } catch (error) {
+    /*
+     * Un error leyendo localStorage jamás debe
+     * provocar pérdida del pedido ni crash del POS.
+     */
+    console.error(
+      "[RC ORDERA] No fue posible leer los respaldos de conflictos de revisión.",
+      error
+    );
+
+    return {
+      ok: false,
+      backups: [],
+    };
+  }
+}
+
+function saveRevisionConflictBackup(
+  order,
+  remoteRevision = null
+) {
+  if (!order?.id) {
+    return false;
+  }
+
+  const stored =
+    readRevisionConflictBackups();
+
+  /*
+   * Si el almacenamiento existente está corrupto
+   * o no puede leerse, NO lo sobrescribimos.
+   */
+  if (!stored.ok) {
+    return false;
+  }
+
+  const localRevision =
+    Number.parseInt(
+      order._syncRevision,
+      10
+    );
+
+const parsedRemoteRevision =
+  Number.parseInt(
+    remoteRevision,
+    10
+  );
+
+/*
+ * IDEMPOTENCIA DEL RESPALDO.
+ *
+ * La misma edición local del mismo conflicto
+ * debe guardarse una sola vez.
+ *
+ * Esto evita llenar los 10 espacios disponibles
+ * con copias repetidas del mismo pedido.
+ *
+ * IMPORTANTE:
+ * - no modifica el pedido;
+ * - no llama a Supabase;
+ * - no crea timers;
+ * - no genera reintentos;
+ * - no elimina respaldos existentes.
+ */
+const existingBackup =
+  stored.backups.some(
+    (backup) =>
+      String(backup?.orderId || "") ===
+        String(order.id) &&
+      String(backup?.localUpdatedAt || "") ===
+        String(order.updatedAt || "") &&
+      (
+        Number.parseInt(
+          backup?.localRevision,
+          10
+        ) || 0
+      ) ===
+        (
+          Number.isFinite(localRevision)
+            ? localRevision
+            : 0
+        ) &&
+      (
+        Number.parseInt(
+          backup?.remoteRevision,
+          10
+        ) || 0
+      ) ===
+        (
+          Number.isFinite(parsedRemoteRevision)
+            ? parsedRemoteRevision
+            : 0
+        ) &&
+      backup?.order &&
+      typeof backup.order === "object"
+  );
+
+if (existingBackup) {
+  return true;
+}
+
+let orderSnapshot;
+
+  try {
+    orderSnapshot =
+      structuredCloneOrder(order);
+  } catch (error) {
+    console.error(
+      "[RC ORDERA] No fue posible crear una copia del pedido en conflicto.",
+      error
+    );
+
+    return false;
+  }
+
+  const backup = {
+    backupId: [
+      String(order.id),
+      String(order.updatedAt || ""),
+      Number.isFinite(localRevision)
+        ? localRevision
+        : 0,
+      Number.isFinite(parsedRemoteRevision)
+        ? parsedRemoteRevision
+        : 0,
+      Date.now(),
+    ].join(":"),
+
+    orderId:
+      String(order.id),
+
+    localRevision:
+      Number.isFinite(localRevision)
+        ? localRevision
+        : null,
+
+    remoteRevision:
+      Number.isFinite(parsedRemoteRevision)
+        ? parsedRemoteRevision
+        : null,
+
+    localUpdatedAt:
+      order.updatedAt || null,
+
+    backedUpAt:
+      new Date().toISOString(),
+
+    order:
+      orderSnapshot,
+  };
+
+  /*
+   * Máximo 10 respaldos.
+   *
+   * Es deliberadamente pequeño para evitar
+   * llenar localStorage con datos históricos.
+   */
+  const nextBackups = [
+    backup,
+    ...stored.backups,
+  ].slice(
+    0,
+    REVISION_CONFLICT_BACKUP_LIMIT
+  );
+
+  try {
+    localStorage.setItem(
+      STORAGE_KEYS.revisionConflictBackups,
+      JSON.stringify(nextBackups)
+    );
+
+    /*
+     * Verificación posterior.
+     *
+     * No consideramos exitoso el respaldo
+     * solamente porque setItem() no lanzó error.
+     */
+    const verificationRaw =
+      localStorage.getItem(
+        STORAGE_KEYS.revisionConflictBackups
+      );
+
+    const verification =
+      JSON.parse(
+        verificationRaw || "[]"
+      );
+
+    const confirmed =
+      Array.isArray(verification) &&
+      verification.some(
+        (entry) =>
+          entry?.backupId ===
+          backup.backupId
+      );
+
+    if (!confirmed) {
+      console.error(
+        "[RC ORDERA] El respaldo del conflicto no pudo verificarse."
+      );
+
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    /*
+     * Si localStorage está lleno, bloqueado
+     * o falla por cualquier motivo,
+     * informamos false.
+     *
+     * Más adelante usaremos este resultado
+     * para impedir que se descarte la versión
+     * local sin haberla respaldado.
+     */
+    console.error(
+      "[RC ORDERA] No fue posible guardar el respaldo del pedido en conflicto.",
+      error
+    );
+
+    return false;
+  }
+}
 function blockOrderRevisionSync(
   order,
   remoteRevision = null
@@ -2340,19 +2601,319 @@ function confirmOrderSyncedIfUnchanged(orderId, expectedUpdatedAt) {
 
 function mergeOrders(cloudOrders, localOrders) {
   const ordersById = new Map();
-  [...cloudOrders, ...localOrders].forEach((order) => {
-    if (!order?.id) return;
-    const current = ordersById.get(order.id);
-    if (!current || needsCloudSync(order) || new Date(order.updatedAt || 0) > new Date(current.updatedAt || 0)) {
-      ordersById.set(order.id, normalizeOrderNotes({
+
+  /*
+   * Leemos los respaldos una sola vez por merge.
+   *
+   * No hacemos una lectura de localStorage
+   * por cada pedido.
+   */
+  const backupState =
+    readRevisionConflictBackups();
+
+  const conflictBackups =
+    backupState.ok &&
+    Array.isArray(backupState.backups)
+      ? backupState.backups
+      : [];
+
+  /*
+   * Confirma que la versión local bloqueada
+   * tiene un respaldo verificable antes de
+   * permitir que una revisión remota superior
+   * la sustituya.
+   */
+  const hasVerifiedConflictBackup = (
+    order,
+    remoteRevision
+  ) => {
+    if (!order?.id) {
+      return false;
+    }
+
+    const localRevision =
+      Number.parseInt(
+        order._syncRevision,
+        10
+      );
+
+    if (
+      !Number.isFinite(localRevision) ||
+      localRevision < 1 ||
+      !Number.isFinite(remoteRevision) ||
+      remoteRevision <= localRevision
+    ) {
+      return false;
+    }
+
+    return conflictBackups.some(
+      (backup) => {
+        if (
+          String(backup?.orderId || "") !==
+          String(order.id)
+        ) {
+          return false;
+        }
+
+        /*
+         * El respaldo debe corresponder
+         * exactamente a la edición local
+         * que estamos a punto de sustituir.
+         */
+        if (
+          String(
+            backup?.localUpdatedAt || ""
+          ) !==
+          String(order.updatedAt || "")
+        ) {
+          return false;
+        }
+
+        const backupLocalRevision =
+          Number.parseInt(
+            backup?.localRevision,
+            10
+          );
+
+        const backupRemoteRevision =
+          Number.parseInt(
+            backup?.remoteRevision,
+            10
+          );
+
+        if (
+          backupLocalRevision !==
+          localRevision
+        ) {
+          return false;
+        }
+
+        /*
+         * Supabase puede haber avanzado todavía
+         * más desde que ocurrió el conflicto.
+         *
+         * Ejemplo:
+         * respaldo detectó revisión 5
+         * Supabase ahora está en revisión 7.
+         *
+         * Eso sigue siendo seguro porque
+         * conservamos la misma edición local
+         * original en el respaldo.
+         */
+        if (
+          Number.isFinite(
+            backupRemoteRevision
+          ) &&
+          backupRemoteRevision >
+            remoteRevision
+        ) {
+          return false;
+        }
+
+        return true;
+      }
+    );
+  };
+
+  [
+    ...(Array.isArray(cloudOrders)
+      ? cloudOrders
+      : []),
+
+    ...(Array.isArray(localOrders)
+      ? localOrders
+      : []),
+  ].forEach((order) => {
+    if (!order?.id) {
+      return;
+    }
+
+    const normalizedOrder =
+      normalizeOrderNotes({
         ...order,
-        type: normalizeOrderType(order.type),
-        businessDate: orderBusinessDate(order),
-      }));
+        type:
+          normalizeOrderType(
+            order.type
+          ),
+        businessDate:
+          orderBusinessDate(
+            order
+          ),
+      });
+
+    const current =
+      ordersById.get(
+        normalizedOrder.id
+      );
+
+    /*
+     * Primer pedido con ese ID.
+     */
+    if (!current) {
+      ordersById.set(
+        normalizedOrder.id,
+        normalizedOrder
+      );
+
+      return;
+    }
+
+    /*
+     * CASO ESPECIAL:
+     *
+     * La versión que llega ahora es una
+     * edición local bloqueada por conflicto.
+     *
+     * Normalmente los pedidos de nube entraron
+     * primero en el Map y los locales después.
+     */
+    if (
+      isOrderRevisionSyncBlocked(
+        normalizedOrder
+      )
+    ) {
+      const localRevision =
+        Number.parseInt(
+          normalizedOrder._syncRevision,
+          10
+        );
+
+      const remoteRevision =
+        Number.parseInt(
+          current._syncRevision,
+          10
+        );
+
+      const remoteIsConfirmed =
+        current.syncStatus ===
+        "synced";
+
+      const remoteIsNewer =
+        Number.isFinite(
+          localRevision
+        ) &&
+        localRevision > 0 &&
+        Number.isFinite(
+          remoteRevision
+        ) &&
+        remoteRevision >
+          localRevision;
+
+      const localBackupExists =
+        remoteIsNewer &&
+        hasVerifiedConflictBackup(
+          normalizedOrder,
+          remoteRevision
+        );
+
+      /*
+       * ÚNICO caso donde dejamos ganar
+       * a la nube sobre un pending local:
+       *
+       * 1. local está bloqueado por conflicto;
+       * 2. nube está confirmada;
+       * 3. revisión nube es superior;
+       * 4. edición local tiene respaldo verificado.
+       *
+       * Si cualquiera falla:
+       * conservamos la versión local bloqueada.
+       */
+      if (
+        remoteIsConfirmed &&
+        remoteIsNewer &&
+        localBackupExists
+      ) {
+        console.info(
+          "[RC ORDERA] Conflicto reconciliado durante merge: se conserva la revisión remota confirmada y la edición local permanece respaldada.",
+          {
+            orderId:
+              normalizedOrder.id,
+            localRevision,
+            remoteRevision,
+          }
+        );
+
+        /*
+         * current ya contiene la versión remota.
+         * No necesitamos escribir nada.
+         */
+        return;
+      }
+
+      /*
+       * Sin respaldo o sin una revisión remota
+       * inequívocamente superior:
+       * NO descartamos la edición local.
+       */
+      ordersById.set(
+        normalizedOrder.id,
+        normalizedOrder
+      );
+
+      return;
+    }
+
+    /*
+     * COMPORTAMIENTO ORIGINAL:
+     *
+     * Un pedido local pendiente normal
+     * continúa teniendo prioridad.
+     *
+     * Esto protege el modo offline y evita
+     * regresiones en pedidos todavía no
+     * confirmados por Supabase.
+     */
+    if (
+      needsCloudSync(
+        normalizedOrder
+      )
+    ) {
+      ordersById.set(
+        normalizedOrder.id,
+        normalizedOrder
+      );
+
+      return;
+    }
+
+    /*
+     * Para pedidos sin cambios pendientes,
+     * conservamos la versión más reciente.
+     */
+    const incomingUpdatedAt =
+      new Date(
+        normalizedOrder.updatedAt ||
+        0
+      ).getTime();
+
+    const currentUpdatedAt =
+      new Date(
+        current.updatedAt ||
+        0
+      ).getTime();
+
+    if (
+      incomingUpdatedAt >
+      currentUpdatedAt
+    ) {
+      ordersById.set(
+        normalizedOrder.id,
+        normalizedOrder
+      );
     }
   });
 
-  return Array.from(ordersById.values()).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  return Array.from(
+    ordersById.values()
+  ).sort(
+    (a, b) =>
+      new Date(
+        b.createdAt || 0
+      ) -
+      new Date(
+        a.createdAt || 0
+      )
+  );
 }
 
 function supabaseConfig() {
@@ -3714,7 +4275,158 @@ nextTicket =
   1;
     saveTicketState();
 
-    currentOrder = currentOrderHasContent(currentOrderBeforeLoad) ? currentOrderBeforeLoad : createBlankOrder();
+/*
+ * RECONCILIACION SEGURA DEL PEDIDO ABIERTO.
+ *
+ * Regla:
+ * - borradores nuevos se conservan;
+ * - pendientes normales se conservan;
+ * - solo un revision_conflict ya reconciliado
+ *   en savedOrders puede adoptar la version remota;
+ * - la version local debe tener respaldo verificable.
+ */
+const orderBeforeCurrentReconciliation =
+  currentOrderHasContent(currentOrderBeforeLoad)
+    ? currentOrderBeforeLoad
+    : createBlankOrder();
+
+let reconciledCurrentOrder =
+  orderBeforeCurrentReconciliation;
+
+if (
+  orderBeforeCurrentReconciliation?.saved &&
+  orderBeforeCurrentReconciliation?.id &&
+  isOrderRevisionSyncBlocked(
+    orderBeforeCurrentReconciliation
+  )
+) {
+  const reconciledSavedOrder =
+    savedOrders.find(
+      (savedOrder) =>
+        String(savedOrder?.id || "") ===
+        String(
+          orderBeforeCurrentReconciliation.id
+        )
+    ) || null;
+
+  const localRevision =
+    Number.parseInt(
+      orderBeforeCurrentReconciliation._syncRevision,
+      10
+    );
+
+  const reconciledRevision =
+    Number.parseInt(
+      reconciledSavedOrder?._syncRevision,
+      10
+    );
+
+  const backupState =
+    readRevisionConflictBackups();
+
+  const hasMatchingConflictBackup =
+    backupState.ok &&
+    Array.isArray(backupState.backups) &&
+    backupState.backups.some(
+      (backup) => {
+        if (
+          String(backup?.orderId || "") !==
+          String(
+            orderBeforeCurrentReconciliation.id
+          )
+        ) {
+          return false;
+        }
+
+        if (
+          String(
+            backup?.localUpdatedAt || ""
+          ) !==
+          String(
+            orderBeforeCurrentReconciliation.updatedAt ||
+              ""
+          )
+        ) {
+          return false;
+        }
+
+        const backupLocalRevision =
+          Number.parseInt(
+            backup?.localRevision,
+            10
+          );
+
+        const backupRemoteRevision =
+          Number.parseInt(
+            backup?.remoteRevision,
+            10
+          );
+
+        if (
+          backupLocalRevision !==
+          localRevision
+        ) {
+          return false;
+        }
+
+        if (
+          Number.isFinite(
+            backupRemoteRevision
+          ) &&
+          Number.isFinite(
+            reconciledRevision
+          ) &&
+          backupRemoteRevision >
+            reconciledRevision
+        ) {
+          return false;
+        }
+
+        return true;
+      }
+    );
+
+  const canAdoptReconciledOrder =
+    Boolean(
+      reconciledSavedOrder &&
+      reconciledSavedOrder.syncStatus ===
+        "synced" &&
+      !isOrderRevisionSyncBlocked(
+        reconciledSavedOrder
+      ) &&
+      Number.isFinite(localRevision) &&
+      localRevision > 0 &&
+      Number.isFinite(
+        reconciledRevision
+      ) &&
+      reconciledRevision >
+        localRevision &&
+      hasMatchingConflictBackup
+    );
+
+  if (canAdoptReconciledOrder) {
+    reconciledCurrentOrder =
+      normalizeCurrentOrderDraft(
+        structuredCloneOrder(
+          reconciledSavedOrder
+        )
+      );
+
+    console.info(
+      "[RC ORDERA] Pedido abierto reconciliado con la revision remota confirmada.",
+      {
+        orderId:
+          reconciledCurrentOrder.id,
+        localRevision,
+        remoteRevision:
+          reconciledRevision,
+      }
+    );
+  }
+}
+
+currentOrder =
+  reconciledCurrentOrder;
     renderCurrencySettings();
     renderCategories();
     renderMenu();
@@ -4674,7 +5386,69 @@ async function saveCloudOrderInternal(
         order._syncRemoteRevision,
         10
       );
+const localRevision =
+  Number.parseInt(
+    order._syncRevision,
+    10
+  );
 
+/*
+ * Si el usuario modificó nuevamente un pedido
+ * que ya estaba bloqueado, updatedAt cambia.
+ *
+ * Antes de rechazar otro intento de sincronización
+ * protegemos exactamente esa nueva edición local.
+ *
+ * No hacemos RPC, fetch, timer ni reintento.
+ */
+const backupState =
+  readRevisionConflictBackups();
+
+const currentEditionAlreadyBackedUp =
+  backupState.ok &&
+  Array.isArray(backupState.backups) &&
+  backupState.backups.some(
+    (backup) =>
+      String(backup?.orderId || "") ===
+        String(order.id) &&
+      String(backup?.localUpdatedAt || "") ===
+        String(order.updatedAt || "") &&
+      Number.parseInt(
+        backup?.localRevision,
+        10
+      ) === localRevision &&
+      Number.parseInt(
+        backup?.remoteRevision,
+        10
+      ) === remoteRevision
+  );
+
+if (!currentEditionAlreadyBackedUp) {
+  const currentEditionBackupSaved =
+    saveRevisionConflictBackup(
+      order,
+      remoteRevision
+    );
+
+  if (!currentEditionBackupSaved) {
+    console.error(
+      "[RC ORDERA] No fue posible respaldar la edición local actual del pedido bloqueado.",
+      {
+        orderId: order.id,
+        localRevision:
+          Number.isFinite(localRevision)
+            ? localRevision
+            : null,
+        remoteRevision:
+          Number.isFinite(remoteRevision)
+            ? remoteRevision
+            : null,
+        localUpdatedAt:
+          order.updatedAt || null,
+      }
+    );
+  }
+}
     blockedError.remoteRevision =
       Number.isFinite(remoteRevision)
         ? remoteRevision
@@ -5100,6 +5874,26 @@ if (
    * una modificación verdadera de otro dispositivo.
    * No sobrescribimos nada.
    */
+      const conflictBackupSaved =
+  saveRevisionConflictBackup(
+    order,
+    remoteRevision
+  );
+
+if (!conflictBackupSaved) {
+  console.error(
+    "[RC ORDERA] No fue posible respaldar el pedido antes de bloquear el conflicto de revisión.",
+    {
+      orderId: order.id,
+      localRevision:
+        Number.parseInt(
+          order._syncRevision,
+          10
+        ) || null,
+      remoteRevision,
+    }
+  );
+}
 blockOrderRevisionSync(
   order,
   remoteRevision
@@ -8227,22 +9021,38 @@ if (remoteRow) {
       10
     );
 
-  if (
-    Number.isFinite(remoteRevision) &&
-    remoteRevision > 0 &&
-    Number.isFinite(localRevision) &&
-    localRevision > 0 &&
-    remoteRevision > localRevision
-  ) {
-    blockOrderRevisionSync(
+ if (
+  Number.isFinite(remoteRevision) &&
+  remoteRevision > 0 &&
+  Number.isFinite(localRevision) &&
+  localRevision > 0 &&
+  remoteRevision > localRevision
+) {
+  const conflictBackupSaved =
+    saveRevisionConflictBackup(
       order,
       remoteRevision
     );
 
-    continue;
+  if (!conflictBackupSaved) {
+    console.error(
+      "[RC ORDERA] El conflicto de revisión fue bloqueado, pero no fue posible crear el respaldo local.",
+      {
+        orderId: order.id,
+        localRevision,
+        remoteRevision,
+      }
+    );
   }
-}
 
+  blockOrderRevisionSync(
+    order,
+    remoteRevision
+  );
+
+  continue;
+}
+}
 /*
  * No existe una versión remota más nueva.
  * El pedido todavía puede intentar
