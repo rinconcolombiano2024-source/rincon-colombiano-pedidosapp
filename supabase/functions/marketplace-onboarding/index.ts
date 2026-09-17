@@ -13,18 +13,38 @@ function response(status: number, body: Record<string, unknown>) {
   });
 }
 
-async function stripeRequest(path: string, values: Record<string, string>, key: string) {
+async function stripeRequest(
+  path: string,
+  values: Record<string, string>,
+  key: string,
+  idempotencyKey = "",
+) {
   const body = new URLSearchParams(values);
+
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${key}`,
+    "Content-Type": "application/x-www-form-urlencoded",
+  };
+
+  if (idempotencyKey) {
+    headers["Idempotency-Key"] = idempotencyKey;
+  }
+
   const result = await fetch(`https://api.stripe.com/v1/${path}`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/x-www-form-urlencoded" },
+    headers,
     body,
+    signal: AbortSignal.timeout(15_000),
   });
+
   const data = await result.json();
-  if (!result.ok) throw new Error(data?.error?.message || "Stripe request failed");
+
+  if (!result.ok) {
+    throw new Error(data?.error?.message || "Stripe request failed");
+  }
+
   return data;
 }
-
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (request.method !== "POST") return response(405, { error: "Method not allowed" });
@@ -80,7 +100,7 @@ Deno.serve(async (request) => {
       "capabilities[transfers][requested]": "true",
       "metadata[rc_ordera_user_id]": user.id,
       "metadata[account_type]": accountType,
-    }, stripeKey);
+    }, stripeKey, `rc-ordera-account:${user.id}:${accountType}`);
     accountId = account.id;
     const { error } = await admin.from("marketplace_accounts").upsert({
       owner_user_id: user.id,
@@ -97,7 +117,9 @@ Deno.serve(async (request) => {
 
   const accountResult = await fetch(`https://api.stripe.com/v1/accounts/${encodeURIComponent(accountId)}`, {
     headers: { Authorization: `Bearer ${stripeKey}` },
+    signal: AbortSignal.timeout(15_000),
   });
+  
   const accountState = await accountResult.json();
   if (!accountResult.ok) return response(502, { error: accountState?.error?.message || "Could not read payout account" });
   const onboardingStatus = accountState.details_submitted && accountState.payouts_enabled ? "complete" : "pending";
