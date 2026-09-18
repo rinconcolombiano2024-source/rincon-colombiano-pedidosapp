@@ -4942,11 +4942,24 @@ async function customerCreateCustomerOrder(orderPayload, total, tableLabel, cust
   const pendingOrder = customerReadPendingOrder(fingerprint);
   const orderId = pendingOrder?.orderId || customerGenerateId();
   const publicToken = pendingOrder?.publicToken || customerGenerateId();
-  const payloadWithToken = { ...orderPayload, publicToken };
+
+  // V91-12:
+  // El token es una credencial privada del cliente.
+  // Debe viajar únicamente por p_public_token.
+  // Nunca debe almacenarse dentro de order_json.
+  const payloadForServer = { ...orderPayload };
+
+  delete payloadForServer.publicToken;
+  delete payloadForServer.public_token;
 
   localStorage.setItem(
     customerPendingOrderStorageKey(),
-    JSON.stringify({ fingerprint, orderId, publicToken, createdAt: pendingOrder?.createdAt || Date.now() })
+    JSON.stringify({
+      fingerprint,
+      orderId,
+      publicToken,
+      createdAt: pendingOrder?.createdAt || Date.now(),
+    })
   );
 
   const { data: rpcData, error: rpcError } = await customerClient.rpc("create_customer_order", {
@@ -4956,22 +4969,23 @@ async function customerCreateCustomerOrder(orderPayload, total, tableLabel, cust
     p_table_label: tableLabel,
     p_customer_name: customerName,
     p_order_type: orderType,
-    p_order_json: payloadWithToken,
+    p_order_json: payloadForServer,
     p_total: total,
   });
 
   if (rpcError) throw rpcError;
 
   const row = customerNormalizeRpcRow(rpcData);
+
   localStorage.removeItem(customerPendingOrderStorageKey());
+
   return {
     id: row?.id || orderId,
     publicToken: row?.public_token || publicToken,
-    payload: payloadWithToken,
+    payload: payloadForServer,
     trackingAvailable: true,
   };
 }
-
 function customerStatusText(row) {
   const ticket = row?.ticket_number ? customerT("ticketSuffix", { ticket: String(row.ticket_number).padStart(4, "0") }) : "";
   const status = row?.canonical_status || row?.status || "";
