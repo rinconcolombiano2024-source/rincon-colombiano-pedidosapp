@@ -32,14 +32,70 @@ Deno.serve(async (request) => {
   const accessToken = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
   const { data: userData } = accessToken ? await admin.auth.getUser(accessToken) : { data: { user: null } };
   const user = userData?.user || null;
-  const orderResult = await admin.from("customer_orders")
-    .select("id,public_token,user_id,customer_user_id,status,total,currency,payment_method,payment_status,order_json")
-    .eq("id", payload.orderId).maybeSingle();
-  if (orderResult.error) return response(500, { error: "Could not read order" });
-  const order = orderResult.data;
-  if (!order) return response(404, { error: "Order was not found" });
-  const tokenMatches = String(payload.publicToken || "").length >= 8 && payload.publicToken === order.public_token;
-  if (!(tokenMatches || (user && user.id === order.customer_user_id))) return response(403, { error: "Not authorized" });
+const orderResult = await admin.from("customer_orders")
+  .select("id,user_id,customer_user_id,status,total,currency,payment_method,payment_status,order_json")
+  .eq("id", payload.orderId)
+  .maybeSingle();
+
+if (orderResult.error) {
+  return response(500, { error: "Could not read order" });
+}
+
+const order = orderResult.data;
+
+if (!order) {
+  return response(404, { error: "Order was not found" });
+}
+
+const authenticatedCustomer =
+  Boolean(
+    user &&
+    user.id === order.customer_user_id
+  );
+
+let tokenMatches = false;
+
+const suppliedToken =
+  String(payload.publicToken || "").trim();
+
+if (
+  !authenticatedCustomer &&
+  suppliedToken.length >= 8
+) {
+  const tokenResult = await admin.rpc(
+    "rc_ordera_customer_token_matches",
+    {
+      p_order_id: order.id,
+      p_public_token: suppliedToken,
+    }
+  );
+
+  if (tokenResult.error) {
+    console.error(
+      "marketplace-checkout token validation failed",
+      tokenResult.error
+    );
+
+    return response(
+      500,
+      { error: "Could not validate order access" }
+    );
+  }
+
+  tokenMatches =
+    tokenResult.data === true;
+}
+
+if (
+  !authenticatedCustomer &&
+  !tokenMatches
+) {
+  return response(
+    403,
+    { error: "Not authorized" }
+  );
+}
+  
   if (order.payment_status === "paid") return response(409, { error: "Order is already paid" });
   if (order.status !== "pending") return response(409, { error: "Order can no longer be paid online" });
   if (String(order.payment_method || "").toLowerCase() !== "online") {
