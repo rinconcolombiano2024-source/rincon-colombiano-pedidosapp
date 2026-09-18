@@ -606,34 +606,44 @@ for all
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
-drop policy if exists "Customers create pending customer orders" on public.customer_orders;
-create policy "Customers create pending customer orders"
-on public.customer_orders
-for insert
-to authenticated
-with check (status = 'pending' and auth.uid() = customer_user_id);
+drop policy if exists
+  "Customers create pending customer orders"
+on public.customer_orders;
 
-drop policy if exists "Authenticated customers create own pending customer orders" on public.customer_orders;
-create policy "Authenticated customers create own pending customer orders"
-on public.customer_orders
-for insert
-to authenticated
-with check (status = 'pending' and auth.uid() = customer_user_id);
+drop policy if exists
+  "Authenticated customers create own pending customer orders"
+on public.customer_orders;
 
-drop policy if exists "Authenticated customers read own customer orders" on public.customer_orders;
-create policy "Authenticated customers read own customer orders"
+drop policy if exists
+  "Authenticated customers read own customer orders"
+on public.customer_orders;
+
+create policy
+  "Authenticated customers read own customer orders"
 on public.customer_orders
 for select
 to authenticated
-using (auth.uid() = customer_user_id);
+using (
+  auth.uid() = customer_user_id
+);
 
-drop policy if exists "Users manage own customer orders" on public.customer_orders;
-create policy "Users manage own customer orders"
+
+drop policy if exists
+  "Users manage own customer orders"
+on public.customer_orders;
+
+drop policy if exists
+  "Restaurants read own customer orders"
+on public.customer_orders;
+
+create policy
+  "Restaurants read own customer orders"
 on public.customer_orders
-for all
-using (auth.uid() = user_id)
-with check (auth.uid() = user_id);
-
+for select
+to authenticated
+using (
+  auth.uid() = user_id
+);
 drop policy if exists "Users manage own customer order messages" on public.customer_order_messages;
 create policy "Users manage own customer order messages"
 on public.customer_order_messages
@@ -793,7 +803,13 @@ grant select, insert, update, delete on public.orders to authenticated;
 grant select, insert, update, delete on public.ticket_counters to authenticated;
 grant select, insert, update, delete on public.customer_profiles to authenticated;
 revoke insert on public.customer_orders from anon;
-grant select, insert, update, delete on public.customer_orders to authenticated;
+revoke insert, update, delete
+on public.customer_orders
+from anon, authenticated;
+
+grant select
+on public.customer_orders
+to authenticated;
 grant select, insert, update, delete on public.customer_order_messages to authenticated;
 grant select, insert, update on public.courier_live_locations to authenticated;
 grant select, insert, update on public.delivery_assignments to authenticated;
