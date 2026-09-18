@@ -4,6 +4,11 @@
 
 begin;
 
+-- Supabase instala pgcrypto normalmente en el esquema extensions.
+-- Incluimos ambos esquemas para que la migracion funcione tanto si
+-- pgcrypto esta en public como si esta en extensions.
+set local search_path = pg_catalog, public, extensions;
+
 create extension if not exists pgcrypto;
 
 do $preflight$
@@ -47,7 +52,7 @@ returns boolean
 language sql
 stable
 security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog, public, extensions
 as $$
   select
     p_order_id is not null
