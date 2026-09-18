@@ -20,10 +20,9 @@ Deno.serve(async (request) => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
   const stripeKey = Deno.env.get("STRIPE_SECRET_KEY") || "";
   const appBaseUrl = (Deno.env.get("APP_BASE_URL") || "").replace(/\/+$/, "");
-  if (!supabaseUrl || !serviceKey || !stripeKey || !appBaseUrl) {
-    return response(503, { error: "Online payments are not configured" });
-  }
-
+ if (!supabaseUrl || !serviceKey) {
+  return response(503, { error: "Backend is not configured" });
+}
   let payload: { orderId?: string; publicToken?: string } = {};
   try { payload = await request.json(); } catch { return response(400, { error: "Invalid request" }); }
   if (!payload.orderId) return response(400, { error: "Order is required" });
@@ -101,6 +100,12 @@ if (
   if (String(order.payment_method || "").toLowerCase() !== "online") {
     return response(409, { error: "Order was not created for online payment" });
   }
+  if (!stripeKey || !appBaseUrl) {
+  return response(
+    503,
+    { error: "Online payments are not configured" }
+  );
+}
 
   const restaurantResult = await admin.from("restaurant_profiles")
     .select("business_name,country_code")
