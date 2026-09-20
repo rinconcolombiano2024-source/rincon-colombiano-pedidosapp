@@ -650,6 +650,10 @@ let clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;
 let clientOrdersPollGeneration = 0;
 let clientOrdersRefreshInFlight = null;
 let clientOrdersRefreshPending = false;
+let clientOrdersRefreshRetryNotBefore = 0;
+let clientOrdersRefreshRetryDelay = CLIENT_ORDERS_POLL_MIN_MS;
+let clientOrdersRefreshLastError = null;
+let clientOrdersRefreshUserId = null;
 let clientOrdersTrackingInFlight = null;
 let orderCachePersistHandle = null;
 let orderCachePersistMode = "";
@@ -799,7 +803,10 @@ async function refreshRestaurantBusinessContext(options = {}) {
   if (!force && refreshedRecently) return restaurantBusinessContext;
   if (!cloudState.client || !cloudState.user || !navigator.onLine) return restaurantBusinessContext;
 
-  const { data, error } = await cloudState.client.rpc("get_current_restaurant_business_context");
+  const { data, error } = await withCloudTimeout(
+    cloudState.client.rpc("get_current_restaurant_business_context"),
+    undefined, 20000, options.signal
+  );
   if (error) {
     if (["42883", "PGRST202"].includes(error.code)) return restaurantBusinessContext;
     throw error;
@@ -1285,11 +1292,16 @@ function withCloudTimeout(
   operation,
   message =
     "La nube no respondio a tiempo.",
-  timeoutMs = 20000
+  timeoutMs = 20000,
+  parentSignal = null
 ) {
   let timerId = null;
   let abortController = null;
   let pendingOperation = operation;
+  const forwardAbort = () => abortController?.abort(parentSignal.reason);
+  if (parentSignal?.aborted) {
+    return Promise.reject(parentSignal.reason || Object.assign(new Error(message), { name: "AbortError" }));
+  }
 
   /*
    * Las consultas PostgREST de Supabase
@@ -1308,6 +1320,7 @@ function withCloudTimeout(
       new AbortController();
 
   }
+  parentSignal?.addEventListener("abort", forwardAbort, { once: true });
   const attachSignal = (request) =>
     abortController && typeof request?.abortSignal === "function"
       ? request.abortSignal(abortController.signal)
@@ -1320,6 +1333,8 @@ function withCloudTimeout(
       ? Promise.all(pendingOperation.map(attachSignal))
       : attachSignal(pendingOperation);
   } catch (error) {
+    parentSignal?.removeEventListener("abort", forwardAbort);
+    abortController?.abort();
     return Promise.reject(error);
   }
 
@@ -1354,6 +1369,7 @@ function withCloudTimeout(
     ),
     timeout,
   ]).finally(() => {
+    parentSignal?.removeEventListener("abort", forwardAbort);
     if (timerId !== null) {
       window.clearTimeout(timerId);
     }
@@ -4451,7 +4467,7 @@ syncPendingAfterLoad =
   hasPendingDataToSync();
 try {
   await withCloudTimeout(
-    refreshClientOrders({ silent: true }),
+    (signal) => refreshClientOrders({ silent: true, signal }),
     "Los pedidos de clientes tardaron demasiado en actualizarse.",
     8000
   );
@@ -5272,26 +5288,26 @@ async function confirmRestaurantDeletion() {
   }
 }
 
-async function claimCloudTicket() {
+async function claimCloudTicket(signal = null) {
   if (!cloudState.client || !cloudState.user) return null;
 
-  await refreshRestaurantBusinessContext({ force: true });
+  await refreshRestaurantBusinessContext({ force: true, signal });
 
-  const { data, error } = await cloudState.client.rpc("claim_next_ticket", {
+  const { data, error } = await withCloudTimeout(cloudState.client.rpc("claim_next_ticket", {
     p_business_date: todayKey,
-  });
+  }), undefined, 20000, signal);
 
   if (error) throw error;
   return data;
 }
 
-async function setCloudNextTicket(number) {
+async function setCloudNextTicket(number, signal = null) {
   if (!cloudState.client || !cloudState.user) return;
 
-  const { error } = await cloudState.client.rpc("set_next_ticket", {
+  const { error } = await withCloudTimeout(cloudState.client.rpc("set_next_ticket", {
     p_business_date: todayKey,
     p_next_ticket: number,
-  });
+  }), undefined, 20000, signal);
 
   if (error) throw error;
 
@@ -5302,29 +5318,41 @@ let cloudOrderSaveQueue = Promise.resolve();
 
 async function saveCloudOrder(order, signal = null) {
   const orderId =
-    String(order?.id || "");
+    `${cloudState.user?.id || ""}:${order?.id || ""}`;
+  const edition = String(order?.updatedAt || "");
+  const client = cloudState.client;
+  const userId = cloudState.user?.id;
+  const unconfirmed = () => Object.assign(
+    new Error("La nube no confirmo completamente el pedido. Permanecera pendiente."),
+    { code: "RC_ORDERA_ORDER_NOT_CONFIRMED" }
+  );
 
   if (
     orderId &&
     cloudOrderSaveInFlight.has(orderId)
   ) {
-    return cloudOrderSaveInFlight.get(orderId);
+    const active = cloudOrderSaveInFlight.get(orderId);
+    if (active.edition !== edition) throw unconfirmed();
+    await active.operation;
+    if (String(order.updatedAt || "") !== edition) throw unconfirmed();
+    return;
   }
 
   const operation =
     cloudOrderSaveQueue
       .catch(() => {})
-      .then(() =>
-        saveCloudOrderInternal(
-          order,
-          signal
-        )
-      );
+      .then(() => {
+        if (signal?.aborted) {
+          throw signal.reason || Object.assign(new Error("Solicitud cancelada."), { name: "AbortError" });
+        }
+        if (client !== cloudState.client || userId !== cloudState.user?.id) throw unconfirmed();
+        return saveCloudOrderInternal(order, signal);
+      });
 
   if (orderId) {
     cloudOrderSaveInFlight.set(
       orderId,
-      operation
+      { operation, edition }
     );
   }
 
@@ -5336,7 +5364,7 @@ async function saveCloudOrder(order, signal = null) {
   } finally {
     if (
       orderId &&
-      cloudOrderSaveInFlight.get(orderId) ===
+      cloudOrderSaveInFlight.get(orderId)?.operation ===
         operation
     ) {
       cloudOrderSaveInFlight.delete(
@@ -5356,6 +5384,8 @@ async function saveCloudOrderInternal(
   ) {
     return;
   }
+  const requestClient = cloudState.client;
+  const requestUserId = cloudState.user.id;
 
   /*
    * PROTECCIÓN CENTRAL CONTRA CONFLICTOS DE REVISIÓN.
@@ -5469,6 +5499,9 @@ if (!currentEditionAlreadyBackedUp) {
   }
 
   const applyConfirmedCloudState = (result = {}) => {
+  if (requestClient !== cloudState.client || requestUserId !== cloudState.user?.id) {
+    throw Object.assign(new Error("La sesion cambio durante la sincronizacion."), { name: "AbortError" });
+  }
   const parsedRevision = Number.parseInt(
     result?.revision,
     10
@@ -5618,6 +5651,12 @@ if (!error) {
   }
 
   applyConfirmedCloudState(result);
+  if (order.updatedAt !== orderForCloud.updatedAt) {
+    throw Object.assign(
+      new Error("La nube no confirmo completamente el pedido. Permanecera pendiente."),
+      { code: "RC_ORDERA_ORDER_NOT_CONFIRMED" }
+    );
+  }
 }
 
 return { data, error };
@@ -5630,10 +5669,10 @@ return { data, error };
 
   if (ticketCollision) {
     const offlineTicketNumber = Number(order.ticketNumber) || null;
-    await refreshRestaurantBusinessContext({ force: true });
+    await refreshRestaurantBusinessContext({ force: true, signal });
 
     order.offlineTicketNumber = order.offlineTicketNumber || offlineTicketNumber;
-    order.ticketNumber = await claimCloudTicket();
+    order.ticketNumber = await claimCloudTicket(signal);
     order.businessDate = todayKey;
     order.updatedAt = new Date().toISOString();
 
@@ -5728,7 +5767,8 @@ try {
           .maybeSingle(),
       ],
       "No fue posible verificar el pedido en nube a tiempo.",
-      8000
+      8000,
+      signal
     );
 
     if (remoteOrderResponse.error) {
@@ -5926,19 +5966,19 @@ async function voidCloudOrder(orderId, reason = "Cancelado por el restaurante") 
   if (error) throw error;
 }
 
-async function advanceCloudTicketCounter(minimumNextTicket) {
+async function advanceCloudTicketCounter(minimumNextTicket, signal = null) {
   if (!cloudState.client || !cloudState.user || !Number.isFinite(minimumNextTicket)) return;
 
-  const { data, error } = await cloudState.client
+  const { data, error } = await withCloudTimeout(cloudState.client
     .from("ticket_counters")
     .select("next_ticket")
     .eq("user_id", cloudState.user.id)
     .eq("business_date", todayKey)
-    .maybeSingle();
+    .maybeSingle(), undefined, 20000, signal);
 
   if (error) throw error;
   if (!data || data.next_ticket < minimumNextTicket) {
-    await setCloudNextTicket(minimumNextTicket);
+    await setCloudNextTicket(minimumNextTicket, signal);
   }
 }
 
@@ -7134,7 +7174,7 @@ clientOrdersRealtimeStableTimer = setTimeout(() => {
   stopClientOrdersPolling();
   clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;
       if (clientOrdersRealtimeNeedsCatchup) {
-  refreshClientOrders({ silent: true })
+  refreshClientOrders({ silent: true, reconcileAfterInFlight: true })
     .then(() => {
       if (
         channel === clientOrdersChannel &&
@@ -7167,7 +7207,7 @@ clientOrdersRealtimeStableTimer = setTimeout(() => {
   startClientOrdersPolling();
 }
 
-async function loadCurrentRestaurantDeliveryTracking() {
+async function loadCurrentRestaurantDeliveryTracking(signal = null) {
   if (!cloudState.client || !cloudState.user || !navigator.onLine) {
     return clientDeliveryTrackingByOrderId instanceof Map
       ? clientDeliveryTrackingByOrderId
@@ -7175,7 +7215,10 @@ async function loadCurrentRestaurantDeliveryTracking() {
   }
   if (clientOrdersTrackingInFlight) return clientOrdersTrackingInFlight;
   clientOrdersTrackingInFlight = (async () => {
-    const { data, error } = await cloudState.client.rpc("get_current_restaurant_delivery_tracking");
+    const { data, error } = await withCloudTimeout(
+      cloudState.client.rpc("get_current_restaurant_delivery_tracking"),
+      undefined, 8000, signal
+    );
    if (error) {
   const missingFunction =
     /PGRST202|could not find the function|42883/i.test(
@@ -7207,13 +7250,21 @@ async function loadCurrentRestaurantDeliveryTracking() {
 async function refreshClientOrders(options = {}) {
   if (clientOrdersRefreshInFlight) {
     if (
-      options.reconcileAfterInFlight !== false
+      options.reconcileAfterInFlight === true
     ) {
       clientOrdersRefreshPending = true;
     }
 
     return clientOrdersRefreshInFlight;
   }
+  const userId = cloudState.user?.id || null;
+  if (clientOrdersRefreshUserId !== userId) {
+    clientOrdersRefreshUserId = userId;
+    clientOrdersRefreshRetryNotBefore = 0;
+    clientOrdersRefreshRetryDelay = CLIENT_ORDERS_POLL_MIN_MS;
+    clientOrdersRefreshLastError = null;
+  }
+  if (Date.now() < clientOrdersRefreshRetryNotBefore) throw clientOrdersRefreshLastError;
 
   clientOrdersRefreshInFlight =
     performClientOrdersRefresh(options);
@@ -7224,9 +7275,25 @@ async function refreshClientOrders(options = {}) {
     const result =
       await clientOrdersRefreshInFlight;
 
-    refreshSucceeded = true;
+    refreshSucceeded = result !== false;
+    if (refreshSucceeded) {
+      clientOrdersRefreshRetryNotBefore = 0;
+      clientOrdersRefreshRetryDelay = CLIENT_ORDERS_POLL_MIN_MS;
+      clientOrdersRefreshLastError = null;
+    }
 
     return result;
+  } catch (error) {
+    clientOrdersRefreshLastError = error;
+    clientOrdersRefreshRetryDelay = Math.min(
+      clientOrdersRefreshRetryDelay * 2, CLIENT_ORDERS_POLL_MAX_MS
+    );
+    clientOrdersRefreshRetryNotBefore = Date.now() + Math.min(
+      CLIENT_ORDERS_POLL_MAX_MS,
+      clientOrdersRefreshRetryDelay * (0.9 + Math.random() * 0.2)
+    );
+    clientOrdersRealtimeNeedsCatchup = true;
+    throw error;
   } finally {
     clientOrdersRefreshInFlight = null;
 
@@ -7263,6 +7330,8 @@ async function refreshClientOrders(options = {}) {
 }
 async function performClientOrdersRefresh(options = {}) {
   const { silent = false } = options;
+  const requestClient = cloudState.client;
+  const requestUserId = cloudState.user?.id;
   const previousIds = new Set(pendingClientOrders.filter((order) => order.status === "pending").map((order) => order.id));
   if (!canUseCustomerModule()) {
     pendingClientOrders = [];
@@ -7288,7 +7357,7 @@ async function performClientOrdersRefresh(options = {}) {
     .in("status", ["pending", "accepted", "sent"])
     .order("created_at", { ascending: false })
     .limit(100);
-  const trackingRequest = loadCurrentRestaurantDeliveryTracking().catch((trackingError) => {
+  const trackingRequest = loadCurrentRestaurantDeliveryTracking(options.signal).catch((trackingError) => {
     console.warn(
       "No fue posible confirmar el seguimiento de domicilios. Se conservara el ultimo estado valido.",
       trackingError
@@ -7299,10 +7368,11 @@ async function performClientOrdersRefresh(options = {}) {
       : new Map();
   });
   const [ordersResponse, tracking] = await Promise.all([
-    ordersRequest,
+    withCloudTimeout(ordersRequest, undefined, 8000, options.signal),
     trackingRequest,
   ]);
   const { data, error } = ordersResponse;
+  if (requestClient !== cloudState.client || requestUserId !== cloudState.user?.id) return false;
 
   if (error) {
     if (!silent || elements.clientOrdersDialog.open) {
@@ -7779,7 +7849,7 @@ async function acceptClientOrder(orderId) {
       alert("El pago en linea todavia no ha sido confirmado.");
     } else if (/already|only pending|missing its restaurant ticket/i.test(message)) {
       alert("Este pedido ya fue procesado en otra caja. La bandeja se actualizara.");
-      await refreshClientOrders({ silent: true });
+      await refreshClientOrders({ silent: true, reconcileAfterInFlight: true });
     } else if (["42883", "PGRST202"].includes(error.code)) {
       alert("El servicio de pedidos necesita una actualizacion. Contacta al soporte antes de aceptar pedidos.");
     } else {
@@ -7795,7 +7865,7 @@ async function acceptClientOrder(orderId) {
   }
   if (result.already_accepted) {
     alert("Este pedido ya fue aceptado en otra caja. No se imprimira nuevamente.");
-    await refreshClientOrders({ silent: true });
+    await refreshClientOrders({ silent: true, reconcileAfterInFlight: true });
     return;
   }
 
@@ -8440,7 +8510,6 @@ function syncPendingData(options = {}) {
   }
 
   if (pendingDataSyncInFlight) {
-    pendingDataSyncRequested = true;
     return pendingDataSyncInFlight;
   }
 
@@ -8476,7 +8545,7 @@ function schedulePendingDataSyncRetry(delayMs = 5000) {
   );
 
   const requestedDueAt =
-    Date.now() + normalizedDelay;
+    Math.max(Date.now() + normalizedDelay, pendingDataSyncRetryNotBefore);
 
   /*
    * Si ya existe un reintento igual o más próximo,
@@ -8484,6 +8553,7 @@ function schedulePendingDataSyncRetry(delayMs = 5000) {
    */
   if (
     pendingDataSyncRetryTimer !== null &&
+    pendingDataSyncRetryDueAt >= pendingDataSyncRetryNotBefore &&
     pendingDataSyncRetryDueAt > 0 &&
     pendingDataSyncRetryDueAt <= requestedDueAt
   ) {
@@ -9120,10 +9190,11 @@ const highestLocalTicketToday = savedOrders
 pendingDataSyncRetryNotBefore = 0;
 
 if (
-  hasMorePendingOrders &&
+  (hasMorePendingOrders || savedOrders.some((order) =>
+    needsAutomaticCloudSync(order) && !pendingDeletedOrderIds.includes(order.id)
+  )) &&
   hasPendingDataToSync()
 ) {
-  pendingDataSyncRequested = true;
   schedulePendingDataSyncRetry(
     SYNC_ORDER_BATCH_DELAY_MS
   );
@@ -9158,7 +9229,11 @@ renderOrder();
     ) {
       pendingDataSyncRequested = false;
       schedulePendingDataSyncRetry(
-        Math.max(5000, pendingDataSyncRetryNotBefore - Date.now())
+        Math.max(
+          5000,
+          pendingDataSyncRetryNotBefore - Date.now(),
+          pendingDataSyncRetryDueAt - Date.now()
+        )
       );
     }
   }
@@ -12399,7 +12474,7 @@ async function upsertCurrentOrder(options = {}) {
       try {
         currentOrder.ticketNumber =
           await withCloudTimeout(
-            claimCloudTicket(),
+            (signal) => claimCloudTicket(signal),
             "La nube tardó demasiado en asignar el ticket.",
             2500
           );
@@ -12509,13 +12584,14 @@ await withCloudTimeout(
        * Guardar ni Imprimir.
        */
       withCloudTimeout(
-        advanceCloudTicketCounter(
+        (signal) => advanceCloudTicketCounter(
           Math.max(
             nextTicket,
             Number(
               currentOrder.ticketNumber
             ) + 1
-          )
+          ),
+          signal
         ),
         "El contador de tickets tardó demasiado.",
         3000
@@ -14600,7 +14676,7 @@ if (!centralRefreshSucceeded) {
   return false;
 }
 
-if (needsClientCatchup) await refreshClientOrders({ silent: true });
+if (needsClientCatchup) await refreshClientOrders({ silent: true, reconcileAfterInFlight: true });
 
 centralRealtimeNeedsCatchup = false;
 clientOrdersRealtimeNeedsCatchup = false;
@@ -14628,6 +14704,7 @@ await syncRestaurantOperationalStatus({
       }
     },
     () => {
+      cloudRecoveryLastCompletedAt = Date.now();
       if (cloudRecoveryInFlight === operation) {
         cloudRecoveryInFlight = null;
       }
