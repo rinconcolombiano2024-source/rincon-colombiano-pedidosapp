@@ -114,7 +114,7 @@ test("late courier response cannot replace a different user's state", async () =
   assert.equal(h.c.courierAssignments, original);
 });
 
-function central() {
+function central(enabled = true) {
   let removed = 0, callback;
   const channel = { on() { return this; }, subscribe(fn) { callback = fn; } };
   const h = runtime({
@@ -124,7 +124,7 @@ function central() {
     centralSyncInProgress: false, centralSyncRefreshPending: false,
     centralRealtimeNeedsCatchup: false, centralRealtimeReconnectDelay: 1500,
     CENTRAL_REALTIME_RECONNECT_MIN_MS: 1500, CENTRAL_REALTIME_RECONNECT_MAX_MS: 60000,
-    CENTRAL_REALTIME_STABLE_MS: 30000,
+    CENTRAL_REALTIME_STABLE_MS: 30000, CENTRAL_REALTIME_ENABLED: enabled,
     cloudState: { user: { id: "owner" }, client: {
       channel: () => channel,
       removeChannel: () => { removed++; callback("CLOSED"); return Promise.resolve("ok"); },
@@ -149,6 +149,16 @@ test("failed central channel is removed once and CLOSED cannot schedule a loop",
   assert.equal(h.removed(), 1);
   assert.equal(h.timers.size, 1);
   assert.equal(h.c.centralRealtimeNeedsCatchup, true);
+});
+
+test("disabled central Realtime creates neither a channel nor a refresh/reconnect timer", () => {
+  const h = central(false);
+  h.c.startCentralRealtime();
+  h.c.scheduleCentralRefresh({ orders: true });
+  h.c.deferCentralRefreshAfterError({ status: 503 }, { orders: true });
+  assert.equal(h.c.centralSyncChannel, null);
+  assert.equal(h.removed(), 0);
+  assert.equal(h.timers.size, 0);
 });
 
 test("central 503 gates direct and scheduled requests while retaining scopes", async () => {
