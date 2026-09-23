@@ -20,6 +20,8 @@
     ["app.clientTitle", "RC ORDERA - Menu del cliente", "RC ORDERA - Menu klienta", "RC ORDERA - Customer menu"],
     ["app.tagline", "Tu comida favorita, cerca de ti.", "Twoje ulubione jedzenie blisko Ciebie.", "Your favorite food, close to you."],
     ["common.close", "Cerrar", "Zamknij", "Close"],
+    ["sync.requestCancelled", "Solicitud cancelada.", "Żądanie anulowane.", "Request cancelled."],
+    ["sync.sessionChanged", "La sesion cambio durante la sincronizacion.", "Sesja zmieniła się podczas synchronizacji.", "The session changed during synchronization."],
     ["common.clear", "Limpiar", "Wyczyść", "Clear"],
     ["common.add", "Agregar", "Dodaj", "Add"],
     ["common.delete", "Eliminar", "Usuń", "Delete"],
