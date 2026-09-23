@@ -1454,6 +1454,7 @@ function customerScheduleDescriptionRender() {
   if (customerDescriptionTranslationRenderTimer) return;
   customerDescriptionTranslationRenderTimer = window.setTimeout(() => {
     customerDescriptionTranslationRenderTimer = null;
+    customerSaveDescriptionTranslationCache();
     customerRenderCategories();
     customerRenderMenu();
     customerRenderSelectedRestaurantDetails();
@@ -1501,7 +1502,6 @@ function customerQueueMenuTextTranslation(text) {
       const cleanTranslated = customerNormalizeProductDescription(translated);
       if (cleanTranslated) {
         customerDescriptionTranslations[key] = cleanTranslated;
-        customerSaveDescriptionTranslationCache();
         customerScheduleDescriptionRender();
       }
     })
@@ -1667,6 +1667,7 @@ let customerStatusPollingDelay = CUSTOMER_STATUS_POLL_MIN_MS;
 let customerStatusPollInFlight = null;
 let customerTrackingRealtimeChannel = null;
 let customerTrackingRealtimeSignature = "";
+let customerTrackingRealtimeRow = null;
 let customerTrackingRefreshTimer = null;
 let customerTrackingRealtimeRetryTimer = null;
 let customerTrackingRealtimeStableTimer = null;
@@ -1676,6 +1677,9 @@ let customerTrackingRealtimeStatus = "idle";
 let customerTrackingRpcAvailable = null;
 let customerChatTimer = null;
 let customerChatLoadInFlight = null;
+let customerChatVersion = "";
+let customerChatGeneration = 0;
+let customerChatConditionalSupported = true;
 let customerChatPollSignature = "";
 let customerChatPollingDelay = CUSTOMER_CHAT_POLL_MIN_MS;
 let customerKnownChatMessageIds = new Set();
@@ -4700,18 +4704,33 @@ async function customerLoadChatMessages(options = {}) {
   if (!customerTrackedOrder?.id || !customerTrackedOrder.publicToken || !customerClient) return false;
   if (customerChatLoadInFlight) return customerChatLoadInFlight;
 
+  const orderId = customerTrackedOrder.id;
+  const publicToken = customerTrackedOrder.publicToken;
+  const generation = customerChatGeneration;
   const operation = (async () => {
-    const { data, error } = await customerClient.rpc("get_customer_order_messages", {
-      p_order_id: customerTrackedOrder.id,
-      p_public_token: customerTrackedOrder.publicToken,
-    });
+    let conditional = customerChatConditionalSupported;
+    const args = { p_order_id: orderId, p_public_token: publicToken };
+    let result = await customerClient.rpc("get_customer_order_messages", conditional
+      ? { ...args, p_known_version: customerChatVersion } : args);
+    if (conditional && result.error?.code === "PGRST202") {
+      customerChatConditionalSupported = false;
+      conditional = false;
+      result = await customerClient.rpc("get_customer_order_messages", args);
+    }
+    if (generation !== customerChatGeneration || orderId !== customerTrackedOrder?.id
+      || publicToken !== customerTrackedOrder?.publicToken) return false;
+    const { data, error } = result;
 
     if (error) {
       if (!silent) customerSetChatStatus(customerT("chatLoadError"), "error");
       return false;
     }
 
-    const messages = Array.isArray(data) ? data : [];
+    if (conditional && data?.[0]?.messages === null) return true;
+    const messages = conditional
+      ? (Array.isArray(data?.[0]?.messages) ? data[0].messages : [])
+      : (Array.isArray(data) ? data : []);
+    customerChatVersion = conditional ? String(data?.[0]?.version || "") : "";
     const newRestaurantMessage = messages.some(
       (message) => message.sender === "restaurant" && customerChatLoadedOnce && !customerKnownChatMessageIds.has(message.id)
     );
@@ -4767,6 +4786,8 @@ function customerScheduleChatPoll(delayMs) {
 function customerStartChat(orderId, publicToken) {
   if (!customerElements.chatPanel || !orderId || !publicToken) return;
   customerStopChatPolling();
+  customerChatGeneration += 1;
+  customerChatVersion = "";
   customerKnownChatMessageIds = new Set();
   customerChatLoadedOnce = false;
   customerChatPollingDelay = CUSTOMER_CHAT_POLL_MIN_MS;
@@ -5122,6 +5143,7 @@ function customerStopOrderTrackingRealtime() {
   const channel = customerTrackingRealtimeChannel;
   customerTrackingRealtimeChannel = null;
   customerTrackingRealtimeSignature = "";
+  customerTrackingRealtimeRow = null;
   customerTrackingRealtimeStatus = "idle";
   if (channel && customerClient?.removeChannel) customerClient.removeChannel(channel).catch(() => {});
 }
@@ -5138,9 +5160,13 @@ function customerStartOrderTrackingRealtime(row = {}) {
   if (!customerClient?.channel || !customerUser || !customerTrackedOrder?.id) return;
   const courierId = String(row.courier_user_id || "");
   const signature = `${customerTrackedOrder.id}:${courierId}`;
-  if (customerTrackingRealtimeChannel && customerTrackingRealtimeSignature === signature) return;
+  if (customerTrackingRealtimeChannel && customerTrackingRealtimeSignature === signature) {
+    customerTrackingRealtimeRow = { ...row };
+    return;
+  }
   customerStopOrderTrackingRealtime();
   customerTrackingRealtimeSignature = signature;
+  customerTrackingRealtimeRow = { ...row };
   let channel = customerClient
     .channel(`customer-order-tracking-${customerUser.id}-${customerTrackedOrder.id}`)
     .on(
@@ -5152,7 +5178,27 @@ function customerStartOrderTrackingRealtime(row = {}) {
     channel = channel.on(
       "postgres_changes",
       { event: "UPDATE", schema: "public", table: "courier_live_locations", filter: `user_id=eq.${courierId}` },
-      customerScheduleTrackingRefresh
+      (payload) => {
+        if (channel !== customerTrackingRealtimeChannel || signature !== customerTrackingRealtimeSignature) return;
+        const location = payload?.new;
+        const current = customerTrackingRealtimeRow;
+        if (current?.id !== customerTrackedOrder?.id) return;
+        const locationAt = location?.last_location_at || location?.updated_at;
+        const lat = Number(location?.lat), lng = Number(location?.lng);
+        if (location?.user_id !== courierId || current?.courier_user_id !== courierId
+          || !["accepted", "arrived_restaurant", "picked_up", "arrived_customer"].includes(current?.courier_assignment_status)
+          || ["delivered", "cancelled", "rejected", "failed", "refunded"].includes(current?.canonical_status)
+          || location?.lat == null || location?.lng == null
+          || !Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180
+          || !Number.isFinite(Date.parse(locationAt))) {
+          customerScheduleTrackingRefresh();
+          return;
+        }
+        if (Date.parse(locationAt) < Date.parse(current.courier_location_updated_at)) return;
+        customerTrackingRealtimeRow = { ...current, courier_lat: lat, courier_lng: lng,
+          courier_location_updated_at: locationAt };
+        customerRenderCourierTracking(customerTrackingRealtimeRow);
+      }
     );
   }
   customerTrackingRealtimeChannel = channel;
@@ -5234,14 +5280,16 @@ async function customerPollOrderStatus() {
   if (!customerTrackedOrder?.id || !customerTrackedOrder.publicToken || !customerClient || !navigator.onLine) return false;
   if (customerStatusPollInFlight) return customerStatusPollInFlight;
 
+  const orderId = customerTrackedOrder.id;
+  const publicToken = customerTrackedOrder.publicToken;
   const operation = (async () => {
 
   let data = null;
   let error = null;
   if (customerTrackingRpcAvailable !== false) {
     ({ data, error } = await customerClient.rpc("get_customer_order_tracking", {
-      p_order_id: customerTrackedOrder.id,
-      p_public_token: customerTrackedOrder.publicToken,
+      p_order_id: orderId,
+      p_public_token: publicToken,
     }));
     if (error && customerIsMissingRpc(error)) {
       customerTrackingRpcAvailable = false;
@@ -5254,11 +5302,12 @@ async function customerPollOrderStatus() {
 
   if (customerTrackingRpcAvailable === false) {
     ({ data, error } = await customerClient.rpc("get_customer_order_status", {
-      p_order_id: customerTrackedOrder.id,
-      p_public_token: customerTrackedOrder.publicToken,
+      p_order_id: orderId,
+      p_public_token: publicToken,
     }));
   }
 
+  if (orderId !== customerTrackedOrder?.id || publicToken !== customerTrackedOrder?.publicToken) return false;
   if (error) {
     customerSetTrackingStatus(customerT("orderSentCashier"), "");
     return false;
