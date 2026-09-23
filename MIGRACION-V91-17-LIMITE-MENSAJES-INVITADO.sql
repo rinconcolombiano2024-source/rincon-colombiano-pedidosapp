@@ -1,33 +1,77 @@
--- Limite autorizado: 30 mensajes/minuto por pedido.
--- Protege el RPC de invitados despues de la validacion V91-12.
--- No altera la firma, el token, el contenido ni los permisos existentes.
-begin;
-do $migration$
-declare
-  v_definition text;
-  v_anchor text := E'  if v_user_id is null then\n    raise exception ''Order not found'';\n  end if;';
-  v_guard text := $guard$
+BEGIN;
 
-  -- V91-17: serializar mensajes del mismo pedido antes de contar.
-  perform 1 from public.customer_orders co where co.id = p_order_id for update;
-  if (select count(*) from (
-    select 1 from public.customer_order_messages msg
-    where msg.order_id = p_order_id
-      and msg.created_at > statement_timestamp() - interval '1 minute'
-    limit 30
-  ) recent_messages) >= 30 then
-    raise exception 'Message rate limit exceeded' using errcode = 'PT429';
-  end if;
-$guard$;
+CREATE OR REPLACE FUNCTION public.create_customer_message(
+  p_order_id uuid,
+  p_public_token text,
+  p_body text,
+  p_image_data_url text
+)
+RETURNS TABLE(id uuid)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+declare
+  v_user_id uuid;
+  v_body text := left(trim(coalesce(p_body, '')), 1200);
+  v_image text := coalesce(p_image_data_url, '');
+  v_recent_messages integer := 0;
 begin
-  select pg_get_functiondef('public.create_customer_message(uuid,text,text,text)'::regprocedure)
-  into v_definition;
-  if strpos(v_definition, '-- V91-17: serializar') > 0 then return; end if;
-  if strpos(v_definition, 'rc_ordera_customer_token_matches') = 0
-    or strpos(v_definition, v_anchor) = 0 then
-    raise exception 'V91-17: contrato V91-12 no reconocido; no se modifico el RPC';
+  select co.user_id
+    into v_user_id
+  from public.customer_orders co
+  where co.id = p_order_id
+    and public.rc_ordera_customer_token_matches(co.id, p_public_token);
+
+  if v_user_id is null then
+    raise exception 'Order not found';
   end if;
-  execute replace(v_definition, v_anchor, v_anchor || v_guard);
+
+  /*
+   * V91-17:
+   * Protección antiabuso quirúrgica.
+   * Máximo 30 mensajes de cliente por pedido en una ventana de 1 minuto.
+   */
+  select count(*)::integer
+    into v_recent_messages
+  from public.customer_order_messages m
+  where m.order_id = p_order_id
+    and m.sender = 'customer'
+    and m.created_at >= now() - interval '1 minute';
+
+  if v_recent_messages >= 30 then
+    raise exception 'Too many messages. Please try again later.';
+  end if;
+
+  if v_image <> '' and v_image not like 'data:image/%' then
+    raise exception 'Invalid image';
+  end if;
+
+  if length(v_image) > 950000 then
+    raise exception 'Image too large';
+  end if;
+
+  if v_body = '' and v_image = '' then
+    raise exception 'Empty message';
+  end if;
+
+  return query
+  insert into public.customer_order_messages (
+    order_id,
+    user_id,
+    sender,
+    body,
+    image_data_url
+  )
+  values (
+    p_order_id,
+    v_user_id,
+    'customer',
+    v_body,
+    v_image
+  )
+  returning public.customer_order_messages.id;
 end;
-$migration$;
-commit;
+$function$;
+
+COMMIT;
