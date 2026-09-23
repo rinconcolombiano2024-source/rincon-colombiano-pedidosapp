@@ -1488,7 +1488,8 @@ if (canTakeOrders) {
   const channel = waiterClient
     .channel(`restaurant-station-${waiterStoreId}-${waiterUser.id}`)
     .on("postgres_changes", { event: "*", schema: "public", table: "customer_orders", filter: `user_id=eq.${waiterStoreId}` }, () => {
-      waiterLoadStationOrders().catch(console.error);
+      if (channel !== waiterOrdersChannel) return;
+      waiterScheduleStationRetry();
     });
   waiterOrdersChannel = channel;
  channel.subscribe((status) => {
