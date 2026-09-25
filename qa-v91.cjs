@@ -67,7 +67,7 @@ check(/function saveMenuCatalog\(\)\s*\{[\s\S]*?markMenuPending\(\);[\s\S]*?save
 check(app.includes("remoteMenuHasNewerRevision") && app.includes("protectLocalMenuFromEmptyCloud"), "menu vacio confirmado conserva su revision de nube");
 check(customer.includes("customerReadMenuCache(requestedStoreId)"), "cliente recupera el menu publico cuando falla la nube");
 check(app.includes("anulacion(es) antigua(s)") && app.includes("order not found"), "cola antigua no queda pendiente para siempre");
-check(waiter.includes('code === "PGRST002"') && waiter.includes('code === "PGRST003"') && waiter.includes("status === 503"), "mesero conserva pedidos ante fallos temporales de Supabase");
+check(waiter.includes('code === "PGRST002"') && waiter.includes('code === "PGRST003"') && waiter.includes("[429, 502, 503].includes(status)"), "mesero conserva pedidos ante fallos temporales de Supabase");
 check(waiter.includes("remaining.push(...queue.slice(index + 1))"), "mesero corta la ronda de cola tras un fallo temporal");
 check(waiter.includes('if (!confirmedOrder?.id)'), "mesero solo confirma pedidos con respuesta real del servidor");
 check(waiter.includes('waiterOrdersRealtimeStatus === "SUBSCRIBED"') && waiter.includes("WAITER_STATION_POLL_MAX_MS"), "estaciones sondean solo como respaldo de Realtime");
@@ -148,7 +148,7 @@ check(
   "ticketCounterPending solo se limpia tras confirmacion"
 );
 check(
-  /const expectedUpdatedAt = order\.updatedAt;\s*await saveCloudOrder\(order\);\s*confirmOrderSyncedIfUnchanged\(order\.id, expectedUpdatedAt\);/s.test(pendingOrderLoop),
+  /const expectedUpdatedAt = order\.updatedAt;\s*await withCloudTimeout\(\s*\(signal\)\s*=>\s*saveCloudOrder\(\s*order,\s*signal\s*\),[^;]+;\s*confirmOrderSyncedIfUnchanged\(order\.id, expectedUpdatedAt\);/s.test(pendingOrderLoop),
   "pedido pendiente conserva estado si falla saveCloudOrder"
 );
 check(
@@ -228,4 +228,4 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`FAIL: ${failure}`));
   process.exit(1);
 }
-console.log("RC ORDERA V91.0.3 QA: comprobaciones aprobadas.");
+console.log(`RC ORDERA V${JSON.parse(read("package.json")).version} QA: comprobaciones aprobadas.`);
