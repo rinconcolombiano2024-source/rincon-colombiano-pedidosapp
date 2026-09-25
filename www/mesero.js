@@ -793,6 +793,26 @@ function waiterRenderStationOrders(orders = []) {
     .join("");
 }
 
+const waiterStationEventIds = new Map();
+let waiterStationEventSequence = 0;
+let waiterStationCacheContext = "";
+let waiterStationFullReadAt = 0;
+let waiterStationDeltaSupported = true;
+
+function waiterQueueStationEvent(payload) {
+  const id = payload?.new?.id || payload?.old?.id;
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id || "")) {
+    waiterStationCacheContext = "";
+  } else {
+    if (waiterStationEventIds.size >= 100 && !waiterStationEventIds.has(id)) {
+      waiterStationCacheContext = "";
+      waiterStationEventIds.clear();
+    }
+    waiterStationEventIds.set(id, ++waiterStationEventSequence);
+  }
+  waiterScheduleStationRetry();
+}
+
 function waiterStationLoadContext() {
   return waiterClient && waiterUser && waiterMembership
     ? `${waiterStoreId}:${waiterUser.id}:${waiterMembership.station}`
@@ -806,7 +826,7 @@ function waiterScheduleStationRetry() {
     waiterStationRetryTimer = null;
     if (context !== waiterStationLoadContext() || !navigator.onLine || document.visibilityState !== "visible") return;
     try {
-      await waiterLoadStationOrders();
+      await waiterLoadStationOrders({ realtime: true });
     } catch (error) {
       console.error(error);
     }
@@ -823,6 +843,7 @@ function waiterDeferStationRetry() {
 }
 
 async function waiterLoadStationOrders(options = {}) {
+  if (options.realtime !== true) waiterStationCacheContext = "";
   if (waiterStationLoadInFlight) {
     if (options.reconcileAfterInFlight !== false) waiterStationLoadPending = true;
     return waiterStationLoadInFlight;
@@ -884,10 +905,25 @@ async function waiterLoadStationOrdersNow(onError) {
     return false;
   }
   waiterElements.stationOrders.innerHTML = `<div class="waiter-empty">Actualizando pedidos...</div>`;
-  const { data, error } = await waiterClient.rpc("list_my_station_orders", {
-  p_restaurant_user_id: waiterStoreId,
-  p_station: waiterMembership.station,
-});
+  const context = waiterStationLoadContext();
+  const events = new Map(waiterStationEventIds);
+  const readStartedAt = Date.now();
+  const delta = waiterStationDeltaSupported && waiterStationCacheContext === context
+    && readStartedAt >= waiterStationFullReadAt
+    && readStartedAt - waiterStationFullReadAt < WAITER_STATION_POLL_MIN_MS
+    && events.size > 0 && Array.isArray(cachedOrders) && cachedOrders.length < 100
+    && cachedOrders.every(order => Number.isFinite(Date.parse(order.created_at)));
+  const args = { p_restaurant_user_id: waiterStoreId, p_station: waiterMembership.station };
+  let partial = delta;
+  let result = await waiterClient.rpc("list_my_station_orders",
+    partial ? { ...args, p_order_ids: [...events.keys()] } : args);
+  if (partial && result.error?.code === "PGRST202") {
+    waiterStationDeltaSupported = false;
+    partial = false;
+    result = await waiterClient.rpc("list_my_station_orders", args);
+  }
+  if (context !== waiterStationLoadContext()) return false;
+  const { data, error } = result;
   if (error) {
     if (Array.isArray(cachedOrders) && cachedOrders.length) waiterRenderStationOrders(cachedOrders);
     else waiterElements.stationOrders.innerHTML = `<div class="waiter-empty">No fue posible cargar esta estacion. Contacta al propietario e intenta nuevamente.</div>`;
@@ -895,7 +931,16 @@ async function waiterLoadStationOrdersNow(onError) {
     if (onError) onError(error);
     return false;
   }
-  const orders = Array.isArray(data) ? data : [];
+  let orders = Array.isArray(data) ? data : [];
+  if (partial) {
+    orders = cachedOrders.filter(order => !events.has(order.order_id)).concat(orders)
+      .sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at)).slice(0, 100);
+  }
+  for (const [id, sequence] of events) {
+    if (waiterStationEventIds.get(id) === sequence) waiterStationEventIds.delete(id);
+  }
+  waiterStationCacheContext = context;
+  if (!partial) waiterStationFullReadAt = readStartedAt;
   localStorage.setItem(waiterStationCacheKey(), JSON.stringify(orders));
   waiterRenderStationOrders(orders);
   waiterSetStatus("Sincronizado", "ok");
@@ -1487,9 +1532,9 @@ if (canTakeOrders) {
   waiterOrdersRealtimeStatus = "connecting";
   const channel = waiterClient
     .channel(`restaurant-station-${waiterStoreId}-${waiterUser.id}`)
-    .on("postgres_changes", { event: "*", schema: "public", table: "customer_orders", filter: `user_id=eq.${waiterStoreId}` }, () => {
+    .on("postgres_changes", { event: "*", schema: "public", table: "customer_orders", filter: `user_id=eq.${waiterStoreId}` }, (payload) => {
       if (channel !== waiterOrdersChannel) return;
-      waiterScheduleStationRetry();
+      waiterQueueStationEvent(payload);
     });
   waiterOrdersChannel = channel;
  channel.subscribe((status) => {
