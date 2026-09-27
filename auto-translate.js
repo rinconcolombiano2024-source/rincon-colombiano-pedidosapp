@@ -15,6 +15,7 @@
   let translationGeneration = 0;
   let translationServicePausedUntil = 0;
   let translationWarningShownAt = 0;
+  const translationRequests = new Map();
   const originalDocumentTitle = document.title;
   const nativeAlert = window.alert.bind(window);
   const nativeConfirm = window.confirm.bind(window);
@@ -866,6 +867,7 @@ if (
   // 2. Después revisa traducciones ya guardadas.
   const key = cacheKey(targetLanguage, clean);
   if (cache[key]) return cache[key];
+  if (translationRequests.has(key)) return translationRequests.get(key);
 
   // 3. No traducir datos demasiado largos o sin conexión.
   if (clean.length > 500 || !navigator.onLine) {
@@ -880,6 +882,9 @@ if (
 
   // 4. Los textos no incluidos en el diccionario se traducen en el servidor.
   // La clave privada del proveedor nunca se expone en el navegador.
+  const operation = (async () => {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 10_000);
   try {
     const config = window.RC_ORDERA_SUPABASE || {};
     const baseUrl = String(config.url || "").replace(/\/+$/, "");
@@ -887,6 +892,7 @@ if (
     if (!baseUrl || !publicKey) return clean;
     const response = await fetch(`${baseUrl}/functions/v1/translate-public-content`, {
       method: "POST",
+      signal: controller.signal,
       headers: {
         "content-type": "application/json; charset=utf-8",
         apikey: publicKey,
@@ -903,10 +909,7 @@ if (
     const data = await response.json();
     const translated = normalize(data?.translatedText || "");
 
-    if (
-      translated &&
-      translated.toLowerCase() !== clean.toLowerCase()
-    ) {
+    if (translated) {
       cache[key] = translated;
       saveCache();
       return translated;
@@ -921,9 +924,18 @@ if (
         error
       );
     }
+  } finally {
+    window.clearTimeout(timeout);
   }
 
   return clean;
+  })();
+  translationRequests.set(key, operation);
+  try {
+    return await operation;
+  } finally {
+    if (translationRequests.get(key) === operation) translationRequests.delete(key);
+  }
 }
 function setOriginalAttribute(element, attribute) {
   let values = originalAttributes.get(element);
@@ -1006,9 +1018,10 @@ function setOriginalAttribute(element, attribute) {
   }
 
   const sourceText = state.source;
+  const currentText = node.nodeValue;
 
   const translated = await fetchTranslation(sourceText, language);
-   if (generation !== translationGeneration) {
+   if (generation !== translationGeneration || node.nodeValue !== currentText) {
   return;
 }
 
@@ -1052,8 +1065,9 @@ if (!shouldTranslateContent(source)) {
   continue;
 }
 
+    const currentAttribute = element.getAttribute(attribute);
     const translated = await fetchTranslation(state.source, language);
-if (generation !== translationGeneration) {
+if (generation !== translationGeneration || element.getAttribute(attribute) !== currentAttribute) {
   return;
 }
     state.last = translated;
@@ -1094,7 +1108,8 @@ if (generation !== translationGeneration) {
     document.documentElement.lang = language;
     try {
       const translatedTitle = await fetchTranslation(originalDocumentTitle, language);
-      if (translatedTitle) document.title = translatedTitle;
+      if (generation !== translationGeneration) return;
+      if (translatedTitle && document.title !== translatedTitle) document.title = translatedTitle;
       updateLocalizedManifest();
       const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
         acceptNode(node) {
@@ -1132,7 +1147,7 @@ if (generation !== translationGeneration) {
 ].join(",")
     )
   : [];
-      const attributeElements = [...elements].sort((left, right) =>
+      const attributeElements = [root, ...elements].filter((element) => element.nodeType === Node.ELEMENT_NODE).sort((left, right) =>
         Number(elementIsVisible(right)) - Number(elementIsVisible(left))
       );
       const localAttributeElements = [];
@@ -1348,25 +1363,33 @@ function scheduleTranslateRoot(root) {
 
   translateScheduled = true;
 
-  requestAnimationFrame(() => {
-    translateScheduled = false;
+  requestAnimationFrame(flushTranslateRoots);
+}
 
-    const roots = Array.from(pendingTranslateRoots);
-    pendingTranslateRoots.clear();
-
+async function flushTranslateRoots() {
+  if (translating) {
+    window.setTimeout(flushTranslateRoots, 120);
+    return;
+  }
+  const roots = Array.from(pendingTranslateRoots).filter((root) => root.isConnected);
+  pendingTranslateRoots.clear();
+  try {
     for (const rootElement of roots) {
-      try {
-        translateTree(rootElement);
-      } catch (error) {
-        console.error("RC ORDERA TRANSLATE ERROR", error);
-      }
+      if (roots.some((other) => other !== rootElement && other.contains(rootElement))) continue;
+      await translateTree(rootElement);
     }
-  });
+  } finally {
+    translateScheduled = false;
+    const next = pendingTranslateRoots.values().next().value;
+    if (next) scheduleTranslateRoot(next);
+  }
 }
 
 const observer = new MutationObserver((mutations) => {
   for (const mutation of mutations) {
+    if (document.head.contains(mutation.target)) continue;
     if (mutation.type === "characterData") {
+      if (originalText.get(mutation.target)?.last === mutation.target.nodeValue) continue;
       scheduleTranslateRoot(mutation.target);
       continue;
     }
