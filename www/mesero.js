@@ -21,6 +21,11 @@ const waiterElements = {
   email: document.querySelector("#waiterEmail"),
   password: document.querySelector("#waiterPassword"),
   signUpButton: document.querySelector("#waiterSignUpButton"),
+  resetPasswordButton: document.querySelector("#waiterResetPasswordButton"),
+  recoveryForm: document.querySelector("#waiterPasswordRecoveryForm"),
+  newPassword: document.querySelector("#waiterNewPassword"),
+  savePasswordButton: document.querySelector("#waiterSavePasswordButton"),
+  cancelRecoveryButton: document.querySelector("#waiterCancelRecoveryButton"),
   authMessage: document.querySelector("#waiterAuthMessage"),
   accessCard: document.querySelector("#waiterAccessCard"),
   accessMessage: document.querySelector("#waiterAccessMessage"),
@@ -103,6 +108,9 @@ let waiterSentOrdersLoadPending = false;
 let waiterToastTimer = null;
 let waiterSyncingQueue = false;
 let waiterBusinessContext = null;
+let waiterRecoveringPassword = waiterParams.get("recovery") === "1" ||
+  new URLSearchParams(window.location.hash.slice(1)).get("type") === "recovery";
+let waiterPasswordRequestInFlight = false;
 
 function waiterEscape(value) {
   return String(value ?? "")
@@ -1658,6 +1666,7 @@ function waiterChangeStation() {
   waiterShowToast(`Estación cambiada a ${stationLabel}.`);
 }
 function waiterAuthorize(options = {}) {
+  if (waiterRecoveringPassword) return Promise.resolve(false);
   const { force = false } = options;
   if (!waiterClient || !waiterUser || !waiterStoreId) return Promise.resolve(false);
   if (waiterAuthorizeInFlight) return waiterAuthorizeInFlight;
@@ -1792,6 +1801,87 @@ async function waiterActivateAuthorization() {
   }
 }
 
+async function waiterSendPasswordResetEmail() {
+  if (!waiterClient || waiterPasswordRequestInFlight) return;
+  const email = waiterElements.email.value.trim();
+  if (!email || !waiterElements.email.checkValidity()) {
+    waiterElements.email.reportValidity();
+    waiterElements.email.focus();
+    return;
+  }
+  waiterPasswordRequestInFlight = true;
+  waiterElements.resetPasswordButton.disabled = true;
+  try {
+    const redirectTo = new URL("mesero.html", window.location.href);
+    redirectTo.searchParams.set("store", waiterStoreId);
+    redirectTo.searchParams.set("recovery", "1");
+    const { error } = await waiterClient.auth.resetPasswordForEmail(email, { redirectTo: redirectTo.href });
+    if (error) throw error;
+    waiterSetMessage(waiterElements.authMessage, "Correo enviado por RC ORDERA. Abre el enlace para crear una contrasena nueva.", "ok");
+  } catch {
+    waiterSetMessage(waiterElements.authMessage, "No fue posible enviar el correo de recuperacion. Intenta nuevamente.", "error");
+  } finally {
+    waiterPasswordRequestInFlight = false;
+    waiterElements.resetPasswordButton.disabled = false;
+  }
+}
+
+function waiterShowPasswordRecovery() {
+  waiterRecoveringPassword = true;
+  waiterStopRealtime();
+  waiterRenderLoggedOut();
+  waiterElements.authForm.hidden = true;
+  waiterElements.recoveryForm.hidden = false;
+  waiterSetMessage(waiterElements.authMessage, waiterUser
+    ? "RC ORDERA verifico el enlace. Escribe tu nueva contrasena."
+    : "El enlace de recuperacion no es valido o ha caducado. Solicita uno nuevo.", waiterUser ? "ok" : "error");
+  waiterElements.newPassword.focus();
+}
+
+function waiterFinishPasswordRecovery() {
+  waiterRecoveringPassword = false;
+  waiterElements.recoveryForm.hidden = true;
+  waiterElements.newPassword.value = "";
+  waiterElements.authForm.hidden = false;
+  const url = new URL(window.location.href);
+  url.searchParams.delete("recovery");
+  if (url.searchParams.get("type") === "recovery") url.searchParams.delete("type");
+  url.hash = "";
+  window.history.replaceState(window.history.state, "", url.href);
+}
+
+async function waiterUpdateRecoveredPassword(event) {
+  event.preventDefault();
+  if (!waiterClient || !waiterRecoveringPassword || waiterPasswordRequestInFlight) return;
+  if (!waiterUser) {
+    waiterSetMessage(waiterElements.authMessage, "El enlace de recuperacion no es valido o ha caducado. Solicita uno nuevo.", "error");
+    return;
+  }
+  const password = waiterElements.newPassword.value;
+  if (password.length < 6) {
+    waiterElements.newPassword.reportValidity();
+    return;
+  }
+  waiterPasswordRequestInFlight = true;
+  waiterElements.savePasswordButton.disabled = true;
+  waiterElements.cancelRecoveryButton.disabled = true;
+  let saved = false;
+  try {
+    const { error } = await waiterClient.auth.updateUser({ password });
+    if (error) throw error;
+    waiterFinishPasswordRecovery();
+    waiterSetMessage(waiterElements.authMessage, "Contrasena actualizada. Ya puedes iniciar sesion en RC ORDERA.", "ok");
+    saved = true;
+  } catch {
+    waiterSetMessage(waiterElements.authMessage, "No fue posible actualizar la contrasena. Intenta nuevamente.", "error");
+  } finally {
+    waiterPasswordRequestInFlight = false;
+    waiterElements.savePasswordButton.disabled = false;
+    waiterElements.cancelRecoveryButton.disabled = false;
+  }
+  if (saved) await waiterAuthorize().catch(console.error);
+}
+
 async function waiterSignIn(event) {
   event.preventDefault();
   const email = waiterElements.email.value.trim();
@@ -1887,18 +1977,28 @@ async function waiterInitialize() {
     },
   });
   const { data, error } = await waiterClient.auth.getSession();
-  if (error) throw error;
-  waiterUser = data.session?.user || null;
-  if (waiterUser) await waiterAuthorize();
+  if (error && !waiterRecoveringPassword) throw error;
+  waiterUser = data?.session?.user || null;
+  if (waiterRecoveringPassword) waiterShowPasswordRecovery();
+  else if (waiterUser) await waiterAuthorize();
   else waiterRenderLoggedOut();
 
-waiterClient.auth.onAuthStateChange(async (event, session) => {
+waiterClient.auth.onAuthStateChange((event, session) => {
   waiterUser = session?.user || null;
+
+  if (event === "PASSWORD_RECOVERY") {
+    waiterShowPasswordRecovery();
+    return;
+  }
+  if (waiterRecoveringPassword) return;
 
   if (event === "INITIAL_SESSION") return;
 
   if (waiterUser) {
-    await waiterAuthorize();
+    // Leave the auth callback before making authenticated Supabase requests.
+    window.setTimeout(() => {
+      if (waiterUser && !waiterRecoveringPassword) waiterAuthorize().catch(console.error);
+    }, 0);
   } else {
     waiterRenderLoggedOut();
   }
@@ -1907,6 +2007,15 @@ waiterClient.auth.onAuthStateChange(async (event, session) => {
 
 waiterElements.authForm.addEventListener("submit", waiterSignIn);
 waiterElements.signUpButton.addEventListener("click", waiterSignUp);
+waiterElements.resetPasswordButton?.addEventListener("click", waiterSendPasswordResetEmail);
+waiterElements.recoveryForm?.addEventListener("submit", waiterUpdateRecoveredPassword);
+waiterElements.cancelRecoveryButton?.addEventListener("click", () => {
+  if (waiterPasswordRequestInFlight) return;
+  waiterFinishPasswordRecovery();
+  waiterSetMessage(waiterElements.authMessage, "");
+  if (waiterUser) waiterAuthorize().catch(console.error);
+  else waiterRenderLoggedOut();
+});
 waiterElements.changeStationButton?.addEventListener(
   "click",
   waiterChangeStation

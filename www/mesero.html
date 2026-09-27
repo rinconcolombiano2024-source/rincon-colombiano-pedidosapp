@@ -55,6 +55,17 @@
           <div class="waiter-auth-actions">
             <button id="waiterSignInButton" type="submit">Iniciar sesion</button>
             <button id="waiterSignUpButton" type="button">Crear cuenta de empleado</button>
+            <button id="waiterResetPasswordButton" type="button">Recuperar contrasena</button>
+          </div>
+        </form>
+        <form id="waiterPasswordRecoveryForm" class="waiter-auth-form" hidden>
+          <label>
+            Nueva contrasena
+            <input id="waiterNewPassword" type="password" autocomplete="new-password" minlength="6" required />
+          </label>
+          <div class="waiter-auth-actions">
+            <button id="waiterSavePasswordButton" type="submit">Guardar nueva contrasena</button>
+            <button id="waiterCancelRecoveryButton" type="button">Cancelar</button>
           </div>
         </form>
         <p id="waiterAuthMessage" class="auth-message"></p>
