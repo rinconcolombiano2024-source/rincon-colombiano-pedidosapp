@@ -127,6 +127,7 @@ const CUSTOMER_APP_LANGUAGE_KEY = "rincon_colombiano_app_language";
 const CUSTOMER_TRANSLATION_CACHE_KEY = "rincon_colombiano_description_translations_v1";
 const CUSTOMER_PENDING_ORDER_KEY_PREFIX = "rc_ordera_pending_customer_order";
 const CUSTOMER_TRACKED_ORDER_KEY_PREFIX = "rc_ordera_tracked_customer_order";
+const CUSTOMER_TRACKED_ORDER_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const CUSTOMER_MENU_CACHE_KEY_PREFIX = "rc_ordera_customer_menu_cache_v1";
 const CUSTOMER_REALTIME_RECONNECT_MIN_MS = 2_000;
 const CUSTOMER_REALTIME_RECONNECT_MAX_MS = 60_000;
@@ -4887,30 +4888,74 @@ function customerPendingOrderStorageKey() {
 function customerTrackedOrderStorageKey() {
   return `${CUSTOMER_TRACKED_ORDER_KEY_PREFIX}_${customerStoreId || "unknown"}`;
 }
-
 function customerPersistTrackedOrder() {
   if (!customerTrackedOrder?.id || !customerTrackedOrder.publicToken || !customerStoreId) return;
-  localStorage.setItem(customerTrackedOrderStorageKey(), JSON.stringify({
-    ...customerTrackedOrder,
-    restaurantUserId: customerStoreId,
-    savedAt: Date.now(),
-  }));
+
+  const storageKey = customerTrackedOrderStorageKey();
+
+  try {
+    // Elimina cualquier token antiguo que hubiera quedado persistido.
+    localStorage.removeItem(storageKey);
+
+    // El token solo vive durante la sesión actual del navegador.
+    sessionStorage.setItem(storageKey, JSON.stringify({
+      ...customerTrackedOrder,
+      restaurantUserId: customerStoreId,
+      savedAt: Date.now(),
+    }));
+  } catch {
+    // No interrumpimos el pedido si el almacenamiento del navegador falla.
+  }
 }
 
 function customerRestoreTrackedOrder() {
   if (!customerStoreId || customerTrackedOrder) return false;
+
+  const storageKey = customerTrackedOrderStorageKey();
+
   try {
-    const stored = JSON.parse(localStorage.getItem(customerTrackedOrderStorageKey()) || "null");
-    if (!stored?.id || !stored.publicToken || stored.restaurantUserId !== customerStoreId) return false;
+    // Limpia automáticamente el formato inseguro antiguo.
+    localStorage.removeItem(storageKey);
+
+    const stored = JSON.parse(
+      sessionStorage.getItem(storageKey) || "null"
+    );
+
+    if (
+      !stored?.id ||
+      !stored.publicToken ||
+      stored.restaurantUserId !== customerStoreId
+    ) {
+      sessionStorage.removeItem(storageKey);
+      return false;
+    }
+
+    const savedAt = Number(stored.savedAt) || 0;
+
+    if (
+      !savedAt ||
+      Date.now() - savedAt > CUSTOMER_TRACKED_ORDER_MAX_AGE_MS
+    ) {
+      sessionStorage.removeItem(storageKey);
+      return false;
+    }
+
     customerStartStatusTracking(
       stored.id,
       stored.publicToken,
       stored.paymentMethod || "",
       stored.paymentUrl || ""
     );
+
     customerTrackedOrder.status = stored.status || "pending";
+
     return true;
   } catch {
+    try {
+      sessionStorage.removeItem(storageKey);
+      localStorage.removeItem(storageKey);
+    } catch {}
+
     return false;
   }
 }
