@@ -370,6 +370,7 @@ const CUSTOMER_I18N = {
     addProductFirst: "Agrega al menos un producto.",
     sendingOrder: "Enviando pedido...",
     sendOrderError: "No se pudo enviar. Revisa internet o avisa al restaurante.",
+    orderRateLimited: "Has enviado varios pedidos en poco tiempo. Espera unos minutos antes de intentarlo de nuevo.",
     menuChangedBeforeOrder: "El menu cambio antes de confirmar el pedido. Ya cargamos los precios y productos actuales; revisa el carrito.",
     orderSent: "Pedido enviado. Espera confirmacion del restaurante.",
     orderSentWaiting: "Pedido enviado. Esperando que el restaurante lo acepte.",
@@ -682,6 +683,7 @@ const CUSTOMER_I18N = {
     addProductFirst: "Dodaj przynajmniej jeden produkt.",
     sendingOrder: "Wysylanie zamowienia...",
     sendOrderError: "Nie udalo sie wyslac. Sprawdz internet albo powiadom restauracje.",
+    orderRateLimited: "Wysłano zbyt wiele zamówień w krótkim czasie. Odczekaj kilka minut i spróbuj ponownie.",
     menuChangedBeforeOrder: "Menu zmienilo sie przed potwierdzeniem zamowienia. Zaladowalismy aktualne produkty i ceny; sprawdz koszyk.",
     orderSent: "Zamowienie wyslane. Poczekaj na potwierdzenie restauracji.",
     orderSentWaiting: "Zamowienie wyslane. Oczekiwanie na akceptacje restauracji.",
@@ -994,6 +996,7 @@ const CUSTOMER_I18N = {
     addProductFirst: "Add at least one product.",
     sendingOrder: "Sending order...",
     sendOrderError: "Could not send. Check internet or tell the restaurant.",
+    orderRateLimited: "Too many orders were sent in a short time. Wait a few minutes before trying again.",
     menuChangedBeforeOrder: "The menu changed before the order was confirmed. Current products and prices are loaded; review your cart.",
     orderSent: "Order sent. Wait for restaurant confirmation.",
     orderSentWaiting: "Order sent. Waiting for the restaurant to accept it.",
@@ -1357,7 +1360,17 @@ function customerRegistrationPosition() {
 
 function customerInitialLanguage() {
   const fromUrl = String(customerParams.get("lang") || "").toLowerCase();
-  const saved = String(localStorage.getItem(CUSTOMER_LANGUAGE_KEY) || localStorage.getItem(CUSTOMER_APP_LANGUAGE_KEY) || "").toLowerCase();
+
+  let saved = "";
+
+  try {
+    saved = String(
+      localStorage.getItem(CUSTOMER_LANGUAGE_KEY) ||
+      localStorage.getItem(CUSTOMER_APP_LANGUAGE_KEY) ||
+      ""
+    ).toLowerCase();
+  } catch {}
+
   const browser = String(navigator.language || "").toLowerCase();
   if (CUSTOMER_I18N[fromUrl]) return fromUrl;
   if (CUSTOMER_I18N[saved]) return saved;
@@ -1577,8 +1590,12 @@ function customerSetLanguage(language) {
   if (!CUSTOMER_I18N[language]) return;
   customerLanguage = language;
   customerDescriptionTranslationFailures = new Map();
+try {
   localStorage.setItem(CUSTOMER_LANGUAGE_KEY, language);
   localStorage.setItem(CUSTOMER_APP_LANGUAGE_KEY, language);
+} catch {
+  // El idioma sigue funcionando aunque el navegador bloquee el almacenamiento.
+}
   customerApplyTranslations();
   if (customerTableFromQr) {
     customerElements.tableLabel.textContent = customerT("orderFor", { table: customerTableFromQr });
@@ -4952,6 +4969,22 @@ function customerPendingOrderStorageKey() {
 function customerTrackedOrderStorageKey() {
   return `${CUSTOMER_TRACKED_ORDER_KEY_PREFIX}_${customerStoreId || "unknown"}`;
 }
+function customerPurgeLegacyPersistentOrderSecrets() {
+  try {
+    for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+      const key = localStorage.key(index);
+
+      if (
+        key === CUSTOMER_PENDING_ORDER_KEY_PREFIX ||
+        key?.startsWith(`${CUSTOMER_PENDING_ORDER_KEY_PREFIX}_`) ||
+        key === CUSTOMER_TRACKED_ORDER_KEY_PREFIX ||
+        key?.startsWith(`${CUSTOMER_TRACKED_ORDER_KEY_PREFIX}_`)
+      ) {
+        localStorage.removeItem(key);
+      }
+    }
+  } catch {}
+}
 function customerPersistTrackedOrder() {
   if (!customerTrackedOrder?.id || !customerTrackedOrder.publicToken || !customerStoreId) return;
 
@@ -4971,12 +5004,12 @@ function customerPersistTrackedOrder() {
     // No interrumpimos el pedido si el almacenamiento del navegador falla.
   }
 }
-
 function customerRestoreTrackedOrder() {
+  customerPurgeLegacyPersistentOrderSecrets();
+
   if (!customerStoreId || customerTrackedOrder) return false;
 
   const storageKey = customerTrackedOrderStorageKey();
-
   try {
     // Limpia automáticamente el formato inseguro antiguo.
     localStorage.removeItem(storageKey);
@@ -5105,15 +5138,21 @@ delete payloadForServer.public_token;
 
 payloadForServer.clientGuardId = customerOrderGuardId();
 
-sessionStorage.setItem(
-  customerPendingOrderStorageKey(),
-  JSON.stringify({
-    fingerprint,
-    orderId,
-    publicToken,
-    createdAt: pendingOrder?.createdAt || Date.now(),
-  })
-);
+try {
+  sessionStorage.setItem(
+    customerPendingOrderStorageKey(),
+    JSON.stringify({
+      fingerprint,
+      orderId,
+      publicToken,
+      createdAt: pendingOrder?.createdAt || Date.now(),
+    })
+  );
+
+  localStorage.removeItem(customerPendingOrderStorageKey());
+} catch {
+  // El pedido puede continuar aunque el navegador no permita almacenamiento temporal.
+}
 
   const { data: rpcData, error: rpcError } = await customerClient.rpc("create_customer_order", {
     p_id: orderId,
@@ -5130,9 +5169,10 @@ sessionStorage.setItem(
 
   const row = customerNormalizeRpcRow(rpcData);
 
-sessionStorage.removeItem(customerPendingOrderStorageKey());
-localStorage.removeItem(customerPendingOrderStorageKey());
-
+try {
+  sessionStorage.removeItem(customerPendingOrderStorageKey());
+  localStorage.removeItem(customerPendingOrderStorageKey());
+} catch {}
   return {
     id: row?.id || orderId,
     publicToken: row?.public_token || publicToken,
@@ -6029,8 +6069,10 @@ async function customerSendOrder() {
   } catch (error) {
   console.error("ERROR REAL create_customer_order:", error);
 
-  if (/restaurant is closed/i.test(String(error?.message || ""))) {
-      customerSetStatus(customerT("restaurantClosedOrder"), "error");
+if (/ORDER_RATE_LIMITED/i.test(String(error?.message || ""))) {
+  customerSetStatus(customerT("orderRateLimited"), "error");
+} else if (/restaurant is closed/i.test(String(error?.message || ""))) {
+  customerSetStatus(customerT("restaurantClosedOrder"), "error");
       customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
     } else if (/restaurant (country|region) does not match/i.test(String(error?.message || ""))) {
       customerSetStatus(customerT("restaurantRegionMismatch"), "error");
@@ -6048,7 +6090,7 @@ async function customerSendOrder() {
 
   if (!insertedOrder) {
     customerElements.sendButton.disabled = false;
-    if (![customerT("restaurantClosedOrder"), customerT("restaurantRegionMismatch"), customerT("menuChangedBeforeOrder")].includes(customerElements.status.textContent)) {
+ if (![customerT("orderRateLimited"), customerT("restaurantClosedOrder"), customerT("restaurantRegionMismatch"), customerT("deliveryQuoteRequired"), customerT("menuChangedBeforeOrder")].includes(customerElements.status.textContent)) {
       customerSetStatus(customerT("sendOrderError"), "error");
     }
     return;
