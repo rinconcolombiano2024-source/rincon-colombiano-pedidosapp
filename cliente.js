@@ -4990,16 +4990,37 @@ function customerOrderFingerprint(orderPayload) {
 }
 
 function customerReadPendingOrder(fingerprint) {
+  const storageKey = customerPendingOrderStorageKey();
+
   try {
-    const pending = JSON.parse(localStorage.getItem(customerPendingOrderStorageKey()) || "null");
+    // Elimina cualquier versión insegura antigua.
+    localStorage.removeItem(storageKey);
+
+    const pending = JSON.parse(
+      sessionStorage.getItem(storageKey) || "null"
+    );
+
     const createdAt = Number(pending?.createdAt) || 0;
     const isRecent = Date.now() - createdAt < 30 * 60 * 1000;
-    if (isRecent && pending?.fingerprint === fingerprint && pending?.orderId && pending?.publicToken) {
+
+    if (
+      isRecent &&
+      pending?.fingerprint === fingerprint &&
+      pending?.orderId &&
+      pending?.publicToken
+    ) {
       return pending;
     }
+
+    // Si está vencido o dañado, lo eliminamos.
+    sessionStorage.removeItem(storageKey);
   } catch {
-    // A damaged local retry marker must never block a new order.
+    try {
+      sessionStorage.removeItem(storageKey);
+      localStorage.removeItem(storageKey);
+    } catch {}
   }
+
   return null;
 }
 
