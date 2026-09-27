@@ -2283,8 +2283,33 @@ async function customerInitializeAuth() {
   } else {
     customerRenderHistory();
   }
-  client.auth.onAuthStateChange(async (event, session) => {
-    customerUser = session?.user || null;
+client.auth.onAuthStateChange(async (event, session) => {
+  const previousUserId = customerUser?.id || null;
+  const nextUserId = session?.user?.id || null;
+
+  if (previousUserId !== nextUserId) {
+    try {
+      [sessionStorage, localStorage].forEach((storage) => {
+        for (let index = storage.length - 1; index >= 0; index -= 1) {
+          const key = storage.key(index);
+
+          if (
+            key?.startsWith(`${CUSTOMER_PENDING_ORDER_KEY_PREFIX}_`) ||
+            key?.startsWith(`${CUSTOMER_TRACKED_ORDER_KEY_PREFIX}_`)
+          ) {
+            storage.removeItem(key);
+          }
+        }
+      });
+    } catch {}
+
+    customerStopStatusPolling();
+    customerStopChatPolling();
+    customerStopOrderTrackingRealtime();
+    customerTrackedOrder = null;
+  }
+
+  customerUser = session?.user || null;
     if (event === "PASSWORD_RECOVERY") {
       customerShowPasswordRecoveryForm();
       return;
@@ -2521,6 +2546,20 @@ async function customerSignOut() {
     customerStopStatusPolling();
     customerStopChatPolling();
     customerStopOrderTrackingRealtime();
+try {
+  [sessionStorage, localStorage].forEach((storage) => {
+    for (let index = storage.length - 1; index >= 0; index -= 1) {
+      const key = storage.key(index);
+
+      if (
+        key?.startsWith(`${CUSTOMER_PENDING_ORDER_KEY_PREFIX}_`) ||
+        key?.startsWith(`${CUSTOMER_TRACKED_ORDER_KEY_PREFIX}_`)
+      ) {
+        storage.removeItem(key);
+      }
+    }
+  });
+} catch {}
     customerTrackedOrder = null;
     customerUser = null;
     customerResetResolvedIdentity();
@@ -4551,8 +4590,14 @@ async function customerConfirmDelivery() {
     customerSetTrackingStatus(customerT("deliveryConfirmError"), "error");
     return;
   }
-  customerTrackedOrder.customerConfirmed = true;
-  customerPersistTrackedOrder();
+customerTrackedOrder.customerConfirmed = true;
+
+try {
+  const storageKey = customerTrackedOrderStorageKey();
+
+  sessionStorage.removeItem(storageKey);
+  localStorage.removeItem(storageKey);
+} catch {}
   if (button) {
     button.disabled = true;
     button.textContent = customerT("deliveryConfirmed");
@@ -5039,15 +5084,15 @@ async function customerCreateCustomerOrder(orderPayload, total, tableLabel, cust
   delete payloadForServer.publicToken;
   delete payloadForServer.public_token;
 
-  localStorage.setItem(
-    customerPendingOrderStorageKey(),
-    JSON.stringify({
-      fingerprint,
-      orderId,
-      publicToken,
-      createdAt: pendingOrder?.createdAt || Date.now(),
-    })
-  );
+sessionStorage.setItem(
+  customerPendingOrderStorageKey(),
+  JSON.stringify({
+    fingerprint,
+    orderId,
+    publicToken,
+    createdAt: pendingOrder?.createdAt || Date.now(),
+  })
+);
 
   const { data: rpcData, error: rpcError } = await customerClient.rpc("create_customer_order", {
     p_id: orderId,
@@ -5064,7 +5109,8 @@ async function customerCreateCustomerOrder(orderPayload, total, tableLabel, cust
 
   const row = customerNormalizeRpcRow(rpcData);
 
-  localStorage.removeItem(customerPendingOrderStorageKey());
+sessionStorage.removeItem(customerPendingOrderStorageKey());
+localStorage.removeItem(customerPendingOrderStorageKey());
 
   return {
     id: row?.id || orderId,
@@ -5404,11 +5450,20 @@ async function customerPollOrderStatus() {
     customerShowNotification(customerT("notificationStatusTitle"), message);
   }
 
-  if (["delivered", "cancelled", "rejected", "failed", "refunded"].includes(nextStatus)) {
-    customerStopStatusPolling();
-    customerStopChatPolling();
-    customerStopOrderTrackingRealtime();
+ if (["delivered", "cancelled", "rejected", "failed", "refunded"].includes(nextStatus)) {
+  customerStopStatusPolling();
+  customerStopChatPolling();
+  customerStopOrderTrackingRealtime();
+
+  if (["cancelled", "rejected", "failed", "refunded"].includes(nextStatus)) {
+    try {
+      const storageKey = customerTrackedOrderStorageKey();
+
+      sessionStorage.removeItem(storageKey);
+      localStorage.removeItem(storageKey);
+    } catch {}
   }
+}
   return true;
   })();
 
