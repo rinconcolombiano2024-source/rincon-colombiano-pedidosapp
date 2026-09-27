@@ -127,6 +127,7 @@ const CUSTOMER_APP_LANGUAGE_KEY = "rincon_colombiano_app_language";
 const CUSTOMER_TRANSLATION_CACHE_KEY = "rincon_colombiano_description_translations_v1";
 const CUSTOMER_PENDING_ORDER_KEY_PREFIX = "rc_ordera_pending_customer_order";
 const CUSTOMER_TRACKED_ORDER_KEY_PREFIX = "rc_ordera_tracked_customer_order";
+const CUSTOMER_TRACKED_ORDER_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const CUSTOMER_MENU_CACHE_KEY_PREFIX = "rc_ordera_customer_menu_cache_v1";
 const CUSTOMER_REALTIME_RECONNECT_MIN_MS = 2_000;
 const CUSTOMER_REALTIME_RECONNECT_MAX_MS = 60_000;
@@ -2282,8 +2283,33 @@ async function customerInitializeAuth() {
   } else {
     customerRenderHistory();
   }
-  client.auth.onAuthStateChange(async (event, session) => {
-    customerUser = session?.user || null;
+client.auth.onAuthStateChange(async (event, session) => {
+  const previousUserId = customerUser?.id || null;
+  const nextUserId = session?.user?.id || null;
+
+  if (previousUserId !== nextUserId) {
+    try {
+      [sessionStorage, localStorage].forEach((storage) => {
+        for (let index = storage.length - 1; index >= 0; index -= 1) {
+          const key = storage.key(index);
+
+          if (
+            key?.startsWith(`${CUSTOMER_PENDING_ORDER_KEY_PREFIX}_`) ||
+            key?.startsWith(`${CUSTOMER_TRACKED_ORDER_KEY_PREFIX}_`)
+          ) {
+            storage.removeItem(key);
+          }
+        }
+      });
+    } catch {}
+
+    customerStopStatusPolling();
+    customerStopChatPolling();
+    customerStopOrderTrackingRealtime();
+    customerTrackedOrder = null;
+  }
+
+  customerUser = session?.user || null;
     if (event === "PASSWORD_RECOVERY") {
       customerShowPasswordRecoveryForm();
       return;
@@ -2520,6 +2546,20 @@ async function customerSignOut() {
     customerStopStatusPolling();
     customerStopChatPolling();
     customerStopOrderTrackingRealtime();
+try {
+  [sessionStorage, localStorage].forEach((storage) => {
+    for (let index = storage.length - 1; index >= 0; index -= 1) {
+      const key = storage.key(index);
+
+      if (
+        key?.startsWith(`${CUSTOMER_PENDING_ORDER_KEY_PREFIX}_`) ||
+        key?.startsWith(`${CUSTOMER_TRACKED_ORDER_KEY_PREFIX}_`)
+      ) {
+        storage.removeItem(key);
+      }
+    }
+  });
+} catch {}
     customerTrackedOrder = null;
     customerUser = null;
     customerResetResolvedIdentity();
@@ -4550,8 +4590,14 @@ async function customerConfirmDelivery() {
     customerSetTrackingStatus(customerT("deliveryConfirmError"), "error");
     return;
   }
-  customerTrackedOrder.customerConfirmed = true;
-  customerPersistTrackedOrder();
+customerTrackedOrder.customerConfirmed = true;
+
+try {
+  const storageKey = customerTrackedOrderStorageKey();
+
+  sessionStorage.removeItem(storageKey);
+  localStorage.removeItem(storageKey);
+} catch {}
   if (button) {
     button.disabled = true;
     button.textContent = customerT("deliveryConfirmed");
@@ -4887,30 +4933,74 @@ function customerPendingOrderStorageKey() {
 function customerTrackedOrderStorageKey() {
   return `${CUSTOMER_TRACKED_ORDER_KEY_PREFIX}_${customerStoreId || "unknown"}`;
 }
-
 function customerPersistTrackedOrder() {
   if (!customerTrackedOrder?.id || !customerTrackedOrder.publicToken || !customerStoreId) return;
-  localStorage.setItem(customerTrackedOrderStorageKey(), JSON.stringify({
-    ...customerTrackedOrder,
-    restaurantUserId: customerStoreId,
-    savedAt: Date.now(),
-  }));
+
+  const storageKey = customerTrackedOrderStorageKey();
+
+  try {
+    // Elimina cualquier token antiguo que hubiera quedado persistido.
+    localStorage.removeItem(storageKey);
+
+    // El token solo vive durante la sesión actual del navegador.
+    sessionStorage.setItem(storageKey, JSON.stringify({
+      ...customerTrackedOrder,
+      restaurantUserId: customerStoreId,
+      savedAt: Date.now(),
+    }));
+  } catch {
+    // No interrumpimos el pedido si el almacenamiento del navegador falla.
+  }
 }
 
 function customerRestoreTrackedOrder() {
   if (!customerStoreId || customerTrackedOrder) return false;
+
+  const storageKey = customerTrackedOrderStorageKey();
+
   try {
-    const stored = JSON.parse(localStorage.getItem(customerTrackedOrderStorageKey()) || "null");
-    if (!stored?.id || !stored.publicToken || stored.restaurantUserId !== customerStoreId) return false;
+    // Limpia automáticamente el formato inseguro antiguo.
+    localStorage.removeItem(storageKey);
+
+    const stored = JSON.parse(
+      sessionStorage.getItem(storageKey) || "null"
+    );
+
+    if (
+      !stored?.id ||
+      !stored.publicToken ||
+      stored.restaurantUserId !== customerStoreId
+    ) {
+      sessionStorage.removeItem(storageKey);
+      return false;
+    }
+
+    const savedAt = Number(stored.savedAt) || 0;
+
+    if (
+      !savedAt ||
+      Date.now() - savedAt > CUSTOMER_TRACKED_ORDER_MAX_AGE_MS
+    ) {
+      sessionStorage.removeItem(storageKey);
+      return false;
+    }
+
     customerStartStatusTracking(
       stored.id,
       stored.publicToken,
       stored.paymentMethod || "",
       stored.paymentUrl || ""
     );
+
     customerTrackedOrder.status = stored.status || "pending";
+
     return true;
   } catch {
+    try {
+      sessionStorage.removeItem(storageKey);
+      localStorage.removeItem(storageKey);
+    } catch {}
+
     return false;
   }
 }
@@ -4945,16 +5035,37 @@ function customerOrderFingerprint(orderPayload) {
 }
 
 function customerReadPendingOrder(fingerprint) {
+  const storageKey = customerPendingOrderStorageKey();
+
   try {
-    const pending = JSON.parse(localStorage.getItem(customerPendingOrderStorageKey()) || "null");
+    // Elimina cualquier versión insegura antigua.
+    localStorage.removeItem(storageKey);
+
+    const pending = JSON.parse(
+      sessionStorage.getItem(storageKey) || "null"
+    );
+
     const createdAt = Number(pending?.createdAt) || 0;
     const isRecent = Date.now() - createdAt < 30 * 60 * 1000;
-    if (isRecent && pending?.fingerprint === fingerprint && pending?.orderId && pending?.publicToken) {
+
+    if (
+      isRecent &&
+      pending?.fingerprint === fingerprint &&
+      pending?.orderId &&
+      pending?.publicToken
+    ) {
       return pending;
     }
+
+    // Si está vencido o dañado, lo eliminamos.
+    sessionStorage.removeItem(storageKey);
   } catch {
-    // A damaged local retry marker must never block a new order.
+    try {
+      sessionStorage.removeItem(storageKey);
+      localStorage.removeItem(storageKey);
+    } catch {}
   }
+
   return null;
 }
 
@@ -4973,15 +5084,15 @@ async function customerCreateCustomerOrder(orderPayload, total, tableLabel, cust
   delete payloadForServer.publicToken;
   delete payloadForServer.public_token;
 
-  localStorage.setItem(
-    customerPendingOrderStorageKey(),
-    JSON.stringify({
-      fingerprint,
-      orderId,
-      publicToken,
-      createdAt: pendingOrder?.createdAt || Date.now(),
-    })
-  );
+sessionStorage.setItem(
+  customerPendingOrderStorageKey(),
+  JSON.stringify({
+    fingerprint,
+    orderId,
+    publicToken,
+    createdAt: pendingOrder?.createdAt || Date.now(),
+  })
+);
 
   const { data: rpcData, error: rpcError } = await customerClient.rpc("create_customer_order", {
     p_id: orderId,
@@ -4998,7 +5109,8 @@ async function customerCreateCustomerOrder(orderPayload, total, tableLabel, cust
 
   const row = customerNormalizeRpcRow(rpcData);
 
-  localStorage.removeItem(customerPendingOrderStorageKey());
+sessionStorage.removeItem(customerPendingOrderStorageKey());
+localStorage.removeItem(customerPendingOrderStorageKey());
 
   return {
     id: row?.id || orderId,
@@ -5338,11 +5450,20 @@ async function customerPollOrderStatus() {
     customerShowNotification(customerT("notificationStatusTitle"), message);
   }
 
-  if (["delivered", "cancelled", "rejected", "failed", "refunded"].includes(nextStatus)) {
-    customerStopStatusPolling();
-    customerStopChatPolling();
-    customerStopOrderTrackingRealtime();
+ if (["delivered", "cancelled", "rejected", "failed", "refunded"].includes(nextStatus)) {
+  customerStopStatusPolling();
+  customerStopChatPolling();
+  customerStopOrderTrackingRealtime();
+
+  if (["cancelled", "rejected", "failed", "refunded"].includes(nextStatus)) {
+    try {
+      const storageKey = customerTrackedOrderStorageKey();
+
+      sessionStorage.removeItem(storageKey);
+      localStorage.removeItem(storageKey);
+    } catch {}
   }
+}
   return true;
   })();
 
