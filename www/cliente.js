@@ -128,6 +128,7 @@ const CUSTOMER_TRANSLATION_CACHE_KEY = "rincon_colombiano_description_translatio
 const CUSTOMER_PENDING_ORDER_KEY_PREFIX = "rc_ordera_pending_customer_order";
 const CUSTOMER_TRACKED_ORDER_KEY_PREFIX = "rc_ordera_tracked_customer_order";
 const CUSTOMER_TRACKED_ORDER_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+const CUSTOMER_ORDER_GUARD_KEY = "rc_ordera_order_guard_v1";
 const CUSTOMER_MENU_CACHE_KEY_PREFIX = "rc_ordera_customer_menu_cache_v1";
 const CUSTOMER_REALTIME_RECONNECT_MIN_MS = 2_000;
 const CUSTOMER_REALTIME_RECONNECT_MAX_MS = 60_000;
@@ -4920,6 +4921,24 @@ function customerGenerateId() {
   const hex = Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
   return [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20)].join("-");
 }
+function customerOrderGuardId() {
+  const uuidV4Pattern =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+  try {
+    const stored = localStorage.getItem(CUSTOMER_ORDER_GUARD_KEY);
+
+    if (stored && uuidV4Pattern.test(stored)) {
+      return stored;
+    }
+
+    const generated = customerGenerateId();
+    localStorage.setItem(CUSTOMER_ORDER_GUARD_KEY, generated);
+    return generated;
+  } catch {
+    return customerGenerateId();
+  }
+}
 
 function customerNormalizeRpcRow(data) {
   if (Array.isArray(data)) return data[0] || null;
@@ -5079,10 +5098,12 @@ async function customerCreateCustomerOrder(orderPayload, total, tableLabel, cust
   // El token es una credencial privada del cliente.
   // Debe viajar únicamente por p_public_token.
   // Nunca debe almacenarse dentro de order_json.
-  const payloadForServer = { ...orderPayload };
+ const payloadForServer = { ...orderPayload };
 
-  delete payloadForServer.publicToken;
-  delete payloadForServer.public_token;
+delete payloadForServer.publicToken;
+delete payloadForServer.public_token;
+
+payloadForServer.clientGuardId = customerOrderGuardId();
 
 sessionStorage.setItem(
   customerPendingOrderStorageKey(),
