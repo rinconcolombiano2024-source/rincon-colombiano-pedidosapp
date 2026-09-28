@@ -11,6 +11,7 @@ const migration = read("MIGRACION-V91-01-RENDIMIENTO-INTEGRIDAD-Y-CIERRES.sql");
 const stationContractMigration = read("MIGRACION-V91-03-CONTRATO-MULTIESTACION-Y-REALTIME.sql");
 const syncLoadMigration = read("MIGRACION-V91-04-CONTROL-CARGA-SINCRONIZACION.sql");
 const syncContractMigration = read("MIGRACION-V91-07-CONTRATO-COMPATIBILIDAD-SINCRONIZACION.sql");
+const releaseContractMigration = read("MIGRACION-V91-26-CONTRATO-RELEASE-V91-25.sql");
 const marketplaceCheckout = read("supabase/functions/marketplace-checkout/index.ts");
 const sw = read("service-worker.js");
 const failures = [];
@@ -29,6 +30,43 @@ check(courier.includes('courierDeliveryRealtimeStatus === "SUBSCRIBED"'), "colab
 check(migration.includes("get_rc_ordera_schema_version"), "control de version de esquema");
 check(/rpc\(\s*"get_rc_ordera_sync_contract"/.test(app), "frontend verifica contrato de sincronizacion");
 check(/MINIMUM_SYNC_CONTRACT_VERSION\s*=\s*7\b/.test(app), "frontend exige contrato 7");
+check(
+  /MINIMUM_RELEASE_CONTRACT_VERSION\s*=\s*25\b/.test(app),
+  "frontend exige contrato de release V91-25"
+);
+
+check(
+  /rpc\(\s*"get_rc_ordera_release_contract"/.test(app),
+  "frontend verifica contrato real V91-25"
+);
+
+check(
+  releaseContractMigration.includes("V91-23")
+    && releaseContractMigration.includes("V91-24")
+    && releaseContractMigration.includes("V91-25"),
+  "contrato de release valida V91-23 V91-24 V91-25"
+);
+
+check(
+  releaseContractMigration.includes(
+    "create_customer_order_v91_22_core"
+  )
+    && releaseContractMigration.includes(
+      "rc_ordera_consume_order_rate_limit"
+    ),
+  "contrato valida seguridad V91-23"
+);
+
+check(
+  releaseContractMigration.includes(
+    "v91_25_product_identity"
+  )
+    && releaseContractMigration.includes(
+      "v91_25_single_report"
+    ),
+  "contrato valida productos y motor unico V91-25"
+);
+
 check(!syncContractMigration.includes("V91-08") && syncContractMigration.includes("array['orders', 'customer_order_messages']") && syncContractMigration.includes("alter publication supabase_realtime add table public.%I"), "contrato 7 instala publicaciones sin V91-08");
 check(app.includes('"RC_ORDERA_SCHEMA_OUTDATED", "RC_ORDERA_SCHEMA_INCOMPLETE"'), "carga inicial bloquea esquema incompleto");
 check(syncContractMigration.includes("get_rc_ordera_sync_contract"), "RPC de contrato de sincronizacion disponible");
