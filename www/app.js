@@ -1039,7 +1039,7 @@ function isCancelledSavedOrder(order) {
 }
 
 function closureReportCacheKey(periodType, periodValue) {
-  return `${String(periodType || "").toLowerCase()}:${String(periodValue || "")}`;
+  return `${cloudState.user?.id || "local"}:${String(periodType || "").toLowerCase()}:${String(periodValue || "")}`;
 }
 
 function normalizedCloudClosureReport(periodType, periodValue) {
@@ -4556,20 +4556,40 @@ function closureReportRange(periodType, periodValue) {
 }
 
 async function loadCloudOrdersForReport(periodType, periodValue) {
-  if (!cloudState.client || !cloudState.user || !navigator.onLine) return 0;
+  const cacheKey = closureReportCacheKey(periodType, periodValue);
+  cloudClosureReports.delete(cacheKey);
+  if (!cloudState.client || !cloudState.user || !navigator.onLine) {
+    throw new Error("Se necesita conexion para obtener el cierre completo.");
+  }
+  const client = cloudState.client;
+  const userId = cloudState.user.id;
   closureReportRange(periodType, periodValue);
   await withCloudTimeout((signal) => ensureMinimumDatabaseVersion(signal));
-  const { data, error } = await cloudState.client.rpc("get_restaurant_closure_report", {
+  if (client !== cloudState.client || userId !== cloudState.user?.id) throw new Error("La sesion cambio durante el cierre.");
+  const { data, error } = await withCloudTimeout((signal) => client.rpc("get_restaurant_closure_report", {
     p_period_type: periodType,
     p_period_value: String(periodValue || ""),
-  });
+  }).abortSignal(signal));
   if (error) throw error;
+  if (client !== cloudState.client || userId !== cloudState.user?.id) throw new Error("La sesion cambio durante el cierre.");
   const report = Array.isArray(data) ? data[0] : data;
-  if (!report || typeof report !== "object") {
+  if (!report || typeof report !== "object" || report.periodType !== periodType
+      || report.periodValue !== String(periodValue) || !Number.isFinite(Number(report.tickets))
+      || Number(report.tickets) < 0 || !Number.isFinite(Number(report.total))) {
     throw new Error("La nube no devolvio un cierre valido.");
   }
-  cloudClosureReports.set(closureReportCacheKey(periodType, periodValue), report);
+  cloudClosureReports.set(cacheKey, report);
   return Number(report.tickets) || 0;
+}
+
+async function prepareCloudPeriodClosure(periodType, periodValue) {
+  const client = cloudState.client;
+  const userId = cloudState.user?.id;
+  if (!client || !userId || !navigator.onLine) throw new Error("Se necesita conexion para obtener el cierre completo.");
+  await syncPendingData({ silent: true, allowWhileLoading: true });
+  if (client !== cloudState.client || userId !== cloudState.user?.id) throw new Error("La sesion cambio durante el cierre.");
+  if (pendingOrdersCount() || pendingDeletedOrdersCount()) throw new Error("Hay pedidos pendientes de sincronizar. No se puede confirmar un cierre incompleto.");
+  await loadCloudOrdersForReport(periodType, periodValue);
 }
 
 function currentRestaurantRpcProfilePayload() {
@@ -13132,6 +13152,91 @@ async function downloadCurrentTicketPdf() {
   downloadBlob(blob, `rc-ordera-ticket-${ticketName}.pdf`);
 }
 
+let ticketHistoryArchive = null;
+
+function ticketHistoryOrders() {
+  const orders = new Map(savedOrders.map((order) => [order.id, order]));
+  const deleted = new Set(readDeletedOrderIds());
+  if (ticketHistoryArchive && ticketHistoryArchive.userId === cloudState.user?.id) {
+    for (const order of ticketHistoryArchive.orders.values()) {
+      const local = orders.get(order.id);
+      if (!local || (!needsCloudSync(local) && Number(order._syncRevision) > Number(local._syncRevision || 0))) orders.set(order.id, order);
+    }
+  }
+  return [...orders.values()].filter((order) => !deleted.has(order.id));
+}
+
+async function loadTicketHistoryPage(reset = false) {
+  if (!cloudState.client || !cloudState.user || !navigator.onLine) {
+    ticketHistoryArchive?.controller?.abort();
+    ticketHistoryArchive = null;
+    renderTicketHistory();
+    return;
+  }
+  const date = String(elements.ticketHistoryDateInput?.value || "").trim();
+  const client = cloudState.client;
+  const userId = cloudState.user.id;
+  if (ticketHistoryArchive?.busy && ticketHistoryArchive.userId === userId && ticketHistoryArchive.date === date) return;
+  if (reset || !ticketHistoryArchive || ticketHistoryArchive.userId !== userId || ticketHistoryArchive.date !== date) {
+    ticketHistoryArchive?.controller?.abort();
+    ticketHistoryArchive = { userId, date, orders: new Map(), cursor: null, more: true, busy: false, error: false };
+  }
+  const state = ticketHistoryArchive;
+  if (state.busy || !state.more) return;
+  state.busy = true;
+  state.error = false;
+  renderTicketHistory();
+  try {
+    const { data, error } = await withCloudTimeout((signal) => {
+      // Keep the timeout controller available to cancel a superseded date/page.
+      const controller = new AbortController();
+      state.controller = controller;
+      if (signal.aborted) controller.abort();
+      else signal.addEventListener("abort", () => controller.abort(), { once: true });
+      let query = client.from("orders")
+        .select("id, created_at, business_date, ticket_number, order_json, revision")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .limit(LOCAL_ORDER_CACHE_LIMIT);
+      if (date) query = query.eq("business_date", date);
+      if (state.cursor) query = query.or(`created_at.lt.${state.cursor.created_at},and(created_at.eq.${state.cursor.created_at},id.lt.${state.cursor.id})`);
+      return query.abortSignal(controller.signal);
+    });
+    if (state !== ticketHistoryArchive || client !== cloudState.client || userId !== cloudState.user?.id) return;
+    if (error) throw error;
+    if (!Array.isArray(data)) throw new Error("No fue posible consultar el historial completo.");
+    for (const row of data) {
+      if (!row?.id || !row.order_json || typeof row.order_json !== "object") continue;
+      state.orders.set(row.id, normalizeOrderNotes({
+        ...row.order_json, id: row.id, createdAt: row.created_at,
+        businessDate: row.business_date, ticketNumber: row.ticket_number,
+        type: normalizeOrderType(row.order_json.type), saved: true,
+        _syncRevision: Number(row.revision) || 0, syncStatus: "synced",
+      }));
+    }
+    if (data.length) state.cursor = { id: data[data.length - 1].id, created_at: data[data.length - 1].created_at };
+    state.more = data.length === LOCAL_ORDER_CACHE_LIMIT;
+  } catch (error) {
+    if (state === ticketHistoryArchive && userId === cloudState.user?.id) {
+      state.error = true;
+      console.warn("No fue posible consultar el historial completo.", error);
+    }
+  } finally {
+    state.busy = false;
+    if (state === ticketHistoryArchive) renderTicketHistory();
+  }
+}
+
+function ticketHistoryPagingHtml() {
+  const state = ticketHistoryArchive;
+  if (!state || state.userId !== cloudState.user?.id) return "";
+  return `<div class="monthly-empty">${escapeHtml(appUiText(state.error
+    ? "No fue posible consultar el historial completo."
+    : "Los filtros se aplican a los tickets consultados. Carga mas para consultar los anteriores."))}</div>`
+    + (state.more ? `<button type="button" data-action="load-more-tickets" ${state.busy ? "disabled" : ""}>${escapeHtml(appUiText(state.busy ? "Cargando tickets..." : "Cargar mas tickets"))}</button>` : "");
+}
+
 function ticketHistorySearchText(order) {
   return normalizeSearchText([
     order.ticketNumber,
@@ -13147,7 +13252,7 @@ function filteredTicketHistory() {
   const query = normalizeSearchText(elements.ticketHistorySearchInput?.value || "");
   const date = String(elements.ticketHistoryDateInput?.value || "").trim();
   const payment = String(elements.ticketHistoryPaymentFilter?.value || "all");
-  return savedOrders
+  return ticketHistoryOrders()
     .filter((order) => !date || orderBusinessDate(order) === date)
     .filter((order) => payment === "all" || normalizePaymentStatus(order.paymentStatus, "unverified") === payment)
     .filter((order) => !query || ticketHistorySearchText(order).includes(query))
@@ -13158,10 +13263,10 @@ function renderTicketHistory() {
   if (!elements.ticketHistoryList) return;
   const orders = filteredTicketHistory();
   if (!orders.length) {
-    elements.ticketHistoryList.innerHTML = '<div class="monthly-empty">No hay tickets que coincidan con los filtros.</div>';
+    elements.ticketHistoryList.innerHTML = '<div class="monthly-empty">No hay tickets que coincidan con los filtros.</div>' + ticketHistoryPagingHtml();
     return;
   }
-  elements.ticketHistoryList.innerHTML = orders.slice(0, 500).map((order) => {
+  elements.ticketHistoryList.innerHTML = orders.map((order) => {
     const status = normalizePaymentStatus(order.paymentStatus, "unverified");
     const created = new Date(order.createdAt || 0);
     const createdLabel = Number.isNaN(created.getTime())
@@ -13193,7 +13298,7 @@ function renderTicketHistory() {
         </div>
       </article>
     `;
-  }).join("");
+  }).join("") + ticketHistoryPagingHtml();
 }
 
 function openTicketHistoryDialog() {
@@ -13203,6 +13308,7 @@ function openTicketHistoryDialog() {
   if (elements.ticketHistorySearchInput) elements.ticketHistorySearchInput.value = "";
   renderTicketHistory();
   elements.ticketHistoryDialog.showModal();
+  loadTicketHistoryPage(true).catch(console.error);
 }
 
 async function updateTicketPaymentStatus(orderId, status) {
@@ -13285,6 +13391,12 @@ function renderHistory() {
 }
 
 function renderMonthlyClose(month = currentMonthKey()) {
+  if (!normalizedCloudClosureReport("month", month)) {
+    elements.closeMonthInput.value = month;
+    elements.printCloseButton.disabled = true;
+    elements.monthlyCloseContent.innerHTML = '<div class="monthly-empty">Cierre no verificado. Conecta con la nube y vuelve a abrir el cierre para obtener todos los pedidos.</div>';
+    return { month, tickets: 0 };
+  }
   const report = buildMonthlyClose(month);
   elements.closeMonthInput.value = month;
   elements.printCloseButton.disabled = report.tickets === 0;
@@ -13365,6 +13477,12 @@ function renderMonthlyClose(month = currentMonthKey()) {
 }
 
 function renderAnnualClose(year = currentYearKey()) {
+  if (!normalizedCloudClosureReport("year", String(year))) {
+    elements.closeYearInput.value = year;
+    elements.printAnnualCloseButton.disabled = true;
+    elements.annualCloseContent.innerHTML = '<div class="monthly-empty">Cierre no verificado. Conecta con la nube y vuelve a abrir el cierre para obtener todos los pedidos.</div>';
+    return { year: String(year), tickets: 0 };
+  }
   const report = buildAnnualClose(String(year));
   elements.closeYearInput.value = report.year;
   elements.printAnnualCloseButton.disabled = report.tickets === 0;
@@ -13394,6 +13512,12 @@ function renderAnnualClose(year = currentYearKey()) {
 }
 
 function renderDailyClose(day = todayKey) {
+  if (!normalizedCloudClosureReport("day", day)) {
+    elements.closeDayInput.value = day;
+    elements.printDailyCloseButton.disabled = true;
+    elements.dailyCloseContent.innerHTML = '<div class="monthly-empty">Cierre no verificado. Conecta con la nube y vuelve a abrir el cierre para obtener todos los pedidos.</div>';
+    return { day, tickets: 0 };
+  }
   const report = buildDailyClose(day);
   elements.closeDayInput.value = day;
   elements.printDailyCloseButton.disabled = report.tickets === 0;
@@ -13533,8 +13657,11 @@ function renderDailyClose(day = todayKey) {
 }
 
 async function confirmCloudPeriodClosure(periodType, anchorDate) {
-  if (!cloudState.client || !cloudState.user || !navigator.onLine) return false;
-  const { error } = await cloudState.client.rpc("close_current_restaurant_period", {
+  if (!cloudState.client || !cloudState.user || !navigator.onLine) throw new Error("Se necesita conexion para confirmar el cierre completo.");
+  if (pendingOrdersCount() || pendingDeletedOrdersCount()) throw new Error("Hay pedidos pendientes de sincronizar. No se puede confirmar un cierre incompleto.");
+  const client = cloudState.client;
+  const userId = cloudState.user.id;
+  const { error } = await client.rpc("close_current_restaurant_period", {
     p_period_type: periodType,
     p_anchor_date: anchorDate,
   });
@@ -13544,6 +13671,7 @@ async function confirmCloudPeriodClosure(periodType, anchorDate) {
     }
     throw error;
   }
+  if (client !== cloudState.client || userId !== cloudState.user?.id) throw new Error("La sesion cambio durante el cierre.");
   return true;
 }
 
@@ -13631,7 +13759,9 @@ function renderPrintDailyClose(report) {
 }
 
 async function printDailyClose() {
-  const report = renderDailyClose(elements.closeDayInput.value || todayKey);
+  const day = elements.closeDayInput.value || todayKey;
+  await prepareCloudPeriodClosure("day", day);
+  const report = renderDailyClose(day);
   if (!report.tickets) {
     alert("No hay pedidos guardados para imprimir en ese dia.");
     return;
@@ -13694,7 +13824,9 @@ function renderPrintMonthlyClose(report) {
 }
 
 async function printMonthlyClose() {
-  const report = renderMonthlyClose(elements.closeMonthInput.value || currentMonthKey());
+  const month = elements.closeMonthInput.value || currentMonthKey();
+  await prepareCloudPeriodClosure("month", month);
+  const report = renderMonthlyClose(month);
   if (!report.tickets) {
     alert("No hay pedidos guardados para imprimir en ese mes.");
     return;
@@ -13727,7 +13859,9 @@ function renderPrintAnnualClose(report) {
 }
 
 async function printAnnualClose() {
-  const report = renderAnnualClose(elements.closeYearInput.value || currentYearKey());
+  const year = elements.closeYearInput.value || currentYearKey();
+  await prepareCloudPeriodClosure("year", year);
+  const report = renderAnnualClose(year);
   if (!report.tickets) {
     alert("No hay pedidos guardados para imprimir en ese ano.");
     return;
@@ -14193,16 +14327,29 @@ elements.historyList.addEventListener("click", (event) => {
 });
 
 elements.ticketHistoryButton?.addEventListener("click", openTicketHistoryDialog);
-elements.refreshTicketHistoryButton?.addEventListener("click", renderTicketHistory);
+elements.refreshTicketHistoryButton?.addEventListener("click", () => loadTicketHistoryPage(true).catch(console.error));
 elements.ticketHistorySearchInput?.addEventListener("input", renderTicketHistory);
-elements.ticketHistoryDateInput?.addEventListener("change", renderTicketHistory);
+elements.ticketHistoryDateInput?.addEventListener("change", () => loadTicketHistoryPage(true).catch(console.error));
+elements.ticketHistoryDialog?.addEventListener("close", () => {
+  ticketHistoryArchive?.controller?.abort();
+  ticketHistoryArchive = null;
+});
 elements.ticketHistoryPaymentFilter?.addEventListener("change", renderTicketHistory);
 elements.ticketHistoryList?.addEventListener("click", async (event) => {
   const button = event.target.closest("button[data-action]");
+  if (button?.dataset.action === "load-more-tickets") {
+    await loadTicketHistoryPage();
+    return;
+  }
   const card = event.target.closest("[data-ticket-id]");
   if (!button || !card) return;
-  const order = savedOrders.find((item) => item.id === card.dataset.ticketId);
+  const order = ticketHistoryOrders().find((item) => item.id === card.dataset.ticketId);
   if (!order) return;
+  if (["open-ticket", "toggle-payment"].includes(button.dataset.action)) {
+    const index = savedOrders.findIndex((item) => item.id === order.id);
+    if (index < 0) savedOrders.push(order);
+    else savedOrders[index] = order;
+  }
   if (button.dataset.action === "open-ticket") {
     loadOrder(order.id);
     elements.ticketHistoryDialog?.close();
@@ -14268,6 +14415,7 @@ elements.dailyCloseButton.addEventListener(
           allowWhileLoading: true,
         });
 
+        todayKey = restaurantBusinessContext?.businessDate || currentBusinessDate();
         await loadCloudOrdersForReport("day", todayKey);
 
       }
@@ -14287,8 +14435,7 @@ elements.dailyCloseButton.addEventListener(
 
       /*
        * Nunca eliminamos los datos locales.
-       * Permitimos ver el cierre, pero advertimos
-       * que no ha sido verificado con Supabase.
+       * No usamos la cache parcial como cierre completo.
        */
 
       todayKey = restaurantBusinessContext?.businessDate || currentBusinessDate();
@@ -14298,7 +14445,7 @@ elements.dailyCloseButton.addEventListener(
       elements.dailyCloseDialog.showModal();
 
       showToast(
-        "Cierre mostrado con datos locales. No fue posible verificar la nube."
+        "Cierre no verificado. No fue posible obtener todos los pedidos de la nube."
       );
 
     } finally {
@@ -14316,7 +14463,7 @@ elements.closeDayInput.addEventListener("change", async () => {
     await loadCloudOrdersForReport("day", day);
   } catch (error) {
     console.warn("No fue posible actualizar el cierre diario desde Supabase.", error);
-    showToast("Cierre diario mostrado con los datos disponibles en este equipo.");
+    showToast("Cierre no verificado. No fue posible obtener todos los pedidos de la nube.");
   }
   renderDailyClose(day);
 });
@@ -14371,7 +14518,7 @@ elements.monthlyCloseButton.addEventListener(
       elements.monthlyCloseDialog.showModal();
 
       showToast(
-        "Cierre mensual mostrado con datos locales. No fue posible verificar la nube."
+        "Cierre no verificado. No fue posible obtener todos los pedidos de la nube."
       );
 
     } finally {
@@ -14389,7 +14536,7 @@ elements.closeMonthInput.addEventListener("change", async () => {
     await loadCloudOrdersForReport("month", month);
   } catch (error) {
     console.warn("No fue posible actualizar el cierre mensual desde Supabase.", error);
-    showToast("Cierre mensual mostrado con los datos disponibles en este equipo.");
+    showToast("Cierre no verificado. No fue posible obtener todos los pedidos de la nube.");
   }
   renderMonthlyClose(month);
 });
@@ -14414,7 +14561,7 @@ elements.annualCloseButton?.addEventListener("click", async () => {
     console.error("No fue posible verificar la nube antes del cierre anual:", error);
     renderAnnualClose(currentYearKey());
     elements.annualCloseDialog.showModal();
-    showToast("Cierre anual mostrado con datos locales. No fue posible verificar la nube.");
+    showToast("Cierre no verificado. No fue posible obtener todos los pedidos de la nube.");
   } finally {
     elements.annualCloseButton.disabled = false;
   }
@@ -14425,7 +14572,7 @@ elements.closeYearInput?.addEventListener("change", async () => {
     await loadCloudOrdersForReport("year", year);
   } catch (error) {
     console.warn("No fue posible actualizar el cierre anual desde Supabase.", error);
-    showToast("Cierre anual mostrado con los datos disponibles en este equipo.");
+    showToast("Cierre no verificado. No fue posible obtener todos los pedidos de la nube.");
   }
   renderAnnualClose(year);
 });
