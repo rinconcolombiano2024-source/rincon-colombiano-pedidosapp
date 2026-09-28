@@ -69,6 +69,7 @@ const SYNC_ORDER_BATCH_SIZE = 5;
 const SYNC_ORDER_BATCH_DELAY_MS = 15_000;
 const MINIMUM_DATABASE_SCHEMA_VERSION = 91;
 const MINIMUM_SYNC_CONTRACT_VERSION = 7;
+const MINIMUM_RELEASE_CONTRACT_VERSION = 25;
 
 const LEGACY_STORAGE_KEYS = {
   nextTicket: "rincon_colombiano_next_ticket",
@@ -681,19 +682,21 @@ const cloudState = {
   lastError: "",
   lastErrorDetails: "",
   moduleWarning: "",
-  schemaVersion: null,
-  schemaContractVersion: null,
-  schemaCompatible: false,
+ schemaVersion: null,
+schemaContractVersion: null,
+releaseContractVersion: null,
+schemaCompatible: false,
 };
 
 async function ensureMinimumDatabaseVersion(signal) {
-  if (
-    Number(cloudState.schemaVersion) >= MINIMUM_DATABASE_SCHEMA_VERSION
-    && Number(cloudState.schemaContractVersion) >= MINIMUM_SYNC_CONTRACT_VERSION
-    && cloudState.schemaCompatible === true
-  ) {
-    return cloudState.schemaVersion;
-  }
+if (
+  Number(cloudState.schemaVersion) >= MINIMUM_DATABASE_SCHEMA_VERSION
+  && Number(cloudState.schemaContractVersion) >= MINIMUM_SYNC_CONTRACT_VERSION
+  && Number(cloudState.releaseContractVersion) >= MINIMUM_RELEASE_CONTRACT_VERSION
+  && cloudState.schemaCompatible === true
+) {
+  return cloudState.schemaVersion;
+}
   const { data, error } = await cloudState.client.rpc("get_rc_ordera_schema_version").abortSignal(signal);
 if (error) {
   const code = String(error?.code || "");
@@ -789,11 +792,97 @@ if (error) {
       : [];
     throw schemaError;
   }
+const {
+  data: releaseContractData,
+  error: releaseContractError,
+} = await cloudState.client
+  .rpc("get_rc_ordera_release_contract")
+  .abortSignal(signal);
 
-  cloudState.schemaVersion = version;
-  cloudState.schemaContractVersion = contractVersion;
-  cloudState.schemaCompatible = true;
-  return version;
+if (releaseContractError) {
+  if (
+    ["42883", "PGRST202"].includes(
+      String(releaseContractError?.code || "")
+    )
+  ) {
+    const schemaError = new Error(
+      appUiText(
+        "La base de datos no tiene completo el contrato de sincronizacion V91."
+      )
+    );
+
+    schemaError.code = "RC_ORDERA_SCHEMA_INCOMPLETE";
+    schemaError.cause = releaseContractError;
+    throw schemaError;
+  }
+
+  if (isTemporarySyncInfrastructureError(releaseContractError)) {
+    const cloudError = new Error(
+      appUiText(
+        "La nube de RC ORDERA no está respondiendo temporalmente. Intenta nuevamente en unos momentos."
+      )
+    );
+
+    cloudError.code =
+      "RC_ORDERA_CLOUD_TEMPORARILY_UNAVAILABLE";
+
+    cloudError.cause = releaseContractError;
+    throw cloudError;
+  }
+
+  const schemaError = new Error(
+    appUiText(
+      "No fue posible verificar la versión de la base de datos."
+    )
+  );
+
+  schemaError.code = "RC_ORDERA_SCHEMA_CHECK_FAILED";
+  schemaError.cause = releaseContractError;
+
+  throw schemaError;
+}
+
+const releaseContractRow = Array.isArray(releaseContractData)
+  ? releaseContractData[0]
+  : releaseContractData;
+
+const releaseContractVersion = Number(
+  releaseContractRow?.release_contract_version
+);
+
+const releaseSchemaVersion = Number(
+  releaseContractRow?.schema_version
+);
+
+if (
+  releaseContractRow?.compatible !== true
+  || !Number.isFinite(releaseContractVersion)
+  || releaseContractVersion < MINIMUM_RELEASE_CONTRACT_VERSION
+  || !Number.isFinite(releaseSchemaVersion)
+  || releaseSchemaVersion < MINIMUM_DATABASE_SCHEMA_VERSION
+) {
+  const schemaError = new Error(
+    appUiText(
+      "La base de datos no tiene completo el contrato de sincronizacion V91."
+    )
+  );
+
+  schemaError.code = "RC_ORDERA_SCHEMA_INCOMPLETE";
+
+  schemaError.missingComponents = Array.isArray(
+    releaseContractRow?.missing_components
+  )
+    ? releaseContractRow.missing_components
+    : [];
+
+  throw schemaError;
+}
+cloudState.schemaVersion = version;
+cloudState.schemaContractVersion = contractVersion;
+cloudState.releaseContractVersion = releaseContractVersion;
+cloudState.schemaCompatible = true;
+
+return version;
 }
 
 async function refreshRestaurantBusinessContext(options = {}) {
