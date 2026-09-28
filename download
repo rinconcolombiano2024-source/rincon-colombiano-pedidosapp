@@ -1,6 +1,18 @@
+# Keep runtime assets and www; exclude development and database-only files.
+.git/
+.github/
 node_modules/
+tests/
 test-results/
 playwright-report/
-.env
-.env.*
-!.env.example
+supabase/
+scripts/
+*.sql
+*.md
+*.txt
+*.cjs
+*.zip
+.env*
+qa-*.png
+index-restaurante-backup.html
+download*

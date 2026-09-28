@@ -998,7 +998,7 @@ function todaysOrders() {
 }
 
 function ordersForDay(day) {
-  return savedOrders.filter((order) => orderBusinessDate(order) === day && !isCancelledSavedOrder(order));
+  return savedOrders.filter((order) => orderBusinessDate(order) === day && !isExcludedFromClosure(order));
 }
 
 function currentMonthKey(date = null) {
@@ -1023,7 +1023,7 @@ function formatDayLabel(day) {
 }
 
 function ordersForMonth(month) {
-  return savedOrders.filter((order) => orderBusinessDate(order).startsWith(`${month}-`) && !isCancelledSavedOrder(order));
+  return savedOrders.filter((order) => orderBusinessDate(order).startsWith(`${month}-`) && !isExcludedFromClosure(order));
 }
 
 function currentYearKey(date = null) {
@@ -1031,7 +1031,11 @@ function currentYearKey(date = null) {
 }
 
 function ordersForYear(year) {
-  return savedOrders.filter((order) => orderBusinessDate(order).startsWith(`${year}-`) && !isCancelledSavedOrder(order));
+  return savedOrders.filter((order) => orderBusinessDate(order).startsWith(`${year}-`) && !isExcludedFromClosure(order));
+}
+
+function isExcludedFromClosure(order) {
+  return ["cancelled", "rejected"].includes(String(order?.canonicalStatus || order?.status || "").toLowerCase());
 }
 
 function isCancelledSavedOrder(order) {
@@ -11558,6 +11562,8 @@ function itemReportName(item) {
 }
 
 function itemReportKey(item) {
+  const productId = String(item?.productId || item?.product_id || "").trim();
+  if (productId) return `product:${productId}`;
   return itemReportName(item)
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -11766,6 +11772,7 @@ function renderMenu() {
           type="button"
           data-category="${escapeHtml(category)}"
           data-name="${escapeHtml(dish.name)}"
+          data-product-id="${escapeHtml(dish.id || dish.productId || "")}"
           data-price="${dish.price}"
           data-station="${escapeHtml(normalizeProductStation(dish.station))}"
           ${productIsAvailable(dish) ? "" : "disabled aria-disabled=\"true\""}
@@ -12353,13 +12360,17 @@ async function clearMenuSecurely() {
   }
 }
 
-function addItem(name, price, station = "kitchen") {
+function addItem(name, price, station = "kitchen", productId = "") {
   const cleanName = String(name || "").trim();
   const cleanPrice = Number.parseFloat(price) || 0;
+  const cleanProductId = String(productId || "").trim();
   if (!cleanName) return;
 
   const existing = currentOrder.items.find(
-    (item) => item.name.toLowerCase() === cleanName.toLowerCase() && item.price === cleanPrice && !item.note
+    (item) => (cleanProductId
+      ? String(item.productId || item.product_id || "") === cleanProductId
+      : !item.productId && !item.product_id && item.name.toLowerCase() === cleanName.toLowerCase())
+      && item.price === cleanPrice && !item.note
   );
 
   if (existing) {
@@ -12368,6 +12379,7 @@ function addItem(name, price, station = "kitchen") {
     currentOrder.items.push({
       id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
       name: cleanName,
+      ...(cleanProductId ? { productId: cleanProductId } : {}),
       price: cleanPrice,
       qty: 1,
       note: "",
@@ -14007,8 +14019,8 @@ function saveCustomerFromDialog() {
   elements.customerDialog.close();
 }
 
-function loadOrder(orderId) {
-  const order = savedOrders.find((item) => item.id === orderId);
+function loadOrder(orderId, historicalOrder = null) {
+  const order = historicalOrder?.id === orderId ? historicalOrder : savedOrders.find((item) => item.id === orderId);
   if (!order) return;
   currentOrder = structuredCloneOrder(order);
   renderOrder();
@@ -14080,7 +14092,7 @@ if (elements.menuSearchClearButton) {
 elements.menuGrid.addEventListener("click", (event) => {
   const button = event.target.closest(".dish-button");
   if (!button) return;
-  addItem(button.dataset.name, button.dataset.price, button.dataset.station);
+  addItem(button.dataset.name, button.dataset.price, button.dataset.station, button.dataset.productId);
 });
 
 elements.customItemForm.addEventListener("submit", (event) => {
@@ -14345,13 +14357,13 @@ elements.ticketHistoryList?.addEventListener("click", async (event) => {
   if (!button || !card) return;
   const order = ticketHistoryOrders().find((item) => item.id === card.dataset.ticketId);
   if (!order) return;
-  if (["open-ticket", "toggle-payment"].includes(button.dataset.action)) {
+  if (button.dataset.action === "toggle-payment") {
     const index = savedOrders.findIndex((item) => item.id === order.id);
     if (index < 0) savedOrders.push(order);
     else savedOrders[index] = order;
   }
   if (button.dataset.action === "open-ticket") {
-    loadOrder(order.id);
+    loadOrder(order.id, order);
     elements.ticketHistoryDialog?.close();
     return;
   }

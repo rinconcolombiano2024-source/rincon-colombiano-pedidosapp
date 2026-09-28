@@ -1,0 +1,15 @@
+node_modules
+www
+android
+scripts
+supabase
+*.sql
+qa-*.cjs
+qa-*.png
+AUDITORIA-*.md
+REPORTE-*.md
+GUIA-*.md
+ENTREGA-*.md
+PREFLIGHT-*.sql
+VALIDACION-*.sql
+MIGRACION-*.sql

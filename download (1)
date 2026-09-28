@@ -1,16 +1,6 @@
-# Keep source and historical evidence in the ZIP, not in the public website.
-.git/
-.github/
 node_modules/
 test-results/
 playwright-report/
-tests/
-supabase/
-*.sql
-*.md
-*.txt
-!vendor/SUPABASE-LICENSE.txt
-qa-*.cjs
-qa-*.png
-index-restaurante-backup.html
-download*
+.env
+.env.*
+!.env.example
