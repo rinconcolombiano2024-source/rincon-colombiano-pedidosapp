@@ -1,5 +1,15 @@
 (function () {
   const rows = [
+    ["history.fetchFailed","No fue posible consultar el historial completo.","Nie udało się pobrać pełnej historii.","The complete history could not be retrieved."],
+    ["history.loadedFilters","Los filtros se aplican a los tickets consultados. Carga mas para consultar los anteriores.","Filtry dotyczą pobranych paragonów. Wczytaj więcej, aby zobaczyć wcześniejsze.","Filters apply to loaded tickets. Load more to see earlier tickets."],
+    ["history.loading","Cargando tickets...","Wczytywanie paragonów...","Loading tickets..."],
+    ["history.loadMore","Cargar mas tickets","Wczytaj więcej paragonów","Load more tickets"],
+    ["close.fullReportRequired","Cierre no verificado. Conecta con la nube y vuelve a abrir el cierre para obtener todos los pedidos.","Zamknięcie niezweryfikowane. Połącz się z chmurą i otwórz ponownie zamknięcie, aby pobrać wszystkie zamówienia.","Close not verified. Connect to the cloud and reopen the close to retrieve all orders."],
+    ["close.fullReportOffline","Se necesita conexion para obtener el cierre completo.","Aby pobrać pełne zamknięcie, wymagane jest połączenie.","A connection is required to retrieve the complete close."],
+    ["close.sessionChanged","La sesion cambio durante el cierre.","Sesja zmieniła się podczas zamknięcia.","The session changed during the close."],
+    ["close.pendingOrders","Hay pedidos pendientes de sincronizar. No se puede confirmar un cierre incompleto.","Niektóre zamówienia oczekują na synchronizację. Nie można potwierdzić niepełnego zamknięcia.","Orders are awaiting synchronization. An incomplete close cannot be confirmed."],
+    ["close.confirmOffline","Se necesita conexion para confirmar el cierre completo.","Aby potwierdzić pełne zamknięcie, wymagane jest połączenie.","A connection is required to confirm the complete close."],
+    ["close.fullReportFailed","Cierre no verificado. No fue posible obtener todos los pedidos de la nube.","Zamknięcie niezweryfikowane. Nie udało się pobrać wszystkich zamówień z chmury.","Close not verified. Not all orders could be retrieved from the cloud."],
     ["portal.mark","RC","RC","RC"],
     ["portal.intro","Elige cómo quieres utilizar RC ORDERA. Pide comida, administra tu restaurante o realiza entregas.","Wybierz, jak chcesz korzystać z RC ORDERA. Zamawiaj jedzenie, zarządzaj restauracją lub realizuj dostawy.","Choose how to use RC ORDERA. Order food, manage your restaurant or make deliveries."],
     ["portal.recommended","Recomendado","Polecane","Recommended"],
