@@ -1,5 +1,7 @@
 (function () {
   const rows = [
+    ["orders.invalidResponse","La consulta de pedidos devolvio datos invalidos.","Zapytanie o zamówienia zwróciło nieprawidłowe dane.","The orders query returned invalid data."],
+    ["orders.paginationStalled","La paginacion de pedidos no avanzo; se conservaran los pedidos anteriores.","Nie udało się przejść do kolejnej strony zamówień; poprzednie zamówienia zostaną zachowane.","Order pagination did not advance; previous orders will be preserved."],
     ["history.fetchFailed","No fue posible consultar el historial completo.","Nie udało się pobrać pełnej historii.","The complete history could not be retrieved."],
     ["history.loadedFilters","Los filtros se aplican a los tickets consultados. Carga mas para consultar los anteriores.","Filtry dotyczą pobranych paragonów. Wczytaj więcej, aby zobaczyć wcześniejsze.","Filters apply to loaded tickets. Load more to see earlier tickets."],
     ["history.loading","Cargando tickets...","Wczytywanie paragonów...","Loading tickets..."],
