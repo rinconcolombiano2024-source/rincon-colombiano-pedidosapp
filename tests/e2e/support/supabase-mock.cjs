@@ -75,12 +75,25 @@ function supabaseMockScript(options = {}) {
 
 async function installSupabaseMock(page, options = {}) {
   const body = supabaseMockScript(options);
-  await page.route("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4", (route) => route.fulfill({
+
+  const fulfillSupabaseMock = (route) => route.fulfill({
     status: 200,
     contentType: "text/javascript",
     body,
-  }));
-  await page.route("**/*.supabase.co/**", (route) => route.abort());
-}
+  });
 
-module.exports = { installSupabaseMock };
+  await page.route(
+    "**/vendor/supabase-2.57.4.js",
+    fulfillSupabaseMock
+  );
+
+  await page.route(
+    "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4",
+    fulfillSupabaseMock
+  );
+
+  await page.route(
+    "**/*.supabase.co/**",
+    (route) => route.abort()
+  );
+}
