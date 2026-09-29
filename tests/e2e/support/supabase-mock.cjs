@@ -82,10 +82,14 @@ async function installSupabaseMock(page, options = {}) {
     body,
   });
 
-  await page.route(
-    "**/vendor/supabase-2.57.4.js",
-    fulfillSupabaseMock
-  );
+  const hasMockData = Object.keys(options).length > 0;
+
+  if (hasMockData) {
+    await page.route(
+      "**/vendor/supabase-2.57.4.js",
+      fulfillSupabaseMock
+    );
+  }
 
   await page.route(
     "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4",
