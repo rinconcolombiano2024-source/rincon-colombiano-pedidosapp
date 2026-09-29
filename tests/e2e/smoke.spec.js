@@ -11,7 +11,7 @@ const screens = [
 
 for (const screen of screens) {
   test(`${screen.name}: inicia sin errores fatales`, async ({ page }) => {
-    await installSupabaseMock(page);
+   await page.route("**/*.supabase.co/**", (route) => route.abort());
     const pageErrors = [];
     page.on("pageerror", (error) => pageErrors.push(error.message));
 
