@@ -688,7 +688,29 @@ releaseContractVersion: null,
 schemaCompatible: false,
 };
 
+let databaseContractCheck = null;
+let databaseContractValidatedClient = null;
+let databaseContractValidatedUserId = null;
+
+function invalidateDatabaseContract() {
+  databaseContractCheck?.controller.abort();
+  databaseContractCheck = null;
+  databaseContractValidatedClient = null;
+  databaseContractValidatedUserId = null;
+  cloudState.schemaVersion = null;
+  cloudState.schemaContractVersion = null;
+  cloudState.releaseContractVersion = null;
+  cloudState.schemaCompatible = false;
+}
+
 async function ensureMinimumDatabaseVersion(signal) {
+  const aborted = () => signal?.reason || Object.assign(new Error("Solicitud cancelada."), { name: "AbortError" });
+  if (signal?.aborted) throw aborted();
+  const client = cloudState.client;
+  const userId = cloudState.user?.id || null;
+  if (databaseContractValidatedClient !== client || databaseContractValidatedUserId !== userId) {
+    cloudState.schemaCompatible = false;
+  }
 if (
   Number(cloudState.schemaVersion) >= MINIMUM_DATABASE_SCHEMA_VERSION
   && Number(cloudState.schemaContractVersion) >= MINIMUM_SYNC_CONTRACT_VERSION
@@ -697,7 +719,45 @@ if (
 ) {
   return cloudState.schemaVersion;
 }
-  const { data, error } = await cloudState.client.rpc("get_rc_ordera_schema_version").abortSignal(signal);
+  let check = databaseContractCheck;
+  if (!check || check.client !== client || check.userId !== userId || check.controller.signal.aborted) {
+    check?.controller.abort();
+    check = { client, userId, controller: new AbortController(), waiters: 0, promise: null };
+    databaseContractCheck = check;
+    check.promise = Promise.resolve().then(() => withCloudTimeout(
+      (requestSignal) => checkMinimumDatabaseVersion(requestSignal, check), undefined, 20000, check.controller.signal
+    )).finally(() => {
+      if (databaseContractCheck === check) databaseContractCheck = null;
+    });
+  }
+  check.waiters += 1;
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (callback, value) => {
+      if (settled) return;
+      settled = true;
+      signal?.removeEventListener("abort", onAbort);
+      check.waiters -= 1;
+      if (!check.waiters) check.controller.abort();
+      callback(value);
+    };
+    const onAbort = () => finish(reject, aborted());
+    signal?.addEventListener("abort", onAbort, { once: true });
+    check.promise.then(value => finish(resolve, value), error => finish(reject, error));
+    if (signal?.aborted) onAbort();
+  });
+}
+
+async function checkMinimumDatabaseVersion(signal, check) {
+  const client = check.client;
+  const assertSession = () => {
+    if (signal?.aborted || databaseContractCheck !== check || client !== cloudState.client || check.userId !== (cloudState.user?.id || null)) {
+      throw Object.assign(new Error("La sesion cambio durante la sincronizacion."), { name: "AbortError" });
+    }
+  };
+  assertSession();
+  const { data, error } = await client.rpc("get_rc_ordera_schema_version").abortSignal(signal);
+  assertSession();
 if (error) {
   const code = String(error?.code || "");
   const message = String(error?.message || "");
@@ -743,9 +803,10 @@ if (error) {
     throw schemaError;
   }
 
-  const { data: contractData, error: contractError } = await cloudState.client.rpc(
+  const { data: contractData, error: contractError } = await client.rpc(
     "get_rc_ordera_sync_contract"
   ).abortSignal(signal);
+  assertSession();
   if (contractError) {
     if (["42883", "PGRST202"].includes(String(contractError?.code || ""))) {
       const schemaError = new Error(
@@ -795,9 +856,10 @@ if (error) {
 const {
   data: releaseContractData,
   error: releaseContractError,
-} = await cloudState.client
+} = await client
   .rpc("get_rc_ordera_release_contract")
   .abortSignal(signal);
+assertSession();
 
 if (releaseContractError) {
   if (
@@ -881,6 +943,8 @@ cloudState.schemaVersion = version;
 cloudState.schemaContractVersion = contractVersion;
 cloudState.releaseContractVersion = releaseContractVersion;
 cloudState.schemaCompatible = true;
+databaseContractValidatedClient = client;
+databaseContractValidatedUserId = check.userId;
 
 return version;
 }
@@ -3731,6 +3795,7 @@ cloudState.client.auth.onAuthStateChange((event, session) => {
     nextUserId !== previousUserId;
 
   cloudState.user = nextUser;
+  if (previousUserId !== nextUserId) invalidateDatabaseContract();
 
   if (cloudState.user) {
     rememberCloudSession(cloudState.user);
@@ -3767,6 +3832,7 @@ cloudState.client.auth.onAuthStateChange((event, session) => {
 
   cloudState.schemaVersion = null;
   cloudState.schemaContractVersion = null;
+  cloudState.releaseContractVersion = null;
   cloudState.schemaCompatible = false;
 
   pendingClientOrders = [];
@@ -7463,13 +7529,35 @@ async function performClientOrdersRefresh(options = {}) {
   }
 
   const previousById = new Map(pendingClientOrders.map((order) => [String(order.id), order]));
-  const ordersRequest = cloudState.client
-    .from("customer_orders")
-    .select("id, status, table_label, customer_name, order_type, order_json, total, created_at, assigned_courier_user_id, courier_assignment_status, source, created_by_user_id, server_name, station_status, payment_method, payment_status, payment_provider")
-    .eq("user_id", cloudState.user.id)
-    .in("status", ["pending", "accepted", "sent"])
-    .order("created_at", { ascending: false })
-    .limit(100);
+  const ordersRequest = (async () => {
+    const pageSize = 100;
+    const ordersById = new Map();
+    let cursor = null;
+    while (true) {
+      if (requestClient !== cloudState.client || requestUserId !== cloudState.user?.id) return { data: [], error: null };
+      let query = requestClient
+        .from("customer_orders")
+        .select("id, status, table_label, customer_name, order_type, order_json, total, created_at, assigned_courier_user_id, courier_assignment_status, source, created_by_user_id, server_name, station_status, payment_method, payment_status, payment_provider")
+        .eq("user_id", requestUserId)
+        .in("status", ["pending", "accepted", "sent"])
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .limit(pageSize);
+      if (cursor) {
+        query = query.or(`created_at.lt.${cursor.created_at},and(created_at.eq.${cursor.created_at},id.lt.${cursor.id})`);
+      }
+      const response = await withCloudTimeout(query, undefined, 8000, options.signal);
+      if (response.error) return response;
+      if (!Array.isArray(response.data)) throw new Error("La consulta de pedidos devolvio datos invalidos.");
+      for (const order of response.data) ordersById.set(String(order.id), order);
+      if (response.data.length < pageSize) return { data: [...ordersById.values()], error: null };
+      const last = response.data[response.data.length - 1];
+      if (!last?.id || !last?.created_at || (cursor && cursor.id === last.id && cursor.created_at === last.created_at)) {
+        throw new Error("La paginacion de pedidos no avanzo; se conservaran los pedidos anteriores.");
+      }
+      cursor = { id: last.id, created_at: last.created_at };
+    }
+  })();
   const trackingRequest = loadCurrentRestaurantDeliveryTracking(options.signal).catch((trackingError) => {
     console.warn(
       "No fue posible confirmar el seguimiento de domicilios. Se conservara el ultimo estado valido.",
@@ -7481,7 +7569,7 @@ async function performClientOrdersRefresh(options = {}) {
       : new Map();
   });
   const [ordersResponse, tracking] = await Promise.all([
-    withCloudTimeout(ordersRequest, undefined, 8000, options.signal),
+    ordersRequest,
     trackingRequest,
   ]);
   const { data, error } = ordersResponse;
@@ -14924,7 +15012,14 @@ if (!centralRefreshSucceeded) {
   return false;
 }
 
-if (needsClientCatchup) await refreshClientOrders({ silent: true, reconcileAfterInFlight: true });
+if (needsClientCatchup) {
+  const refreshed = await refreshClientOrders({ silent: true, reconcileAfterInFlight: true });
+  if (refreshed === false) {
+    clientOrdersRealtimeNeedsCatchup = true;
+    updateCloudStatus();
+    return false;
+  }
+}
 
 centralRealtimeNeedsCatchup = false;
 clientOrdersRealtimeNeedsCatchup = false;
@@ -14948,6 +15043,7 @@ await syncRestaurantOperationalStatus({
   operation.then(
     () => {
       if (cloudRecoveryInFlight === operation) {
+        cloudRecoveryLastCompletedAt = Date.now();
         cloudRecoveryInFlight = null;
       }
     },
