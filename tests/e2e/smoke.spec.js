@@ -2,11 +2,11 @@ const { test, expect } = require("@playwright/test");
 const { installSupabaseMock } = require("./support/supabase-mock.cjs");
 
 const screens = [
-  { name: "principal", path: "/index.html?app=v91.0.3", selector: ".app-shell" },
-  { name: "cliente", path: "/cliente.html?app=v91.0.3&lang=es", selector: ".customer-app-shell" },
-  { name: "colaborador", path: "/colaborador.html?app=v91.0.3&lang=es", selector: ".collaborator-app-shell" },
-  { name: "mesero", path: "/mesero.html?app=v91.0.3&lang=es", selector: ".waiter-shell" },
-  { name: "administracion", path: "/admin.html?app=v91.0.3&lang=es", selector: ".platform-admin-shell" },
+  { name: "principal", path: "/index.html?app=v91.0.4", selector: ".portal" },
+  { name: "cliente", path: "/cliente.html?app=v91.0.4&lang=es", selector: ".customer-app-shell" },
+  { name: "colaborador", path: "/colaborador.html?app=v91.0.4&lang=es", selector: ".collaborator-app-shell" },
+  { name: "mesero", path: "/mesero.html?app=v91.0.4&lang=es", selector: ".waiter-shell" },
+  { name: "administracion", path: "/admin.html?app=v91.0.4&lang=es", selector: ".platform-admin-shell" },
 ];
 
 for (const screen of screens) {
