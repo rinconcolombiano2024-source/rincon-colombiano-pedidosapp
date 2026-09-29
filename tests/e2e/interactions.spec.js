@@ -10,7 +10,7 @@ const testUser = {
 
 test("restaurante: cambia idioma y abre el acceso sin recargar", async ({ page }) => {
   await installSupabaseMock(page);
-  await page.goto("/index.html?app=v91.0.3", { waitUntil: "domcontentloaded" });
+ await page.goto("/restaurante.html?app=v91.0.4", { waitUntil: "domcontentloaded" });
 
   await expect(page.locator("#authScreen")).toBeVisible();
   await page.locator("#autoLanguageSelect").selectOption("pl");
