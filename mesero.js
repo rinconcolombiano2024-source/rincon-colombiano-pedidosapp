@@ -762,13 +762,13 @@ function waiterStationActions(order) {
     if (status === "received") return `<button type="button" data-next-status="preparing">Iniciar preparacion</button>`;
     if (status === "preparing") return `<button type="button" data-next-status="ready">Marcar listo</button>`;
   }
-  if (station === "packing" && ["received", "preparing", "ready"].includes(status)) {
-    return `<button type="button" data-next-status="packed">Marcar empacado</button>`;
+if (station === "packing" && status === "received") {
+  return `<button type="button" data-next-status="packed">Marcar empacado</button>`;
+}
+if (station === "dispatch") {
+  if (["ready", "packed"].includes(status)) {
+    return `<button type="button" data-next-status="dispatched">Marcar despachado</button>`;
   }
-  if (station === "dispatch") {
-    if (["received", "preparing", "ready", "packed"].includes(status)) {
-      return `<button type="button" data-next-status="dispatched">Marcar despachado</button>`;
-    }
     if (status === "dispatched") return `<button type="button" data-next-status="completed">Marcar entregado</button>`;
   }
   return `<span>Esperando la siguiente estacion.</span>`;
