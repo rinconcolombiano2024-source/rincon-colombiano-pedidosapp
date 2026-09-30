@@ -18,3 +18,5 @@ verify_jwt = false
 
 [functions.marketplace-confirm-delivery]
 verify_jwt = false
+[functions.create-customer-order]
+verify_jwt = false
