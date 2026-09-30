@@ -5120,41 +5120,86 @@ function customerReadPendingOrder(fingerprint) {
 
   return null;
 }
+async function customerCreateCustomerOrder(
+  orderPayload,
+  total,
+  tableLabel,
+  customerName,
+  orderType
+) {
+  if (!customerClient) {
+    throw new Error("ORDER_SERVICE_UNAVAILABLE");
+  }
 
-async function customerCreateCustomerOrder(orderPayload, total, tableLabel, customerName, orderType) {
   const fingerprint = customerOrderFingerprint(orderPayload);
   const pendingOrder = customerReadPendingOrder(fingerprint);
-  const orderId = pendingOrder?.orderId || customerGenerateId();
-  const publicToken = pendingOrder?.publicToken || customerGenerateId();
 
-  // V91-12:
-  // El token es una credencial privada del cliente.
-  // Debe viajar únicamente por p_public_token.
-  // Nunca debe almacenarse dentro de order_json.
- const payloadForServer = { ...orderPayload };
+  const orderId =
+    pendingOrder?.orderId ||
+    customerGenerateId();
 
-delete payloadForServer.publicToken;
-delete payloadForServer.public_token;
+  const publicToken =
+    pendingOrder?.publicToken ||
+    customerGenerateId();
 
-payloadForServer.clientGuardId = customerOrderGuardId();
+  /*
+   * El publicToken es una credencial privada.
+   *
+   * Nunca debe almacenarse dentro de order_json.
+   * Solo viaja como p_public_token hacia el gateway seguro.
+   */
+  const payloadForServer = {
+    ...orderPayload,
+  };
 
-try {
-  sessionStorage.setItem(
-    customerPendingOrderStorageKey(),
-    JSON.stringify({
-      fingerprint,
-      orderId,
-      publicToken,
-      createdAt: pendingOrder?.createdAt || Date.now(),
-    })
-  );
+  delete payloadForServer.publicToken;
+  delete payloadForServer.public_token;
 
-  localStorage.removeItem(customerPendingOrderStorageKey());
-} catch {
-  // El pedido puede continuar aunque el navegador no permita almacenamiento temporal.
-}
+  /*
+   * Identificador antiabuso del navegador.
+   *
+   * El servidor/Edge decide cómo utilizarlo.
+   * El frontend nunca es la autoridad del rate limit.
+   */
+  payloadForServer.clientGuardId =
+    customerOrderGuardId();
 
-  const { data: rpcData, error: rpcError } = await customerClient.rpc("create_customer_order", {
+  const pendingStorageKey =
+    customerPendingOrderStorageKey();
+
+  /*
+   * Conservamos temporalmente ID + token para idempotencia.
+   *
+   * Si hay un corte de red después de que el servidor haya
+   * recibido el pedido, un reintento utiliza exactamente
+   * las mismas credenciales y no crea otro pedido.
+   *
+   * Nunca se persiste en localStorage.
+   */
+  try {
+    sessionStorage.setItem(
+      pendingStorageKey,
+      JSON.stringify({
+        fingerprint,
+        orderId,
+        publicToken,
+        createdAt:
+          pendingOrder?.createdAt ||
+          Date.now(),
+      })
+    );
+
+    localStorage.removeItem(
+      pendingStorageKey
+    );
+  } catch {
+    /*
+     * La falta de almacenamiento temporal no debe impedir
+     * que el cliente pueda realizar el pedido.
+     */
+  }
+
+  const edgePayload = {
     p_id: orderId,
     p_user_id: customerStoreId,
     p_public_token: publicToken,
@@ -5163,20 +5208,167 @@ try {
     p_order_type: orderType,
     p_order_json: payloadForServer,
     p_total: total,
-  });
+  };
 
-  if (rpcError) throw rpcError;
+  /*
+   * P0 SECURITY
+   *
+   * Desde este punto el navegador NO llama directamente a
+   * public.create_customer_order().
+   *
+   * Todo pedido de cliente entra primero por:
+   *
+   *   Supabase Edge
+   *       create-customer-order
+   *
+   * Ahí se aplican validación, identidad, cuotas y protección
+   * antiabuso antes de llegar al núcleo SQL.
+   *
+   * No existe fallback directo al RPC. Esto es intencional:
+   * si el gateway de seguridad falla, el pedido falla cerrado.
+   */
+  const {
+    data,
+    error: invokeError,
+  } = await customerClient.functions.invoke(
+    "create-customer-order",
+    {
+      body: edgePayload,
+    }
+  );
 
-  const row = customerNormalizeRpcRow(rpcData);
+  if (invokeError) {
+    let serverMessage = "";
 
-try {
-  sessionStorage.removeItem(customerPendingOrderStorageKey());
-  localStorage.removeItem(customerPendingOrderStorageKey());
-} catch {}
+    /*
+     * Supabase FunctionsHttpError incluye normalmente una
+     * Response en error.context. Intentamos recuperar únicamente
+     * el código funcional enviado por nuestra Edge Function.
+     */
+    try {
+      const response =
+        invokeError?.context;
+
+      if (
+        response &&
+        typeof response.clone === "function"
+      ) {
+        const responseData =
+          await response.clone().json();
+
+        serverMessage = String(
+          responseData?.error ||
+          responseData?.message ||
+          ""
+        ).trim();
+      }
+    } catch {
+      /*
+       * No propagamos un segundo error causado únicamente
+       * por no poder decodificar la respuesta.
+       */
+    }
+
+    const message =
+      serverMessage ||
+      String(
+        invokeError?.message ||
+        "ORDER_CREATE_FAILED"
+      ).trim() ||
+      "ORDER_CREATE_FAILED";
+
+    const edgeError =
+      new Error(message);
+
+    if (invokeError?.name) {
+      edgeError.name =
+        invokeError.name;
+    }
+
+    throw edgeError;
+  }
+
+  /*
+   * Defensa adicional:
+   * una respuesta HTTP exitosa no debe poder transportar
+   * silenciosamente un error funcional.
+   */
+  if (
+    !data ||
+    typeof data !== "object"
+  ) {
+    throw new Error(
+      "ORDER_CREATE_INVALID_RESPONSE"
+    );
+  }
+
+  if (
+    data.error
+  ) {
+    throw new Error(
+      String(data.error)
+    );
+  }
+
+  const row =
+    Array.isArray(data)
+      ? data[0]
+      : data;
+
+  const returnedId =
+    String(
+      row?.id ||
+      ""
+    ).trim();
+
+  const returnedPublicToken =
+    String(
+      row?.public_token ||
+      row?.publicToken ||
+      ""
+    ).trim();
+
+  /*
+   * No aceptamos una respuesta incompleta.
+   *
+   * Si Edge/SQL deja de cumplir el contrato, fallamos antes
+   * de empezar tracking/chat/pago con credenciales corruptas.
+   */
+  if (
+    !returnedId ||
+    !returnedPublicToken
+  ) {
+    throw new Error(
+      "ORDER_CREATE_INVALID_RESPONSE"
+    );
+  }
+
+  /*
+   * El pedido fue confirmado por el servidor.
+   * La estructura de reintento ya no es necesaria.
+   */
+  try {
+    sessionStorage.removeItem(
+      pendingStorageKey
+    );
+
+    localStorage.removeItem(
+      pendingStorageKey
+    );
+  } catch {}
+
+  /*
+   * Conservamos exactamente el contrato que el resto de
+   * cliente.js ya consume.
+   *
+   * No modificamos tracking, pagos, chat ni renderizado.
+   */
   return {
-    id: row?.id || orderId,
-    publicToken: row?.public_token || publicToken,
-    payload: payloadForServer,
+    id: returnedId,
+    publicToken:
+      returnedPublicToken,
+    payload:
+      payloadForServer,
     trackingAvailable: true,
   };
 }
