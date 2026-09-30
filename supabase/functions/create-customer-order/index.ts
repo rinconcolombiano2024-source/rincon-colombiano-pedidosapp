@@ -439,13 +439,6 @@ Deno.serve(async (request) => {
   const supabaseUrl =
     Deno.env.get("SUPABASE_URL")?.trim() || "";
 
-  const publishableKey =
-    readSupabaseRuntimeKey(
-      "SUPABASE_PUBLISHABLE_KEYS",
-      "SUPABASE_PUBLISHABLE_KEY",
-      "SUPABASE_ANON_KEY",
-    );
-
   const secretKey =
     readSupabaseRuntimeKey(
       "SUPABASE_SECRET_KEYS",
@@ -462,7 +455,7 @@ Deno.serve(async (request) => {
 
   if (
     !supabaseUrl ||
-    !publishableKey ||
+    publicApplicationKeys.size === 0 ||
     !secretKey
   ) {
     console.error(
@@ -854,42 +847,19 @@ Deno.serve(async (request) => {
     );
   }
 
-  const scopedClient = createClient(
-    supabaseUrl,
-    publishableKey,
-    {
-      ...(
-        userAccessToken
-          ? {
-              global: {
-                headers: {
-                  Authorization:
-                    `Bearer ${userAccessToken}`,
-                },
-              },
-            }
-          : {}
-      ),
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-    },
-  );
 
   /*
    * ==========================================================
    * CREACION REAL
    *
-   * No usamos service_role aqui.
+   * Usamos service_role SOLO desde esta Edge Function para
+   * ejecutar un RPC interno que NO tiene permiso para anon ni
+   * authenticated.
    *
-   * Esto es CRITICO:
-   * el RPC se ejecuta bajo la identidad real del cliente
-   * autenticado o bajo anon si es invitado.
+   * La identidad del cliente se valida arriba con auth.getUser()
+   * y se transmite como p_customer_user_id.
    *
-   * Por tanto auth.uid(), RLS y contratos actuales conservan
-   * su comportamiento.
+   * Esto cierra el bypass directo al RPC desde el navegador.
    * ==========================================================
    */
 
@@ -901,6 +871,7 @@ Deno.serve(async (request) => {
     p_customer_name: customerName,
     p_order_type: orderType,
     p_order_json: orderJson,
+    p_customer_user_id: currentUserId,
     p_total: payload.p_total,
   };
 
@@ -909,8 +880,8 @@ Deno.serve(async (request) => {
   const {
     data: orderData,
     error: orderError,
-  } = await scopedClient.rpc(
-    "create_customer_order",
+  } = await admin.rpc(
+    "rc_ordera_create_customer_order_edge",
     rpcPayload,
   );
 
