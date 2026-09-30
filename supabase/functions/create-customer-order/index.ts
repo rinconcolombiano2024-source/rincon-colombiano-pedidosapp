@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { createClient } from "npm:@supabase/supabase-js@2.117.1";
 
 /*
  * ============================================================
@@ -82,16 +82,125 @@ function isClientGuardId(value: string) {
     .test(value);
 }
 
-async function sha256(value: string) {
-  const encoded = new TextEncoder().encode(value);
+function readSupabaseRuntimeKeyCandidates(
+  mapEnvName: string,
+  singleEnvName: string,
+  legacyEnvName: string,
+) {
+  const values = new Set<string>();
 
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    encoded,
+  const mapValue =
+    Deno.env.get(mapEnvName)?.trim() || "";
+
+  if (mapValue) {
+    try {
+      const parsed = JSON.parse(mapValue);
+
+      if (
+        parsed &&
+        typeof parsed === "object" &&
+        !Array.isArray(parsed)
+      ) {
+        for (const value of Object.values(parsed)) {
+          if (typeof value !== "string") {
+            continue;
+          }
+
+          const normalized = value.trim();
+
+          if (normalized) {
+            values.add(normalized);
+          }
+        }
+      }
+    } catch {
+      // El helper principal conserva los fallbacks compatibles.
+    }
+  }
+
+  const singleValue =
+    Deno.env.get(singleEnvName)?.trim() || "";
+
+  if (singleValue) {
+    values.add(singleValue);
+  }
+
+  const legacyValue =
+    Deno.env.get(legacyEnvName)?.trim() || "";
+
+  if (legacyValue) {
+    values.add(legacyValue);
+  }
+
+  return values;
+}
+
+function readSupabaseRuntimeKey(
+  mapEnvName: string,
+  singleEnvName: string,
+  legacyEnvName: string,
+) {
+  const mapValue =
+    Deno.env.get(mapEnvName)?.trim() || "";
+
+  if (mapValue) {
+    try {
+      const parsed = JSON.parse(mapValue);
+
+      const defaultKey =
+        typeof parsed?.default === "string"
+          ? parsed.default.trim()
+          : "";
+
+      if (defaultKey) {
+        return defaultKey;
+      }
+    } catch {
+      // Continuamos con los fallbacks controlados.
+    }
+  }
+
+  const singleValue =
+    Deno.env.get(singleEnvName)?.trim() || "";
+
+  if (singleValue) {
+    return singleValue;
+  }
+
+  /*
+   * Compatibilidad temporal con proyectos Supabase
+   * que todavía conservan las claves legacy.
+   */
+  return (
+    Deno.env.get(legacyEnvName)?.trim() || ""
+  );
+}
+
+async function hmacSha256(
+  secret: string,
+  value: string,
+) {
+  const encoder = new TextEncoder();
+
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    {
+      name: "HMAC",
+      hash: "SHA-256",
+    },
+    false,
+    ["sign"],
+  );
+
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    encoder.encode(value),
   );
 
   return Array.from(
-    new Uint8Array(digest),
+    new Uint8Array(signature),
   )
     .map((byte) =>
       byte
@@ -99,6 +208,71 @@ async function sha256(value: string) {
         .padStart(2, "0")
     )
     .join("");
+}
+
+async function readRequestBodyWithLimit(
+  request: Request,
+  maximumBytes: number,
+) {
+  if (!request.body) {
+    return {
+      text: "",
+      tooLarge: false,
+    };
+  }
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const {
+        done,
+        value,
+      } = await reader.read();
+
+      if (done) {
+        break;
+      }
+
+      if (!value) {
+        continue;
+      }
+
+      totalBytes += value.byteLength;
+
+      if (totalBytes > maximumBytes) {
+        try {
+          await reader.cancel();
+        } catch {
+          // El cuerpo ya sera rechazado; no propagamos error de cancelacion.
+        }
+
+        return {
+          text: "",
+          tooLarge: true,
+        };
+      }
+
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const body = new Uint8Array(totalBytes);
+  let offset = 0;
+
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return {
+    text: new TextDecoder().decode(body),
+    tooLarge: false,
+  };
 }
 
 function firstForwardedAddress(value: string) {
@@ -205,23 +379,23 @@ function safeDatabaseErrorMessage(error: unknown) {
   return "ORDER_CREATE_FAILED";
 }
 
+function extractBearerToken(authorization: string) {
+  const match = /^Bearer\s+(.+)$/i.exec(authorization.trim());
+  return match?.[1]?.trim() || "";
+}
+
 async function authenticatedUserId(
   admin: ReturnType<typeof createClient>,
-  authorization: string,
+  accessToken: string,
 ) {
-  const token = authorization.replace(
-    /^Bearer\s+/i,
-    "",
-  ).trim();
-
-  if (!token) {
+  if (!accessToken) {
     return null;
   }
 
   const {
     data,
     error,
-  } = await admin.auth.getUser(token);
+  } = await admin.auth.getUser(accessToken);
 
   if (error || !data?.user?.id) {
     return null;
@@ -263,18 +437,33 @@ Deno.serve(async (request) => {
    */
 
   const supabaseUrl =
-    Deno.env.get("SUPABASE_URL") || "";
+    Deno.env.get("SUPABASE_URL")?.trim() || "";
 
-  const anonKey =
-    Deno.env.get("SUPABASE_ANON_KEY") || "";
+  const publishableKey =
+    readSupabaseRuntimeKey(
+      "SUPABASE_PUBLISHABLE_KEYS",
+      "SUPABASE_PUBLISHABLE_KEY",
+      "SUPABASE_ANON_KEY",
+    );
 
-  const serviceRoleKey =
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+  const secretKey =
+    readSupabaseRuntimeKey(
+      "SUPABASE_SECRET_KEYS",
+      "SUPABASE_SECRET_KEY",
+      "SUPABASE_SERVICE_ROLE_KEY",
+    );
+
+  const publicApplicationKeys =
+    readSupabaseRuntimeKeyCandidates(
+      "SUPABASE_PUBLISHABLE_KEYS",
+      "SUPABASE_PUBLISHABLE_KEY",
+      "SUPABASE_ANON_KEY",
+    );
 
   if (
     !supabaseUrl ||
-    !anonKey ||
-    !serviceRoleKey
+    !publishableKey ||
+    !secretKey
   ) {
     console.error(
       JSON.stringify({
@@ -318,7 +507,23 @@ Deno.serve(async (request) => {
   let rawBody = "";
 
   try {
-    rawBody = await request.text();
+    const bodyRead =
+      await readRequestBodyWithLimit(
+        request,
+        MAX_REQUEST_BYTES,
+      );
+
+    if (bodyRead.tooLarge) {
+      return jsonResponse(
+        413,
+        {
+          error: "ORDER_REQUEST_TOO_LARGE",
+        },
+        requestId,
+      );
+    }
+
+    rawBody = bodyRead.text;
   } catch {
     return jsonResponse(
       400,
@@ -329,18 +534,11 @@ Deno.serve(async (request) => {
     );
   }
 
-  if (
-    !rawBody ||
-    rawBody.length > MAX_REQUEST_BYTES
-  ) {
+  if (!rawBody) {
     return jsonResponse(
-      rawBody
-        ? 413
-        : 400,
+      400,
       {
-        error: rawBody
-          ? "ORDER_REQUEST_TOO_LARGE"
-          : "INVALID_ORDER_REQUEST",
+        error: "INVALID_ORDER_REQUEST",
       },
       requestId,
     );
@@ -479,11 +677,12 @@ Deno.serve(async (request) => {
 
   const admin = createClient(
     supabaseUrl,
-    serviceRoleKey,
+    secretKey,
     {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
+        detectSessionInUrl: false,
       },
     },
   );
@@ -494,31 +693,25 @@ Deno.serve(async (request) => {
       4096,
     );
 
-  /*
-   * Si existe una sesion autentica, la conservaremos en el RPC
-   * que realmente crea el pedido.
-   *
-   * Para invitado utilizamos anon.
-   */
-  const authorizationForRpc =
-    incomingAuthorization ||
-    `Bearer ${anonKey}`;
+  const bearerToken =
+    extractBearerToken(incomingAuthorization);
 
-  const scopedClient = createClient(
-    supabaseUrl,
-    anonKey,
-    {
-      global: {
-        headers: {
-          Authorization: authorizationForRpc,
-        },
-      },
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    },
+  /*
+   * Compatibilidad durante la migracion de claves:
+   *
+   * - Con claves nuevas, Authorization debe contener un JWT de usuario.
+   * - Algunos clientes legacy pueden seguir enviando la clave publica
+   *   como Bearer. En ese caso se trata como invitado, nunca como usuario.
+   */
+  const bearerIsPublicApplicationKey = Boolean(
+    bearerToken &&
+      publicApplicationKeys.has(bearerToken)
   );
+
+  const userAccessToken =
+    bearerIsPublicApplicationKey
+      ? ""
+      : bearerToken;
 
   /*
    * ==========================================================
@@ -534,12 +727,15 @@ Deno.serve(async (request) => {
     500,
   ) || "unknown-agent";
 
-  const networkHash = await sha256(
-    networkIdentity,
+  const networkHash = await hmacSha256(
+    secretKey,
+    `network:${networkIdentity}`,
   );
 
-  const deviceHash = await sha256(
+  const deviceHash = await hmacSha256(
+    secretKey,
     [
+      "device",
       networkIdentity,
       userAgent,
       normalizedGuard,
@@ -550,7 +746,8 @@ Deno.serve(async (request) => {
    * ==========================================================
    * RATE LIMIT PERSISTENTE
    *
-   * Esta RPC solo puede ser ejecutada con service_role.
+   * Esta RPC solo puede ser ejecutada con credencial de servidor
+   * (secret key o service_role legacy).
    *
    * MUY IMPORTANTE:
    * esta llamada termina antes de comenzar la transaccion que
@@ -621,13 +818,65 @@ Deno.serve(async (request) => {
    * ==========================================================
    */
 
+  /*
+   * Si existe Authorization, solamente aceptamos:
+   *
+   * - Bearer de aplicacion publica conocido -> invitado; o
+   * - JWT de usuario valido -> cliente autenticado.
+   *
+   * Nunca degradamos silenciosamente un JWT invalido a invitado.
+   */
+  if (incomingAuthorization && !bearerToken) {
+    return jsonResponse(
+      401,
+      {
+        error: "INVALID_AUTH_SESSION",
+      },
+      requestId,
+    );
+  }
+
   const currentUserId =
-    incomingAuthorization
+    userAccessToken
       ? await authenticatedUserId(
           admin,
-          incomingAuthorization,
+          userAccessToken,
         )
       : null;
+
+  if (userAccessToken && !currentUserId) {
+    return jsonResponse(
+      401,
+      {
+        error: "INVALID_AUTH_SESSION",
+      },
+      requestId,
+    );
+  }
+
+  const scopedClient = createClient(
+    supabaseUrl,
+    publishableKey,
+    {
+      ...(
+        userAccessToken
+          ? {
+              global: {
+                headers: {
+                  Authorization:
+                    `Bearer ${userAccessToken}`,
+                },
+              },
+            }
+          : {}
+      ),
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    },
+  );
 
   /*
    * ==========================================================
