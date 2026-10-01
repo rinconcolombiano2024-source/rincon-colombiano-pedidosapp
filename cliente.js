@@ -5736,11 +5736,21 @@ async function customerSendOrder() {
   customerElements.sendButton.disabled = true;
   customerSetStatus(customerT("sendingOrder"), "");
   customerClearPaymentBox();
-  let insertedOrder;
-  try {
+let insertedOrder;
+
+try {
+  if (customerUser) {
     await customerSaveProfile();
-    insertedOrder = await customerCreateCustomerOrder(orderPayload, total, tableLabel, customerName, orderType);
-  } catch (error) {
+  }
+
+  insertedOrder = await customerCreateCustomerOrder(
+    orderPayload,
+    total,
+    tableLabel,
+    customerName,
+    orderType
+  );
+} catch (error) {
   console.error("ERROR REAL create_customer_order:", error);
 if (/ORDER_RATE_LIMITED/i.test(String(error?.message || ""))) {
   customerSetStatus(customerT("orderRateLimited"), "error");
