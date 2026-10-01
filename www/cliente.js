@@ -1,5 +1,4 @@
 const CUSTOMER_DEFAULT_MENU = {};
-
 const customerElements = {
   languageSelect: document.querySelector("#customerLanguageSelect"),
   status: document.querySelector("#customerStatus"),
@@ -57,13 +56,10 @@ const customerElements = {
   greetingName: document.querySelector("#customerGreetingName"),
 profileAvatarInitials:
 document.querySelector("#customerProfileAvatarInitials"),
-
 headerCartButton:
 document.querySelector("#customerHeaderCartButton"),
-
 headerCartBadge:
 document.querySelector("#customerHeaderCartBadge"),
-
 views: Array.from(document.querySelectorAll("[data-customer-view]")),
   viewButtons: Array.from(document.querySelectorAll("[data-customer-view-target]")),
   backToRestaurantsButton: document.querySelector("#customerBackToRestaurantsButton"),
@@ -82,16 +78,12 @@ editProfileButton: document.querySelector("#customerEditProfileButton"),
   menuGrid: document.querySelector("#customerMenuGrid"),
 cartItems: document.querySelector("#customerCartItems"),
 cartTotal: document.querySelector("#customerCartTotal"),
-
 cartModal:
   document.querySelector("#customerCartModal"),
-
 cartSheet:
   document.querySelector("#customerCartSheet"),
-
 cartCloseButton:
   document.querySelector("#customerCartCloseButton"),
-
 notifyButton:
   document.querySelector("#customerNotifyButton"),
   orderType: document.querySelector("#customerOrderType"),
@@ -121,7 +113,6 @@ notifyButton:
   chatStatus: document.querySelector("#customerChatStatus"),
   sendButton: document.querySelector("#sendCustomerOrderButton"),
 };
-
 const CUSTOMER_LANGUAGE_KEY = "rincon_colombiano_customer_language";
 const CUSTOMER_APP_LANGUAGE_KEY = "rincon_colombiano_app_language";
 const CUSTOMER_TRANSLATION_CACHE_KEY = "rincon_colombiano_description_translations_v1";
@@ -1082,7 +1073,6 @@ const CUSTOMER_I18N = {
     imageStillLarge: "The image is still too heavy. Crop the photo or lower the quality.",
   },
 };
-
 const CUSTOMER_DESCRIPTION_TRANSLATION_FALLBACKS = {
   en: [
     ["acompanado de", "served with"],
@@ -1223,11 +1213,9 @@ const CUSTOMER_DESCRIPTION_TRANSLATION_FALLBACKS = {
     ["y", "i"],
   ],
 };
-
 const customerParams = new URLSearchParams(window.location.search);
 let customerStoreId = String(customerParams.get("store") || "").trim();
 const customerTableFromQr = String(customerParams.get("mesa") || customerParams.get("table") || "").trim();
-
 function customerDetectedRegion(coords = null) {
   const latitude = Number(coords?.latitude ?? coords?.lat);
   const longitude = Number(coords?.longitude ?? coords?.lng);
@@ -1253,7 +1241,6 @@ function customerDetectedRegion(coords = null) {
     longitude: Number.isFinite(longitude) ? longitude : null,
   };
 }
-
 const CUSTOMER_CATEGORY_LABELS = {
   es: {
     all: "Todos", colombiana: "Colombiana", polaca: "Polaca", mexicana: "Mexicana", italiana: "Italiana",
@@ -1295,7 +1282,6 @@ const CUSTOMER_CATEGORY_LABELS = {
     bebidas: "Drinks", jugos: "Juices", "comida-casera": "Home-style", familiar: "Family", other: "Other",
   },
 };
-
 const CUSTOMER_REGIONS = {
   PL: [
     "Dolnośląskie", "Kujawsko-Pomorskie", "Lubelskie", "Lubuskie", "Łódzkie", "Małopolskie",
@@ -1310,13 +1296,11 @@ const CUSTOMER_REGIONS = {
     "Valle del Cauca", "Vaupés", "Vichada", "Bogotá D.C.",
   ],
 };
-
 function customerCountryName(countryCode) {
   if (countryCode === "PL") return "Polonia";
   if (countryCode === "CO") return "Colombia";
   return "";
 }
-
 function customerRenderRegistrationRegions(countryCode, selectedRegion = "") {
   const select = customerElements.registerRegionInput;
   if (!select) return;
@@ -1330,7 +1314,6 @@ function customerRenderRegistrationRegions(countryCode, selectedRegion = "") {
   `;
   select.disabled = regions.length === 0;
 }
-
 function customerSyncRegistrationRegionFromInputs(base = customerRegistrationRegion) {
   const countryCode = customerInputValue(customerElements.registerCountryInput).toUpperCase() || base.countryCode || "";
   return {
@@ -1343,7 +1326,6 @@ function customerSyncRegistrationRegionFromInputs(base = customerRegistrationReg
     timezone: countryCode === "PL" ? "Europe/Warsaw" : countryCode === "CO" ? "America/Bogota" : base.timezone || "",
   };
 }
-
 function customerRegistrationPosition() {
   return new Promise((resolve) => {
     if (!navigator.geolocation || (!window.isSecureContext && !["localhost", "127.0.0.1"].includes(window.location.hostname))) {
@@ -1357,12 +1339,9 @@ function customerRegistrationPosition() {
     );
   });
 }
-
 function customerInitialLanguage() {
   const fromUrl = String(customerParams.get("lang") || "").toLowerCase();
-
   let saved = "";
-
   try {
     saved = String(
       localStorage.getItem(CUSTOMER_LANGUAGE_KEY) ||
@@ -1370,7 +1349,6 @@ function customerInitialLanguage() {
       ""
     ).toLowerCase();
   } catch {}
-
   const browser = String(navigator.language || "").toLowerCase();
   if (CUSTOMER_I18N[fromUrl]) return fromUrl;
   if (CUSTOMER_I18N[saved]) return saved;
@@ -1378,14 +1356,12 @@ function customerInitialLanguage() {
   if (browser.startsWith("en")) return "en";
   return "es";
 }
-
 let customerLanguage = customerInitialLanguage();
 let customerRegistrationRegion = customerDetectedRegion();
 let customerDescriptionTranslations = customerReadDescriptionTranslationCache();
 let customerDescriptionTranslationRequests = new Set();
 let customerDescriptionTranslationFailures = new Map();
 let customerDescriptionTranslationRenderTimer = null;
-
 function customerT(key, values = {}) {
   const dictionary = CUSTOMER_I18N[customerLanguage] || CUSTOMER_I18N.es;
   const fallback = CUSTOMER_I18N.es[key] || key;
@@ -1398,7 +1374,6 @@ function customerT(key, values = {}) {
   }
   return template.replace(/\{(\w+)\}/g, (_, name) => values[name] ?? "");
 }
-
 function customerReadDescriptionTranslationCache() {
   try {
     const parsed = JSON.parse(localStorage.getItem(CUSTOMER_TRANSLATION_CACHE_KEY) || "{}");
@@ -1407,7 +1382,6 @@ function customerReadDescriptionTranslationCache() {
     return {};
   }
 }
-
 function customerSaveDescriptionTranslationCache() {
   try {
     const entries = Object.entries(customerDescriptionTranslations).slice(-450);
@@ -1416,29 +1390,23 @@ function customerSaveDescriptionTranslationCache() {
     // La traduccion sigue funcionando aunque el navegador limite el almacenamiento.
   }
 }
-
 function customerDescriptionTranslationKey(language, text) {
   return `auto>${language}|${String(text || "").trim()}`;
 }
-
 function customerNormalizeDescriptionForFallback(text) {
   return String(text || "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
 }
-
 function customerEscapeRegExp(value) {
   return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
-
 function customerFallbackDescriptionTranslation(text, language) {
   const description = customerNormalizeProductDescription(text);
   if (!description || language === "es") return description;
-
   const replacements = CUSTOMER_DESCRIPTION_TRANSLATION_FALLBACKS[language] || [];
   if (!replacements.length) return description;
-
   let translated = ` ${customerNormalizeDescriptionForFallback(description)} `;
   replacements
     .slice()
@@ -1448,23 +1416,19 @@ function customerFallbackDescriptionTranslation(text, language) {
       const pattern = new RegExp(`(^|[^a-z0-9])${customerEscapeRegExp(cleanSource)}(?=$|[^a-z0-9])`, "g");
       translated = translated.replace(pattern, `$1${target}`);
     });
-
   translated = translated.replace(/\s+([,.;:!?])/g, "$1").replace(/\s+/g, " ").trim();
   if (translated) translated = translated[0].toUpperCase() + translated.slice(1);
   return translated && translated !== customerNormalizeDescriptionForFallback(description) ? translated : description;
 }
-
 function customerMenuTextDisplay(text) {
   const cleanText = customerNormalizeProductDescription(text);
   if (!cleanText) return "";
   const key = customerDescriptionTranslationKey(customerLanguage, cleanText);
   return customerDescriptionTranslations[key] || customerFallbackDescriptionTranslation(cleanText, customerLanguage);
 }
-
 function customerDescriptionDisplay(dish) {
   return customerMenuTextDisplay(dish?.description || "");
 }
-
 function customerScheduleDescriptionRender() {
   if (customerDescriptionTranslationRenderTimer) return;
   customerDescriptionTranslationRenderTimer = window.setTimeout(() => {
@@ -1475,12 +1439,10 @@ function customerScheduleDescriptionRender() {
     customerRenderSelectedRestaurantDetails();
   }, 120);
 }
-
 async function customerFetchDescriptionTranslation(text, language) {
   const description = customerNormalizeProductDescription(text);
   const targetLanguage = ["es", "pl", "en"].includes(language) ? language : "";
   if (!description || !targetLanguage) return description;
-
   if (!customerClient?.functions) throw new Error("translation service unavailable");
   const { data, error } = await customerClient.functions.invoke("translate-public-content", {
     body: { text: description, targetLanguage },
@@ -1489,17 +1451,14 @@ async function customerFetchDescriptionTranslation(text, language) {
     const translated = customerNormalizeProductDescription(data?.translatedText);
     if (translated) return translated;
   }
-
   const fallback = customerFallbackDescriptionTranslation(description, targetLanguage);
   if (fallback && fallback.toLowerCase() !== description.toLowerCase()) return fallback;
   if (targetLanguage === "es" && fallback) return fallback;
   throw error || new Error("translation unavailable");
 }
-
 function customerQueueMenuTextTranslation(text) {
   const description = customerNormalizeProductDescription(text);
   if (!description || !window.navigator.onLine) return;
-
   const key = customerDescriptionTranslationKey(customerLanguage, description);
   const failedAt = customerDescriptionTranslationFailures.get(key);
   if (
@@ -1509,7 +1468,6 @@ function customerQueueMenuTextTranslation(text) {
   ) {
     return;
   }
-
   customerDescriptionTranslationFailures.delete(key);
   customerDescriptionTranslationRequests.add(key);
   customerFetchDescriptionTranslation(description, customerLanguage)
@@ -1527,11 +1485,9 @@ function customerQueueMenuTextTranslation(text) {
       customerDescriptionTranslationRequests.delete(key);
     });
 }
-
 function customerQueueDescriptionTranslation(dish) {
   customerQueueMenuTextTranslation(dish?.description || "");
 }
-
 function customerRenderGreeting(fullName = customerResolvedProfileName) {
   const firstName = customerNormalizeText(fullName).split(/\s+/)[0] || "";
   if (customerElements.greeting) {
@@ -1542,7 +1498,6 @@ function customerRenderGreeting(fullName = customerResolvedProfileName) {
     customerElements.greetingName.hidden = !firstName;
   }
 }
-
 function customerResetResolvedIdentity(userId = "") {
   customerIdentityUserId = String(userId || "");
   customerResolvedProfileName = "";
@@ -1550,12 +1505,10 @@ function customerResetResolvedIdentity(userId = "") {
   customerRenderGreeting("");
   if (customerElements.profileAvatarInitials) customerElements.profileAvatarInitials.textContent = "C";
 }
-
 function customerAdoptIdentityUser(user) {
   const nextUserId = String(user?.id || "");
   if (nextUserId !== customerIdentityUserId) customerResetResolvedIdentity(nextUserId);
 }
-
 function customerApplyTranslations() {
   document.documentElement.lang = customerLanguage;
   if (customerElements.languageSelect) customerElements.languageSelect.value = customerLanguage;
@@ -1567,7 +1520,6 @@ function customerApplyTranslations() {
     manifest.setAttribute("href", manifestName);
   }
   document.title = `${customerNormalizeBusinessName(customerSettings.businessName)} - ${customerT("documentTitleSuffix")}`;
-
   document.querySelectorAll("[data-i18n]").forEach((node) => {
     node.textContent = customerT(node.dataset.i18n);
   });
@@ -1585,7 +1537,6 @@ function customerApplyTranslations() {
   });
   customerRenderGreeting();
 }
-
 function customerSetLanguage(language) {
   if (!CUSTOMER_I18N[language]) return;
   customerLanguage = language;
@@ -1615,32 +1566,27 @@ try {
     customerInputValue(customerElements.registerRegionInput) || customerRegistrationRegion.region
   );
 }
-
 function customerOrderTypeText(value) {
   if (value === "Recoger en el punto") {
     return customerT("pickup");
   }
-
   if (value === "Domicilio") {
     return customerT("delivery");
   }
-
   if (value === "Comer en el punto") {
     return customerT("eatHere");
   }
-
   return String(value || "");
 }
-
 function customerPaymentMethodText(value) {
   if (value === "Transferencia") return customerT("transfer");
   if (value === "Datafono") return customerT("cardTerminal");
   if (value === "Online") return customerT("onlinePayment");
   return customerT("cash");
 }
-
 let customerClient = null;
 let customerAuthInitialized = false;
+let customerAuthStateRevision = 0;
 let customerUser = null;
 let customerIdentityUserId = "";
 let customerResolvedProfileName = "";
@@ -1674,7 +1620,6 @@ let customerSettings = {
   onlinePaymentProvider: "disabled",
   onlinePaymentNote: "",
 };
-
 let customerMapDistance = null;
 let googleMapsScriptPromise = null;
 const customerPlaceAutocompletes = new Map();
@@ -1727,7 +1672,6 @@ let customerMenuFetchStoreId = "";
 let customerRestaurantFavorite = false;
 let customerCurrentView = customerStoreId ? "store" : "home";
 let customerPaymentReturnHandled = false;
-
 const CUSTOMER_DELIVERY_RATES = {
   baseKm: 1.5,
   baseFee: 4.5,
@@ -1737,13 +1681,11 @@ const CUSTOMER_DELIVERY_RATES = {
   longPerKm: 2.5,
   extraLongPerKm: 3.5,
 };
-
 function customerSetView(view, options = {}) {
   const allowedViews = new Set(["home", "store", "orders", "profile"]);
   let nextView = allowedViews.has(view) ? view : "home";
   if (nextView === "store" && !customerStoreId) nextView = "home";
   customerCurrentView = nextView;
-
   customerElements.views.forEach((section) => {
     section.hidden = section.dataset.customerView !== nextView;
   });
@@ -1753,12 +1695,10 @@ function customerSetView(view, options = {}) {
     else button.removeAttribute("aria-current");
   });
   document.body.dataset.customerView = nextView;
-
   if (nextView === "profile") customerRenderProfileDetails();
   if (nextView === "orders") customerRenderActiveOrderState();
   if (!options.keepScroll) window.scrollTo({ top: 0, behavior: options.instant ? "auto" : "smooth" });
 }
-
 function customerRenderLocationSummary() {
   if (!customerElements.topLocation) return;
   const address = customerNormalizeText(
@@ -1771,7 +1711,6 @@ function customerRenderLocationSummary() {
   customerElements.topLocation.removeAttribute("data-i18n");
   customerElements.topLocation.textContent = summary || customerT("locationNotSet");
 }
-
 function customerRenderProfileDetails() {
   if (!customerElements.profileDetails) return;
   if (customerElements.profileEditActions) {
@@ -1798,7 +1737,6 @@ function customerRenderProfileDetails() {
     <div><span>${customerEscapeHtml(customerT("profileAddress"))}</span><strong>${customerEscapeHtml(address || fallback)}</strong></div>
   `;
 }
-
 function customerRenderSelectedRestaurantDetails() {
   const selected = customerSelectedRestaurant();
   const originalDescription = selected?.description || "";
@@ -1806,7 +1744,6 @@ function customerRenderSelectedRestaurantDetails() {
   customerQueueMenuTextTranslation(originalDescription);
   const address = selected?.address || customerSettings.restaurantAddress || customerT("restaurantNoAddress");
   const isOpen = selected ? selected.operationalOpen === true : customerSettings.restaurantOperationalOpen === true;
-
   if (customerElements.selectedRestaurantDescription) {
     customerElements.selectedRestaurantDescription.textContent = description;
     customerElements.selectedRestaurantDescription.hidden = !description;
@@ -1827,7 +1764,6 @@ function customerRenderSelectedRestaurantDetails() {
   }
   customerRenderFavoriteRestaurantButton();
 }
-
 function customerRenderFavoriteRestaurantButton() {
   const button = customerElements.favoriteRestaurantButton;
   if (!button) return;
@@ -1841,7 +1777,6 @@ function customerRenderFavoriteRestaurantButton() {
   const icon = button.querySelector("span");
   if (icon) icon.textContent = active ? "\u2665" : "\u2661";
 }
-
 async function customerLoadFavoriteRestaurant() {
   customerRestaurantFavorite = false;
   if (!customerClient || !customerUser || !customerStoreId) {
@@ -1859,7 +1794,6 @@ async function customerLoadFavoriteRestaurant() {
   if (!error) customerRestaurantFavorite = Array.isArray(data) && data.length > 0;
   customerRenderFavoriteRestaurantButton();
 }
-
 async function customerToggleFavoriteRestaurant() {
   if (!customerUser) {
     customerSetStatus(customerT("favoriteSignIn"), "error");
@@ -1882,7 +1816,6 @@ async function customerToggleFavoriteRestaurant() {
   }
   customerRenderFavoriteRestaurantButton();
 }
-
 function customerRenderActiveOrderState() {
   if (!customerElements.noActiveOrder) return;
   const hasActiveOrder = Boolean(
@@ -1894,41 +1827,34 @@ function customerRenderActiveOrderState() {
   customerElements.noActiveOrder.hidden = hasActiveOrder;
 }
 const CUSTOMER_PLATFORM_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
-
 function customerRoundMoney(value) {
   const number = Number.parseFloat(value);
   return Number.isFinite(number) ? Math.round(number * 100) / 100 : 0;
 }
-
 function customerSupabaseConfig() {
   const config = window.RC_ORDERA_SUPABASE || {};
   const rawUrl = String(config.url || "").trim();
   let cleanUrl = rawUrl;
-
   try {
     const parsed = new URL(rawUrl);
     cleanUrl = `${parsed.protocol}//${parsed.host}`;
   } catch {
     cleanUrl = rawUrl.replace(/\/rest\/v1\/?.*$/i, "").replace(/\/+$/, "");
   }
-
   return {
     url: cleanUrl,
     anonKey: String(config.anonKey || "").trim(),
   };
 }
-
 function customerConnectionMessage() {
   const config = customerSupabaseConfig();
   if (!config.url || !config.anonKey) return customerT("appNotConfigured");
   if (!window.supabase?.createClient) return customerT("appConnectionLoadError");
   return customerT("appConnectionLoadError");
 }
-
 function customerLoadSupabaseLibrary() {
   if (window.supabase?.createClient) return Promise.resolve(true);
   if (!navigator.onLine) return Promise.resolve(false);
-
   return new Promise((resolve) => {
     const existingScript = document.querySelector("script[data-supabase-loader]");
     if (existingScript) {
@@ -1936,7 +1862,6 @@ function customerLoadSupabaseLibrary() {
       existingScript.addEventListener("error", () => resolve(false), { once: true });
       return;
     }
-
     const script = document.createElement("script");
     script.src = "vendor/supabase-2.57.4.js";
     script.async = true;
@@ -1946,7 +1871,6 @@ function customerLoadSupabaseLibrary() {
     document.head.appendChild(script);
   });
 }
-
 function customerFriendlyAuthError(error) {
   const message = String(error?.message || "");
   if (/invalid login credentials/i.test(message)) return customerT("authInvalidCredentials");
@@ -1954,14 +1878,12 @@ function customerFriendlyAuthError(error) {
   if (/already registered|already exists|user already/i.test(message)) return customerT("authAlreadyRegistered");
   return customerT("authError");
 }
-
 function customerSetAuthMessage(message, type = "") {
   if (!customerElements.authMessage) return;
   customerElements.authMessage.textContent = message;
   customerElements.authMessage.dataset.type = type;
   customerElements.authMessage.hidden = !message;
 }
-
 function customerMountAuthDialog() {
   if (!customerElements.authDialogBody || !customerElements.authFields) return;
   if (customerElements.authFields.parentElement !== customerElements.authDialogBody) {
@@ -1969,7 +1891,6 @@ function customerMountAuthDialog() {
     if (customerElements.authMessage) customerElements.authDialogBody.appendChild(customerElements.authMessage);
   }
 }
-
 function customerSetAuthMode(mode = "login") {
   const normalizedMode = mode === "register" ? "register" : "login";
   customerRecoveringPassword = false;
@@ -1989,7 +1910,6 @@ function customerSetAuthMode(mode = "login") {
   if (customerElements.resendVerificationButton) customerElements.resendVerificationButton.hidden = normalizedMode === "register";
   customerSetAuthMessage("");
 }
-
 function customerOpenAuthDialog(mode = "login") {
   customerMountAuthDialog();
   customerSetAuthMode(mode);
@@ -2002,11 +1922,9 @@ function customerOpenAuthDialog(mode = "login") {
     customerElements.authEmail?.focus({ preventScroll: true });
   }, 50);
 }
-
 function customerCloseAuthDialog() {
   if (customerElements.authDialog?.open) customerElements.authDialog.close();
 }
-
 function customerShowPasswordRecoveryForm() {
   customerMountAuthDialog();
   customerRecoveringPassword = true;
@@ -2032,23 +1950,19 @@ function customerShowPasswordRecoveryForm() {
   customerSetAuthMessage(customerT("recoveryReady"), "ok");
   window.setTimeout(() => customerElements.newPasswordInput?.focus(), 50);
 }
-
 function customerHidePasswordRecoveryForm(message = "") {
   customerRecoveringPassword = false;
   if (customerElements.newPasswordInput) customerElements.newPasswordInput.value = "";
   customerSetAuthMode("login");
   if (message) customerSetAuthMessage(message, "ok");
 }
-
 function customerInputValue(input) {
   return String(input?.value || "").trim();
 }
-
 function customerSetInputIfEmpty(input, value) {
   const cleanValue = customerNormalizeText(value);
   if (input && cleanValue && !input.value.trim()) input.value = cleanValue;
 }
-
 function customerRegisteredAddressPayload() {
   customerRegistrationRegion = customerSyncRegistrationRegionFromInputs();
   return {
@@ -2067,7 +1981,6 @@ function customerRegisteredAddressPayload() {
     longitude: customerRegistrationRegion.longitude,
   };
 }
-
 function customerApplyRegisterFieldsToOrder() {
   customerSetInputIfEmpty(customerElements.nameInput, customerInputValue(customerElements.registerNameInput));
   customerSetInputIfEmpty(customerElements.phoneInput, customerInputValue(customerElements.registerPhoneInput));
@@ -2075,53 +1988,41 @@ function customerApplyRegisterFieldsToOrder() {
   customerSetInputIfEmpty(customerElements.neighborhoodInput, customerInputValue(customerElements.registerNeighborhoodInput));
   customerSetInputIfEmpty(customerElements.referenceInput, customerInputValue(customerElements.registerReferenceInput));
 }
-
 function customerApplyProfileFields(
   profile = {},
   options = {}
 ) {
-
   const overwrite =
     options.overwrite === true;
   const address = profile.default_address || {};
   const fullName = String(profile.full_name || "").trim();
   const customerAssignProfileValue =
   (element, value) => {
-
     if (!element) return;
-
     const cleanValue =
       String(value ?? "").trim();
-
     if (!cleanValue) return;
-
     if (
       overwrite ||
       !String(element.value || "").trim()
     ) {
       element.value = cleanValue;
     }
-
   };
-
   if (fullName) customerResolvedProfileName = fullName;
   customerRenderGreeting();
   if (customerElements.profileAvatarInitials) {
-
   const nameParts =
     fullName
       .split(/\s+/)
       .filter(Boolean);
-
   let initials = "C";
-
   if (nameParts.length === 1) {
     initials =
       nameParts[0]
         .slice(0, 2)
         .toUpperCase();
   }
-
   if (nameParts.length >= 2) {
     initials =
       (
@@ -2129,7 +2030,6 @@ function customerApplyProfileFields(
         nameParts[nameParts.length - 1][0]
       ).toUpperCase();
   }
-
   customerElements.profileAvatarInitials.textContent =
     initials;
 }
@@ -2151,67 +2051,54 @@ function customerApplyProfileFields(
   customerElements.registerCityInput,
   customerRegistrationRegion.city
 );
-
 customerAssignProfileValue(
   customerElements.registerPostalCodeInput,
   customerRegistrationRegion.postalCode
 );
-
 customerAssignProfileValue(
   customerElements.registerNameInput,
   profile.full_name
 );
-
 customerAssignProfileValue(
   customerElements.registerPhoneInput,
   profile.phone
 );
-
 customerAssignProfileValue(
   customerElements.registerAddressInput,
   address.address
 );
-
 customerAssignProfileValue(
   customerElements.registerNeighborhoodInput,
   address.neighborhood
 );
-
 customerAssignProfileValue(
   customerElements.registerReferenceInput,
   address.reference
 );
-
 customerAssignProfileValue(
   customerElements.nameInput,
   profile.full_name
 );
-
 customerAssignProfileValue(
   customerElements.phoneInput,
   profile.phone
 );
-
 customerAssignProfileValue(
   customerElements.tableInput,
   address.table
 );
-
 customerAssignProfileValue(
   customerElements.addressInput,
   address.address
 );
-
 customerAssignProfileValue(
   customerElements.neighborhoodInput,
   address.neighborhood
 );
-
 customerAssignProfileValue(
   customerElements.referenceInput,
   address.reference
 );
-
 customerAssignProfileValue(
   customerElements.distanceInput,
   address.distanceKm
@@ -2219,7 +2106,6 @@ customerAssignProfileValue(
   customerRenderLocationSummary();
   customerRenderProfileDetails();
 }
-
 function customerProfileFromMetadata() {
   const metadata = customerUser?.user_metadata || {};
   return {
@@ -2236,7 +2122,6 @@ function customerProfileFromMetadata() {
     },
   };
 }
-
 function customerEnsureClient() {
   if (customerClient) return customerClient;
   const config = customerSupabaseConfig();
@@ -2251,7 +2136,6 @@ function customerEnsureClient() {
 });
   return customerClient;
 }
-
 function customerRenderAccount() {
   customerAdoptIdentityUser(customerUser);
   const email = customerUser?.email || "";
@@ -2266,7 +2150,6 @@ function customerRenderAccount() {
   if (customerElements.signOutButton) customerElements.signOutButton.hidden = !customerUser;
   if (customerElements.sendButton) customerElements.sendButton.disabled = customerCart.length === 0;
   if (customerUser && !customerRecoveringPassword) customerCloseAuthDialog();
-
   if (customerUser && !customerProfileLoaded) {
     customerApplyProfileFields(customerProfileFromMetadata());
     if (!customerElements.nameInput.value.trim()) {
@@ -2278,11 +2161,9 @@ function customerRenderAccount() {
   customerRenderProfileDetails();
   customerRenderFavoriteRestaurantButton();
 }
-
 function customerUrlLooksLikeRecovery() {
   return /type=recovery/i.test(window.location.hash) || customerParams.get("type") === "recovery" || customerParams.get("recovery") === "1";
 }
-
 async function customerInitializeAuth() {
   if (!customerEnsureClient()) await customerLoadSupabaseLibrary();
   const client = customerEnsureClient();
@@ -2301,16 +2182,15 @@ async function customerInitializeAuth() {
   } else {
     customerRenderHistory();
   }
-client.auth.onAuthStateChange(async (event, session) => {
+client.auth.onAuthStateChange((event, session) => {
   const previousUserId = customerUser?.id || null;
   const nextUserId = session?.user?.id || null;
-
-  if (previousUserId !== nextUserId) {
+  const identityChanged = previousUserId !== nextUserId;
+  if (identityChanged) {
     try {
       [sessionStorage, localStorage].forEach((storage) => {
         for (let index = storage.length - 1; index >= 0; index -= 1) {
           const key = storage.key(index);
-
           if (
             key?.startsWith(`${CUSTOMER_PENDING_ORDER_KEY_PREFIX}_`) ||
             key?.startsWith(`${CUSTOMER_TRACKED_ORDER_KEY_PREFIX}_`)
@@ -2320,33 +2200,58 @@ client.auth.onAuthStateChange(async (event, session) => {
         }
       });
     } catch {}
-
     customerStopStatusPolling();
     customerStopChatPolling();
     customerStopOrderTrackingRealtime();
     customerTrackedOrder = null;
   }
-
   customerUser = session?.user || null;
-    if (event === "PASSWORD_RECOVERY") {
-      customerShowPasswordRecoveryForm();
-      return;
-    }
+  if (event === "PASSWORD_RECOVERY") {
+    customerAuthStateRevision += 1;
+    customerShowPasswordRecoveryForm();
     customerRenderAccount();
-    if (customerUser) {
-      await customerLoadProfile();
-      await customerEnsureIdentity();
-      await customerLoadHistory();
-      await customerLoadFavoriteRestaurant();
-    } else {
-      customerHistoryRows = [];
-      customerRestaurantFavorite = false;
-      customerRenderHistory();
-      customerRenderFavoriteRestaurantButton();
+    return;
+  }
+  customerRenderAccount();
+  if (!customerUser) {
+    if (identityChanged) {
+      customerAuthStateRevision += 1;
     }
-  });
+    customerHistoryRows = [];
+    customerRestaurantFavorite = false;
+    customerRenderHistory();
+    customerRenderFavoriteRestaurantButton();
+    return;
+  }
+  const shouldHydrate =
+    identityChanged ||
+    event === "USER_UPDATED";
+  if (!shouldHydrate) {
+    return;
+  }
+  const revision = ++customerAuthStateRevision;
+  // Ejecutar la hidratación fuera del callback de Auth evita bloquear
+  // llamadas posteriores de Supabase y descarta trabajos obsoletos.
+  window.setTimeout(() => {
+    (async () => {
+      if (revision !== customerAuthStateRevision || !customerUser) return;
+      await customerLoadProfile();
+      if (revision !== customerAuthStateRevision || !customerUser) return;
+      await customerEnsureIdentity();
+      if (revision !== customerAuthStateRevision || !customerUser) return;
+      await customerLoadHistory();
+      if (revision !== customerAuthStateRevision || !customerUser) return;
+      await customerLoadFavoriteRestaurant();
+    })().catch((error) => {
+      if (revision !== customerAuthStateRevision) return;
+      console.error(
+        "Error procesando cambio de autenticación del cliente:",
+        error
+      );
+    });
+  }, 0);
+});
 }
-
 async function customerSignInWithEmail() {
   if (!customerEnsureClient()) await customerLoadSupabaseLibrary();
   const client = customerEnsureClient();
@@ -2371,7 +2276,6 @@ async function customerSignInWithEmail() {
   customerElements.authPassword.value = "";
   customerSetAuthMessage(customerT("signedIn"), "ok");
 }
-
 async function customerSignUpWithEmail() {
   if (!customerEnsureClient()) await customerLoadSupabaseLibrary();
   const client = customerEnsureClient();
@@ -2400,7 +2304,6 @@ async function customerSignUpWithEmail() {
     customerElements.privacyConsentInput?.focus();
     return;
   }
-
   if (!customerInputValue(customerElements.registerCountryInput)) {
     customerSetAuthMessage(customerT("registerCountryRequired"), "error");
     customerElements.registerCountryInput?.focus();
@@ -2416,7 +2319,6 @@ async function customerSignUpWithEmail() {
     customerElements.registerCityInput?.focus();
     return;
   }
-
   customerSetAuthMessage(customerT("locationRequest"));
   const registrationCoords = await customerRegistrationPosition();
   const detectedRegion = customerDetectedRegion(registrationCoords);
@@ -2441,7 +2343,6 @@ async function customerSignUpWithEmail() {
       }
     }
   }
-
   if (!customerElements.registerNameInput.value.trim()) customerElements.registerNameInput.value = fullName;
   customerApplyRegisterFieldsToOrder();
   customerSetAuthMessage(customerT("signingUp"));
@@ -2481,7 +2382,6 @@ async function customerSignUpWithEmail() {
   }
   customerSetAuthMessage(customerT("accountCreated"), "ok");
 }
-
 async function customerSendPasswordResetEmail() {
   if (!customerEnsureClient()) await customerLoadSupabaseLibrary();
   const client = customerEnsureClient();
@@ -2495,7 +2395,6 @@ async function customerSendPasswordResetEmail() {
     customerElements.authEmail?.focus();
     return;
   }
-
   customerSetAuthMessage(customerT("resetSending"));
   const redirectTo = window.location.href.split("#")[0];
   const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo });
@@ -2505,7 +2404,6 @@ async function customerSendPasswordResetEmail() {
   }
   customerSetAuthMessage(customerT("resetSent"), "ok");
 }
-
 async function customerResendVerificationEmail() {
   if (!customerEnsureClient()) await customerLoadSupabaseLibrary();
   const client = customerEnsureClient();
@@ -2519,7 +2417,6 @@ async function customerResendVerificationEmail() {
     customerElements.authEmail?.focus();
     return;
   }
-
   customerSetAuthMessage(customerT("resendSending"));
   const redirectTo = window.location.href.split("#")[0].split("?")[0];
   const { error } = await client.auth.resend({
@@ -2533,7 +2430,6 @@ async function customerResendVerificationEmail() {
   }
   customerSetAuthMessage(customerT("resendSent"), "ok");
 }
-
 async function customerUpdateRecoveredPassword() {
   if (!customerEnsureClient()) await customerLoadSupabaseLibrary();
   const client = customerEnsureClient();
@@ -2547,7 +2443,6 @@ async function customerUpdateRecoveredPassword() {
     customerElements.newPasswordInput?.focus();
     return;
   }
-
   const { error } = await client.auth.updateUser({ password });
   if (error) {
     customerSetAuthMessage(customerFriendlyAuthError(error), "error");
@@ -2555,7 +2450,6 @@ async function customerUpdateRecoveredPassword() {
   }
   customerHidePasswordRecoveryForm(customerT("passwordUpdated"));
 }
-
 async function customerSignOut() {
   if (!customerClient) return;
   try {
@@ -2568,7 +2462,6 @@ try {
   [sessionStorage, localStorage].forEach((storage) => {
     for (let index = storage.length - 1; index >= 0; index -= 1) {
       const key = storage.key(index);
-
       if (
         key?.startsWith(`${CUSTOMER_PENDING_ORDER_KEY_PREFIX}_`) ||
         key?.startsWith(`${CUSTOMER_TRACKED_ORDER_KEY_PREFIX}_`)
@@ -2586,7 +2479,6 @@ try {
     window.location.replace("index.html?app=v91.0.4");
   }
 }
-
 function customerProfilePayload() {
   const registeredAddress = customerRegisteredAddressPayload();
   return {
@@ -2611,7 +2503,6 @@ function customerProfilePayload() {
     updated_at: new Date().toISOString(),
   };
 }
-
 function customerSplitName(fullName = "") {
   const cleanName = customerNormalizeText(fullName);
   if (!cleanName) return { firstName: "", lastName: "" };
@@ -2621,7 +2512,6 @@ function customerSplitName(fullName = "") {
     lastName: parts.join(" "),
   };
 }
-
 function customerGeneralProfilePayload() {
   const profile = customerProfilePayload();
   const nameParts = customerSplitName(profile.full_name);
@@ -2645,7 +2535,6 @@ function customerGeneralProfilePayload() {
     updated_at: new Date().toISOString(),
   };
 }
-
 async function customerActivateRole(role) {
   if (!customerClient || !customerUser) return;
   try {
@@ -2659,7 +2548,6 @@ async function customerActivateRole(role) {
     console.warn("No se pudo activar el rol del cliente en la nube.", error);
   }
 }
-
 async function customerEnsureIdentity() {
   if (!customerClient || !customerUser) return;
   try {
@@ -2670,7 +2558,6 @@ async function customerEnsureIdentity() {
   }
   await customerActivateRole("customer");
 }
-
 async function customerLoadProfile() {
   if (!customerClient || !customerUser) return;
   const requestedUserId = customerUser.id;
@@ -2698,21 +2585,15 @@ async function customerLoadProfile() {
 );
   customerRenderDeliveryFields();
 }
-
 async function customerSaveProfile() {
-
   if (!customerClient || !customerUser) {
     throw new Error(
       "No hay una sesión de cliente activa."
     );
   }
-
   const profile =
     customerProfilePayload();
-
-
   /* Guardar perfil específico del cliente */
-
   const { error: profileError } =
     await customerClient
       .from("customer_profiles")
@@ -2722,14 +2603,10 @@ async function customerSaveProfile() {
           onConflict: "user_id"
         }
       );
-
   if (profileError) {
     throw profileError;
   }
-
-
   /* Mantener también actualizado el perfil general */
-
   const { error: generalProfileError } =
     await customerClient
       .from("user_profiles")
@@ -2739,94 +2616,67 @@ async function customerSaveProfile() {
           onConflict: "user_id"
         }
       );
-
   if (generalProfileError) {
     throw generalProfileError;
   }
-
-
   /* Actualizar también los datos de Supabase Auth.
      Así al volver a iniciar sesión no aparece
      nuevamente el nombre antiguo. */
-
   const currentMetadata =
     customerUser.user_metadata || {};
-
   const { data: authData, error: authError } =
     await customerClient.auth.updateUser({
       data: {
         ...currentMetadata,
-
         full_name:
           profile.full_name,
-
         phone:
           profile.phone,
-
         default_address:
           profile.default_address,
-
         country:
           profile.default_address?.country || "",
-
         country_code:
           profile.default_address?.countryCode || "",
-
         city:
           profile.default_address?.city || "",
-
         region:
           profile.default_address?.region || "",
-
         postal_code:
           profile.default_address?.postalCode || "",
-
         preferred_language:
           customerLanguage
       }
     });
-
   if (authError) {
     throw authError;
   }
-
-
   /* Actualizar también el usuario que tenemos en memoria */
-
   if (authData?.user) {
     customerUser = authData.user;
   }
-
   customerResolvedProfileName = profile.full_name;
   customerProfileLoaded = true;
   customerRenderGreeting();
-
-
   return profile;
 }
-
 function customerHistoryItems(row) {
   return Array.isArray(row?.order_json?.items) ? row.order_json.items : [];
 }
-
 function customerLineQuantity(item) {
   const quantity = Number.parseFloat(item?.qty ?? item?.quantity);
   return Number.isFinite(quantity) && quantity > 0 ? quantity : 1;
 }
-
 function customerLinePrice(item) {
   const price = Number.parseFloat(item?.price ?? item?.unit_price_snapshot);
   return Number.isFinite(price) && price > 0 ? price : 0;
 }
-
 function customerLineName(item) {
   return customerNormalizeText(item?.name || item?.product_name_snapshot || "Producto");
 }
-
 function customerHistoryItemCount(row) {
   return customerHistoryItems(row).reduce((count, item) => count + customerLineQuantity(item), 0);
 }
-
 function customerRenderHistory() {
   if (!customerElements.historyList) return;
   if (!customerUser) {
@@ -2874,7 +2724,6 @@ function customerRenderHistory() {
     })
     .join("");
 }
-
 async function customerLoadHistory() {
   if (!customerClient || !customerUser) {
     customerHistoryRows = [];
@@ -2889,7 +2738,6 @@ async function customerLoadHistory() {
   customerHistoryRows = Array.isArray(data) ? data : [];
   customerRenderHistory();
 }
-
 function customerOpenHistoryOrder(orderId) {
   const row = customerHistoryRows.find((item) => item.id === orderId);
   if (!row) return;
@@ -2901,15 +2749,12 @@ function customerOpenHistoryOrder(orderId) {
   customerSetView("orders");
   customerElements.chatPanel?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
-
 async function customerRepeatHistoryOrder(orderId) {
   const row = customerHistoryRows.find((item) => item.id === orderId);
   if (!row?.restaurant_user_id) return;
-
   await customerSelectRestaurant(row.restaurant_user_id);
   const repeatedItems = [];
   let unavailableCount = 0;
-
   customerHistoryItems(row).forEach((historicalItem) => {
     const lookup = {
       productId:
@@ -2939,12 +2784,10 @@ async function customerRepeatHistoryOrder(orderId) {
       ),
     });
   });
-
   if (!repeatedItems.length) {
     customerSetStatus(customerT("historyRepeatUnavailable"), "error");
     return;
   }
-
   customerCart = repeatedItems;
   if (["Comer en el punto", "Recoger en el punto", "Domicilio"].includes(row.order_type)) {
     customerElements.orderType.value = row.order_type;
@@ -2958,13 +2801,11 @@ async function customerRepeatHistoryOrder(orderId) {
   );
   customerElements.cartItems?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
-
 function customerSetStatus(message, type = "") {
   customerElements.status.removeAttribute("data-i18n");
   customerElements.status.textContent = message;
   customerElements.status.dataset.type = type;
 }
-
 function customerSetTrackingStatus(message, type = "") {
   if (!customerElements.trackingStatus) return;
   customerElements.trackingStatus.textContent = message;
@@ -2972,7 +2813,6 @@ function customerSetTrackingStatus(message, type = "") {
   customerElements.trackingStatus.hidden = !message;
   customerRenderActiveOrderState();
 }
-
 function customerEscapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -2981,12 +2821,10 @@ function customerEscapeHtml(value) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
-
 function customerCleanCategoryName(value) {
   const cleanName = String(value || "").trim().replace(/\s+/g, " ");
   return cleanName || "Menu";
 }
-
 function customerCategoryKey(value) {
   return customerCleanCategoryName(value)
     .normalize("NFD")
@@ -3026,7 +2864,6 @@ const CUSTOMER_RESTAURANT_CATEGORY_KEYWORDS = {
   latina: ["latina", "latino", "latinoamericana"],
   africana: ["africana", "africano", "african"],
   caribena: ["caribena", "caribeno", "caribbean", "caribe"],
-
   vegetariana: ["vegetariana", "vegetariano", "vegetarian"],
   vegana: ["vegana", "vegano", "vegan"],
   saludable: ["saludable", "healthy", "fit"],
@@ -3051,7 +2888,6 @@ const CUSTOMER_RESTAURANT_CATEGORY_KEYWORDS = {
 };
 function customerRestaurantMatchesCategory(restaurant, category) {
   if (!category || category === "all") return true;
-
   const searchable = customerNormalizeSearchText(
     [
       restaurant.name,
@@ -3063,15 +2899,12 @@ function customerRestaurantMatchesCategory(restaurant, category) {
       .filter(Boolean)
       .join(" ")
   );
-
   const knownCategoryKeys =
     Object.keys(CUSTOMER_RESTAURANT_CATEGORY_KEYWORDS);
-
   if (category === "other") {
     return !knownCategoryKeys.some((categoryKey) => {
       const keywords =
         CUSTOMER_RESTAURANT_CATEGORY_KEYWORDS[categoryKey] || [];
-
       return keywords.some((keyword) =>
         searchable.includes(
           customerNormalizeSearchText(keyword)
@@ -3079,10 +2912,8 @@ function customerRestaurantMatchesCategory(restaurant, category) {
       );
     });
   }
-
   const keywords =
     CUSTOMER_RESTAURANT_CATEGORY_KEYWORDS[category] || [category];
-
   return keywords.some((keyword) =>
     searchable.includes(
       customerNormalizeSearchText(keyword)
@@ -3098,7 +2929,6 @@ function customerNormalizeSearchText(value) {
     .toLowerCase()
     .trim();
 }
-
 function customerNormalizeRestaurantProfile(row = {}) {
   const userId = customerNormalizeText(row.user_id || row.userId);
   const name = customerNormalizeText(row.business_name || row.businessName);
@@ -3121,13 +2951,11 @@ function customerNormalizeRestaurantProfile(row = {}) {
     updatedAt: customerNormalizeText(row.updated_at || row.updatedAt),
   };
 }
-
 function customerIsMissingRpc(error) {
   const code = String(error?.code || error?.status || "");
   const message = String(error?.message || "").toLowerCase();
   return code === "PGRST202" || code === "42883" || message.includes("could not find the function");
 }
-
 function customerStopDirectoryRealtime() {
   if (customerDirectoryRealtimeRetryTimer) {
     window.clearTimeout(customerDirectoryRealtimeRetryTimer);
@@ -3150,7 +2978,6 @@ function customerStopDirectoryRealtime() {
   customerDirectoryRealtimeStatus = "idle";
   if (channel && customerClient?.removeChannel) customerClient.removeChannel(channel).catch(() => {});
 }
-
 function customerScheduleDirectoryRefresh() {
   if (customerDirectoryRealtimeTimer) window.clearTimeout(customerDirectoryRealtimeTimer);
   customerDirectoryRealtimeTimer = window.setTimeout(() => {
@@ -3158,7 +2985,6 @@ function customerScheduleDirectoryRefresh() {
     customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
   }, 300);
 }
-
 function customerScheduleDirectoryPoll(delayMs = customerDirectoryPollingDelay) {
   if (customerDirectoryRealtimeStatus === "SUBSCRIBED") {
     if (customerDirectoryPollTimer) {
@@ -3167,21 +2993,16 @@ function customerScheduleDirectoryPoll(delayMs = customerDirectoryPollingDelay) 
     }
     return;
   }
-
   if (customerDirectoryPollTimer) {
     window.clearTimeout(customerDirectoryPollTimer);
   }
-
   customerDirectoryPollTimer = window.setTimeout(async () => {
     customerDirectoryPollTimer = null;
-
     if (customerDirectoryRealtimeStatus === "SUBSCRIBED") return;
-
     if (document.visibilityState !== "visible" || !window.navigator.onLine) {
       customerScheduleDirectoryPoll(CUSTOMER_DIRECTORY_POLL_MIN_MS);
       return;
     }
-
     const loaded = await customerLoadRestaurantDirectory({ silent: true });
     customerDirectoryPollingDelay = loaded
       ? CUSTOMER_DIRECTORY_POLL_MIN_MS
@@ -3189,13 +3010,11 @@ function customerScheduleDirectoryPoll(delayMs = customerDirectoryPollingDelay) 
           Math.max(customerDirectoryPollingDelay, CUSTOMER_DIRECTORY_POLL_MIN_MS) * 2,
           CUSTOMER_DIRECTORY_POLL_MAX_MS
         );
-
     if (customerDirectoryRealtimeStatus !== "SUBSCRIBED") {
       customerScheduleDirectoryPoll(customerDirectoryPollingDelay);
     }
   }, Math.max(0, Number(delayMs) || 0));
 }
-
 function customerStartDirectoryRealtime() {
   if (
     customerDirectoryRealtimeChannel &&
@@ -3203,7 +3022,6 @@ function customerStartDirectoryRealtime() {
   ) {
     return;
   }
-
   if (!customerDirectoryPollTimer) {
     customerScheduleDirectoryPoll(customerDirectoryPollingDelay);
   }
@@ -3223,17 +3041,13 @@ function customerStartDirectoryRealtime() {
   customerDirectoryRealtimeChannel = channel;
  channel.subscribe((status) => {
   if (channel !== customerDirectoryRealtimeChannel) return;
-
   customerDirectoryRealtimeStatus = status;
-
   if (status === "SUBSCRIBED") {
     if (customerDirectoryRealtimeStableTimer) {
       window.clearTimeout(customerDirectoryRealtimeStableTimer);
     }
-
     customerDirectoryRealtimeStableTimer = window.setTimeout(() => {
       customerDirectoryRealtimeStableTimer = null;
-
       if (
         channel === customerDirectoryRealtimeChannel &&
         customerDirectoryRealtimeStatus === "SUBSCRIBED"
@@ -3242,17 +3056,14 @@ function customerStartDirectoryRealtime() {
           CUSTOMER_REALTIME_RECONNECT_MIN_MS;
       }
     }, CUSTOMER_REALTIME_STABLE_MS);
-
     if (customerDirectoryPollTimer) {
       window.clearTimeout(customerDirectoryPollTimer);
       customerDirectoryPollTimer = null;
     }
     customerDirectoryPollingDelay = CUSTOMER_DIRECTORY_POLL_MIN_MS;
-
     customerScheduleDirectoryRefresh();
     return;
   }
-
   if (
     status === "CHANNEL_ERROR" ||
     status === "TIMED_OUT" ||
@@ -3262,28 +3073,21 @@ function customerStartDirectoryRealtime() {
       window.clearTimeout(customerDirectoryRealtimeStableTimer);
       customerDirectoryRealtimeStableTimer = null;
     }
-
     customerDirectoryRealtimeChannel = null;
     customerScheduleDirectoryPoll(customerDirectoryPollingDelay);
-
     if (customerClient?.removeChannel) {
       customerClient.removeChannel(channel).catch(() => {});
     }
-
     if (customerDirectoryRealtimeRetryTimer) {
       window.clearTimeout(customerDirectoryRealtimeRetryTimer);
     }
-
     const retryDelay = customerDirectoryRealtimeRetryDelay;
-
     customerDirectoryRealtimeRetryDelay = Math.min(
       retryDelay * 2,
       CUSTOMER_REALTIME_RECONNECT_MAX_MS
     );
-
     customerDirectoryRealtimeRetryTimer = window.setTimeout(() => {
       customerDirectoryRealtimeRetryTimer = null;
-
       if (window.navigator.onLine) {
         customerStartDirectoryRealtime();
       }
@@ -3291,20 +3095,17 @@ function customerStartDirectoryRealtime() {
   }
 });
   }
-
 function customerRestaurantDedupeKey(restaurant) {
   const name = customerNormalizeSearchText(restaurant?.name || "");
   const address = customerNormalizeSearchText(restaurant?.address || "");
   if (!name) return `id:${restaurant?.userId || ""}`;
   return address ? `${name}|${address}` : `name:${name}`;
 }
-
 function customerRestaurantIsNewer(candidate, current) {
   const candidateTime = new Date(candidate?.updatedAt || 0).getTime();
   const currentTime = new Date(current?.updatedAt || 0).getTime();
   return Number.isFinite(candidateTime) && candidateTime > currentTime;
 }
-
 function customerDeduplicateRestaurants(restaurants = []) {
   const byIdentity = new Map();
   restaurants.forEach((restaurant) => {
@@ -3316,14 +3117,11 @@ function customerDeduplicateRestaurants(restaurants = []) {
     }
     if (customerRestaurantIsNewer(restaurant, current)) byIdentity.set(key, restaurant);
   });
-
   return Array.from(byIdentity.values()).sort((a, b) => a.name.localeCompare(b.name));
 }
-
 function customerSelectedRestaurant() {
   return customerRestaurants.find((restaurant) => restaurant.userId === customerStoreId) || null;
 }
-
 function customerRenderPaymentMethods() {
   const option = customerElements.onlinePaymentOption;
   if (!option) return;
@@ -3336,7 +3134,6 @@ function customerRenderPaymentMethods() {
     customerElements.paymentMethod.value = "Efectivo";
   }
 }
-
 function customerClearRestaurantSelection(messageKey = "") {
   customerStoreId = "";
   customerStopMenuRealtime();
@@ -3357,12 +3154,10 @@ function customerClearRestaurantSelection(messageKey = "") {
     onlinePaymentProvider: "disabled",
     onlinePaymentNote: "",
   };
-
   const nextUrl = new URL(window.location.href);
   nextUrl.searchParams.delete("store");
   nextUrl.searchParams.set("app", "v91.0.4");
   window.history.replaceState({}, "", nextUrl.toString());
-
   customerApplyBusinessName();
   customerRenderRestaurantDirectory();
   customerRenderSelectedRestaurantDetails();
@@ -3373,14 +3168,11 @@ function customerClearRestaurantSelection(messageKey = "") {
   customerSetView("home", { keepScroll: true });
   if (messageKey) customerSetStatus(customerT(messageKey), "error");
 }
-
 function customerRenderRestaurantDirectory() {
   if (!customerElements.restaurantList) return;
-
   const selected = customerSelectedRestaurant();
   const compactSingleRestaurant = false;
   customerElements.restaurantPanel?.classList.toggle("is-compact", compactSingleRestaurant);
-
   if (customerElements.restaurantTitle) {
     if (compactSingleRestaurant) {
       customerElements.restaurantTitle.removeAttribute("data-i18n");
@@ -3390,7 +3182,6 @@ function customerRenderRestaurantDirectory() {
       customerElements.restaurantTitle.textContent = customerT("restaurantTitle");
     }
   }
-
   if (customerElements.selectedRestaurantText) {
     customerElements.selectedRestaurantText.removeAttribute("data-i18n");
     if (compactSingleRestaurant) {
@@ -3403,20 +3194,16 @@ function customerRenderRestaurantDirectory() {
       customerElements.selectedRestaurantText.textContent = customerT("restaurantHelp");
     }
   }
-
   if (compactSingleRestaurant) {
     customerElements.restaurantList.innerHTML = "";
     return;
   }
-
 const query =
   customerNormalizeSearchText(
     customerRestaurantSearchQuery
   );
-
 const visibleRestaurants =
   customerRestaurants.filter((restaurant) => {
-
     const matchesSearch =
       !query ||
       customerNormalizeSearchText(
@@ -3431,42 +3218,35 @@ const visibleRestaurants =
           .filter(Boolean)
           .join(" ")
       ).includes(query);
-
     const matchesCategory =
       customerRestaurantMatchesCategory(
         restaurant,
         customerRestaurantCategoryFilter
       );
-
     return matchesSearch && matchesCategory;
   });
-
   if (!customerRestaurants.length) {
     customerElements.restaurantList.innerHTML = `<div class="customer-empty">${customerEscapeHtml(
       customerT("restaurantEmpty")
     )}</div>`;
     return;
   }
-
   if (!visibleRestaurants.length) {
     customerElements.restaurantList.innerHTML = `<div class="customer-empty">${customerEscapeHtml(
       customerT("restaurantSearchEmpty", { query: customerRestaurantSearchQuery })
     )}</div>`;
     return;
   }
-
  customerElements.restaurantList.innerHTML = visibleRestaurants
   .map((restaurant) => {
     const isSelected = restaurant.userId === customerStoreId;
     const isOpen = restaurant.operationalOpen === true;
-
     const initials = restaurant.name
       .split(/\s+/)
       .filter(Boolean)
       .slice(0, 2)
       .map((part) => part[0]?.toUpperCase() || "")
       .join("");
-
     const restaurantImage = restaurant.logoUrl
       ? `
         <img
@@ -3493,11 +3273,8 @@ return `
       }`
     )}"
   >
-
     <div class="customer-restaurant-cover">
-
       ${restaurantImage}
-
      <button
   class="customer-restaurant-heart"
   type="button"
@@ -3507,7 +3284,6 @@ return `
 >
   &#9825;
 </button>
-
       <span class="customer-restaurant-open-label ${
         isOpen ? "is-open" : "is-closed"
       }">
@@ -3515,44 +3291,32 @@ return `
           customerT(isOpen ? "restaurantOpen" : "restaurantClosed")
         )}
       </span>
-
     </div>
-
     <div class="customer-restaurant-content">
-
       <div class="customer-restaurant-name-row">
-
         <strong class="customer-restaurant-name">
           ${customerEscapeHtml(restaurant.name)}
         </strong>
-
       </div>
-
       <span class="customer-restaurant-address">
         ${customerEscapeHtml(
           restaurant.address || customerT("restaurantNoAddress")
         )}
       </span>
-
       <div class="customer-restaurant-meta">
-
         <span>
           ${customerEscapeHtml(
             customerT("deliveryCalculatedAtCheckout")
           )}
         </span>
-
       </div>
-
     </div>
-
   </article>
 `;
     })
   .join("");
   customerRenderSelectedRestaurantDetails();
 }
-
 function customerLoadRestaurantDirectory(options = {}) {
   if (customerDirectoryLoadPromise) return customerDirectoryLoadPromise;
   customerDirectoryLoadPromise = customerLoadRestaurantDirectoryNow(options).finally(() => {
@@ -3560,18 +3324,15 @@ function customerLoadRestaurantDirectory(options = {}) {
   });
   return customerDirectoryLoadPromise;
 }
-
 async function customerLoadRestaurantDirectoryNow(options = {}) {
   const { silent = false } = options;
   const client = customerEnsureClient();
   if (!client || !customerElements.restaurantList) return false;
-
   if (!silent) {
     customerElements.restaurantList.innerHTML = `<div class="customer-empty">${customerEscapeHtml(
       customerT("restaurantLoading")
     )}</div>`;
   }
-
   customerStartDirectoryRealtime();
   let { data, error } = await client.rpc("get_public_restaurant_directory_by_region", {
     p_country_code: customerRegistrationRegion.countryCode || "",
@@ -3588,14 +3349,12 @@ async function customerLoadRestaurantDirectoryNow(options = {}) {
     if (customerRegistrationRegion.region) query = query.ilike("region", customerRegistrationRegion.region);
     ({ data, error } = await query.order("business_name", { ascending: true }));
   }
-
   if (error) {
     customerElements.restaurantList.innerHTML = `<div class="customer-empty">${customerEscapeHtml(
       customerT("restaurantLoadError")
     )}</div>`;
     return false;
   }
-
   customerRestaurants = customerDeduplicateRestaurants((Array.isArray(data) ? data : [])
     .map(customerNormalizeRestaurantProfile)
     .filter(Boolean)
@@ -3614,11 +3373,9 @@ async function customerLoadRestaurantDirectoryNow(options = {}) {
   customerRenderRestaurantDirectory();
   return true;
 }
-
 async function customerSelectRestaurant(storeId, options = {}) {
   const nextStoreId = customerNormalizeText(storeId);
   if (!nextStoreId) return;
-
   const previousStoreId = customerStoreId;
   customerStoreId = nextStoreId;
   if (previousStoreId && previousStoreId !== customerStoreId) {
@@ -3628,14 +3385,12 @@ async function customerSelectRestaurant(storeId, options = {}) {
     customerLocationCoords = null;
     customerSetTrackingStatus("");
   }
-
   if (options.updateUrl !== false) {
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("store", customerStoreId);
     nextUrl.searchParams.set("app", "v91.0.4");
     window.history.replaceState({}, "", nextUrl.toString());
   }
-
   customerApplyMenuSearch("");
   customerRenderRestaurantDirectory();
   customerSetStatus(customerT("refreshingMenu"), "");
@@ -3647,7 +3402,6 @@ async function customerSelectRestaurant(storeId, options = {}) {
     customerSetStatus(customerT("restaurantClosedBrowse"), "error");
   }
 }
-
 function customerFetchPublicMenu(storeId) {
   if (customerMenuFetchPromise && customerMenuFetchStoreId === storeId) return customerMenuFetchPromise;
   customerMenuFetchStoreId = storeId;
@@ -3659,11 +3413,9 @@ function customerFetchPublicMenu(storeId) {
   });
   return customerMenuFetchPromise;
 }
-
 function customerMenuCacheKey(storeId) {
   return `${CUSTOMER_MENU_CACHE_KEY_PREFIX}:${customerNormalizeText(storeId)}`;
 }
-
 function customerReadMenuCache(storeId) {
   try {
     const cached = JSON.parse(localStorage.getItem(customerMenuCacheKey(storeId)) || "null");
@@ -3675,7 +3427,6 @@ function customerReadMenuCache(storeId) {
     return null;
   }
 }
-
 function customerStoreMenuCache(storeId, menu, settings) {
   const normalizedMenu = customerNormalizeMenu(menu || {});
   if (!customerMenuProductCount(normalizedMenu)) return;
@@ -3690,7 +3441,6 @@ function customerStoreMenuCache(storeId, menu, settings) {
     console.warn("No se pudo conservar el menu publico para uso sin conexion.", error);
   }
 }
-
 async function customerFetchPublicMenuNow(storeId) {
   const { data: rpcData, error: rpcError } = await customerClient.rpc("get_public_restaurant_menu", {
     p_user_id: storeId,
@@ -3699,7 +3449,6 @@ async function customerFetchPublicMenuNow(storeId) {
     const row = Array.isArray(rpcData) ? rpcData[0] : rpcData;
     if (row) return row;
   }
-
   const { data: activeProfile, error: profileError } = await customerClient
     .from("restaurant_profiles")
     .select("user_id")
@@ -3709,17 +3458,14 @@ async function customerFetchPublicMenuNow(storeId) {
     .maybeSingle();
   if (profileError) throw rpcError || profileError;
   if (!activeProfile) return null;
-
   const { data, error } = await customerClient
     .from("restaurant_public_catalogs")
     .select("menu, settings")
     .eq("restaurant_user_id", storeId)
     .maybeSingle();
-
   if (error) throw rpcError || error;
   return data;
 }
-
 function customerStopMenuRealtime() {
   if (customerMenuRealtimeRetryTimer) {
     window.clearTimeout(customerMenuRealtimeRetryTimer);
@@ -3742,7 +3488,6 @@ function customerStopMenuRealtime() {
     });
   }
 }
-
 function customerScheduleMenuRealtimeRefetch() {
   if (!customerStoreId || !customerClient) return;
   if (customerMenuRealtimeTimer) window.clearTimeout(customerMenuRealtimeTimer);
@@ -3759,11 +3504,9 @@ function customerScheduleMenuRealtimeRefetch() {
     }
   }, 350);
 }
-
 function customerStartMenuRealtime() {
   if (!customerClient?.channel || !customerStoreId) return;
   if (customerMenuRealtimeChannel && customerMenuRealtimeStoreId === customerStoreId) return;
-
   customerStopMenuRealtime();
   const storeId = customerStoreId;
   customerMenuRealtimeStoreId = storeId;
@@ -3805,15 +3548,12 @@ function customerStartMenuRealtime() {
   ) {
     return;
   }
-
   if (status === "SUBSCRIBED") {
     if (customerMenuRealtimeStableTimer) {
       window.clearTimeout(customerMenuRealtimeStableTimer);
     }
-
     customerMenuRealtimeStableTimer = window.setTimeout(() => {
       customerMenuRealtimeStableTimer = null;
-
       if (
         storeId === customerStoreId &&
         channel === customerMenuRealtimeChannel
@@ -3822,11 +3562,9 @@ function customerStartMenuRealtime() {
           CUSTOMER_REALTIME_RECONNECT_MIN_MS;
       }
     }, CUSTOMER_REALTIME_STABLE_MS);
-
     customerScheduleMenuRealtimeRefetch();
     return;
   }
-
   if (
     status === "CHANNEL_ERROR" ||
     status === "TIMED_OUT" ||
@@ -3836,33 +3574,25 @@ function customerStartMenuRealtime() {
       window.clearTimeout(customerMenuRealtimeStableTimer);
       customerMenuRealtimeStableTimer = null;
     }
-
     customerMenuRealtimeChannel = null;
     customerMenuRealtimeStoreId = "";
-
     if (customerClient?.removeChannel) {
       customerClient.removeChannel(channel).catch(() => {});
     }
-
     customerSetStatus(
       customerT("menuRealtimeError"),
       "error"
     );
-
     if (customerMenuRealtimeRetryTimer) {
       window.clearTimeout(customerMenuRealtimeRetryTimer);
     }
-
     const retryDelay = customerMenuRealtimeRetryDelay;
-
     customerMenuRealtimeRetryDelay = Math.min(
       retryDelay * 2,
       CUSTOMER_REALTIME_RECONNECT_MAX_MS
     );
-
     customerMenuRealtimeRetryTimer = window.setTimeout(() => {
       customerMenuRealtimeRetryTimer = null;
-
       if (
         storeId === customerStoreId &&
         window.navigator.onLine
@@ -3877,15 +3607,12 @@ function customerStartMenuRealtime() {
 function customerMenuProductCount(menu = customerMenu) {
   return Object.values(menu || {}).reduce((count, dishes) => count + (Array.isArray(dishes) ? dishes.length : 0), 0);
 }
-
 function customerProductAvailable(product) {
   return product?.available !== false;
 }
-
 function customerNormalizeProductDescription(value) {
   return String(value || "").trim().replace(/\s+/g, " ").slice(0, 260);
 }
-
 function customerHashText(value) {
   let hash = 0;
   const text = String(value || "");
@@ -3894,28 +3621,23 @@ function customerHashText(value) {
   }
   return Math.abs(hash).toString(36);
 }
-
 function customerNormalizeProductId(value) {
   return String(value || "").trim().replace(/\s+/g, "-").slice(0, 90);
 }
-
 function customerStableProductId(category, name, description = "") {
   const cleanCategory = customerCategoryKey(category) || "menu";
   const cleanName = customerCategoryKey(name) || "producto";
   return `prod-${cleanCategory}-${cleanName}-${customerHashText(`${category}|${name}|${description}`)}`;
 }
-
 function customerNormalizeMenu(menu) {
   const normalized = {};
   const categoriesByKey = new Map();
-
   Object.entries(menu || {}).forEach(([category, dishes]) => {
     const cleanCategory = customerCleanCategoryName(category);
     const categoryKey = customerCategoryKey(cleanCategory);
     const finalCategory = categoriesByKey.get(categoryKey) || cleanCategory;
     categoriesByKey.set(categoryKey, finalCategory);
     if (!normalized[finalCategory]) normalized[finalCategory] = [];
-
     if (Array.isArray(dishes)) {
       dishes.forEach((dish) => {
         const name = String(dish?.name || "").trim();
@@ -3939,17 +3661,14 @@ function customerNormalizeMenu(menu) {
       });
     }
   });
-
   return normalized;
 }
-
 function customerNormalizeProductStation(station) {
   const value = String(station || "").trim().toLowerCase();
   return ["kitchen", "grill", "drinks", "fast_food", "starters", "salads"].includes(value)
     ? value
     : "kitchen";
 }
-
 function customerFormatMoney(amount) {
   const value = Number(amount) || 0;
   const formatted = new Intl.NumberFormat("en-US", {
@@ -3958,34 +3677,27 @@ function customerFormatMoney(amount) {
   }).format(value);
   const localized =
     customerSettings.moneyFormat === "eu" ? formatted.replaceAll(",", " ").replace(".", ",") : formatted;
-
   if (customerSettings.currencyPosition === "after") {
     return `${localized} ${customerSettings.currencySymbol}`;
   }
-
   const separator = /[A-Za-z0-9]$/.test(customerSettings.currencySymbol) ? " " : "";
   return `${customerSettings.currencySymbol}${separator}${localized}`;
 }
-
 function customerNormalizeMoney(value) {
   const number = Number.parseFloat(value);
   return Number.isFinite(number) && number > 0 ? number : 0;
 }
-
 function customerNormalizeDeliveryMinimumFee(value) {
   const number = Number.parseFloat(value);
   return Number.isFinite(number) && number >= 0 ? number : 20;
 }
-
 function customerNormalizeText(value) {
   return String(value || "").trim();
 }
-
 function customerNormalizeBusinessName(value) {
   const name = customerNormalizeText(value).replace(/\s+/g, " ");
   return name || "RC ORDERA";
 }
-
 function customerApplyBusinessName() {
   const name = customerNormalizeBusinessName(customerSettings.businessName);
   customerSettings.businessName = name;
@@ -4005,46 +3717,36 @@ function customerApplyBusinessName() {
   customerRenderRestaurantDirectory();
   customerRenderSelectedRestaurantDetails();
 }
-
 function customerNormalizeDistance(value) {
   const number = Number.parseFloat(String(value || "").replace(",", "."));
   return Number.isFinite(number) && number > 0 ? number : 0;
 }
-
 function customerDeliveryQuoteIsUsable() {
   if (!customerMapDistance?.quoteId || !customerMapDistance?.quoteToken) return false;
   const expiresAt = new Date(customerMapDistance.expiresAt || 0).getTime();
   return Number.isFinite(expiresAt) && expiresAt > Date.now() + 5000;
 }
-
 function customerCalculateDeliveryFee(distanceKm) {
   const distance = customerNormalizeDistance(distanceKm);
   if (distance <= 0) return 0;
-
   const rates = CUSTOMER_DELIVERY_RATES;
   let total = rates.baseFee;
-
   if (distance > rates.baseKm) {
     total += (Math.min(distance, rates.intermediateLimitKm) - rates.baseKm) * rates.intermediatePerKm;
   }
-
   if (distance > rates.intermediateLimitKm) {
     total += (Math.min(distance, rates.longLimitKm) - rates.intermediateLimitKm) * rates.longPerKm;
   }
-
   if (distance > rates.longLimitKm) {
     total += (distance - rates.longLimitKm) * rates.extraLongPerKm;
   }
-
   return customerRoundMoney(total * CUSTOMER_DELIVERY_MARKUP);
 }
-
 function customerSetMapResult(message, type = "") {
   customerElements.mapResult.textContent = message;
   customerElements.mapResult.dataset.type = type;
   customerElements.mapResult.hidden = !message;
 }
-
 function customerMapDestinationLabel(destination) {
   if (destination?.lat && destination?.lng) {
     const lat = typeof destination.lat === "function" ? destination.lat() : destination.lat;
@@ -4053,30 +3755,25 @@ function customerMapDestinationLabel(destination) {
   }
   return String(destination || "");
 }
-
 function customerDeliveryDestination() {
   return [
     customerElements.addressInput.value.trim(),
     customerElements.neighborhoodInput.value.trim(),
   ].filter(Boolean).join(", ");
 }
-
 function customerDeliveryDestinationForMaps() {
   if (customerLocationCoords && window.google?.maps?.LatLng) {
     return new google.maps.LatLng(customerLocationCoords.lat, customerLocationCoords.lng);
   }
   return customerDeliveryDestination();
 }
-
 function customerCanUseGoogleMaps() {
   return Boolean(customerSettings.googleMapsApiKey && customerSettings.restaurantAddress && window.navigator.onLine);
 }
-
 function customerLoadGoogleMaps() {
   if (window.google?.maps?.DistanceMatrixService && window.google?.maps?.places?.Autocomplete) return Promise.resolve();
   if (!customerSettings.googleMapsApiKey) return Promise.reject(new Error(customerT("mapsNeedKey")));
   if (googleMapsScriptPromise) return googleMapsScriptPromise;
-
   googleMapsScriptPromise = new Promise((resolve, reject) => {
     const callbackName = `rinconGoogleMapsReady_${Date.now()}`;
     const script = document.createElement("script");
@@ -4094,10 +3791,8 @@ function customerLoadGoogleMaps() {
     });
     document.head.appendChild(script);
   });
-
   return googleMapsScriptPromise;
 }
-
 function customerGetGoogleMapsDistance(origin, destination) {
   return new Promise((resolve, reject) => {
     const service = new google.maps.DistanceMatrixService();
@@ -4129,13 +3824,11 @@ function customerGetGoogleMapsDistance(origin, destination) {
     );
   });
 }
-
 function customerAddressComponent(result, types = [], shortName = false) {
   const components = result?.address_components || [];
   const component = components.find((entry) => types.every((type) => entry.types.includes(type)));
   return (shortName ? component?.short_name : component?.long_name) || "";
 }
-
 function customerNormalizedRegion(countryCode, value) {
   const cleanValue = customerNormalizeText(value);
   if (!cleanValue) return "";
@@ -4149,7 +3842,6 @@ function customerNormalizedRegion(countryCode, value) {
   const match = (CUSTOMER_REGIONS[countryCode] || []).find((region) => comparable(region) === comparable(cleanValue));
   return match || cleanValue;
 }
-
 function customerPlaceLocality(place) {
   return customerAddressComponent(place, ["locality"])
     || customerAddressComponent(place, ["postal_town"])
@@ -4158,12 +3850,10 @@ function customerPlaceLocality(place) {
     || customerAddressComponent(place, ["administrative_area_level_2"])
     || customerAddressComponent(place, ["administrative_area_level_3"]);
 }
-
 function customerApplyPlace(place, input) {
   if (!place?.address_components?.length) return;
   const countryCode = String(customerAddressComponent(place, ["country"], true)).toUpperCase();
   if (!["PL", "CO"].includes(countryCode)) return;
-
   const previousCountryCode = customerRegistrationRegion.countryCode;
   const previousRegion = customerRegistrationRegion.region;
   const city = customerPlaceLocality(place);
@@ -4175,7 +3865,6 @@ function customerApplyPlace(place, input) {
   const latitude = place.geometry?.location?.lat?.();
   const longitude = place.geometry?.location?.lng?.();
   const formattedAddress = customerNormalizeText(place.formatted_address || place.name);
-
   customerRegistrationRegion = {
     ...customerRegistrationRegion,
     countryCode,
@@ -4190,7 +3879,6 @@ function customerApplyPlace(place, input) {
   if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
     customerLocationCoords = { lat: latitude, lng: longitude };
   }
-
   if (customerElements.registerCountryInput) customerElements.registerCountryInput.value = countryCode;
   customerRenderRegistrationRegions(countryCode, customerRegistrationRegion.region);
   if (customerElements.registerCityInput && city) customerElements.registerCityInput.value = city;
@@ -4205,13 +3893,11 @@ function customerApplyPlace(place, input) {
   }
   customerRenderLocationSummary();
   customerRenderProfileDetails();
-
   if (countryCode !== previousCountryCode || customerRegistrationRegion.region !== previousRegion) {
     customerStopDirectoryRealtime();
     customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
   }
 }
-
 async function customerPreparePlaceAutocomplete() {
   if (!customerSettings.googleMapsApiKey) return;
   await customerLoadGoogleMaps();
@@ -4221,7 +3907,6 @@ async function customerPreparePlaceAutocomplete() {
     customerElements.registerAddressInput,
     customerElements.addressInput,
   ].filter(Boolean);
-
   inputs.forEach((input) => {
     let autocomplete = customerPlaceAutocompletes.get(input);
     if (!autocomplete) {
@@ -4235,11 +3920,9 @@ async function customerPreparePlaceAutocomplete() {
     }
   });
 }
-
 async function customerReverseGeocodeLocation(coords, options = {}) {
   if (!coords || !customerSettings.googleMapsApiKey) return false;
   await customerLoadGoogleMaps();
-
   return new Promise((resolve) => {
     const geocoder = new google.maps.Geocoder();
     geocoder.geocode({ location: coords }, (results, status) => {
@@ -4247,7 +3930,6 @@ async function customerReverseGeocodeLocation(coords, options = {}) {
         resolve(false);
         return;
       }
-
       const result = results[0];
       const approximateAddress = String(result.formatted_address || "")
         .replace(/,\s*(Poland|Polska|Colombia)$/i, "")
@@ -4283,7 +3965,6 @@ async function customerReverseGeocodeLocation(coords, options = {}) {
         : detectedMatchesSelection
           ? postalCode
           : customerRegistrationRegion.postalCode;
-
       if (approximateAddress && (!preserveManual || detectedMatchesSelection)) {
         customerElements.addressInput.value = approximateAddress;
         if (customerElements.registerAddressInput && !customerElements.registerAddressInput.value.trim()) {
@@ -4330,7 +4011,6 @@ async function customerReverseGeocodeLocation(coords, options = {}) {
     });
   });
 }
-
 async function customerUseLocation() {
   if (customerElements.orderType.value !== "Domicilio") {
     customerSetMapResult(customerT("locationDeliveryOnly"), "error");
@@ -4344,10 +4024,8 @@ async function customerUseLocation() {
     customerSetMapResult(customerT("locationSecureRequired"), "error");
     return;
   }
-
   customerElements.useLocationButton.disabled = true;
   customerSetMapResult(customerT("locationRequest"), "");
-
   navigator.geolocation.getCurrentPosition(
     async (position) => {
       customerLocationCoords = {
@@ -4372,7 +4050,6 @@ async function customerUseLocation() {
             addressFilled ? "ok" : ""
           );
         }
-
         await customerCalculateDistanceWithMaps();
       } catch (error) {
         console.warn("La ubicacion se obtuvo, pero no fue posible consultar Google Maps.", error);
@@ -4397,7 +4074,6 @@ async function customerUseLocation() {
     { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
   );
 }
-
 async function customerCalculateDistanceWithMaps() {
   if (customerElements.orderType.value !== "Domicilio") return;
   if (!customerStoreId || !customerClient) {
@@ -4414,17 +4090,14 @@ async function customerCalculateDistanceWithMaps() {
     customerElements.addressInput.focus();
     return;
   }
-
   customerSetMapResult(customerT("mapsCalculating"), "");
   customerElements.calculateDistanceButton.disabled = true;
-
   try {
     const selectedRestaurant = customerSelectedRestaurant();
     const countryCode = String(
       customerRegistrationRegion.countryCode || selectedRestaurant?.countryCode || ""
     ).trim().toUpperCase();
     if (!["PL", "CO"].includes(countryCode)) throw new Error(customerT("registerCountryRequired"));
-
     const { data, error } = await customerClient.functions.invoke("delivery-quote", {
       body: {
         restaurantUserId: customerStoreId,
@@ -4472,30 +4145,24 @@ async function customerCalculateDistanceWithMaps() {
     customerElements.calculateDistanceButton.disabled = false;
   }
 }
-
 function customerDeliveryFee() {
   if (customerElements.orderType.value !== "Domicilio") return 0;
   return customerDeliveryQuoteIsUsable()
     ? customerRoundMoney(customerMapDistance.finalFee)
     : 0;
 }
-
 function customerItemTotal(item) {
   return customerLineQuantity(item) * customerLinePrice(item);
 }
-
 function customerCartTotal() {
   return customerCart.reduce((total, item) => total + customerItemTotal(item), 0) + customerDeliveryFee();
 }
-
 function customerNormalizeNote(value) {
   return String(value || "").trim().toUpperCase();
 }
-
 function customerNormalizeNoteDraft(value) {
   return String(value || "").toUpperCase();
 }
-
 function customerRenderDeliveryFields() {
   const isDelivery = customerElements.orderType.value === "Domicilio";
   customerElements.deliveryFields.hidden = !isDelivery;
@@ -4509,7 +4176,6 @@ function customerRenderDeliveryFields() {
   customerRenderCart();
   customerRenderLocationSummary();
 }
-
 function customerDeliveryPayload() {
   if (customerElements.orderType.value !== "Domicilio") return null;
   const distanceKm = customerNormalizeDistance(customerElements.distanceInput.value);
@@ -4550,11 +4216,9 @@ function customerDeliveryPayload() {
     tariff: `MONEDA=${currencyLabel}; MINIMO=${minimumFee}; BASE 1.5KM=4.50; 1.5-6KM=1.50/KM; 6-8KM=2.50/KM; +8KM=3.50/KM; AJUSTE OPERATIVO=${markupPercent}%`,
   };
 }
-
 function customerOrderReference(orderId) {
   return String(orderId || "").slice(0, 8).toUpperCase();
 }
-
 function customerClearPaymentBox() {
   if (!customerElements.paymentBox) return;
   customerElements.paymentBox.hidden = true;
@@ -4562,7 +4226,6 @@ function customerClearPaymentBox() {
   if (customerElements.confirmDeliveryButton) customerElements.confirmDeliveryButton.hidden = true;
   customerRenderActiveOrderState();
 }
-
 async function customerStartOnlinePayment(orderId, publicToken) {
   if (!customerClient || !orderId || !publicToken || !navigator.onLine) {
     customerSetTrackingStatus(customerT("onlinePaymentFailed"), "error");
@@ -4584,7 +4247,6 @@ async function customerStartOnlinePayment(orderId, publicToken) {
   window.location.assign(data.url);
   return true;
 }
-
 async function customerConfirmDelivery() {
   if (!customerClient || !customerTrackedOrder?.id || !customerTrackedOrder.publicToken) return;
   const button = customerElements.confirmDeliveryButton;
@@ -4609,10 +4271,8 @@ async function customerConfirmDelivery() {
     return;
   }
 customerTrackedOrder.customerConfirmed = true;
-
 try {
   const storageKey = customerTrackedOrderStorageKey();
-
   sessionStorage.removeItem(storageKey);
   localStorage.removeItem(storageKey);
 } catch {}
@@ -4623,7 +4283,6 @@ try {
   customerSetTrackingStatus(customerT("deliveryConfirmed"), "ok");
   return data;
 }
-
 function customerRenderPaymentBox(orderId, total, payload) {
   if (!customerElements.paymentBox) return;
   const reference = customerOrderReference(orderId);
@@ -4632,7 +4291,6 @@ function customerRenderPaymentBox(orderId, total, payload) {
   const bankAccount = customerSettings.bankAccount || customerT("bankAccountMissing");
   const transferNote = customerSettings.bankTransferNote || customerT("transferNoteDefault");
   let actionHtml = "";
-
   if (paymentMethod === "Transferencia") {
     actionHtml = `
       <p><strong>${customerEscapeHtml(customerT("bankAccountLabel"))}:</strong> ${customerEscapeHtml(bankAccount)}</p>
@@ -4651,7 +4309,6 @@ function customerRenderPaymentBox(orderId, total, payload) {
       })
     )}</p>`;
   }
-
   customerElements.paymentBox.innerHTML = `
     <strong>${customerEscapeHtml(customerT("paymentTitle"))}</strong>
     <p><strong>${customerEscapeHtml(customerT("totalLabel"))}:</strong> ${customerEscapeHtml(amountText)}</p>
@@ -4661,13 +4318,11 @@ function customerRenderPaymentBox(orderId, total, payload) {
   customerElements.paymentBox.hidden = false;
   customerRenderActiveOrderState();
 }
-
 async function customerRequestNotificationPermission() {
   if (!("Notification" in window)) {
     customerSetTrackingStatus(customerT("notificationUnsupported"), "error");
     return "unsupported";
   }
-
   const permission = Notification.permission === "default" ? await Notification.requestPermission() : Notification.permission;
   if (permission === "granted") {
     customerSetTrackingStatus(customerT("notificationsOn"), "ok");
@@ -4676,7 +4331,6 @@ async function customerRequestNotificationPermission() {
   }
   return permission;
 }
-
 function customerShowNotification(title, body) {
   if (!("Notification" in window) || Notification.permission !== "granted") return;
   try {
@@ -4689,27 +4343,23 @@ function customerShowNotification(title, body) {
     // El estado visible en pantalla sigue funcionando aunque el navegador bloquee el aviso.
   }
 }
-
 function customerSetChatStatus(message, type = "") {
   if (!customerElements.chatStatus) return;
   customerElements.chatStatus.textContent = message;
   customerElements.chatStatus.dataset.type = type;
   customerElements.chatStatus.hidden = !message;
 }
-
 function customerMessageImageHtml(message) {
   const image = String(message?.image_data_url || "");
   if (!image.startsWith("data:image/")) return "";
   return `<a href="${customerEscapeHtml(image)}" target="_blank" rel="noopener"><img src="${customerEscapeHtml(image)}" alt="${customerEscapeHtml(customerT("chatImageAlt"))}" loading="lazy" /></a>`;
 }
-
 function customerRenderChatMessages(messages = []) {
   if (!customerElements.chatMessages) return;
   if (!messages.length) {
     customerElements.chatMessages.innerHTML = `<div class="customer-empty">${customerEscapeHtml(customerT("chatEmpty"))}</div>`;
     return;
   }
-
   customerElements.chatMessages.innerHTML = messages
     .map((message) => {
       const sender = message.sender === "restaurant" ? customerT("restaurantSender") : customerT("customerSender");
@@ -4725,7 +4375,6 @@ function customerRenderChatMessages(messages = []) {
     .join("");
   customerElements.chatMessages.scrollTop = customerElements.chatMessages.scrollHeight;
 }
-
 async function customerImageFileToDataUrl(file) {
   if (!file) return "";
   if (!file.type.startsWith("image/")) {
@@ -4734,21 +4383,18 @@ async function customerImageFileToDataUrl(file) {
   if (file.size > 5 * 1024 * 1024) {
     throw new Error(customerT("imageTooLarge"));
   }
-
   const dataUrl = await new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.addEventListener("load", () => resolve(String(reader.result || "")));
     reader.addEventListener("error", () => reject(new Error(customerT("imageReadError"))));
     reader.readAsDataURL(file);
   });
-
   const image = await new Promise((resolve, reject) => {
     const img = new Image();
     img.addEventListener("load", () => resolve(img));
     img.addEventListener("error", () => reject(new Error(customerT("imagePrepareError"))));
     img.src = dataUrl;
   });
-
   const maxSide = 900;
   const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
   const canvas = document.createElement("canvas");
@@ -4762,12 +4408,10 @@ async function customerImageFileToDataUrl(file) {
   }
   return compressed;
 }
-
 async function customerLoadChatMessages(options = {}) {
   const { silent = false } = options;
   if (!customerTrackedOrder?.id || !customerTrackedOrder.publicToken || !customerClient) return false;
   if (customerChatLoadInFlight) return customerChatLoadInFlight;
-
   const orderId = customerTrackedOrder.id;
   const publicToken = customerTrackedOrder.publicToken;
   const generation = customerChatGeneration;
@@ -4784,12 +4428,10 @@ async function customerLoadChatMessages(options = {}) {
     if (generation !== customerChatGeneration || orderId !== customerTrackedOrder?.id
       || publicToken !== customerTrackedOrder?.publicToken) return false;
     const { data, error } = result;
-
     if (error) {
       if (!silent) customerSetChatStatus(customerT("chatLoadError"), "error");
       return false;
     }
-
     if (conditional && data?.[0]?.messages === null) return true;
     const messages = conditional
       ? (Array.isArray(data?.[0]?.messages) ? data[0].messages : [])
@@ -4806,7 +4448,6 @@ async function customerLoadChatMessages(options = {}) {
     }
     return true;
   })();
-
   customerChatLoadInFlight = operation;
   try {
     return await operation;
@@ -4814,7 +4455,6 @@ async function customerLoadChatMessages(options = {}) {
     if (customerChatLoadInFlight === operation) customerChatLoadInFlight = null;
   }
 }
-
 function customerStopChatPolling() {
   if (customerChatTimer) {
     window.clearTimeout(customerChatTimer);
@@ -4822,7 +4462,6 @@ function customerStopChatPolling() {
   }
   customerChatPollSignature = "";
 }
-
 function customerScheduleChatPoll(delayMs) {
   if (!customerTrackedOrder?.id || !customerTrackedOrder.publicToken || !customerClient) {
     customerStopChatPolling();
@@ -4846,7 +4485,6 @@ function customerScheduleChatPoll(delayMs) {
     customerScheduleChatPoll(customerChatPollingDelay);
   }, Math.max(0, Number(delayMs) || 0));
 }
-
 function customerStartChat(orderId, publicToken) {
   if (!customerElements.chatPanel || !orderId || !publicToken) return;
   customerStopChatPolling();
@@ -4861,23 +4499,19 @@ function customerStartChat(orderId, publicToken) {
   customerSetChatStatus("");
   customerScheduleChatPoll(0);
 }
-
 async function customerSendChatMessage() {
   if (!customerTrackedOrder?.id || !customerTrackedOrder.publicToken || !customerClient) {
     customerSetChatStatus(customerT("chatFirstOrder"), "error");
     return;
   }
-
   const body = customerNormalizeText(customerElements.chatInput.value);
   const file = customerElements.chatImageInput.files?.[0] || null;
   if (!body && !file) {
     customerSetChatStatus(customerT("chatNeedMessage"), "error");
     return;
   }
-
   customerElements.chatSendButton.disabled = true;
   customerSetChatStatus(customerT("chatSending"), "");
-
   try {
     const imageDataUrl = await customerImageFileToDataUrl(file);
     const { error } = await customerClient.rpc("create_customer_message", {
@@ -4886,7 +4520,6 @@ async function customerSendChatMessage() {
       p_body: body,
       p_image_data_url: imageDataUrl,
     });
-
     if (error) throw error;
     customerElements.chatInput.value = "";
     customerElements.chatImageInput.value = "";
@@ -4898,7 +4531,6 @@ async function customerSendChatMessage() {
     customerElements.chatSendButton.disabled = false;
   }
 }
-
 function customerValidateOrderData() {
   const isDelivery = customerElements.orderType.value === "Domicilio";
   if (!customerElements.nameInput.value.trim()) {
@@ -4906,30 +4538,24 @@ function customerValidateOrderData() {
     customerElements.nameInput.focus();
     return false;
   }
-
   if (!isDelivery) return true;
-
   if (!customerElements.phoneInput.value.trim()) {
     customerSetStatus(customerT("phoneRequired"), "error");
     customerElements.phoneInput.focus();
     return false;
   }
-
   if (!customerElements.addressInput.value.trim()) {
     customerSetStatus(customerT("addressRequired"), "error");
     customerElements.addressInput.focus();
     return false;
   }
-
   if (!customerDeliveryQuoteIsUsable()) {
     customerSetStatus(customerT("deliveryQuoteRequired"), "error");
     customerElements.calculateDistanceButton.focus();
     return false;
   }
-
   return true;
 }
-
 function customerGenerateId() {
   if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
   const bytes = crypto.getRandomValues(new Uint8Array(16));
@@ -4941,14 +4567,11 @@ function customerGenerateId() {
 function customerOrderGuardId() {
   const uuidV4Pattern =
     /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
   try {
     const stored = localStorage.getItem(CUSTOMER_ORDER_GUARD_KEY);
-
     if (stored && uuidV4Pattern.test(stored)) {
       return stored;
     }
-
     const generated = customerGenerateId();
     localStorage.setItem(CUSTOMER_ORDER_GUARD_KEY, generated);
     return generated;
@@ -4956,16 +4579,13 @@ function customerOrderGuardId() {
     return customerGenerateId();
   }
 }
-
 function customerNormalizeRpcRow(data) {
   if (Array.isArray(data)) return data[0] || null;
   return data || null;
 }
-
 function customerPendingOrderStorageKey() {
   return `${CUSTOMER_PENDING_ORDER_KEY_PREFIX}_${customerStoreId || "unknown"}`;
 }
-
 function customerTrackedOrderStorageKey() {
   return `${CUSTOMER_TRACKED_ORDER_KEY_PREFIX}_${customerStoreId || "unknown"}`;
 }
@@ -4973,7 +4593,6 @@ function customerPurgeLegacyPersistentOrderSecrets() {
   try {
     for (let index = localStorage.length - 1; index >= 0; index -= 1) {
       const key = localStorage.key(index);
-
       if (
         key === CUSTOMER_PENDING_ORDER_KEY_PREFIX ||
         key?.startsWith(`${CUSTOMER_PENDING_ORDER_KEY_PREFIX}_`) ||
@@ -4987,13 +4606,10 @@ function customerPurgeLegacyPersistentOrderSecrets() {
 }
 function customerPersistTrackedOrder() {
   if (!customerTrackedOrder?.id || !customerTrackedOrder.publicToken || !customerStoreId) return;
-
   const storageKey = customerTrackedOrderStorageKey();
-
   try {
     // Elimina cualquier token antiguo que hubiera quedado persistido.
     localStorage.removeItem(storageKey);
-
     // El token solo vive durante la sesión actual del navegador.
     sessionStorage.setItem(storageKey, JSON.stringify({
       ...customerTrackedOrder,
@@ -5006,18 +4622,14 @@ function customerPersistTrackedOrder() {
 }
 function customerRestoreTrackedOrder() {
   customerPurgeLegacyPersistentOrderSecrets();
-
   if (!customerStoreId || customerTrackedOrder) return false;
-
   const storageKey = customerTrackedOrderStorageKey();
   try {
     // Limpia automáticamente el formato inseguro antiguo.
     localStorage.removeItem(storageKey);
-
     const stored = JSON.parse(
       sessionStorage.getItem(storageKey) || "null"
     );
-
     if (
       !stored?.id ||
       !stored.publicToken ||
@@ -5026,9 +4638,7 @@ function customerRestoreTrackedOrder() {
       sessionStorage.removeItem(storageKey);
       return false;
     }
-
     const savedAt = Number(stored.savedAt) || 0;
-
     if (
       !savedAt ||
       Date.now() - savedAt > CUSTOMER_TRACKED_ORDER_MAX_AGE_MS
@@ -5036,27 +4646,22 @@ function customerRestoreTrackedOrder() {
       sessionStorage.removeItem(storageKey);
       return false;
     }
-
     customerStartStatusTracking(
       stored.id,
       stored.publicToken,
       stored.paymentMethod || "",
       stored.paymentUrl || ""
     );
-
     customerTrackedOrder.status = stored.status || "pending";
-
     return true;
   } catch {
     try {
       sessionStorage.removeItem(storageKey);
       localStorage.removeItem(storageKey);
     } catch {}
-
     return false;
   }
 }
-
 async function customerHandlePaymentReturn() {
   if (customerPaymentReturnHandled) return;
   const result = customerParams.get("payment");
@@ -5078,28 +4683,22 @@ async function customerHandlePaymentReturn() {
   nextUrl.searchParams.delete("order");
   window.history.replaceState({}, "", nextUrl.toString());
 }
-
 function customerOrderFingerprint(orderPayload) {
   const fingerprintPayload = { ...orderPayload };
   delete fingerprintPayload.createdAt;
   delete fingerprintPayload.publicToken;
   return JSON.stringify(fingerprintPayload);
 }
-
 function customerReadPendingOrder(fingerprint) {
   const storageKey = customerPendingOrderStorageKey();
-
   try {
     // Elimina cualquier versión insegura antigua.
     localStorage.removeItem(storageKey);
-
     const pending = JSON.parse(
       sessionStorage.getItem(storageKey) || "null"
     );
-
     const createdAt = Number(pending?.createdAt) || 0;
     const isRecent = Date.now() - createdAt < 30 * 60 * 1000;
-
     if (
       isRecent &&
       pending?.fingerprint === fingerprint &&
@@ -5108,7 +4707,6 @@ function customerReadPendingOrder(fingerprint) {
     ) {
       return pending;
     }
-
     // Si está vencido o dañado, lo eliminamos.
     sessionStorage.removeItem(storageKey);
   } catch {
@@ -5117,7 +4715,6 @@ function customerReadPendingOrder(fingerprint) {
       localStorage.removeItem(storageKey);
     } catch {}
   }
-
   return null;
 }
 async function customerCreateCustomerOrder(
@@ -5130,18 +4727,14 @@ async function customerCreateCustomerOrder(
   if (!customerClient) {
     throw new Error("ORDER_SERVICE_UNAVAILABLE");
   }
-
   const fingerprint = customerOrderFingerprint(orderPayload);
   const pendingOrder = customerReadPendingOrder(fingerprint);
-
   const orderId =
     pendingOrder?.orderId ||
     customerGenerateId();
-
   const publicToken =
     pendingOrder?.publicToken ||
     customerGenerateId();
-
   /*
    * El publicToken es una credencial privada.
    *
@@ -5151,10 +4744,8 @@ async function customerCreateCustomerOrder(
   const payloadForServer = {
     ...orderPayload,
   };
-
   delete payloadForServer.publicToken;
   delete payloadForServer.public_token;
-
   /*
    * Identificador antiabuso del navegador.
    *
@@ -5163,10 +4754,8 @@ async function customerCreateCustomerOrder(
    */
   payloadForServer.clientGuardId =
     customerOrderGuardId();
-
   const pendingStorageKey =
     customerPendingOrderStorageKey();
-
   /*
    * Conservamos temporalmente ID + token para idempotencia.
    *
@@ -5188,7 +4777,6 @@ async function customerCreateCustomerOrder(
           Date.now(),
       })
     );
-
     localStorage.removeItem(
       pendingStorageKey
     );
@@ -5198,7 +4786,6 @@ async function customerCreateCustomerOrder(
      * que el cliente pueda realizar el pedido.
      */
   }
-
   const edgePayload = {
     p_id: orderId,
     p_user_id: customerStoreId,
@@ -5209,7 +4796,6 @@ async function customerCreateCustomerOrder(
     p_order_json: payloadForServer,
     p_total: total,
   };
-
   /*
    * P0 SECURITY
    *
@@ -5236,10 +4822,8 @@ async function customerCreateCustomerOrder(
       body: edgePayload,
     }
   );
-
   if (invokeError) {
     let serverMessage = "";
-
     /*
      * Supabase FunctionsHttpError incluye normalmente una
      * Response en error.context. Intentamos recuperar únicamente
@@ -5248,14 +4832,12 @@ async function customerCreateCustomerOrder(
     try {
       const response =
         invokeError?.context;
-
       if (
         response &&
         typeof response.clone === "function"
       ) {
         const responseData =
           await response.clone().json();
-
         serverMessage = String(
           responseData?.error ||
           responseData?.message ||
@@ -5268,7 +4850,6 @@ async function customerCreateCustomerOrder(
        * por no poder decodificar la respuesta.
        */
     }
-
     const message =
       serverMessage ||
       String(
@@ -5276,18 +4857,14 @@ async function customerCreateCustomerOrder(
         "ORDER_CREATE_FAILED"
       ).trim() ||
       "ORDER_CREATE_FAILED";
-
     const edgeError =
       new Error(message);
-
     if (invokeError?.name) {
       edgeError.name =
         invokeError.name;
     }
-
     throw edgeError;
   }
-
   /*
    * Defensa adicional:
    * una respuesta HTTP exitosa no debe poder transportar
@@ -5301,7 +4878,6 @@ async function customerCreateCustomerOrder(
       "ORDER_CREATE_INVALID_RESPONSE"
     );
   }
-
   if (
     data.error
   ) {
@@ -5309,25 +4885,21 @@ async function customerCreateCustomerOrder(
       String(data.error)
     );
   }
-
   const row =
     Array.isArray(data)
       ? data[0]
       : data;
-
   const returnedId =
     String(
       row?.id ||
       ""
     ).trim();
-
   const returnedPublicToken =
     String(
       row?.public_token ||
       row?.publicToken ||
       ""
     ).trim();
-
   /*
    * No aceptamos una respuesta incompleta.
    *
@@ -5342,7 +4914,6 @@ async function customerCreateCustomerOrder(
       "ORDER_CREATE_INVALID_RESPONSE"
     );
   }
-
   /*
    * El pedido fue confirmado por el servidor.
    * La estructura de reintento ya no es necesaria.
@@ -5351,12 +4922,10 @@ async function customerCreateCustomerOrder(
     sessionStorage.removeItem(
       pendingStorageKey
     );
-
     localStorage.removeItem(
       pendingStorageKey
     );
   } catch {}
-
   /*
    * Conservamos exactamente el contrato que el resto de
    * cliente.js ya consume.
@@ -5385,13 +4954,11 @@ function customerStatusText(row) {
   }
   return customerT("orderSentWaiting");
 }
-
 function customerStatusType(status) {
   if (status === "accepted" || status === "sent" || status === "delivered") return "ok";
   if (status === "cancelled") return "error";
   return "";
 }
-
 function customerTimelineLabel(status) {
   const labels = {
     created: "timelineCreated",
@@ -5413,7 +4980,6 @@ function customerTimelineLabel(status) {
   };
   return customerT(labels[status] || "timelineSubmitted");
 }
-
 function customerRenderOrderTimeline(events = []) {
   if (!customerElements.orderTimeline) return;
   customerElements.orderTimeline.hidden = !events.length;
@@ -5427,7 +4993,6 @@ function customerRenderOrderTimeline(events = []) {
     })
     .join("");
 }
-
 async function customerLoadOrderTimeline() {
   if (!customerTrackedOrder?.id || !customerTrackedOrder.publicToken || !customerClient) {
     customerRenderOrderTimeline([]);
@@ -5440,7 +5005,6 @@ async function customerLoadOrderTimeline() {
   if (error) return;
   customerRenderOrderTimeline(Array.isArray(data) ? data : []);
 }
-
 function customerTrackingRelativeTime(value) {
   const date = new Date(value || 0);
   if (Number.isNaN(date.getTime())) return "";
@@ -5451,7 +5015,6 @@ function customerTrackingRelativeTime(value) {
   if (elapsedSeconds < 86400) return formatter.format(-Math.max(1, Math.round(elapsedSeconds / 3600)), "hour");
   return formatter.format(-Math.max(1, Math.round(elapsedSeconds / 86400)), "day");
 }
-
 function customerRenderCourierTracking(row = null) {
   const panel = customerElements.courierTracking;
   if (!panel) return;
@@ -5465,7 +5028,6 @@ function customerRenderCourierTracking(row = null) {
     panel.innerHTML = "";
     return;
   }
-
   const name = String(row?.courier_name || "").trim();
   const lat = Number(row?.courier_lat);
   const lng = Number(row?.courier_lng);
@@ -5478,7 +5040,6 @@ function customerRenderCourierTracking(row = null) {
   const mapUrl = hasLocation
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lng}`)}`
     : "";
-
   panel.hidden = false;
   panel.innerHTML = `
     <strong>${customerEscapeHtml(customerT("courierTrackingTitle"))}</strong>
@@ -5491,7 +5052,6 @@ function customerRenderCourierTracking(row = null) {
     ${mapUrl ? `<a class="customer-map-button" href="${mapUrl}" target="_blank" rel="noopener noreferrer">${customerEscapeHtml(customerT("courierTrackingMap"))}</a>` : ""}
   `;
 }
-
 function customerStopOrderTrackingRealtime() {
   if (customerTrackingRealtimeRetryTimer) {
     window.clearTimeout(customerTrackingRealtimeRetryTimer);
@@ -5512,7 +5072,6 @@ function customerStopOrderTrackingRealtime() {
   customerTrackingRealtimeStatus = "idle";
   if (channel && customerClient?.removeChannel) customerClient.removeChannel(channel).catch(() => {});
 }
-
 function customerScheduleTrackingRefresh() {
   if (customerTrackingRefreshTimer) window.clearTimeout(customerTrackingRefreshTimer);
   customerTrackingRefreshTimer = window.setTimeout(() => {
@@ -5520,7 +5079,6 @@ function customerScheduleTrackingRefresh() {
     customerPollOrderStatus().catch(() => {});
   }, 250);
 }
-
 function customerStartOrderTrackingRealtime(row = {}) {
   if (!customerClient?.channel || !customerUser || !customerTrackedOrder?.id) return;
   const courierId = String(row.courier_user_id || "");
@@ -5575,17 +5133,13 @@ function customerStartOrderTrackingRealtime(row = {}) {
   ) {
     return;
   }
-
   customerTrackingRealtimeStatus = status;
-
   if (status === "SUBSCRIBED") {
     if (customerTrackingRealtimeStableTimer) {
       window.clearTimeout(customerTrackingRealtimeStableTimer);
     }
-
     customerTrackingRealtimeStableTimer = window.setTimeout(() => {
       customerTrackingRealtimeStableTimer = null;
-
       if (
         channel === customerTrackingRealtimeChannel &&
         signature === customerTrackingRealtimeSignature &&
@@ -5595,11 +5149,9 @@ function customerStartOrderTrackingRealtime(row = {}) {
           CUSTOMER_REALTIME_RECONNECT_MIN_MS;
       }
     }, CUSTOMER_REALTIME_STABLE_MS);
-
     customerScheduleTrackingRefresh();
     return;
   }
-
   if (
     status === "CHANNEL_ERROR" ||
     status === "TIMED_OUT" ||
@@ -5609,28 +5161,21 @@ function customerStartOrderTrackingRealtime(row = {}) {
       window.clearTimeout(customerTrackingRealtimeStableTimer);
       customerTrackingRealtimeStableTimer = null;
     }
-
     customerTrackingRealtimeChannel = null;
     customerTrackingRealtimeSignature = "";
-
     if (customerClient?.removeChannel) {
       customerClient.removeChannel(channel).catch(() => {});
     }
-
     if (customerTrackingRealtimeRetryTimer) {
       window.clearTimeout(customerTrackingRealtimeRetryTimer);
     }
-
     const retryDelay = customerTrackingRealtimeRetryDelay;
-
     customerTrackingRealtimeRetryDelay = Math.min(
       retryDelay * 2,
       CUSTOMER_REALTIME_RECONNECT_MAX_MS
     );
-
     customerTrackingRealtimeRetryTimer = window.setTimeout(() => {
       customerTrackingRealtimeRetryTimer = null;
-
       if (
         customerTrackedOrder?.id &&
         window.navigator.onLine
@@ -5644,11 +5189,9 @@ function customerStartOrderTrackingRealtime(row = {}) {
 async function customerPollOrderStatus() {
   if (!customerTrackedOrder?.id || !customerTrackedOrder.publicToken || !customerClient || !navigator.onLine) return false;
   if (customerStatusPollInFlight) return customerStatusPollInFlight;
-
   const orderId = customerTrackedOrder.id;
   const publicToken = customerTrackedOrder.publicToken;
   const operation = (async () => {
-
   let data = null;
   let error = null;
   if (customerTrackingRpcAvailable !== false) {
@@ -5664,20 +5207,17 @@ async function customerPollOrderStatus() {
       customerTrackingRpcAvailable = true;
     }
   }
-
   if (customerTrackingRpcAvailable === false) {
     ({ data, error } = await customerClient.rpc("get_customer_order_status", {
       p_order_id: orderId,
       p_public_token: publicToken,
     }));
   }
-
   if (orderId !== customerTrackedOrder?.id || publicToken !== customerTrackedOrder?.publicToken) return false;
   if (error) {
     customerSetTrackingStatus(customerT("orderSentCashier"), "");
     return false;
   }
-
   const row = customerNormalizeRpcRow(data);
   if (!row) return false;
   const nextStatus = row.canonical_status || row.status || "pending";
@@ -5698,20 +5238,16 @@ async function customerPollOrderStatus() {
       ? customerT("deliveryConfirmed")
       : customerT("confirmDelivery");
   }
-
   if (previousStatus && previousStatus !== nextStatus) {
     customerShowNotification(customerT("notificationStatusTitle"), message);
   }
-
  if (["delivered", "cancelled", "rejected", "failed", "refunded"].includes(nextStatus)) {
   customerStopStatusPolling();
   customerStopChatPolling();
   customerStopOrderTrackingRealtime();
-
   if (["cancelled", "rejected", "failed", "refunded"].includes(nextStatus)) {
     try {
       const storageKey = customerTrackedOrderStorageKey();
-
       sessionStorage.removeItem(storageKey);
       localStorage.removeItem(storageKey);
     } catch {}
@@ -5719,7 +5255,6 @@ async function customerPollOrderStatus() {
 }
   return true;
   })();
-
   customerStatusPollInFlight = operation;
   try {
     return await operation;
@@ -5727,7 +5262,6 @@ async function customerPollOrderStatus() {
     if (customerStatusPollInFlight === operation) customerStatusPollInFlight = null;
   }
 }
-
 function customerStopStatusPolling() {
   if (customerStatusTimer) {
     window.clearTimeout(customerStatusTimer);
@@ -5735,7 +5269,6 @@ function customerStopStatusPolling() {
   }
   customerStatusPollSignature = "";
 }
-
 function customerScheduleStatusPoll(delayMs) {
   if (!customerTrackedOrder?.id || !customerTrackedOrder.publicToken || !customerClient) {
     customerStopStatusPolling();
@@ -5763,7 +5296,6 @@ function customerScheduleStatusPoll(delayMs) {
     customerScheduleStatusPoll(customerStatusPollingDelay);
   }, Math.max(0, Number(delayMs) || 0));
 }
-
 function customerStartStatusTracking(orderId, publicToken, paymentMethod, paymentUrl) {
   customerStopStatusPolling();
   customerStopOrderTrackingRealtime();
@@ -5782,13 +5314,11 @@ function customerStartStatusTracking(orderId, publicToken, paymentMethod, paymen
   customerScheduleStatusPoll(0);
   customerStartChat(orderId, publicToken);
 }
-
 function customerRenderCategories() {
   const categories = Object.keys(customerMenu);
   if (!categories.includes(customerActiveCategory)) {
     customerActiveCategory = categories[0] || "";
   }
-
   customerElements.categoryTabs.innerHTML = categories
     .map(
       (category) => {
@@ -5805,7 +5335,6 @@ function customerRenderCategories() {
     )
     .join("");
 }
-
 function customerMenuSearchEntries(query) {
   const cleanQuery = customerNormalizeSearchText(query);
   const entries = [];
@@ -5817,7 +5346,6 @@ function customerMenuSearchEntries(query) {
   });
   return entries;
 }
-
 function customerApplyMenuSearch(value) {
   customerSearchQuery = String(value || "").trim();
   if (customerElements.menuSearchInput && customerElements.menuSearchInput.value !== customerSearchQuery) {
@@ -5827,20 +5355,17 @@ function customerApplyMenuSearch(value) {
   customerRenderCategories();
   customerRenderMenu();
 }
-
 function customerRenderMenu() {
   const searchQuery = customerNormalizeSearchText(customerSearchQuery);
   const entries = searchQuery
     ? customerMenuSearchEntries(searchQuery)
     : (customerMenu[customerActiveCategory] || []).map((dish, index) => ({ category: customerActiveCategory, dish, index }));
-
   if (!entries.length) {
     customerElements.menuGrid.innerHTML = `<div class="customer-empty">${customerEscapeHtml(
       searchQuery ? customerT("searchEmpty", { query: customerSearchQuery }) : customerT("emptyCategory")
     )}</div>`;
     return;
   }
-
   customerElements.menuGrid.innerHTML = entries
     .map(
       ({ category, dish, index }) => {
@@ -5881,7 +5406,6 @@ function customerCartItemCount() {
     0
   );
 }
-
 function customerRenderHeaderCart() {
   if (
     !customerElements.headerCartBadge ||
@@ -5889,37 +5413,27 @@ function customerRenderHeaderCart() {
   ) {
     return;
   }
-
   const count = customerCartItemCount();
-
   customerElements.headerCartBadge.textContent =
     count > 99 ? "99+" : String(count);
-
   customerElements.headerCartBadge.hidden =
     count === 0;
 }
-
 function customerOpenHeaderCart() {
   if (!customerStoreId) {
     customerSetView("home");
     return;
   }
-
   customerSetView("store", { keepScroll: true });
-
   if (!customerElements.cartModal) return;
-
   customerElements.cartModal.hidden = false;
   document.body.classList.add("customer-cart-open");
-
   window.requestAnimationFrame(() => {
     customerElements.cartSheet?.focus();
   });
 }
-
 function customerCloseHeaderCart() {
   if (!customerElements.cartModal || customerElements.cartModal.hidden) return;
-
   customerElements.cartModal.hidden = true;
   document.body.classList.remove("customer-cart-open");
   customerElements.headerCartButton?.focus();
@@ -5950,18 +5464,14 @@ function customerRenderCart() {
       )
       .join("");
   }
-
   customerElements.cartTotal.textContent = customerFormatMoney(customerCartTotal());
   customerElements.deliveryFeeRow.hidden = customerElements.orderType.value !== "Domicilio";
   customerElements.deliveryFeeLabel.textContent = customerFormatMoney(customerDeliveryFee());
 customerElements.sendButton.disabled =
   customerCart.length === 0;
-
 customerRenderHeaderCart();
-
 customerRenderSelectedRestaurantDetails();
 }
-
 function customerAddItem(dish) {
   const productId =
     customerNormalizeProductId(dish.id || dish.productId) ||
@@ -5985,12 +5495,10 @@ function customerAddItem(dish) {
   }
   customerRenderCart();
 }
-
 function customerFindCurrentMenuProduct(cartItem) {
   const cartProductId = customerNormalizeProductId(cartItem?.productId || "");
   const cartName = String(cartItem?.name || "").toLowerCase();
   let fallbackMatch = null;
-
   Object.values(customerMenu || {}).forEach((dishes) => {
     (dishes || []).forEach((dish) => {
       const productId = customerNormalizeProductId(dish.id || dish.productId || "");
@@ -5998,10 +5506,8 @@ function customerFindCurrentMenuProduct(cartItem) {
       if (!fallbackMatch && cartName && String(dish.name || "").toLowerCase() === cartName) fallbackMatch = dish;
     });
   });
-
   return fallbackMatch;
 }
-
 function customerSyncCartWithCurrentMenu() {
   if (!customerCart.length) return;
   customerCart = customerCart.map((item) => {
@@ -6017,7 +5523,6 @@ function customerSyncCartWithCurrentMenu() {
     };
   });
 }
-
 async function customerLoadMenu(options = {}) {
   const config = customerSupabaseConfig();
   if (!config.url || !config.anonKey) {
@@ -6028,14 +5533,11 @@ async function customerLoadMenu(options = {}) {
     customerSetStatus(customerT("appConnectionLoadError"), "error");
     return;
   }
-
   customerClient = customerEnsureClient();
   await customerInitializeAuth();
-
   if (!options.skipDirectory) {
     await customerLoadRestaurantDirectory({ silent: true });
   }
-
   if (!customerStoreId) {
     customerStopMenuRealtime();
     customerMenu = CUSTOMER_DEFAULT_MENU;
@@ -6048,19 +5550,15 @@ async function customerLoadMenu(options = {}) {
     customerSetView("home", { keepScroll: true });
     return;
   }
-
   const requestedStoreId = customerStoreId;
   customerStartMenuRealtime();
-
   let data = null;
   let loadedFromCache = false;
-
   try {
     data = await customerFetchPublicMenu(requestedStoreId);
   } catch (error) {
     console.error("ERROR REAL CARGANDO RESTAURANTE:", error);
     console.error("STORE ID:", requestedStoreId);
-
     if (requestedStoreId !== customerStoreId) return;
     data = customerReadMenuCache(requestedStoreId);
     if (!data) {
@@ -6069,16 +5567,13 @@ async function customerLoadMenu(options = {}) {
     }
     loadedFromCache = true;
   }
-
   if (requestedStoreId !== customerStoreId) return;
-
   if (!data) {
     await customerLoadRestaurantDirectory({ silent: true });
     if (!customerStoreId || requestedStoreId !== customerStoreId) return;
     customerSetStatus(customerT("noMenu"), "error");
     return;
   }
-
   customerSettings = {
     businessName: customerNormalizeBusinessName(data.settings?.businessName || customerSelectedRestaurant()?.name),
     businessLogoUrl: customerNormalizeText(data.settings?.businessLogoUrl || customerSelectedRestaurant()?.logoUrl),
@@ -6113,7 +5608,6 @@ async function customerLoadMenu(options = {}) {
   customerApplyBusinessName();
   customerRenderSelectedRestaurantDetails();
   customerRenderPaymentMethods();
-
   const loadedMenu = customerNormalizeMenu(data.menu || {});
   if (!customerMenuProductCount(loadedMenu)) {
     customerMenu = loadedMenu;
@@ -6122,19 +5616,16 @@ async function customerLoadMenu(options = {}) {
     customerRenderMenu();
     return;
   }
-
   if (!loadedFromCache) {
     customerStoreMenuCache(requestedStoreId, loadedMenu, customerSettings);
   }
   customerMenu = loadedMenu;
   customerActiveCategory = Object.keys(customerMenu)[0] || "";
   customerSyncCartWithCurrentMenu();
-
   if (customerTableFromQr) {
     customerElements.tableInput.value = customerTableFromQr;
     customerElements.tableLabel.textContent = customerT("orderFor", { table: customerTableFromQr });
   }
-
   customerSetStatus(customerT(loadedFromCache ? "noConnection" : "menuReady"), loadedFromCache ? "error" : "ok");
   customerRenderCategories();
   customerRenderMenu();
@@ -6142,7 +5633,6 @@ async function customerLoadMenu(options = {}) {
   customerRenderCart();
   customerRenderSelectedRestaurantDetails();
 }
-
 async function customerRefreshMenu() {
   customerSetStatus(customerT("refreshingMenu"), "");
   try {
@@ -6153,7 +5643,6 @@ async function customerRefreshMenu() {
   } catch (error) {
     console.error(error);
   }
-
   try {
     await customerLoadMenu();
     customerSetStatus(customerStoreId ? customerT("menuUpdated") : customerT("restaurantChooseFirst"), customerStoreId ? "ok" : "");
@@ -6162,18 +5651,15 @@ async function customerRefreshMenu() {
     customerSetStatus(customerT("menuLoadError"), "error");
   }
 }
-
 async function customerSendOrder() {
   if (!customerClient || !customerStoreId) {
     customerSetStatus(customerT("noConnection"), "error");
     return;
   }
-
   if (!customerCart.length) {
     customerSetStatus(customerT("addProductFirst"), "error");
     return;
   }
-
   const selectedRestaurant = customerSelectedRestaurant();
   if (
     selectedRestaurant?.countryCode
@@ -6200,9 +5686,7 @@ async function customerSendOrder() {
     customerSetStatus(customerT("restaurantClosedOrder"), "error");
     return;
   }
-
   if (!customerValidateOrderData()) return;
-
   const tableLabel = customerElements.tableInput.value.trim();
   const customerName = customerElements.nameInput.value.trim();
   const orderType = customerElements.orderType.value;
@@ -6249,18 +5733,15 @@ async function customerSendOrder() {
     total,
     createdAt: new Date().toISOString(),
   };
-
   customerElements.sendButton.disabled = true;
   customerSetStatus(customerT("sendingOrder"), "");
   customerClearPaymentBox();
-
   let insertedOrder;
   try {
     await customerSaveProfile();
     insertedOrder = await customerCreateCustomerOrder(orderPayload, total, tableLabel, customerName, orderType);
   } catch (error) {
   console.error("ERROR REAL create_customer_order:", error);
-
 if (/ORDER_RATE_LIMITED/i.test(String(error?.message || ""))) {
   customerSetStatus(customerT("orderRateLimited"), "error");
 } else if (/restaurant is closed/i.test(String(error?.message || ""))) {
@@ -6279,7 +5760,6 @@ if (/ORDER_RATE_LIMITED/i.test(String(error?.message || ""))) {
     }
     insertedOrder = null;
   }
-
   if (!insertedOrder) {
     customerElements.sendButton.disabled = false;
  if (![customerT("orderRateLimited"), customerT("restaurantClosedOrder"), customerT("restaurantRegionMismatch"), customerT("deliveryQuoteRequired"), customerT("menuChangedBeforeOrder")].includes(customerElements.status.textContent)) {
@@ -6287,7 +5767,6 @@ if (/ORDER_RATE_LIMITED/i.test(String(error?.message || ""))) {
     }
     return;
   }
-
   customerCart = [];
   customerMapDistance = null;
   customerElements.distanceInput.value = "";
@@ -6317,7 +5796,6 @@ customerSetView("orders");
     await customerStartOnlinePayment(insertedOrder.id, insertedOrder.publicToken);
   }
 }
-
 customerElements.categoryTabs.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-category]");
   if (!button) return;
@@ -6328,7 +5806,6 @@ customerElements.categoryTabs.addEventListener("click", (event) => {
   customerActiveCategory = button.dataset.category;
   customerApplyMenuSearch("");
 });
-
 if (customerElements.menuSearchInput) {
   customerElements.menuSearchInput.addEventListener("input", () => {
     if (customerMenuSearchTimer) window.clearTimeout(customerMenuSearchTimer);
@@ -6339,7 +5816,6 @@ if (customerElements.menuSearchInput) {
     }, 120);
   });
 }
-
 if (customerElements.menuSearchClearButton) {
   customerElements.menuSearchClearButton.addEventListener("click", () => {
     if (customerMenuSearchTimer) {
@@ -6350,7 +5826,6 @@ if (customerElements.menuSearchClearButton) {
     if (customerElements.menuSearchInput) customerElements.menuSearchInput.focus();
   });
 }
-
 customerElements.menuGrid.addEventListener("click", (event) => {
   const button = event.target.closest(".customer-dish-button");
   if (!button || button.disabled) return;
@@ -6358,27 +5833,23 @@ customerElements.menuGrid.addEventListener("click", (event) => {
   const dish = (customerMenu[category] || [])[Number.parseInt(button.dataset.index, 10)];
   if (dish) customerAddItem(dish);
 });
-
 customerElements.cartItems.addEventListener("click", (event) => {
   const row = event.target.closest(".customer-cart-item");
   const action = event.target.dataset.action;
   if (!row || !action) return;
   const item = customerCart.find((entry) => entry.id === row.dataset.id);
   if (!item) return;
-
   if (action === "plus") item.qty += 1;
   if (action === "minus") item.qty = Math.max(1, item.qty - 1);
   if (action === "remove") customerCart = customerCart.filter((entry) => entry.id !== item.id);
   customerRenderCart();
 });
-
 customerElements.cartItems.addEventListener("input", (event) => {
   const row = event.target.closest(".customer-cart-item");
   const action = event.target.dataset.action;
   if (!row || !action) return;
   const item = customerCart.find((entry) => entry.id === row.dataset.id);
   if (!item) return;
-
   if (action === "qty") {
     item.qty = Math.max(1, Number.parseInt(event.target.value, 10) || 1);
     event.target.value = item.qty;
@@ -6390,7 +5861,6 @@ customerElements.cartItems.addEventListener("input", (event) => {
   }
   customerRenderCart();
 });
-
 customerElements.signInButton.addEventListener("click", customerSignInWithEmail);
 customerElements.signUpButton.addEventListener("click", customerSignUpWithEmail);
 customerElements.resetPasswordButton?.addEventListener("click", customerSendPasswordResetEmail);
@@ -6406,113 +5876,79 @@ customerElements.restaurantSearchInput?.addEventListener("input", () => {
   customerRenderRestaurantDirectory();
 });
 if (customerElements.homeSearchInput) {
-
   customerElements.homeSearchInput.addEventListener(
     "input",
     (event) => {
-
       const value =
         String(event.target.value || "").trim();
-
       customerRestaurantSearchQuery = value;
-
       if (customerElements.restaurantSearchInput) {
         customerElements.restaurantSearchInput.value =
           value;
       }
-
       customerRenderRestaurantDirectory();
-
     }
   );
 }
 const customerSeeAllCategoriesButton =
   document.querySelector("#customerSeeAllCategoriesButton");
-
 let customerCategoriesExpanded = false;
 const customerCategoryScroll =
   document.querySelector(".customer-category-scroll");
-
 customerCategoryScroll?.addEventListener("click", (event) => {
   const button =
     event.target.closest(".customer-category-card");
-
   if (!button) return;
-
   const category =
     String(button.dataset.category || "all").trim();
-
   customerRestaurantCategoryFilter =
     category || "all";
-
   customerCategoryScroll
     .querySelectorAll(".customer-category-card")
     .forEach((categoryButton) => {
-
       const active =
         categoryButton === button;
-
       categoryButton.classList.toggle(
         "active",
         active
       );
-
       categoryButton.setAttribute(
         "aria-pressed",
         String(active)
       );
-
     });
-
   customerRenderRestaurantDirectory();
 });
 customerSeeAllCategoriesButton?.addEventListener("click", () => {
-
   if (!customerCategoryScroll) return;
-
   customerCategoriesExpanded =
     !customerCategoriesExpanded;
-
   customerCategoryScroll.classList.toggle(
     "is-expanded",
     customerCategoriesExpanded
   );
-
   customerSeeAllCategoriesButton.innerHTML = customerCategoriesExpanded
     ? `${customerEscapeHtml(customerT("showLess"))} <span aria-hidden="true">↑</span>`
     : `${customerEscapeHtml(customerT("showAll"))} <span aria-hidden="true">→</span>`;
-
 });
-
-
 customerElements.refreshRestaurantsButton?.addEventListener("click", () => customerLoadRestaurantDirectory());
 customerElements.restaurantList?.addEventListener("click", async (event) => {
-
   const favoriteButton = event.target.closest("[data-favorite-store-id]");
-
   if (favoriteButton) {
     event.preventDefault();
     event.stopPropagation();
-
     const restaurantUserId =
       String(favoriteButton.dataset.favoriteStoreId || "").trim();
-
     if (!restaurantUserId) return;
-
     if (!customerUser) {
       customerSetStatus(customerT("favoriteSignIn"), "error");
       customerOpenAuthDialog("login");
       return;
     }
-
     const client = customerEnsureClient();
-
     if (!client) return;
-
     favoriteButton.disabled = true;
-
     try {
-
       const { data, error } = await client.rpc(
         "toggle_customer_favorite",
         {
@@ -6521,82 +5957,59 @@ customerElements.restaurantList?.addEventListener("click", async (event) => {
           p_product_id: "",
         }
       );
-
       if (error) throw error;
-
       const isFavorite = data === true;
-
       favoriteButton.classList.toggle(
         "is-active",
         isFavorite
       );
-
       favoriteButton.innerHTML =
         isFavorite ? "&#9829;" : "&#9825;";
-
       const label = customerT(
         isFavorite
           ? "unfavoriteRestaurant"
           : "favoriteRestaurant"
       );
-
       favoriteButton.setAttribute(
         "aria-label",
         label
       );
-
       favoriteButton.setAttribute(
         "title",
         label
       );
-
       favoriteButton.setAttribute(
         "aria-pressed",
         String(isFavorite)
       );
-
     } catch (error) {
-
       console.error(
         "Favorite restaurant error:",
         error
       );
-
       customerSetStatus(
         customerT("favoriteSaveError"),
         "error"
       );
-
     } finally {
-
       favoriteButton.disabled = false;
-
     }
-
     return;
   }
-
-
   const card = event.target.closest(
     ".customer-restaurant-card"
   );
-
   if (!card) return;
   console.log("CLICK RESTAURANTE:", card.dataset.storeId);
-
   customerSelectRestaurant(
     card.dataset.storeId
   ).catch((error) => {
-
     console.error(error);
-
     customerSetStatus(
       customerT("menuLoadError"),
       "error"
     );
-
   });
-
 });
 customerElements.restaurantList?.addEventListener("keydown", (event) => {
   if (event.key !== "Enter" && event.key !== " ") return;
@@ -6621,11 +6034,9 @@ customerElements.historyList.addEventListener("click", (event) => {
     });
   }
 });
-
 customerElements.notesInput.addEventListener("input", () => {
   customerElements.notesInput.value = customerNormalizeNoteDraft(customerElements.notesInput.value);
 });
-
 customerElements.orderType.addEventListener("change", () => {
   customerRenderDeliveryFields();
   customerRenderSelectedRestaurantDetails();
@@ -6678,13 +6089,11 @@ customerElements.cartCloseButton?.addEventListener(
   "click",
   customerCloseHeaderCart
 );
-
 customerElements.cartModal?.addEventListener("click", (event) => {
   if (event.target.closest('[data-cart-close="true"]')) {
     customerCloseHeaderCart();
   }
 });
-
 document.addEventListener("keydown", (event) => {
   if (
     event.key === "Escape" &&
@@ -6716,20 +6125,17 @@ customerElements.backToRestaurantsButton?.addEventListener("click", () => custom
 customerElements.viewButtons.forEach((button) => {
   button.addEventListener("click", () => customerSetView(button.dataset.customerViewTarget));
 });
-
 [customerElements.registerAddressInput, customerElements.registerNeighborhoodInput].forEach((input) => {
   input?.addEventListener("input", () => {
     customerRenderLocationSummary();
     customerRenderProfileDetails();
   });
 });
-
 [customerElements.registerCityInput, customerElements.registerAddressInput, customerElements.addressInput].forEach((input) => {
   input?.addEventListener("focus", () => {
     customerPreparePlaceAutocomplete().catch(() => {});
   });
 });
-
 [customerElements.addressInput, customerElements.neighborhoodInput].forEach((input) => {
   input?.addEventListener("input", () => {
     customerMapDistance = null;
@@ -6742,55 +6148,44 @@ customerElements.viewButtons.forEach((button) => {
 });
 customerElements.editProfileButton?.addEventListener("click", () => {
   if (!customerUser) return;
-
   const fullName = customerNormalizeText(
     customerElements.nameInput?.value || customerElements.registerNameInput?.value
   );
-
   const phone = customerNormalizeText(
     customerElements.phoneInput?.value || customerElements.registerPhoneInput?.value
   );
-
   const address = customerNormalizeText(
     customerElements.addressInput?.value || customerElements.registerAddressInput?.value
   );
-
   const neighborhood = customerNormalizeText(
     customerElements.neighborhoodInput?.value || customerElements.registerNeighborhoodInput?.value
   );
-
   customerElements.profileDetails.innerHTML = `
     <label>
       <span>${customerEscapeHtml(customerT("profileName"))}</span>
       <input id="customerProfileEditName" type="text" value="${customerEscapeHtml(fullName)}">
     </label>
-
     <label>
       <span>${customerEscapeHtml(customerT("profilePhone"))}</span>
       <input id="customerProfileEditPhone" type="tel" value="${customerEscapeHtml(phone)}">
     </label>
-
     <label>
       <span>${customerEscapeHtml(customerT("profileAddress"))}</span>
       <input id="customerProfileEditAddress" type="text" value="${customerEscapeHtml(address)}">
     </label>
-
     <label>
       <span>Barrio / ciudad</span>
       <input id="customerProfileEditNeighborhood" type="text" value="${customerEscapeHtml(neighborhood)}">
     </label>
-
     <div class="customer-profile-edit-buttons">
       <button class="customer-map-button" id="customerProfileSaveButton" type="button">
         Guardar cambios
       </button>
-
       <button class="customer-map-button" id="customerProfileCancelButton" type="button">
         Cancelar
       </button>
     </div>
   `;
-
   document
     .querySelector("#customerProfileCancelButton")
     ?.addEventListener("click", () => {
@@ -6800,35 +6195,27 @@ customerElements.editProfileButton?.addEventListener("click", () => {
   .querySelector("#customerProfileSaveButton")
   ?.addEventListener("click", async () => {
     if (!customerUser) return;
-
     const newName = customerNormalizeText(
       document.querySelector("#customerProfileEditName")?.value
     );
-
     const newPhone = customerNormalizeText(
       document.querySelector("#customerProfileEditPhone")?.value
     );
-
     const newAddress = customerNormalizeText(
       document.querySelector("#customerProfileEditAddress")?.value
     );
-
     const newNeighborhood = customerNormalizeText(
       document.querySelector("#customerProfileEditNeighborhood")?.value
     );
-
     if (customerElements.nameInput) {
       customerElements.nameInput.value = newName;
     }
-
     if (customerElements.phoneInput) {
       customerElements.phoneInput.value = newPhone;
     }
-
     if (customerElements.addressInput) {
       customerElements.addressInput.value = newAddress;
     }
-
     if (customerElements.neighborhoodInput) {
       customerElements.neighborhoodInput.value = newNeighborhood;
     }
@@ -6836,36 +6223,24 @@ customerElements.editProfileButton?.addEventListener("click", () => {
   customerElements.registerNameInput.value =
     newName;
 }
-
 if (customerElements.registerPhoneInput) {
   customerElements.registerPhoneInput.value =
     newPhone;
 }
-
 if (customerElements.registerAddressInput) {
   customerElements.registerAddressInput.value =
     newAddress;
 }
-
 if (customerElements.registerNeighborhoodInput) {
   customerElements.registerNeighborhoodInput.value =
     newNeighborhood;
 }
-
    try {
-
   await customerSaveProfile();
-
-
   customerResolvedProfileName = newName;
   customerRenderGreeting();
-
-
   customerRenderLocationSummary();
-
   customerRenderProfileDetails();
-
-
   alert(customerT("profileSaved"));
  }
    catch (error) {
@@ -6878,34 +6253,27 @@ function customerRecoverConnection() {
   if (customerRecoveryInFlight) {
     return customerRecoveryInFlight;
   }
-
   if (
     Date.now() - customerRecoveryLastCompletedAt <
     CUSTOMER_RECOVERY_DEDUP_MS
   ) {
     return Promise.resolve(true);
   }
-
   const operation = (async () => {
     if (!window.navigator.onLine) return false;
-
     customerStartDirectoryRealtime();
-
     const recoveryTasks = [
       customerLoadRestaurantDirectory({
         silent: true,
       }).catch(() => {}),
     ];
-
     if (customerTrackedOrder) {
       recoveryTasks.push(
         customerPollOrderStatus().catch(() => {})
       );
     }
-
     if (customerStoreId) {
       customerStartMenuRealtime();
-
       recoveryTasks.push(
         customerRefreshMenu().catch(() => {
           customerSetStatus(
@@ -6915,15 +6283,11 @@ function customerRecoverConnection() {
         })
       );
     }
-
     await Promise.all(recoveryTasks);
-
     customerRecoveryLastCompletedAt = Date.now();
     return true;
   })();
-
   customerRecoveryInFlight = operation;
-
   operation.then(
     () => {
       if (customerRecoveryInFlight === operation) {
@@ -6936,14 +6300,11 @@ function customerRecoverConnection() {
       }
     }
   );
-
   return operation;
 }
-
 window.addEventListener("online", () => {
   customerRecoverConnection().catch(() => {});
 });
-
 document.addEventListener("visibilitychange", () => {
   if (
     document.visibilityState !== "visible" ||
@@ -6951,13 +6312,11 @@ document.addEventListener("visibilitychange", () => {
   ) {
     return;
   }
-
   customerRecoverConnection().catch(() => {});
 });
 window.addEventListener("offline", () => {
   if (customerStoreId) customerSetStatus(customerT("noConnection"), "error");
 });
-
 window.addEventListener("beforeunload", () => {
   customerStopStatusPolling();
   customerStopChatPolling();
@@ -6965,7 +6324,6 @@ window.addEventListener("beforeunload", () => {
   customerStopMenuRealtime();
   customerStopOrderTrackingRealtime();
 });
-
 if (customerElements.registerCountryInput && !customerElements.registerCountryInput.value) {
   customerElements.registerCountryInput.value = customerRegistrationRegion.countryCode || "";
 }
@@ -6986,4 +6344,3 @@ customerLoadMenu().catch(() => {
 if (customerParams.get("auth") === "login" || customerParams.get("auth") === "register") {
   window.setTimeout(() => customerOpenAuthDialog(customerParams.get("auth")), 250);
 }
-
