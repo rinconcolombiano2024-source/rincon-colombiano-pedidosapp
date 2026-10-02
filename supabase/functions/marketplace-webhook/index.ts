@@ -157,25 +157,26 @@ Deno.serve(async (request) => {
       return json(200, { received: true, duplicate: true });
     }
 if (
-  existingResult.data.processing_status === "received" &&
-  !isStale
-) {
-  /*
-   * Existe otra entrega del mismo evento que todavía no ha sido
-   * confirmada como processed/ignored.
-   *
-   * NO respondemos 2xx porque el proceso anterior podría haber
-   * fallado después de reservar el evento y antes de terminarlo.
-   *
-   * Un 503 obliga al proveedor a conservar el evento como no
-   * entregado y reintentarlo posteriormente.
-   */
-  return json(503, {
-    error: "Payment event is still being processed",
-    retryable: true,
-  });
-}
-   
+    if (
+      existingResult.data.processing_status === "received" &&
+      !isStale
+    ) {
+      /*
+       * Existe otra entrega del mismo evento que todavía no ha sido
+       * confirmada como processed/ignored.
+       *
+       * NO respondemos 2xx porque el proceso anterior podría haber
+       * fallado después de reservar el evento y antes de terminarlo.
+       *
+       * Un 503 obliga al proveedor a conservar el evento como no
+       * entregado y reintentarlo posteriormente.
+       */
+      return json(503, {
+        error: "Payment event is still being processed",
+        retryable: true,
+      });
+    }
+
     const resetResult = await admin.from("payment_provider_events").update({
       processing_status: "received",
       error_message: "",
