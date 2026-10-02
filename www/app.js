@@ -8160,23 +8160,182 @@ async function markClientOrderDelivered(orderId) {
 }
 
 async function cancelClientOrder(orderId) {
-  const clientOrder = pendingClientOrders.find((order) => order.id === orderId);
+  const clientOrder = pendingClientOrders.find(
+    (order) => order.id === orderId
+  );
+
   if (!clientOrder) return;
-  if (!canUseCustomerModule() || !navigator.onLine) {
-    alert("Necesitas internet e iniciar sesion para cancelar pedidos de clientes.");
+
+  if (
+    !canUseCustomerModule() ||
+    !navigator.onLine
+  ) {
+    alert(
+      "Necesitas internet e iniciar sesion para cancelar pedidos de clientes."
+    );
     return;
   }
 
-  const label = [clientOrder.table_label, clientOrder.customer_name].filter(Boolean).join(" - ") || "Cliente QR";
-  const shouldCancel = confirm(`Cancelar el pedido de ${label}?`);
+  const label =
+    [
+      clientOrder.table_label,
+      clientOrder.customer_name,
+    ]
+      .filter(Boolean)
+      .join(" - ") ||
+    "Cliente QR";
+
+  const shouldCancel =
+    confirm(
+      `Cancelar el pedido de ${label}?`
+    );
+
   if (!shouldCancel) return;
 
-  await updateClientOrderStatus(orderId, "cancelled", "Pedido de cliente cancelado.", {
-    removeFromList: true,
-    reason: "Cancelado por el restaurante",
-  });
-}
 
+  const {
+    data,
+    error,
+  } =
+    await cloudState.client.functions.invoke(
+      "marketplace-cancel-order",
+      {
+        body: {
+          orderId,
+          reason:
+            "Cancelado por el restaurante",
+        },
+      }
+    );
+
+
+  if (error) {
+    let serverError = "";
+    let serverCode = "";
+    let retryable = false;
+
+    try {
+      const context =
+        error?.context;
+
+      if (
+        context &&
+        typeof context.clone ===
+          "function"
+      ) {
+        const payload =
+          await context
+            .clone()
+            .json();
+
+        serverError =
+          String(
+            payload?.error ||
+              payload?.message ||
+              ""
+          ).trim();
+
+        serverCode =
+          String(
+            payload?.code ||
+              ""
+          ).trim();
+
+        retryable =
+          payload?.retryable ===
+          true;
+      }
+    } catch {
+      /*
+       * No ocultamos el error
+       * principal si no podemos
+       * decodificar la respuesta.
+       */
+    }
+
+
+    if (
+      serverCode ===
+        "ONLINE_PAYMENT_CANCELLATION_REQUIRES_REFUND" ||
+      serverCode ===
+        "PAYMENT_ALREADY_CAPTURED"
+    ) {
+      alert(
+        "Este pedido ya tiene un pago confirmado. No se cancelara automaticamente: primero debe procesarse la devolucion del dinero."
+      );
+      return;
+    }
+
+
+    if (
+      serverCode ===
+        "PAYMENT_PROCESSING" ||
+      serverCode ===
+        "PAYMENT_STATE_UNRESOLVED" ||
+      serverCode ===
+        "PAYMENT_STATE_CHANGED" ||
+      serverCode ===
+        "PAYMENT_REQUIRES_RECONCILIATION" ||
+      serverCode ===
+        "ONLINE_PAYMENT_CANCELLATION_REQUIRES_GATEWAY"
+    ) {
+      alert(
+        retryable
+          ? "El pago se esta verificando. Por seguridad el pedido no fue cancelado. Espera unos segundos e intenta nuevamente."
+          : "El estado del pago debe resolverse antes de cancelar este pedido."
+      );
+
+      return;
+    }
+
+
+    console.error(
+      "marketplace-cancel-order failed",
+      {
+        orderId,
+        code:
+          serverCode,
+        message:
+          serverError ||
+          error?.message ||
+          "",
+      }
+    );
+
+    alert(
+      "No se pudo cancelar el pedido de forma segura. Intenta nuevamente."
+    );
+
+    return;
+  }
+
+
+  if (!data?.cancelled) {
+    alert(
+      "No se pudo confirmar la cancelacion segura del pedido."
+    );
+    return;
+  }
+
+
+  pendingClientOrders =
+    pendingClientOrders.filter(
+      (order) =>
+        order.id !== orderId
+    );
+
+
+  updateClientOrdersBadge();
+
+  renderClientOrders();
+
+
+  showToast(
+    data?.alreadyCancelled
+      ? "El pedido ya estaba cancelado."
+      : "Pedido de cliente cancelado."
+  );
+}
 async function restaurantImageFileToDataUrl(file) {
   if (!file) return "";
   if (!file.type.startsWith("image/")) {
