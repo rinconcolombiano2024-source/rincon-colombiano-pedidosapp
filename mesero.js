@@ -1984,6 +1984,7 @@ async function waiterInitialize() {
   else waiterRenderLoggedOut();
 
 waiterClient.auth.onAuthStateChange((event, session) => {
+  const previousUserId = waiterUser?.id || null;
   waiterUser = session?.user || null;
 
   if (event === "PASSWORD_RECOVERY") {
@@ -1993,6 +1994,12 @@ waiterClient.auth.onAuthStateChange((event, session) => {
   if (waiterRecoveringPassword) return;
 
   if (event === "INITIAL_SESSION") return;
+
+  if (
+    event === "TOKEN_REFRESHED" &&
+    waiterUser?.id === previousUserId &&
+    waiterMembership
+  ) return;
 
   if (waiterUser) {
     // Leave the auth callback before making authenticated Supabase requests.
