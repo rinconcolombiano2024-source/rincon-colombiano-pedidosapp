@@ -175,7 +175,7 @@ if (
     retryable: true,
   });
 }
-    }
+   
     const resetResult = await admin.from("payment_provider_events").update({
       processing_status: "received",
       error_message: "",
