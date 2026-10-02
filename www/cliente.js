@@ -5003,17 +5003,50 @@ function customerRenderOrderTimeline(events = []) {
     })
     .join("");
 }
+const customerTimelineLoads = new Map();
+
 async function customerLoadOrderTimeline() {
   if (!customerTrackedOrder?.id || !customerTrackedOrder.publicToken || !customerClient) {
     customerRenderOrderTimeline([]);
     return;
   }
-  const { data, error } = await customerClient.rpc("get_customer_order_timeline", {
-    p_order_id: customerTrackedOrder.id,
-    p_public_token: customerTrackedOrder.publicToken,
+
+  const client = customerClient;
+  const orderId = customerTrackedOrder.id;
+  const publicToken = customerTrackedOrder.publicToken;
+  const key = `${orderId}:${publicToken}`;
+
+  const pending = customerTimelineLoads.get(key);
+  if (pending?.client === client) return pending.promise;
+
+  const entry = { client, promise: null };
+
+  const operation = Promise.resolve().then(async () => {
+    const { data, error } = await client.rpc("get_customer_order_timeline", {
+      p_order_id: orderId,
+      p_public_token: publicToken,
+    });
+
+    if (
+      error ||
+      client !== customerClient ||
+      orderId !== customerTrackedOrder?.id ||
+      publicToken !== customerTrackedOrder?.publicToken
+    ) return;
+
+    customerRenderOrderTimeline(Array.isArray(data) ? data : []);
   });
-  if (error) return;
-  customerRenderOrderTimeline(Array.isArray(data) ? data : []);
+
+  entry.promise = operation;
+  customerTimelineLoads.set(key, entry);
+
+  try {
+    return await operation;
+  } finally {
+    if (customerTimelineLoads.get(key) === entry) {
+      customerTimelineLoads.delete(key);
+    }
+  }
 }
 function customerTrackingRelativeTime(value) {
   const date = new Date(value || 0);
