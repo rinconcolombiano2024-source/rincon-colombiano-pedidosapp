@@ -204,16 +204,62 @@ Deno.serve(async (request) => {
       return json(200, { received: true, ignored: true });
     }
 
-    if (["checkout.session.async_payment_failed", "payment_intent.payment_failed"].includes(eventType)) {
-      if (!transactionId) throw new Error("Payment transaction reference is missing");
-      const failure = await admin.rpc("rc_ordera_mark_payment_failed", {
-        p_payment_transaction_id: transactionId,
-        p_reason: String(object?.last_payment_error?.message || eventType),
-      });
-      if (failure.error) throw failure.error;
-      await markEvent("processed");
-      return json(200, { received: true });
+/*
+ * Un payment_intent.payment_failed NO significa necesariamente
+ * que el Checkout haya terminado.
+ *
+ * Stripe permite que el cliente pruebe otro metodo de pago
+ * dentro de la misma Checkout Session.
+ *
+ * Por eso mantenemos la transaccion RC ORDERA en pending.
+ * El pago solo pasa a failed cuando Stripe informa un fallo
+ * terminal de la sesion o cuando la sesion expira.
+ */
+if (eventType === "payment_intent.payment_failed") {
+  await markEvent("processed");
+
+  return json(200, {
+    received: true,
+    paymentAttemptFailed: true,
+  });
+}
+
+/*
+ * Estos eventos sí representan el final del intento de Checkout.
+ */
+if (
+  [
+    "checkout.session.async_payment_failed",
+    "checkout.session.expired",
+  ].includes(eventType)
+) {
+  if (!transactionId) {
+    throw new Error(
+      "Payment transaction reference is missing"
+    );
+  }
+
+  const failure = await admin.rpc(
+    "rc_ordera_mark_payment_failed",
+    {
+      p_payment_transaction_id: transactionId,
+      p_reason: String(
+        object?.last_payment_error?.message ||
+        eventType
+      ),
     }
+  );
+
+  if (failure.error) {
+    throw failure.error;
+  }
+
+  await markEvent("processed");
+
+  return json(200, {
+    received: true,
+  });
+}
 
     if (eventType === "refund.updated" && String(object?.status || "") === "succeeded") {
       if (!transactionId) throw new Error("Refund payment transaction was not found");
