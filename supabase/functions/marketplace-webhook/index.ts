@@ -177,13 +177,50 @@ if (
       });
     }
 
-    const resetResult = await admin.from("payment_provider_events").update({
-      processing_status: "received",
-      error_message: "",
-      processed_at: null,
-    }).eq("id", existingResult.data.id).select("id,processing_status,received_at").single();
-    if (resetResult.error) return json(500, { error: "Could not retry event" });
-    eventRecord = resetResult.data;
+const reclaimStartedAt = new Date().toISOString();
+
+let resetQuery = admin
+  .from("payment_provider_events")
+  .update({
+    processing_status: "received",
+    error_message: "",
+    processed_at: null,
+    received_at: reclaimStartedAt,
+  })
+  .eq("id", existingResult.data.id);
+
+if (existingResult.data.processing_status === "received") {
+  resetQuery = resetQuery
+    .eq("processing_status", "received")
+    .lte(
+      "received_at",
+      new Date(Date.now() - 120_000).toISOString(),
+    );
+} else {
+  resetQuery = resetQuery.eq(
+    "processing_status",
+    existingResult.data.processing_status,
+  );
+}
+
+const resetResult = await resetQuery
+  .select("id,processing_status,received_at")
+  .maybeSingle();
+
+if (resetResult.error) {
+  return json(500, {
+    error: "Could not retry event",
+  });
+}
+
+if (!resetResult.data) {
+  return json(503, {
+    error: "Payment event was reclaimed by another worker",
+    retryable: true,
+  });
+}
+
+eventRecord = resetResult.data;
   } else {
     return json(500, { error: "Could not register event" });
   }
