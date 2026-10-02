@@ -10,6 +10,9 @@ verify_jwt = false
 [functions.marketplace-webhook]
 verify_jwt = false
 
+[functions.marketplace-cancel-order]
+verify_jwt = false
+
 [functions.marketplace-checkout]
 verify_jwt = false
 
