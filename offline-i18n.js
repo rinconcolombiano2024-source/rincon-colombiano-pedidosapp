@@ -348,6 +348,53 @@
     ["orders.statusUpdateFailed", "No se pudo actualizar el estado del pedido del cliente.", "Nie udało się zaktualizować statusu zamówienia klienta.", "The customer order status could not be updated."],
     ["orders.deliveredSettlementRetry", "El pedido quedo entregado; la liquidacion se reintentara de forma segura.", "Zamówienie zostało dostarczone; rozliczenie zostanie bezpiecznie ponowione.", "The order was delivered; settlement will be retried safely."],
     ["orders.signInCancel", "Necesitas internet e iniciar sesion para cancelar pedidos de clientes.", "Aby anulować zamówienia klientów, potrzebujesz internetu i aktywnej sesji.", "You need an internet connection and an active session to cancel customer orders."],
+   ["orders.cancelReasonRestaurant",
+  "Cancelado por el restaurante",
+  "Anulowane przez restaurację",
+  "Cancelled by the restaurant"
+],
+
+["orders.cancelPaidRequiresRefund",
+  "Este pedido ya tiene un pago confirmado. No se cancelara automaticamente: primero debe procesarse la devolucion del dinero.",
+  "To zamówienie ma już potwierdzoną płatność. Nie zostanie anulowane automatycznie: najpierw należy dokonać zwrotu środków.",
+  "This order already has a confirmed payment. It will not be cancelled automatically: the payment must be refunded first."
+],
+
+["orders.cancelPaymentVerifying",
+  "El pago se esta verificando. Por seguridad el pedido no fue cancelado. Espera unos segundos e intenta nuevamente.",
+  "Płatność jest weryfikowana. Ze względów bezpieczeństwa zamówienie nie zostało anulowane. Odczekaj kilka sekund i spróbuj ponownie.",
+  "The payment is being verified. For safety, the order was not cancelled. Wait a few seconds and try again."
+],
+
+["orders.cancelPaymentResolveFirst",
+  "El estado del pago debe resolverse antes de cancelar este pedido.",
+  "Stan płatności musi zostać rozstrzygnięty przed anulowaniem tego zamówienia.",
+  "The payment status must be resolved before this order can be cancelled."
+],
+
+["orders.cancelSecureFailed",
+  "No se pudo cancelar el pedido de forma segura. Intenta nuevamente.",
+  "Nie udało się bezpiecznie anulować zamówienia. Spróbuj ponownie.",
+  "The order could not be cancelled safely. Try again."
+],
+
+["orders.cancelSecureConfirmationFailed",
+  "No se pudo confirmar la cancelacion segura del pedido.",
+  "Nie udało się potwierdzić bezpiecznego anulowania zamówienia.",
+  "The safe cancellation of the order could not be confirmed."
+],
+
+["orders.alreadyCancelled",
+  "El pedido ya estaba cancelado.",
+  "Zamówienie było już anulowane.",
+  "The order was already cancelled."
+],
+
+["orders.customerCancelled",
+  "Pedido de cliente cancelado.",
+  "Zamówienie klienta zostało anulowane.",
+  "Customer order cancelled."
+],
     ["chat.signInReply", "Necesitas internet e iniciar sesion para responder el chat.", "Aby odpowiedzieć na czacie, potrzebujesz internetu i aktywnej sesji.", "You need an internet connection and an active session to reply in chat."],
     ["chat.messageOrImage", "Escribe un mensaje o agrega una imagen.", "Wpisz wiadomość lub dodaj obraz.", "Enter a message or add an image."],
     ["chat.sentCustomer", "Mensaje enviado al cliente.", "Wiadomość została wysłana do klienta.", "Message sent to the customer."],
