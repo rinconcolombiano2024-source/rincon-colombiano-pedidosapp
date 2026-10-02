@@ -4469,6 +4469,9 @@ function customerScheduleChatPoll(delayMs) {
   }
   if (customerChatTimer) window.clearTimeout(customerChatTimer);
   const signature = `${customerTrackedOrder.id}:${customerTrackedOrder.publicToken}`;
+  const generation = customerChatGeneration;
+  const orderId = customerTrackedOrder.id;
+  const publicToken = customerTrackedOrder.publicToken;
   customerChatPollSignature = signature;
   customerChatTimer = window.setTimeout(async () => {
     customerChatTimer = null;
@@ -4479,6 +4482,13 @@ function customerScheduleChatPoll(delayMs) {
       return;
     }
     const loaded = await customerLoadChatMessages({ silent: true });
+
+    if (
+      generation !== customerChatGeneration ||
+      signature !== customerChatPollSignature ||
+      orderId !== customerTrackedOrder?.id ||
+      publicToken !== customerTrackedOrder?.publicToken
+    ) return;
     customerChatPollingDelay = loaded
       ? CUSTOMER_CHAT_POLL_MIN_MS
       : Math.min(Math.max(customerChatPollingDelay, CUSTOMER_CHAT_POLL_MIN_MS) * 2, CUSTOMER_CHAT_POLL_MAX_MS);
