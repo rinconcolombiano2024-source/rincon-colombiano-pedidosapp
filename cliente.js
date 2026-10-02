@@ -5300,6 +5300,11 @@ function customerScheduleStatusPoll(delayMs) {
       return;
     }
     const loaded = await customerPollOrderStatus();
+
+    if (
+      signature !== customerStatusPollSignature ||
+      signature !== `${customerTrackedOrder?.id || ""}:${customerTrackedOrder?.publicToken || ""}`
+    ) return;
     customerStatusPollingDelay = loaded
       ? CUSTOMER_STATUS_POLL_MIN_MS
       : Math.min(Math.max(customerStatusPollingDelay, CUSTOMER_STATUS_POLL_MIN_MS) * 2, CUSTOMER_STATUS_POLL_MAX_MS);
