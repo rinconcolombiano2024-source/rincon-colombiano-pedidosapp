@@ -4643,7 +4643,7 @@ updateRestaurantStatusSync();
 // La disponibilidad real del restaurante se valida en servidor.
 
 updateCloudStatus();
-  maybeAskShiftServer();
+    maybeAskShiftServer();
     return { ok: true, warning: cloudState.moduleWarning };
   } catch (error) {
     console.error(error);
@@ -15172,13 +15172,12 @@ startCentralRealtime();
 startClientOrdersRealtime();
 
 updateRestaurantStatusSync();
-    
-await syncRestaurantOperationalStatus({
-      silent: true,
-    });
 
-    updateCloudStatus();
-    cloudRecoveryLastCompletedAt = Date.now();
+// CPU HOTFIX:
+// No relanzar la RPC de estado operativo después de cada recuperación
+// de conexión. Evita tormentas de RPC cuando Supabase está degradado.
+
+updateCloudStatus();    cloudRecoveryLastCompletedAt = Date.now();
     return true;
   })();
 
