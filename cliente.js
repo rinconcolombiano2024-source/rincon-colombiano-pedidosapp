@@ -305,10 +305,12 @@ const CUSTOMER_I18N = {
     cartPanelAria: "Pedido del cliente",
     yourOrder: "Tu pedido",
     enableNotifications: "Activar notificaciones",
-    orderTypeLabel: "Tipo de pedido",
-    eatHere: "Comer en el punto",
-    pickup: "Para llevar / recoger en el punto",
-    delivery: "Envio a domicilio",
+orderTypeLabel: "Tipo de pedido",
+orderTypePlaceholder: "Selecciona cómo quieres recibir tu pedido",
+orderTypeRequired: "Debes seleccionar si quieres comer en el punto, recoger el pedido para llevar o recibirlo a domicilio.",
+eatHere: "Comer en el punto",
+pickup: "Recoger en el punto / para llevar",
+delivery: "Envío a domicilio",
     nameLabel: "Nombre",
     namePlaceholder: "Tu nombre",
     tableLabel: "Mesa / ubicacion",
@@ -618,10 +620,12 @@ const CUSTOMER_I18N = {
     cartPanelAria: "Zamowienie klienta",
     yourOrder: "Twoje zamowienie",
     enableNotifications: "Wlacz powiadomienia",
-    orderTypeLabel: "Typ zamowienia",
-    eatHere: "Na miejscu",
-    pickup: "Na wynos / odbiór w lokalu",
-    delivery: "Dostawa",
+    orderTypeLabel: "Typ zamówienia",
+orderTypePlaceholder: "Wybierz sposób odbioru zamówienia",
+orderTypeRequired: "Wybierz, czy chcesz zjeść na miejscu, odebrać zamówienie na wynos czy zamówić dostawę do domu.",
+eatHere: "Na miejscu",
+pickup: "Odbiór osobisty / na wynos",
+delivery: "Dostawa do domu",
     nameLabel: "Imie",
     namePlaceholder: "Twoje imie",
     tableLabel: "Stolik / lokalizacja",
@@ -931,10 +935,12 @@ const CUSTOMER_I18N = {
     cartPanelAria: "Customer order",
     yourOrder: "Your order",
     enableNotifications: "Enable notifications",
-    orderTypeLabel: "Order type",
-    eatHere: "Eat in",
-    pickup: "Takeaway / pickup",
-    delivery: "Delivery",
+orderTypeLabel: "Order type",
+orderTypePlaceholder: "Choose how you want to receive your order",
+orderTypeRequired: "Choose whether you want to eat in, pick up your order, or have it delivered.",
+eatHere: "Eat in",
+pickup: "Pickup / takeaway",
+delivery: "Home delivery",
     nameLabel: "Name",
     namePlaceholder: "Your name",
     tableLabel: "Table / location",
@@ -4542,7 +4548,21 @@ async function customerSendChatMessage() {
   }
 }
 function customerValidateOrderData() {
-  const isDelivery = customerElements.orderType.value === "Domicilio";
+  const orderType = String(
+    customerElements.orderType.value || ""
+  ).trim();
+
+  if (!orderType) {
+    customerSetStatus(
+      customerT("orderTypeRequired"),
+      "error"
+    );
+
+    customerElements.orderType.focus();
+    return false;
+  }
+
+  const isDelivery = orderType === "Domicilio";
   if (!customerElements.nameInput.value.trim()) {
     customerSetStatus(customerT("nameRequired"), "error");
     customerElements.nameInput.focus();
