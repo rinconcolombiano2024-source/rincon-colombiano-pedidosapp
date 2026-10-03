@@ -4637,20 +4637,13 @@ try {
 startCentralRealtime();
 startClientOrdersRealtime();
 updateRestaurantStatusSync();
-    if (restaurantOperationalMode === "schedule") {
-  await withCloudTimeout(
-    syncRestaurantOperationalStatus({ silent: true }),
-    "El estado del restaurante tardó demasiado en actualizarse.",
-    8000
-  ).catch((error) => {
-    console.warn(
-      "No se pudo actualizar el estado operativo durante la carga.",
-      error
-    );
-  });
-}
-    updateCloudStatus();
-    maybeAskShiftServer();
+
+// CPU HOTFIX:
+// No ejecutar sync_current_restaurant_operational_status durante el arranque.
+// La disponibilidad real del restaurante se valida en servidor.
+
+updateCloudStatus();
+  maybeAskShiftServer();
     return { ok: true, warning: cloudState.moduleWarning };
   } catch (error) {
     console.error(error);
@@ -5294,18 +5287,10 @@ function stopRestaurantStatusSync() {
 }
 
 function updateRestaurantStatusSync() {
-  const shouldSync = Boolean(
-    cloudState.user && restaurantActive && restaurantOperationalMode === "schedule" && navigator.onLine
-  );
-  if (!shouldSync) {
-    stopRestaurantStatusSync();
-    return;
-  }
-  if (!restaurantStatusSyncTimer) {
-    restaurantStatusSyncTimer = window.setInterval(() => {
-      if (document.visibilityState === "visible") syncRestaurantOperationalStatus({ silent: true });
-    }, 60000);
-  }
+  // CPU HOTFIX 2026-10-03:
+  // El estado horario se valida en servidor al consultar menú y crear pedidos.
+  // No ejecutamos una RPC de escritura cada minuto desde cada terminal.
+  stopRestaurantStatusSync();
 }
 
 async function setRestaurantOperationalMode(nextMode) {
