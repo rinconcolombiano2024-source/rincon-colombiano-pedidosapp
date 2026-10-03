@@ -692,9 +692,48 @@
                 <span data-i18n="distanceLabel">Distancia aproximada km</span>
                 <input id="customerDistanceInput" type="number" min="0" step="0.1" placeholder="Calculada automaticamente" data-i18n-placeholder="distancePlaceholder" inputmode="decimal" readonly aria-readonly="true" />
               </label>
-              <button class="customer-map-button" id="customerUseLocationButton" type="button" data-i18n="useLocation">Usar mi ubicacion</button>
-              <button class="customer-map-button" id="customerCalculateDistanceButton" type="button" data-i18n="calculateMaps">Calcular con Google Maps</button>
-              <p class="customer-map-result" id="customerMapResult" hidden></p>
+             <div class="customer-location-actions">
+  <button
+    class="customer-map-button"
+    id="customerUseLocationButton"
+    type="button"
+    data-i18n="useLocation"
+  >
+    Usar mi ubicación
+  </button>
+
+  <button
+    class="customer-map-button"
+    id="customerChooseMapLocationButton"
+    type="button"
+    data-i18n="chooseLocationOnMap"
+  >
+    Seleccionar ubicación en el mapa
+  </button>
+
+  <button
+    class="customer-map-button"
+    id="customerCalculateDistanceButton"
+    type="button"
+    data-i18n="calculateMaps"
+  >
+    Calcular con Google Maps
+  </button>
+</div>
+
+<div
+  class="customer-delivery-map"
+  id="customerDeliveryMap"
+  hidden
+  aria-label="Mapa para seleccionar la ubicación de entrega"
+  data-i18n-aria-label="deliveryMapAria"
+></div>
+
+<p
+  class="customer-map-result"
+  id="customerMapResult"
+  hidden
+></p>
               <p class="customer-delivery-help" data-i18n="deliveryHelp">Domicilio: minimo configurado por el restaurante; si la distancia supera ese valor, se calcula por tramos.</p>
             </div>
 
