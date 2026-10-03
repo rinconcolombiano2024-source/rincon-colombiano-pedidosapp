@@ -616,27 +616,41 @@
 
 </div> 
     
-            <label>
-              <span data-i18n="orderTypeLabel">Tipo de pedido</span>
-<select id="customerOrderType" required>
-  <option value="" selected disabled data-i18n="orderTypePlaceholder">
-    Selecciona cómo quieres recibir tu pedido
-  </option>
+<label>
+  <span data-i18n="orderTypeLabel">Tipo de pedido</span>
 
-  <option value="Comer en el punto" data-i18n="eatHere">
-    Comer en el punto
-  </option>
+  <select id="customerOrderType" required>
+    <option
+      value=""
+      selected
+      disabled
+      data-i18n="orderTypePlaceholder"
+    >
+      Selecciona cómo quieres recibir tu pedido
+    </option>
 
-  <option value="Recoger en el punto" data-i18n="pickup">
-    Recoger en el punto / para llevar
-  </option>
+    <option
+      value="Comer en el punto"
+      data-i18n="eatHere"
+    >
+      Comer en el punto
+    </option>
 
-  <option value="Domicilio" data-i18n="delivery">
-    Envío a domicilio
-  </option>
-</select>
-            </label>
+    <option
+      value="Recoger en el punto"
+      data-i18n="pickup"
+    >
+      Recoger en el punto / para llevar
+    </option>
 
+    <option
+      value="Domicilio"
+      data-i18n="delivery"
+    >
+      Envío a domicilio
+    </option>
+  </select>
+</label>
             <label>
               <span data-i18n="nameLabel">Nombre</span>
               <input id="customerNameInput" type="text" placeholder="Tu nombre" data-i18n-placeholder="namePlaceholder" autocomplete="name" />
@@ -870,4 +884,3 @@
  <script src="cliente.js?v=91.0.4-p3"></script>
   </body>
 </html>
-
