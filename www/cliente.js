@@ -98,8 +98,10 @@ notifyButton:
   referenceInput: document.querySelector("#customerReferenceInput"),
   distanceInput: document.querySelector("#customerDistanceInput"),
   useLocationButton: document.querySelector("#customerUseLocationButton"),
-  calculateDistanceButton: document.querySelector("#customerCalculateDistanceButton"),
-  mapResult: document.querySelector("#customerMapResult"),
+chooseMapLocationButton: document.querySelector("#customerChooseMapLocationButton"),
+calculateDistanceButton: document.querySelector("#customerCalculateDistanceButton"),
+deliveryMap: document.querySelector("#customerDeliveryMap"),
+mapResult: document.querySelector("#customerMapResult"),
   notesInput: document.querySelector("#customerOrderNotes"),
   deliveryFeeRow: document.querySelector("#customerDeliveryFeeRow"),
   deliveryFeeLabel: document.querySelector("#customerDeliveryFeeLabel"),
@@ -330,8 +332,13 @@ delivery: "Envío a domicilio",
     referencePlaceholder: "Piso, timbre, instrucciones",
     distanceLabel: "Distancia aproximada km",
     distancePlaceholder: "Ej: 3.4",
-    useLocation: "Usar mi ubicacion",
-    calculateMaps: "Calcular con Google Maps",
+    useLocation: "Usar mi ubicación",
+chooseLocationOnMap: "Seleccionar ubicación en el mapa",
+deliveryMapAria: "Mapa para seleccionar la ubicación de entrega",
+mapSelectHelp: "Toca el mapa o mueve el marcador hasta el punto exacto de entrega.",
+mapLocationSelected: "Ubicación de entrega seleccionada. Calculando ruta y domicilio...",
+mapLocationError: "No fue posible seleccionar la ubicación en el mapa.",
+calculateMaps: "Calcular con Google Maps",
     deliveryHelp: "La distancia y el domicilio se calculan de forma segura con la ruta real antes de enviar el pedido.",
     kitchenNotesLabel: "Notas para cocina",
     kitchenNotesPlaceholder: "Ej: sin cebolla, salsa aparte...",
@@ -645,10 +652,15 @@ delivery: "Dostawa do domu",
     referencePlaceholder: "Pietro, domofon, instrukcje",
     distanceLabel: "Przyblizona odleglosc km",
     distancePlaceholder: "Np. 3.4",
-    useLocation: "Uzyj mojej lokalizacji",
-    calculateMaps: "Oblicz w Google Maps",
-    deliveryHelp: "Odleglosc i koszt dostawy sa bezpiecznie obliczane z rzeczywistej trasy przed wyslaniem zamowienia.",
-    kitchenNotesLabel: "Uwagi do kuchni",
+    useLocation: "Użyj mojej lokalizacji",
+chooseLocationOnMap: "Wybierz lokalizację na mapie",
+deliveryMapAria: "Mapa do wyboru miejsca dostawy",
+mapSelectHelp: "Dotknij mapy lub przesuń znacznik do dokładnego miejsca dostawy.",
+mapLocationSelected: "Wybrano miejsce dostawy. Obliczanie trasy i kosztu dostawy...",
+mapLocationError: "Nie udało się wybrać lokalizacji na mapie.",
+calculateMaps: "Oblicz w Google Maps",
+deliveryHelp: "Odległość, czas trasy i koszt dostawy są obliczane automatycznie na podstawie wybranej lokalizacji.",
+kitchenNotesLabel: "Uwagi do kuchni",
     kitchenNotesPlaceholder: "Np. bez cebuli, sos osobno...",
     estimatedTotal: "Suma szacunkowa",
     estimatedDelivery: "Dostawa szacunkowa",
@@ -961,9 +973,14 @@ delivery: "Home delivery",
     distanceLabel: "Approximate distance km",
     distancePlaceholder: "Ex: 3.4",
     useLocation: "Use my location",
-    calculateMaps: "Calculate with Google Maps",
-    deliveryHelp: "Distance and delivery cost are securely calculated from the real route before the order is sent.",
-    kitchenNotesLabel: "Kitchen notes",
+chooseLocationOnMap: "Choose location on map",
+deliveryMapAria: "Map for selecting the delivery location",
+mapSelectHelp: "Tap the map or move the marker to the exact delivery point.",
+mapLocationSelected: "Delivery location selected. Calculating route and delivery fee...",
+mapLocationError: "Could not select the location on the map.",
+calculateMaps: "Calculate with Google Maps",
+deliveryHelp: "Distance, route time, and delivery fee are calculated automatically from the selected location.",
+kitchenNotesLabel: "Kitchen notes",
     kitchenNotesPlaceholder: "Ex: no onion, sauce on the side...",
     estimatedTotal: "Estimated total",
     estimatedDelivery: "Estimated delivery",
@@ -1630,6 +1647,9 @@ let customerMapDistance = null;
 let googleMapsScriptPromise = null;
 const customerPlaceAutocompletes = new Map();
 let customerLocationCoords = null;
+
+let customerDeliveryMapInstance = null;
+let customerDeliveryMapMarker = null;
 let customerTrackedOrder = null;
 let customerStatusTimer = null;
 let customerStatusPollSignature = "";
@@ -4017,6 +4037,239 @@ async function customerReverseGeocodeLocation(coords, options = {}) {
     });
   });
 }
+function customerGeocodeAddressForMap(address) {
+  const normalizedAddress = customerNormalizeText(address);
+
+  if (!normalizedAddress || !window.google?.maps?.Geocoder) {
+    return Promise.resolve(null);
+  }
+
+  return new Promise((resolve) => {
+    const geocoder = new google.maps.Geocoder();
+
+    geocoder.geocode(
+      { address: normalizedAddress },
+      (results, status) => {
+        if (status !== "OK" || !results?.length) {
+          resolve(null);
+          return;
+        }
+
+        const location = results[0]?.geometry?.location;
+
+        if (!location) {
+          resolve(null);
+          return;
+        }
+
+        resolve({
+          lat: location.lat(),
+          lng: location.lng(),
+        });
+      }
+    );
+  });
+}
+
+async function customerCommitMapLocation(coords) {
+  const lat = Number(coords?.lat);
+  const lng = Number(coords?.lng);
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    customerSetMapResult(
+      customerT("mapLocationError"),
+      "error"
+    );
+    return;
+  }
+
+  customerLocationCoords = { lat, lng };
+
+  customerMapDistance = null;
+
+  if (customerElements.distanceInput) {
+    customerElements.distanceInput.value = "";
+  }
+
+  if (customerDeliveryMapMarker) {
+    customerDeliveryMapMarker.setPosition(customerLocationCoords);
+  }
+
+  customerSetMapResult(
+    customerT("mapLocationSelected"),
+    "ok"
+  );
+
+  try {
+    await customerReverseGeocodeLocation(
+      customerLocationCoords
+    );
+
+    customerRenderLocationSummary();
+    customerRenderProfileDetails();
+    customerRenderCart();
+
+    await customerCalculateDistanceWithMaps();
+  } catch (error) {
+    console.warn(
+      "No fue posible completar la ubicación seleccionada en el mapa.",
+      error
+    );
+
+    customerSetMapResult(
+      customerT("mapLocationError"),
+      "error"
+    );
+  }
+}
+
+async function customerChooseMapLocation() {
+  if (customerElements.orderType.value !== "Domicilio") {
+    customerSetMapResult(
+      customerT("locationDeliveryOnly"),
+      "error"
+    );
+    return;
+  }
+
+  if (
+    !customerElements.deliveryMap ||
+    !customerElements.chooseMapLocationButton
+  ) {
+    return;
+  }
+
+  customerElements.chooseMapLocationButton.disabled = true;
+
+  try {
+    await customerLoadGoogleMaps();
+
+let center = customerLocationCoords
+  ? {
+      lat: Number(customerLocationCoords.lat),
+      lng: Number(customerLocationCoords.lng),
+    }
+  : null;
+
+// Si el cliente escribió una dirección, esa dirección tiene
+// prioridad sobre la ubicación del restaurante.
+if (!center && customerDeliveryDestination()) {
+  center = await customerGeocodeAddressForMap(
+    customerDeliveryDestination()
+  );
+}
+
+// Solo usamos las coordenadas del restaurante como referencia
+// inicial cuando todavía no tenemos ubicación del cliente.
+if (
+  !center &&
+  Number.isFinite(customerSettings.restaurantLatitude) &&
+  Number.isFinite(customerSettings.restaurantLongitude)
+) {
+  center = {
+    lat: customerSettings.restaurantLatitude,
+    lng: customerSettings.restaurantLongitude,
+  };
+}
+
+if (!center && customerSettings.restaurantAddress) {
+  center = await customerGeocodeAddressForMap(
+    customerSettings.restaurantAddress
+  );
+}
+    if (!center) {
+      customerSetMapResult(
+        customerT("mapsNeedDestination"),
+        "error"
+      );
+      return;
+    }
+
+    customerElements.deliveryMap.hidden = false;
+
+    if (!customerDeliveryMapInstance) {
+      customerDeliveryMapInstance = new google.maps.Map(
+        customerElements.deliveryMap,
+        {
+          center,
+          zoom: 16,
+          clickableIcons: false,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: false,
+        }
+      );
+
+      customerDeliveryMapInstance.addListener(
+        "click",
+        (event) => {
+          if (!event?.latLng) return;
+
+          customerCommitMapLocation({
+            lat: event.latLng.lat(),
+            lng: event.latLng.lng(),
+          }).catch(console.error);
+        }
+      );
+    } else {
+      customerDeliveryMapInstance.setCenter(center);
+      customerDeliveryMapInstance.setZoom(16);
+    }
+
+    if (!customerDeliveryMapMarker) {
+      customerDeliveryMapMarker = new google.maps.Marker({
+        map: customerDeliveryMapInstance,
+        position: center,
+        draggable: true,
+        title: customerT("chooseLocationOnMap"),
+      });
+
+      customerDeliveryMapMarker.addListener(
+        "dragend",
+        (event) => {
+          if (!event?.latLng) return;
+
+          customerCommitMapLocation({
+            lat: event.latLng.lat(),
+            lng: event.latLng.lng(),
+          }).catch(console.error);
+        }
+      );
+    } else {
+      customerDeliveryMapMarker.setMap(
+        customerDeliveryMapInstance
+      );
+
+      customerDeliveryMapMarker.setPosition(center);
+    }
+
+    window.setTimeout(() => {
+      google.maps.event.trigger(
+        customerDeliveryMapInstance,
+        "resize"
+      );
+
+      customerDeliveryMapInstance.setCenter(center);
+    }, 0);
+
+    customerSetMapResult(
+      customerT("mapSelectHelp"),
+      ""
+    );
+  } catch (error) {
+    console.error(
+      "No fue posible abrir el mapa de domicilio.",
+      error
+    );
+
+    customerSetMapResult(
+      customerT("mapLocationError"),
+      "error"
+    );
+  } finally {
+    customerElements.chooseMapLocationButton.disabled = false;
+  }
+}
 async function customerUseLocation() {
   if (customerElements.orderType.value !== "Domicilio") {
     customerSetMapResult(customerT("locationDeliveryOnly"), "error");
@@ -6187,8 +6440,20 @@ customerElements.notifyButton.addEventListener("click", () => {
     customerSetTrackingStatus(customerT("notificationEnableError"), "error");
   });
 });
-customerElements.useLocationButton.addEventListener("click", customerUseLocation);
-customerElements.calculateDistanceButton.addEventListener("click", customerCalculateDistanceWithMaps);
+customerElements.useLocationButton.addEventListener(
+  "click",
+  customerUseLocation
+);
+
+customerElements.chooseMapLocationButton?.addEventListener(
+  "click",
+  customerChooseMapLocation
+);
+
+customerElements.calculateDistanceButton.addEventListener(
+  "click",
+  customerCalculateDistanceWithMaps
+);
 customerElements.chatSendButton.addEventListener("click", customerSendChatMessage);
 customerElements.sendButton.addEventListener("click", customerSendOrder);
 customerElements.paymentBox?.addEventListener("click", (event) => {
