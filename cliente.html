@@ -618,11 +618,23 @@
     
             <label>
               <span data-i18n="orderTypeLabel">Tipo de pedido</span>
-              <select id="customerOrderType">
-                <option value="Comer en el punto" data-i18n="eatHere">Comer en el punto</option>
-                <option value="Recoger en el punto" data-i18n="pickup">Para llevar / recoger en el punto</option>
-                <option value="Domicilio" data-i18n="delivery">Envio a domicilio</option>
-              </select>
+<select id="customerOrderType" required>
+  <option value="" selected disabled data-i18n="orderTypePlaceholder">
+    Selecciona cómo quieres recibir tu pedido
+  </option>
+
+  <option value="Comer en el punto" data-i18n="eatHere">
+    Comer en el punto
+  </option>
+
+  <option value="Recoger en el punto" data-i18n="pickup">
+    Recoger en el punto / para llevar
+  </option>
+
+  <option value="Domicilio" data-i18n="delivery">
+    Envío a domicilio
+  </option>
+</select>
             </label>
 
             <label>
