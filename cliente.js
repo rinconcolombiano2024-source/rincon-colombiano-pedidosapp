@@ -3921,249 +3921,665 @@ function customerApplyPlace(place, input) {
 
   if (!["PL", "CO"].includes(countryCode)) return;
 
-  const previousCountryCode = customerRegistrationRegion.countryCode;
-  const previousRegion = customerRegistrationRegion.region;
-
   const city = customerPlaceLocality(place);
+
   const region = customerNormalizedRegion(
     countryCode,
-    customerAddressComponent(place, ["administrative_area_level_1"])
+    customerAddressComponent(
+      place,
+      ["administrative_area_level_1"]
+    )
   );
-  const postalCode = customerAddressComponent(place, ["postal_code"]);
-  const street = customerAddressComponent(place, ["route"]);
-  const buildingNumber = customerAddressComponent(place, ["street_number"]);
+
+  const postalCode =
+    customerAddressComponent(
+      place,
+      ["postal_code"]
+    );
+
+  const street =
+    customerAddressComponent(
+      place,
+      ["route"]
+    );
+
+  const buildingNumber =
+    customerAddressComponent(
+      place,
+      ["street_number"]
+    );
 
   const neighborhood =
-    customerAddressComponent(place, ["sublocality_level_1"]) ||
-    customerAddressComponent(place, ["sublocality"]) ||
-    customerAddressComponent(place, ["neighborhood"]);
+    customerAddressComponent(
+      place,
+      ["sublocality_level_1"]
+    ) ||
+    customerAddressComponent(
+      place,
+      ["sublocality"]
+    ) ||
+    customerAddressComponent(
+      place,
+      ["neighborhood"]
+    );
 
-  const latitude = place.geometry?.location?.lat?.();
-  const longitude = place.geometry?.location?.lng?.();
+  const latitude =
+    place.geometry?.location?.lat?.();
 
-  const formattedAddress = customerNormalizeText(
-    place.formatted_address || place.name
-  );
+  const longitude =
+    place.geometry?.location?.lng?.();
 
-  customerRegistrationRegion = {
-    ...customerRegistrationRegion,
-    countryCode,
-    country: customerCountryName(countryCode),
-    region: region || customerRegistrationRegion.region,
-    city: city || customerRegistrationRegion.city,
-    postalCode: postalCode || customerRegistrationRegion.postalCode,
-    timezone: countryCode === "PL" ? "Europe/Warsaw" : "America/Bogota",
-    latitude: Number.isFinite(latitude)
-      ? latitude
-      : customerRegistrationRegion.latitude,
-    longitude: Number.isFinite(longitude)
-      ? longitude
-      : customerRegistrationRegion.longitude,
-  };
+  const hasCoords =
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude);
 
-  if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
-    customerLocationCoords = {
-      lat: latitude,
-      lng: longitude,
-    };
-  }
+  const formattedAddress =
+    customerNormalizeText(
+      place.formatted_address ||
+      place.name
+    );
 
-  if (customerElements.registerCountryInput) {
-    customerElements.registerCountryInput.value = countryCode;
-  }
+  const isRegisterCity =
+    input ===
+    customerElements.registerCityInput;
 
-  customerRenderRegistrationRegions(
-    countryCode,
-    customerRegistrationRegion.region
-  );
+  const isRegisterAddress =
+    input ===
+    customerElements.registerAddressInput;
 
-  if (customerElements.registerCityInput && city) {
-    customerElements.registerCityInput.value = city;
-  }
+  const isDeliveryCity =
+    input ===
+    customerElements.cityInput;
 
-  if (customerElements.registerPostalCodeInput && postalCode) {
-    customerElements.registerPostalCodeInput.value = postalCode;
-  }
+  const isDeliveryAddress =
+    input ===
+    customerElements.addressInput;
 
-  if (input === customerElements.cityInput) {
-    if (city) {
-      customerElements.cityInput.value = city;
-    }
 
-    if (postalCode && customerElements.postalCodeInput) {
-      customerElements.postalCodeInput.value = postalCode;
-    }
-
-    customerMapDistance = null;
-    customerLocationCoords =
-      Number.isFinite(latitude) && Number.isFinite(longitude)
-        ? { lat: latitude, lng: longitude }
-        : null;
-
-    if (customerElements.distanceInput) {
-      customerElements.distanceInput.value = "";
-    }
-  }
-
-  if (input === customerElements.registerAddressInput) {
-    if (formattedAddress) {
-      customerElements.registerAddressInput.value = formattedAddress;
-    }
-  }
-
-  if (input === customerElements.addressInput) {
-    if (street) {
-      customerElements.addressInput.value = street;
-    } else if (place.name) {
-      customerElements.addressInput.value = customerNormalizeText(place.name);
-    }
-
-    if (buildingNumber && customerElements.buildingNumberInput) {
-      customerElements.buildingNumberInput.value = buildingNumber;
-    }
-
-    if (city && customerElements.cityInput) {
-      customerElements.cityInput.value = city;
-    }
-
-    if (postalCode && customerElements.postalCodeInput) {
-      customerElements.postalCodeInput.value = postalCode;
-    }
-
-    if (neighborhood && customerElements.neighborhoodInput) {
-      customerElements.neighborhoodInput.value = neighborhood;
-    }
-
-    customerMapDistance = null;
-
-    if (customerElements.distanceInput) {
-      customerElements.distanceInput.value = "";
-    }
-  }
-
-  customerRenderLocationSummary();
-  customerRenderProfileDetails();
+  // =========================================================
+  // REGISTRO / PERFIL
+  // =========================================================
 
   if (
-    countryCode !== previousCountryCode ||
-    customerRegistrationRegion.region !== previousRegion
+    isRegisterCity ||
+    isRegisterAddress
   ) {
-    customerStopDirectoryRealtime();
-    customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
+    const previousCountryCode =
+      customerRegistrationRegion.countryCode;
+
+    const previousRegion =
+      customerRegistrationRegion.region;
+
+    customerRegistrationRegion = {
+      ...customerRegistrationRegion,
+
+      countryCode,
+
+      country:
+        customerCountryName(
+          countryCode
+        ),
+
+      region:
+        region ||
+        customerRegistrationRegion.region,
+
+      city:
+        city ||
+        customerRegistrationRegion.city,
+
+      postalCode:
+        postalCode ||
+        customerRegistrationRegion.postalCode,
+
+      timezone:
+        countryCode === "PL"
+          ? "Europe/Warsaw"
+          : "America/Bogota",
+
+      latitude:
+        hasCoords
+          ? latitude
+          : customerRegistrationRegion.latitude,
+
+      longitude:
+        hasCoords
+          ? longitude
+          : customerRegistrationRegion.longitude,
+    };
+
+    if (
+      customerElements.registerCountryInput
+    ) {
+      customerElements.registerCountryInput.value =
+        countryCode;
+    }
+
+    customerRenderRegistrationRegions(
+      countryCode,
+      customerRegistrationRegion.region
+    );
+
+    if (
+      customerElements.registerCityInput &&
+      city
+    ) {
+      customerElements.registerCityInput.value =
+        city;
+    }
+
+    if (
+      customerElements.registerPostalCodeInput &&
+      postalCode
+    ) {
+      customerElements.registerPostalCodeInput.value =
+        postalCode;
+    }
+
+    if (
+      isRegisterAddress &&
+      formattedAddress
+    ) {
+      customerElements.registerAddressInput.value =
+        formattedAddress;
+    }
+
+    customerRenderLocationSummary();
+    customerRenderProfileDetails();
+
+    if (
+      countryCode !== previousCountryCode ||
+      customerRegistrationRegion.region !==
+        previousRegion
+    ) {
+      customerStopDirectoryRealtime();
+
+      customerLoadRestaurantDirectory({
+        silent: true,
+      }).catch(() => {});
+    }
+
+    return;
+  }
+
+
+  // =========================================================
+  // PEDIDO ACTUAL — CIUDAD
+  // =========================================================
+
+  if (isDeliveryCity) {
+    if (city) {
+      customerElements.cityInput.value =
+        city;
+    } else if (place.name) {
+      customerElements.cityInput.value =
+        customerNormalizeText(
+          place.name
+        );
+    }
+
+    if (
+      postalCode &&
+      customerElements.postalCodeInput
+    ) {
+      customerElements.postalCodeInput.value =
+        postalCode;
+    }
+
+    customerMapDistance = null;
+
+    // Una ciudad NO es una ubicación exacta.
+    customerLocationCoords = null;
+
+    if (
+      customerElements.distanceInput
+    ) {
+      customerElements.distanceInput.value =
+        "";
+    }
+
+    customerRenderLocationSummary();
+    customerRenderProfileDetails();
+    customerRenderCart();
+
+    return;
+  }
+
+
+  // =========================================================
+  // PEDIDO ACTUAL — CALLE / DIRECCIÓN
+  // =========================================================
+
+  if (isDeliveryAddress) {
+    if (street) {
+      customerElements.addressInput.value =
+        street;
+    } else if (place.name) {
+      customerElements.addressInput.value =
+        customerNormalizeText(
+          place.name
+        );
+    }
+
+    if (
+      customerElements.buildingNumberInput
+    ) {
+      customerElements.buildingNumberInput.value =
+        buildingNumber || "";
+    }
+
+    if (
+      city &&
+      customerElements.cityInput
+    ) {
+      customerElements.cityInput.value =
+        city;
+    }
+
+    if (
+      postalCode &&
+      customerElements.postalCodeInput
+    ) {
+      customerElements.postalCodeInput.value =
+        postalCode;
+    }
+
+    if (
+      neighborhood &&
+      customerElements.neighborhoodInput
+    ) {
+      customerElements.neighborhoodInput.value =
+        neighborhood;
+    }
+
+    customerMapDistance = null;
+
+    customerLocationCoords =
+      buildingNumber &&
+      hasCoords
+        ? {
+            lat: latitude,
+            lng: longitude,
+          }
+        : null;
+
+    if (
+      customerElements.distanceInput
+    ) {
+      customerElements.distanceInput.value =
+        "";
+    }
+
+    customerRenderLocationSummary();
+    customerRenderProfileDetails();
+    customerRenderCart();
   }
 }
 async function customerPreparePlaceAutocomplete() {
   if (!customerSettings.googleMapsApiKey) return;
+
   await customerLoadGoogleMaps();
-  const selectedCountry = customerInputValue(customerElements.registerCountryInput).toLowerCase();
- const inputs = [
-  customerElements.registerCityInput,
-  customerElements.registerAddressInput,
-  customerElements.cityInput,
-  customerElements.addressInput,
-].filter(Boolean);
+
+  const selectedRestaurant = customerSelectedRestaurant();
+
+  const selectedCountry = String(
+    customerInputValue(customerElements.registerCountryInput) ||
+    customerRegistrationRegion.countryCode ||
+    selectedRestaurant?.countryCode ||
+    ""
+  )
+    .trim()
+    .toLowerCase();
+
+  const inputs = [
+    customerElements.registerCityInput,
+    customerElements.registerAddressInput,
+    customerElements.cityInput,
+    customerElements.addressInput,
+  ].filter(Boolean);
+
   inputs.forEach((input) => {
     let autocomplete = customerPlaceAutocompletes.get(input);
+
+    const isCityInput =
+      input === customerElements.registerCityInput ||
+      input === customerElements.cityInput;
+
     if (!autocomplete) {
-      const options = { fields: ["address_components", "formatted_address", "geometry", "name"] };
-      if (["pl", "co"].includes(selectedCountry)) options.componentRestrictions = { country: selectedCountry };
-      autocomplete = new google.maps.places.Autocomplete(input, options);
-      autocomplete.addListener("place_changed", () => customerApplyPlace(autocomplete.getPlace(), input));
-      customerPlaceAutocompletes.set(input, autocomplete);
+      const options = {
+        fields: [
+          "address_components",
+          "formatted_address",
+          "geometry",
+          "name",
+        ],
+        types: isCityInput
+          ? ["(cities)"]
+          : ["geocode"],
+      };
+
+      if (["pl", "co"].includes(selectedCountry)) {
+        options.componentRestrictions = {
+          country: selectedCountry,
+        };
+      }
+
+      autocomplete = new google.maps.places.Autocomplete(
+        input,
+        options
+      );
+
+      autocomplete.addListener(
+        "place_changed",
+        () => {
+          customerApplyPlace(
+            autocomplete.getPlace(),
+            input
+          );
+        }
+      );
+
+      customerPlaceAutocompletes.set(
+        input,
+        autocomplete
+      );
     } else if (["pl", "co"].includes(selectedCountry)) {
-      autocomplete.setComponentRestrictions({ country: selectedCountry });
+      autocomplete.setComponentRestrictions({
+        country: selectedCountry,
+      });
     }
   });
 }
-async function customerReverseGeocodeLocation(coords, options = {}) {
-  if (!coords || !customerSettings.googleMapsApiKey) return false;
+async function customerReverseGeocodeLocation(
+  coords,
+  options = {}
+) {
+  if (
+    !coords ||
+    !customerSettings.googleMapsApiKey
+  ) {
+    return false;
+  }
+
   await customerLoadGoogleMaps();
+
+  const preserveManual =
+    options.preserveManual === true;
+
   return new Promise((resolve) => {
-    const geocoder = new google.maps.Geocoder();
-    geocoder.geocode({ location: coords }, (results, status) => {
-      if (status !== "OK" || !results?.length) {
-        resolve(false);
-        return;
-      }
-      const result = results[0];
-      const approximateAddress = String(result.formatted_address || "")
-        .replace(/,\s*(Poland|Polska|Colombia)$/i, "")
-        .trim();
-      const neighborhood =
-        customerAddressComponent(result, ["sublocality"]) ||
-        customerAddressComponent(result, ["neighborhood"]) ||
-        customerAddressComponent(result, ["sublocality_level_1"]);
-      const countryCode = String(customerAddressComponent(result, ["country"], true)).toUpperCase();
-      const city = customerPlaceLocality(result);
-      const region = customerNormalizedRegion(
-        countryCode,
-        customerAddressComponent(result, ["administrative_area_level_1"])
-      );
-      const postalCode = customerAddressComponent(result, ["postal_code"]);
-      const previousCountryCode = customerRegistrationRegion.countryCode;
-      const selectedCountryCode = customerInputValue(customerElements.registerCountryInput).toUpperCase();
-      const preserveManual = options.preserveManual === true;
-      const detectedMatchesSelection = !selectedCountryCode || selectedCountryCode === countryCode;
-      const nextCountryCode = preserveManual && selectedCountryCode ? selectedCountryCode : countryCode;
-      const nextRegion = preserveManual && customerInputValue(customerElements.registerRegionInput)
-        ? customerInputValue(customerElements.registerRegionInput)
-        : detectedMatchesSelection
-          ? region
-          : customerRegistrationRegion.region;
-      const nextCity = preserveManual && customerInputValue(customerElements.registerCityInput)
-        ? customerInputValue(customerElements.registerCityInput)
-        : detectedMatchesSelection
-          ? city
-          : customerRegistrationRegion.city;
-      const nextPostalCode = preserveManual && customerInputValue(customerElements.registerPostalCodeInput)
-        ? customerInputValue(customerElements.registerPostalCodeInput)
-        : detectedMatchesSelection
-          ? postalCode
-          : customerRegistrationRegion.postalCode;
-      if (approximateAddress && (!preserveManual || detectedMatchesSelection)) {
-        customerElements.addressInput.value = approximateAddress;
-        if (customerElements.registerAddressInput && !customerElements.registerAddressInput.value.trim()) {
-          customerElements.registerAddressInput.value = approximateAddress;
+    const geocoder =
+      new google.maps.Geocoder();
+
+    geocoder.geocode(
+      { location: coords },
+      (results, status) => {
+        if (
+          status !== "OK" ||
+          !results?.length
+        ) {
+          resolve(false);
+          return;
         }
-      }
-      if ((neighborhood || city) && (!preserveManual || detectedMatchesSelection)) {
-        customerElements.neighborhoodInput.value = neighborhood || city;
-        if (customerElements.registerNeighborhoodInput && !customerElements.registerNeighborhoodInput.value.trim()) {
-          customerElements.registerNeighborhoodInput.value = neighborhood || city;
+
+        const result = results[0];
+
+        const countryCode = String(
+          customerAddressComponent(
+            result,
+            ["country"],
+            true
+          )
+        ).toUpperCase();
+
+        if (
+          !["PL", "CO"].includes(
+            countryCode
+          )
+        ) {
+          resolve(false);
+          return;
         }
+
+        const city =
+          customerPlaceLocality(result);
+
+        const region =
+          customerNormalizedRegion(
+            countryCode,
+            customerAddressComponent(
+              result,
+              [
+                "administrative_area_level_1",
+              ]
+            )
+          );
+
+        const postalCode =
+          customerAddressComponent(
+            result,
+            ["postal_code"]
+          );
+
+        const street =
+          customerAddressComponent(
+            result,
+            ["route"]
+          );
+
+        const buildingNumber =
+          customerAddressComponent(
+            result,
+            ["street_number"]
+          );
+
+        const neighborhood =
+          customerAddressComponent(
+            result,
+            ["sublocality_level_1"]
+          ) ||
+          customerAddressComponent(
+            result,
+            ["sublocality"]
+          ) ||
+          customerAddressComponent(
+            result,
+            ["neighborhood"]
+          );
+
+        const formattedAddress =
+          customerNormalizeText(
+            result.formatted_address || ""
+          );
+
+
+        // ================================================
+        // REGISTRO
+        // ================================================
+
+        if (preserveManual) {
+          const selectedCountryCode =
+            customerInputValue(
+              customerElements
+                .registerCountryInput
+            ).toUpperCase();
+
+          const detectedMatchesSelection =
+            !selectedCountryCode ||
+            selectedCountryCode ===
+              countryCode;
+
+          if (!detectedMatchesSelection) {
+            resolve(false);
+            return;
+          }
+
+          customerRegistrationRegion = {
+            ...customerRegistrationRegion,
+
+            countryCode,
+
+            country:
+              customerCountryName(
+                countryCode
+              ),
+
+            city:
+              customerInputValue(
+                customerElements
+                  .registerCityInput
+              ) ||
+              city ||
+              customerRegistrationRegion.city,
+
+            region:
+              customerInputValue(
+                customerElements
+                  .registerRegionInput
+              ) ||
+              region ||
+              customerRegistrationRegion.region,
+
+            postalCode:
+              customerInputValue(
+                customerElements
+                  .registerPostalCodeInput
+              ) ||
+              postalCode ||
+              customerRegistrationRegion.postalCode,
+
+            latitude:
+              Number(coords.lat),
+
+            longitude:
+              Number(coords.lng),
+
+            timezone:
+              countryCode === "PL"
+                ? "Europe/Warsaw"
+                : "America/Bogota",
+          };
+
+          if (
+            formattedAddress &&
+            customerElements
+              .registerAddressInput &&
+            !customerElements
+              .registerAddressInput.value
+              .trim()
+          ) {
+            customerElements
+              .registerAddressInput.value =
+              formattedAddress;
+          }
+
+          if (
+            neighborhood &&
+            customerElements
+              .registerNeighborhoodInput &&
+            !customerElements
+              .registerNeighborhoodInput
+              .value.trim()
+          ) {
+            customerElements
+              .registerNeighborhoodInput
+              .value = neighborhood;
+          }
+
+          customerRenderLocationSummary();
+          customerRenderProfileDetails();
+
+          resolve(
+            Boolean(
+              formattedAddress ||
+              city ||
+              street
+            )
+          );
+
+          return;
+        }
+
+
+        // ================================================
+        // PEDIDO ACTUAL — GPS / MAPA
+        // ================================================
+
+        if (
+          street &&
+          customerElements.addressInput
+        ) {
+          customerElements
+            .addressInput.value = street;
+        }
+
+        if (
+          customerElements
+            .buildingNumberInput
+        ) {
+          customerElements
+            .buildingNumberInput.value =
+            buildingNumber || "";
+        }
+
+        if (
+          city &&
+          customerElements.cityInput
+        ) {
+          customerElements.cityInput.value =
+            city;
+        }
+
+        if (
+          postalCode &&
+          customerElements
+            .postalCodeInput
+        ) {
+          customerElements
+            .postalCodeInput.value =
+            postalCode;
+        }
+
+        if (
+          neighborhood &&
+          customerElements
+            .neighborhoodInput
+        ) {
+          customerElements
+            .neighborhoodInput.value =
+            neighborhood;
+        }
+
+        customerMapDistance = null;
+
+        // Estas coordenadas vienen directamente
+        // de GPS o de una selección explícita
+        // en el mapa, por lo tanto sí son precisas.
+        customerLocationCoords = {
+          lat: Number(coords.lat),
+          lng: Number(coords.lng),
+        };
+
+        if (
+          customerElements.distanceInput
+        ) {
+          customerElements
+            .distanceInput.value = "";
+        }
+
+        customerRenderLocationSummary();
+        customerRenderProfileDetails();
+        customerRenderCart();
+
+        resolve(
+          Boolean(
+            street ||
+            buildingNumber ||
+            city ||
+            formattedAddress
+          )
+        );
       }
-      customerRegistrationRegion = {
-        ...customerRegistrationRegion,
-        countryCode: ["PL", "CO"].includes(nextCountryCode) ? nextCountryCode : customerRegistrationRegion.countryCode,
-        country: customerCountryName(nextCountryCode) || customerRegistrationRegion.country,
-        city: nextCity || customerRegistrationRegion.city,
-        region: nextRegion || customerRegistrationRegion.region,
-        postalCode: nextPostalCode || customerRegistrationRegion.postalCode,
-        latitude: preserveManual && !detectedMatchesSelection ? null : customerRegistrationRegion.latitude,
-        longitude: preserveManual && !detectedMatchesSelection ? null : customerRegistrationRegion.longitude,
-        timezone: nextCountryCode === "PL"
-          ? "Europe/Warsaw"
-          : nextCountryCode === "CO"
-            ? "America/Bogota"
-            : customerRegistrationRegion.timezone,
-      };
-      if (preserveManual && !detectedMatchesSelection) customerLocationCoords = null;
-      if (customerElements.registerCountryInput && ["PL", "CO"].includes(nextCountryCode)) {
-        customerElements.registerCountryInput.value = nextCountryCode;
-      }
-      customerRenderRegistrationRegions(customerRegistrationRegion.countryCode, customerRegistrationRegion.region);
-      if (customerRegistrationRegion.city && customerElements.registerCityInput) {
-        customerElements.registerCityInput.value = customerRegistrationRegion.city;
-      }
-      if (customerRegistrationRegion.postalCode && customerElements.registerPostalCodeInput) {
-        customerElements.registerPostalCodeInput.value = customerRegistrationRegion.postalCode;
-      }
-      if (nextCountryCode && nextCountryCode !== previousCountryCode) {
-        customerStopDirectoryRealtime();
-        customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
-      }
-      resolve(Boolean(approximateAddress || neighborhood || city));
-    });
+    );
   });
 }
 function customerGeocodeAddressForMap(address) {
@@ -4959,27 +5375,72 @@ function customerValidateOrderData() {
   }
 
   const isDelivery = orderType === "Domicilio";
+
   if (!customerElements.nameInput.value.trim()) {
-    customerSetStatus(customerT("nameRequired"), "error");
+    customerSetStatus(
+      customerT("nameRequired"),
+      "error"
+    );
     customerElements.nameInput.focus();
     return false;
   }
+
   if (!isDelivery) return true;
+
   if (!customerElements.phoneInput.value.trim()) {
-    customerSetStatus(customerT("phoneRequired"), "error");
+    customerSetStatus(
+      customerT("phoneRequired"),
+      "error"
+    );
     customerElements.phoneInput.focus();
     return false;
   }
-  if (!customerElements.addressInput.value.trim()) {
-    customerSetStatus(customerT("addressRequired"), "error");
-    customerElements.addressInput.focus();
+
+  const city = customerInputValue(
+    customerElements.cityInput
+  );
+
+  const street = customerInputValue(
+    customerElements.addressInput
+  );
+
+  const buildingNumber = customerInputValue(
+    customerElements.buildingNumberInput
+  );
+
+  const hasPreciseLocation =
+    Number.isFinite(Number(customerLocationCoords?.lat)) &&
+    Number.isFinite(Number(customerLocationCoords?.lng));
+
+  const hasStructuredAddress =
+    Boolean(city && street && buildingNumber);
+
+  if (!hasStructuredAddress && !hasPreciseLocation) {
+    customerSetStatus(
+      customerT("addressRequired"),
+      "error"
+    );
+
+    if (!city) {
+      customerElements.cityInput?.focus();
+    } else if (!street) {
+      customerElements.addressInput?.focus();
+    } else {
+      customerElements.buildingNumberInput?.focus();
+    }
+
     return false;
   }
+
   if (!customerDeliveryQuoteIsUsable()) {
-    customerSetStatus(customerT("deliveryQuoteRequired"), "error");
+    customerSetStatus(
+      customerT("deliveryQuoteRequired"),
+      "error"
+    );
     customerElements.calculateDistanceButton.focus();
     return false;
   }
+
   return true;
 }
 function customerGenerateId() {
