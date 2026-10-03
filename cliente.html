@@ -674,22 +674,98 @@
                 <span data-i18n="phoneLabel">Telefono</span>
                 <input id="customerPhoneInput" type="tel" placeholder="Numero de contacto" data-i18n-placeholder="phonePlaceholder" autocomplete="tel" />
               </label>
-              <label>
-                <span data-i18n="addressLabel">Direccion completa</span>
-                <input id="customerAddressInput" type="text" placeholder="Calle, numero, apartamento" data-i18n-placeholder="addressPlaceholder" autocomplete="street-address" />
-              </label>
-              <label>
-                <span data-i18n="neighborhoodLabel">Barrio / ciudad</span>
-                <input id="customerNeighborhoodInput" type="text" placeholder="Barrio o ciudad" data-i18n-placeholder="neighborhoodPlaceholder" autocomplete="address-level2" />
-              </label>
-              <label>
-                <span data-i18n="referenceLabel">Referencia</span>
-                <input id="customerReferenceInput" type="text" placeholder="Piso, timbre, instrucciones" data-i18n-placeholder="referencePlaceholder" autocomplete="off" />
-              </label>
-              <label>
-                <span data-i18n="distanceLabel">Distancia aproximada km</span>
-                <input id="customerDistanceInput" type="number" min="0" step="0.1" placeholder="Calculada automaticamente" data-i18n-placeholder="distancePlaceholder" inputmode="decimal" readonly aria-readonly="true" />
-              </label>
+ <label>
+  <span data-i18n="deliveryCityLabel">Ciudad</span>
+  <input
+    id="customerCityInput"
+    type="text"
+    placeholder="Empieza a escribir la ciudad"
+    data-i18n-placeholder="deliveryCityPlaceholder"
+    autocomplete="address-level2"
+  />
+</label>
+
+<label>
+  <span data-i18n="deliveryPostalCodeLabel">Código postal</span>
+  <input
+    id="customerPostalCodeInput"
+    type="text"
+    placeholder="Código postal (opcional)"
+    data-i18n-placeholder="deliveryPostalCodePlaceholder"
+    autocomplete="postal-code"
+  />
+</label>
+
+<label>
+  <span data-i18n="addressLabel">Calle / Ulica</span>
+  <input
+    id="customerAddressInput"
+    type="text"
+    placeholder="Empieza a escribir la calle, por ejemplo Potockich"
+    data-i18n-placeholder="addressPlaceholder"
+    autocomplete="address-line1"
+  />
+</label>
+
+<label>
+  <span data-i18n="buildingNumberLabel">Número de edificio / casa</span>
+  <input
+    id="customerBuildingNumberInput"
+    type="text"
+    placeholder="Ej: 33"
+    data-i18n-placeholder="buildingNumberPlaceholder"
+    autocomplete="off"
+    inputmode="text"
+  />
+</label>
+
+<label>
+  <span data-i18n="apartmentLabel">Apartamento / Lokal</span>
+  <input
+    id="customerApartmentInput"
+    type="text"
+    placeholder="Ej: 12 (opcional)"
+    data-i18n-placeholder="apartmentPlaceholder"
+    autocomplete="off"
+  />
+</label>
+
+<label>
+  <span data-i18n="neighborhoodLabel">Barrio / distrito</span>
+  <input
+    id="customerNeighborhoodInput"
+    type="text"
+    placeholder="Barrio o distrito (opcional)"
+    data-i18n-placeholder="neighborhoodPlaceholder"
+    autocomplete="address-level3"
+  />
+</label>
+
+<label>
+  <span data-i18n="referenceLabel">Referencia</span>
+  <input
+    id="customerReferenceInput"
+    type="text"
+    placeholder="Piso, puerta, timbre o instrucciones"
+    data-i18n-placeholder="referencePlaceholder"
+    autocomplete="off"
+  />
+</label>
+
+<label>
+  <span data-i18n="distanceLabel">Distancia aproximada km</span>
+  <input
+    id="customerDistanceInput"
+    type="number"
+    min="0"
+    step="0.1"
+    placeholder="Calculada automáticamente"
+    data-i18n-placeholder="distancePlaceholder"
+    inputmode="decimal"
+    readonly
+    aria-readonly="true"
+  />
+</label>
              <div class="customer-location-actions">
   <button
     class="customer-map-button"
