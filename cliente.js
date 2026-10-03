@@ -3792,18 +3792,21 @@ function customerDeliveryDestination() {
   const city = customerInputValue(customerElements.cityInput);
   const neighborhood = customerInputValue(customerElements.neighborhoodInput);
 
-  const countryCode = String(
-    customerRegistrationRegion.countryCode || ""
-  ).toUpperCase();
+const selectedRestaurant =
+  customerSelectedRestaurant();
 
-  const country =
-    customerRegistrationRegion.country ||
-    (countryCode === "PL"
-      ? "Poland"
-      : countryCode === "CO"
-        ? "Colombia"
-        : "");
+const countryCode = String(
+  selectedRestaurant?.countryCode || ""
+)
+  .trim()
+  .toUpperCase();
 
+const country =
+  countryCode === "PL"
+    ? "Poland"
+    : countryCode === "CO"
+      ? "Colombia"
+      : "";
   const streetLine = [
     street,
     buildingNumber,
@@ -4836,13 +4839,7 @@ async function customerUseLocation() {
         lat: position.coords.latitude,
         lng: position.coords.longitude,
       };
-      customerRegistrationRegion = {
-        ...customerRegistrationRegion,
-        ...customerDetectedRegion(position.coords),
-        city: customerRegistrationRegion.city,
-        region: customerRegistrationRegion.region,
-        postalCode: customerRegistrationRegion.postalCode,
-      };
+
       customerElements.addressInput.value = `${customerLocationCoords.lat.toFixed(6)}, ${customerLocationCoords.lng.toFixed(6)}`;
       customerSetMapResult(customerT("locationReceived"), "ok");
       try {
@@ -4897,17 +4894,28 @@ async function customerCalculateDistanceWithMaps() {
   customerSetMapResult(customerT("mapsCalculating"), "");
   customerElements.calculateDistanceButton.disabled = true;
   try {
-    const selectedRestaurant = customerSelectedRestaurant();
-    const countryCode = String(
-      customerRegistrationRegion.countryCode || selectedRestaurant?.countryCode || ""
-    ).trim().toUpperCase();
-    if (!["PL", "CO"].includes(countryCode)) throw new Error(customerT("registerCountryRequired"));
+const selectedRestaurant =
+  customerSelectedRestaurant();
+
+const countryCode = String(
+  selectedRestaurant?.countryCode ||
+  ""
+)
+  .trim()
+  .toUpperCase();
+
+if (!["PL", "CO"].includes(countryCode)) {
+  throw new Error(
+    customerT("registerCountryRequired")
+  );
+}
     const { data, error } = await customerClient.functions.invoke("delivery-quote", {
       body: {
         restaurantUserId: customerStoreId,
         destinationAddress: customerDeliveryDestination(),
         destinationCountryCode: countryCode,
-        destinationRegion: customerRegistrationRegion.region || selectedRestaurant?.region || "",
+destinationRegion:
+  selectedRestaurant?.region || "",
         destinationLat: customerLocationCoords?.lat ?? null,
         destinationLng: customerLocationCoords?.lng ?? null,
       },
@@ -4989,8 +4997,28 @@ function customerDeliveryPayload() {
   const minimumFee = customerNormalizeDeliveryMinimumFee(customerSettings.deliveryMinimumFee);
   const extraFee = customerNormalizeMoney(customerSettings.deliveryFee);
   const markupPercent = customerRoundMoney((CUSTOMER_DELIVERY_MARKUP - 1) * 100);
-  const currencyLabel = customerNormalizeText(customerSettings.currencySymbol || "");
-  return {
+const currencyLabel =
+  customerNormalizeText(
+    customerSettings.currencySymbol || ""
+  );
+
+const selectedRestaurant =
+  customerSelectedRestaurant();
+
+const deliveryCountryCode = String(
+  selectedRestaurant?.countryCode || ""
+)
+  .trim()
+  .toUpperCase();
+
+const deliveryCountry =
+  deliveryCountryCode === "PL"
+    ? "Poland"
+    : deliveryCountryCode === "CO"
+      ? "Colombia"
+      : "";
+
+return {
   name: customerElements.nameInput.value.trim(),
   phone: customerElements.phoneInput.value.trim(),
 
@@ -5003,18 +5031,21 @@ function customerDeliveryPayload() {
   neighborhood: customerInputValue(customerElements.neighborhoodInput),
   reference: customerInputValue(customerElements.referenceInput),
 
-  country: customerRegistrationRegion.country,
-  countryCode: customerRegistrationRegion.countryCode,
+country: deliveryCountry,
+countryCode: deliveryCountryCode,
 
-  city:
-    customerInputValue(customerElements.cityInput) ||
-    customerRegistrationRegion.city,
+city:
+  customerInputValue(
+    customerElements.cityInput
+  ),
 
-  region: customerRegistrationRegion.region,
+region:
+  selectedRestaurant?.region || "",
 
-  postalCode:
-    customerInputValue(customerElements.postalCodeInput) ||
-    customerRegistrationRegion.postalCode,
+postalCode:
+  customerInputValue(
+    customerElements.postalCodeInput
+  ),
     distanceKm,
     calculatedFee,
     minimumFee,
