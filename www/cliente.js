@@ -328,10 +328,23 @@ delivery: "Envío a domicilio",
     cardTerminal: "Datafono / tarjeta al recibir",
     phoneLabel: "Telefono",
     phonePlaceholder: "Numero de contacto",
-    addressLabel: "Direccion completa",
-    addressPlaceholder: "Calle, numero, apartamento",
-    neighborhoodLabel: "Barrio / ciudad",
-    neighborhoodPlaceholder: "Barrio o ciudad",
+deliveryCityLabel: "Ciudad",
+deliveryCityPlaceholder: "Ej: Warszawa",
+
+deliveryPostalCodeLabel: "Código postal",
+deliveryPostalCodePlaceholder: "Ej: 04-866",
+
+addressLabel: "Calle / vía",
+addressPlaceholder: "Ej: Potockich",
+
+buildingNumberLabel: "Número de edificio / casa",
+buildingNumberPlaceholder: "Ej: 33",
+
+apartmentLabel: "Apartamento / local",
+apartmentPlaceholder: "Ej: 12 (opcional)",
+
+neighborhoodLabel: "Barrio / distrito",
+neighborhoodPlaceholder: "Ej: Wawer (opcional)",
     referenceLabel: "Referencia",
     referencePlaceholder: "Piso, timbre, instrucciones",
     distanceLabel: "Distancia aproximada km",
@@ -412,7 +425,9 @@ calculateMaps: "Calcular con Google Maps",
     mapsResult: "Google Maps: {distance}{duration}. Domicilio: {fee}",
     mapsManual: "{error} Revisa la direccion e intenta nuevamente.",
     mapsFallback: "No se pudo calcular con Google Maps.",
-    manualDistanceHelp: "Escribe o confirma la direccion y pulsa Calcular con Google Maps.",
+    manualDistanceHelp: "Puedes escribir los kilómetros como referencia. La tarifa requiere una cotización validada; pulsa Calcular con Google Maps.",
+    manualDistanceNotice: "Distancia manual orientativa. No modifica la tarifa validada del domicilio.",
+    profileSaveChanges: "Guardar cambios",
     mapsLoadError: "No se pudo cargar Google Maps.",
     mapsResponseError: "Google Maps respondio: {status}",
     mapsRouteError: "No se pudo calcular ruta: {status}",
@@ -648,10 +663,23 @@ delivery: "Dostawa do domu",
     cardTerminal: "Terminal / karta przy odbiorze",
     phoneLabel: "Telefon",
     phonePlaceholder: "Numer kontaktowy",
-    addressLabel: "Pelny adres",
-    addressPlaceholder: "Ulica, numer, mieszkanie",
-    neighborhoodLabel: "Dzielnica / miasto",
-    neighborhoodPlaceholder: "Dzielnica lub miasto",
+  deliveryCityLabel: "Miasto",
+deliveryCityPlaceholder: "Np. Warszawa",
+
+deliveryPostalCodeLabel: "Kod pocztowy",
+deliveryPostalCodePlaceholder: "Np. 04-866",
+
+addressLabel: "Ulica",
+addressPlaceholder: "Np. Potockich",
+
+buildingNumberLabel: "Numer budynku / domu",
+buildingNumberPlaceholder: "Np. 33",
+
+apartmentLabel: "Numer mieszkania / lokalu",
+apartmentPlaceholder: "Np. 12 (opcjonalnie)",
+
+neighborhoodLabel: "Dzielnica",
+neighborhoodPlaceholder: "Np. Wawer (opcjonalnie)",
     referenceLabel: "Wskazowki",
     referencePlaceholder: "Pietro, domofon, instrukcje",
     distanceLabel: "Przyblizona odleglosc km",
@@ -732,7 +760,9 @@ kitchenNotesLabel: "Uwagi do kuchni",
     mapsResult: "Google Maps: {distance}{duration}. Dostawa: {fee}",
     mapsManual: "{error} Sprawdz adres i sprobuj ponownie.",
     mapsFallback: "Nie udalo sie obliczyc w Google Maps.",
-    manualDistanceHelp: "Wpisz lub potwierdz adres i nacisnij Oblicz z Google Maps.",
+    manualDistanceHelp: "Możesz wpisać orientacyjną liczbę kilometrów. Opłata wymaga potwierdzonej wyceny; wybierz Oblicz z Google Maps.",
+    manualDistanceNotice: "Ręcznie wpisana odległość jest orientacyjna. Nie zmienia potwierdzonej opłaty za dostawę.",
+    profileSaveChanges: "Zapisz zmiany",
     mapsLoadError: "Nie udalo sie zaladowac Google Maps.",
     mapsResponseError: "Google Maps odpowiedzial: {status}",
     mapsRouteError: "Nie udalo sie obliczyc trasy: {status}",
@@ -968,10 +998,23 @@ delivery: "Home delivery",
     cardTerminal: "Card terminal on delivery",
     phoneLabel: "Phone",
     phonePlaceholder: "Contact number",
-    addressLabel: "Full address",
-    addressPlaceholder: "Street, number, apartment",
-    neighborhoodLabel: "Neighborhood / city",
-    neighborhoodPlaceholder: "Neighborhood or city",
+deliveryCityLabel: "City",
+deliveryCityPlaceholder: "Example: Warsaw",
+
+deliveryPostalCodeLabel: "Postal code",
+deliveryPostalCodePlaceholder: "Example: 04-866",
+
+addressLabel: "Street",
+addressPlaceholder: "Example: Potockich",
+
+buildingNumberLabel: "Building / house number",
+buildingNumberPlaceholder: "Example: 33",
+
+apartmentLabel: "Apartment / unit",
+apartmentPlaceholder: "Example: 12 (optional)",
+
+neighborhoodLabel: "Neighborhood / district",
+neighborhoodPlaceholder: "Example: Wawer (optional)",
     referenceLabel: "Reference",
     referencePlaceholder: "Floor, doorbell, instructions",
     distanceLabel: "Approximate distance km",
@@ -1052,7 +1095,9 @@ kitchenNotesLabel: "Kitchen notes",
     mapsResult: "Google Maps: {distance}{duration}. Delivery: {fee}",
     mapsManual: "{error} Check the address and try again.",
     mapsFallback: "Could not calculate with Google Maps.",
-    manualDistanceHelp: "Enter or confirm the address, then select Calculate with Google Maps.",
+    manualDistanceHelp: "You can enter an estimated distance. The delivery fee requires a validated quote; select Calculate with Google Maps.",
+    manualDistanceNotice: "The manual distance is an estimate. It does not change the validated delivery fee.",
+    profileSaveChanges: "Save changes",
     mapsLoadError: "Could not load Google Maps.",
     mapsResponseError: "Google Maps responded: {status}",
     mapsRouteError: "Could not calculate route: {status}",
@@ -1747,15 +1792,15 @@ function customerRenderProfileDetails() {
   customerElements.profileEditActions.hidden = !customerUser;
 }
   const fullName = customerNormalizeText(
-    customerElements.nameInput?.value || customerElements.registerNameInput?.value
+    customerElements.registerNameInput?.value
   );
   const phone = customerNormalizeText(
-    customerElements.phoneInput?.value || customerElements.registerPhoneInput?.value
+    customerElements.registerPhoneInput?.value
   );
   const address = customerNormalizeText(
     [
-      customerElements.addressInput?.value || customerElements.registerAddressInput?.value,
-      customerElements.neighborhoodInput?.value || customerElements.registerNeighborhoodInput?.value,
+      customerElements.registerAddressInput?.value,
+      customerElements.registerNeighborhoodInput?.value,
     ]
       .filter(Boolean)
       .join(", ")
@@ -1996,12 +2041,10 @@ function customerSetInputIfEmpty(input, value) {
 function customerRegisteredAddressPayload() {
   customerRegistrationRegion = customerSyncRegistrationRegionFromInputs();
   return {
-    table: customerInputValue(customerElements.tableInput),
-    address: customerInputValue(customerElements.registerAddressInput) || customerInputValue(customerElements.addressInput),
+    address: customerInputValue(customerElements.registerAddressInput),
     neighborhood:
-      customerInputValue(customerElements.registerNeighborhoodInput) || customerInputValue(customerElements.neighborhoodInput),
-    reference: customerInputValue(customerElements.registerReferenceInput) || customerInputValue(customerElements.referenceInput),
-    distanceKm: customerInputValue(customerElements.distanceInput),
+      customerInputValue(customerElements.registerNeighborhoodInput),
+    reference: customerInputValue(customerElements.registerReferenceInput),
     country: customerRegistrationRegion.country,
     countryCode: customerRegistrationRegion.countryCode,
     city: customerRegistrationRegion.city,
@@ -2513,14 +2556,12 @@ function customerProfilePayload() {
   const registeredAddress = customerRegisteredAddressPayload();
   return {
     user_id: customerUser.id,
-    full_name: customerInputValue(customerElements.nameInput) || customerInputValue(customerElements.registerNameInput),
-    phone: customerInputValue(customerElements.phoneInput) || customerInputValue(customerElements.registerPhoneInput),
+    full_name: customerInputValue(customerElements.registerNameInput),
+    phone: customerInputValue(customerElements.registerPhoneInput),
     default_address: {
-      table: customerInputValue(customerElements.tableInput) || registeredAddress.table,
-      address: customerInputValue(customerElements.addressInput) || registeredAddress.address,
-      neighborhood: customerInputValue(customerElements.neighborhoodInput) || registeredAddress.neighborhood,
-      reference: customerInputValue(customerElements.referenceInput) || registeredAddress.reference,
-      distanceKm: customerInputValue(customerElements.distanceInput) || registeredAddress.distanceKm,
+      address: registeredAddress.address,
+      neighborhood: registeredAddress.neighborhood,
+      reference: registeredAddress.reference,
       country: registeredAddress.country,
       countryCode: registeredAddress.countryCode,
       city: registeredAddress.city,
@@ -2819,9 +2860,7 @@ async function customerRepeatHistoryOrder(orderId) {
     return;
   }
   customerCart = repeatedItems;
-  if (["Comer en el punto", "Recoger en el punto", "Domicilio"].includes(row.order_type)) {
-    customerElements.orderType.value = row.order_type;
-  }
+  customerElements.orderType.value = "";
   customerRenderDeliveryFields();
   customerRenderCart();
   customerSetView("store");
@@ -4225,10 +4264,9 @@ async function customerPreparePlaceAutocomplete() {
 
   const selectedRestaurant = customerSelectedRestaurant();
 
-  const selectedCountry = String(
+  const registrationCountry = String(
     customerInputValue(customerElements.registerCountryInput) ||
     customerRegistrationRegion.countryCode ||
-    selectedRestaurant?.countryCode ||
     ""
   )
     .trim()
@@ -4243,6 +4281,12 @@ async function customerPreparePlaceAutocomplete() {
 
   inputs.forEach((input) => {
     let autocomplete = customerPlaceAutocompletes.get(input);
+    const isRegistrationInput =
+      input === customerElements.registerCityInput ||
+      input === customerElements.registerAddressInput;
+    const selectedCountry = isRegistrationInput
+      ? registrationCountry
+      : String(selectedRestaurant?.countryCode || "").trim().toLowerCase();
 
     const isCityInput =
       input === customerElements.registerCityInput ||
@@ -4286,10 +4330,10 @@ async function customerPreparePlaceAutocomplete() {
         input,
         autocomplete
       );
-    } else if (["pl", "co"].includes(selectedCountry)) {
-      autocomplete.setComponentRestrictions({
-        country: selectedCountry,
-      });
+    } else {
+      autocomplete.setComponentRestrictions(
+        ["pl", "co"].includes(selectedCountry) ? { country: selectedCountry } : {}
+      );
     }
   });
 }
@@ -4840,7 +4884,12 @@ async function customerUseLocation() {
         lng: position.coords.longitude,
       };
 
-      customerElements.addressInput.value = `${customerLocationCoords.lat.toFixed(6)}, ${customerLocationCoords.lng.toFixed(6)}`;
+      customerMapDistance = null;
+
+      if (customerElements.distanceInput) {
+        customerElements.distanceInput.value = "";
+      }
+
       customerSetMapResult(customerT("locationReceived"), "ok");
       try {
         if (customerSettings.googleMapsApiKey) {
@@ -4990,7 +5039,9 @@ function customerRenderDeliveryFields() {
 }
 function customerDeliveryPayload() {
   if (customerElements.orderType.value !== "Domicilio") return null;
-  const distanceKm = customerNormalizeDistance(customerElements.distanceInput.value);
+  const distanceKm = customerDeliveryQuoteIsUsable()
+    ? customerNormalizeDistance(customerMapDistance.distanceKm)
+    : 0;
   const calculatedFee = customerDeliveryQuoteIsUsable()
     ? customerRoundMoney(customerMapDistance.finalFee)
     : 0;
@@ -5395,7 +5446,7 @@ function customerValidateOrderData() {
     customerElements.orderType.value || ""
   ).trim();
 
-  if (!orderType) {
+  if (!["Comer en el punto", "Recoger en el punto", "Domicilio"].includes(orderType)) {
     customerSetStatus(
       customerT("orderTypeRequired"),
       "error"
@@ -5440,8 +5491,12 @@ function customerValidateOrderData() {
   );
 
   const hasPreciseLocation =
-    Number.isFinite(Number(customerLocationCoords?.lat)) &&
-    Number.isFinite(Number(customerLocationCoords?.lng));
+    typeof customerLocationCoords?.lat === "number" &&
+    typeof customerLocationCoords?.lng === "number" &&
+    Number.isFinite(customerLocationCoords.lat) &&
+    Number.isFinite(customerLocationCoords.lng) &&
+    Math.abs(customerLocationCoords.lat) <= 90 &&
+    Math.abs(customerLocationCoords.lng) <= 180;
 
   const hasStructuredAddress =
     Boolean(city && street && buildingNumber);
@@ -6735,8 +6790,11 @@ if (/ORDER_RATE_LIMITED/i.test(String(error?.message || ""))) {
   }
   customerCart = [];
   customerMapDistance = null;
+  customerLocationCoords = null;
+  customerElements.orderType.value = "";
   customerElements.distanceInput.value = "";
   customerElements.notesInput.value = "";
+  customerRenderDeliveryFields();
   customerRenderCart();
   if (insertedOrder.trackingAvailable) {
     customerStartStatusTracking(insertedOrder.id, insertedOrder.publicToken, paymentMethod, "");
@@ -7008,7 +7066,17 @@ customerElements.orderType.addEventListener("change", () => {
   customerRenderSelectedRestaurantDetails();
 });
 customerElements.paymentMethod.addEventListener("change", customerRenderCart);
-customerElements.distanceInput.addEventListener("input", customerRenderCart);
+if (customerElements.distanceInput) {
+  customerElements.distanceInput.readOnly = false;
+  customerElements.distanceInput.disabled = false;
+  customerElements.distanceInput.min = "0";
+  customerElements.distanceInput.step = "any";
+  customerElements.distanceInput.inputMode = "decimal";
+  customerElements.distanceInput.addEventListener("input", () => {
+    customerSetMapResult(customerT("manualDistanceNotice"), "");
+    customerRenderCart();
+  });
+}
 customerElements.languageSelect.addEventListener("change", () => customerSetLanguage(customerElements.languageSelect.value));
 customerElements.registerCountryInput?.addEventListener("change", () => {
   const countryCode = customerInputValue(customerElements.registerCountryInput).toUpperCase();
@@ -7139,16 +7207,16 @@ customerElements.viewButtons.forEach((button) => {
 customerElements.editProfileButton?.addEventListener("click", () => {
   if (!customerUser) return;
   const fullName = customerNormalizeText(
-    customerElements.nameInput?.value || customerElements.registerNameInput?.value
+    customerElements.registerNameInput?.value
   );
   const phone = customerNormalizeText(
-    customerElements.phoneInput?.value || customerElements.registerPhoneInput?.value
+    customerElements.registerPhoneInput?.value
   );
   const address = customerNormalizeText(
-    customerElements.addressInput?.value || customerElements.registerAddressInput?.value
+    customerElements.registerAddressInput?.value
   );
   const neighborhood = customerNormalizeText(
-    customerElements.neighborhoodInput?.value || customerElements.registerNeighborhoodInput?.value
+    customerElements.registerNeighborhoodInput?.value
   );
   customerElements.profileDetails.innerHTML = `
     <label>
@@ -7164,15 +7232,15 @@ customerElements.editProfileButton?.addEventListener("click", () => {
       <input id="customerProfileEditAddress" type="text" value="${customerEscapeHtml(address)}">
     </label>
     <label>
-      <span>Barrio / ciudad</span>
+      <span>${customerEscapeHtml(customerT("neighborhoodLabel"))}</span>
       <input id="customerProfileEditNeighborhood" type="text" value="${customerEscapeHtml(neighborhood)}">
     </label>
     <div class="customer-profile-edit-buttons">
       <button class="customer-map-button" id="customerProfileSaveButton" type="button">
-        Guardar cambios
+        ${customerEscapeHtml(customerT("profileSaveChanges"))}
       </button>
       <button class="customer-map-button" id="customerProfileCancelButton" type="button">
-        Cancelar
+        ${customerEscapeHtml(customerT("cancel"))}
       </button>
     </div>
   `;
@@ -7197,18 +7265,6 @@ customerElements.editProfileButton?.addEventListener("click", () => {
     const newNeighborhood = customerNormalizeText(
       document.querySelector("#customerProfileEditNeighborhood")?.value
     );
-    if (customerElements.nameInput) {
-      customerElements.nameInput.value = newName;
-    }
-    if (customerElements.phoneInput) {
-      customerElements.phoneInput.value = newPhone;
-    }
-    if (customerElements.addressInput) {
-      customerElements.addressInput.value = newAddress;
-    }
-    if (customerElements.neighborhoodInput) {
-      customerElements.neighborhoodInput.value = newNeighborhood;
-    }
     if (customerElements.registerNameInput) {
   customerElements.registerNameInput.value =
     newName;
