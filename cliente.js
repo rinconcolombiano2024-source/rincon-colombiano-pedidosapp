@@ -3875,7 +3875,6 @@ const safeNeighborhood =
 
 return [
   streetLine,
-  safeNeighborhood,
   cityLine,
   country,
 ]
