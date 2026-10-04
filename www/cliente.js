@@ -3847,23 +3847,40 @@ const country =
       ? "Colombia"
       : "";
   const streetLine = [
-    street,
-    buildingNumber,
-  ].filter(Boolean).join(" ");
+  street,
+  buildingNumber,
+]
+  .filter(Boolean)
+  .join(" ");
 
-  const cityLine = [
-    postalCode,
-    city,
-  ].filter(Boolean).join(" ");
+const cityLine = [
+  postalCode,
+  city,
+]
+  .filter(Boolean)
+  .join(" ");
 
-  return [
-    streetLine,
-    neighborhood,
-    cityLine,
-    country,
-  ]
-    .filter(Boolean)
-    .join(", ");
+const normalizedCity =
+  customerNormalizeSearchText(city);
+
+const normalizedNeighborhood =
+  customerNormalizeSearchText(neighborhood);
+
+const safeNeighborhood =
+  neighborhood &&
+  normalizedNeighborhood &&
+  normalizedNeighborhood !== normalizedCity
+    ? neighborhood
+    : "";
+
+return [
+  streetLine,
+  safeNeighborhood,
+  cityLine,
+  country,
+]
+  .filter(Boolean)
+  .join(", ");
 }
 function customerDeliveryDestinationForMaps() {
   if (customerLocationCoords && window.google?.maps?.LatLng) {
@@ -3991,20 +4008,25 @@ function customerApplyPlace(place, input) {
       ["street_number"]
     );
 
-  const neighborhood =
-    customerAddressComponent(
-      place,
-      ["sublocality_level_1"]
-    ) ||
-    customerAddressComponent(
-      place,
-      ["sublocality"]
-    ) ||
-    customerAddressComponent(
-      place,
-      ["neighborhood"]
-    );
+const rawNeighborhood =
+  customerAddressComponent(
+    place,
+    ["sublocality_level_1"]
+  ) ||
+  customerAddressComponent(
+    place,
+    ["sublocality"]
+  ) ||
+  customerAddressComponent(
+    place,
+    ["neighborhood"]
+  );
 
+const neighborhood =
+  customerNormalizeSearchText(rawNeighborhood) ===
+  customerNormalizeSearchText(city)
+    ? ""
+    : rawNeighborhood;
   const latitude =
     place.geometry?.location?.lat?.();
 
@@ -4419,19 +4441,25 @@ async function customerReverseGeocodeLocation(
             ["street_number"]
           );
 
-        const neighborhood =
-          customerAddressComponent(
-            result,
-            ["sublocality_level_1"]
-          ) ||
-          customerAddressComponent(
-            result,
-            ["sublocality"]
-          ) ||
-          customerAddressComponent(
-            result,
-            ["neighborhood"]
-          );
+const rawNeighborhood =
+  customerAddressComponent(
+    result,
+    ["sublocality_level_1"]
+  ) ||
+  customerAddressComponent(
+    result,
+    ["sublocality"]
+  ) ||
+  customerAddressComponent(
+    result,
+    ["neighborhood"]
+  );
+
+const neighborhood =
+  customerNormalizeSearchText(rawNeighborhood) ===
+  customerNormalizeSearchText(city)
+    ? ""
+    : rawNeighborhood;
 
         const formattedAddress =
           customerNormalizeText(
