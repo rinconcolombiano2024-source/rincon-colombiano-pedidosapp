@@ -143,11 +143,75 @@ Deno.serve(async (request) => {
   const detectedRegion = String(
     addressComponent(geocodeResult, "administrative_area_level_1")?.long_name || destinationRegion,
   ).trim().slice(0, 160);
-  const verifiedLat = finiteCoordinate(geocodeResult?.geometry?.location?.lat, -90, 90);
-  const verifiedLng = finiteCoordinate(geocodeResult?.geometry?.location?.lng, -180, 180);
-  const verifiedAddress = String(geocodeResult?.formatted_address || destinationAddress).trim().slice(0, 500);
+const verifiedLat = finiteCoordinate(
+  geocodeResult?.geometry?.location?.lat,
+  -90,
+  90,
+);
 
-  const routeRequest = {
+const verifiedLng = finiteCoordinate(
+  geocodeResult?.geometry?.location?.lng,
+  -180,
+  180,
+);
+
+const verifiedAddress = String(
+  geocodeResult?.formatted_address || destinationAddress,
+)
+  .trim()
+  .slice(0, 500);
+
+const verifiedCity = String(
+  addressComponent(geocodeResult, "locality")?.long_name
+    || addressComponent(geocodeResult, "postal_town")?.long_name
+    || addressComponent(geocodeResult, "administrative_area_level_2")?.long_name
+    || "",
+)
+  .trim()
+  .slice(0, 160);
+
+const verifiedStreet = String(
+  addressComponent(geocodeResult, "route")?.long_name || "",
+)
+  .trim()
+  .slice(0, 220);
+
+const verifiedBuildingNumber = String(
+  addressComponent(geocodeResult, "street_number")?.long_name || "",
+)
+  .trim()
+  .slice(0, 80);
+
+const verifiedPostalCode = String(
+  addressComponent(geocodeResult, "postal_code")?.long_name || "",
+)
+  .trim()
+  .slice(0, 40);
+
+const verifiedNeighborhood = String(
+  addressComponent(geocodeResult, "sublocality_level_1")?.long_name
+    || addressComponent(geocodeResult, "neighborhood")?.long_name
+    || "",
+)
+  .trim()
+  .slice(0, 160);
+
+/*
+ * P0 SECURITY:
+ * Una cotización de domicilio debe terminar siempre
+ * en unas coordenadas reales verificadas por Google.
+ */
+if (
+  verifiedLat === null
+  || verifiedLng === null
+  || verifiedAddress.length < 5
+) {
+  return response(422, {
+    error: "Delivery address could not be verified precisely",
+  });
+}
+
+const routeRequest = {
     origin: waypoint(originAddress, originLat, originLng),
     destination: waypoint(verifiedAddress, verifiedLat, verifiedLng),
     travelMode: "DRIVE",
@@ -203,14 +267,37 @@ Deno.serve(async (request) => {
   if (!quote?.quote_id || !quote?.quote_token) {
     return response(500, { error: "Delivery quote was not created" });
   }
-  return response(200, {
-    quoteId: quote.quote_id,
-    quoteToken: quote.quote_token,
-    distanceKm: Number(quote.distance_km),
-    durationSeconds: Number(quote.duration_seconds) || 0,
-    finalFee: Number(quote.final_fee),
-    currency: quote.currency,
-    expiresAt: quote.expires_at,
-    feeBreakdown: quote.fee_breakdown || {},
-  });
+return response(200, {
+  quoteId: quote.quote_id,
+  quoteToken: quote.quote_token,
+
+  distanceKm: Number(quote.distance_km),
+  durationSeconds: Number(quote.duration_seconds) || 0,
+
+  finalFee: Number(quote.final_fee),
+  currency: quote.currency,
+
+  expiresAt: quote.expires_at,
+  feeBreakdown: quote.fee_breakdown || {},
+
+  /*
+   * Destino canónico verificado por Google.
+   *
+   * Estos valores son informativos para el frontend.
+   * La base de datos sigue siendo la autoridad final
+   * gracias a V91-31.
+   */
+  verifiedAddress,
+  verifiedLat,
+  verifiedLng,
+
+  verifiedCountryCode: detectedCountry,
+  verifiedRegion: detectedRegion,
+
+  verifiedCity,
+  verifiedStreet,
+  verifiedBuildingNumber,
+  verifiedPostalCode,
+  verifiedNeighborhood,
+});
 });
