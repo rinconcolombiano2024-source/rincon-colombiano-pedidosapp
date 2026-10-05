@@ -133,9 +133,29 @@ Deno.serve(async (request) => {
   const geocodeResponse = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?${geocodeParams.toString()}`);
   const geocodeBody = await geocodeResponse.json().catch(() => ({}));
   const geocodeResult = geocodeBody?.results?.[0];
-  if (!geocodeResponse.ok || geocodeBody?.status !== "OK" || !geocodeResult) {
-    return response(422, { error: "Delivery address could not be verified" });
-  }
+ if (
+  !geocodeResponse.ok
+  || geocodeBody?.status !== "OK"
+  || !geocodeResult
+) {
+  return response(422, {
+    error: "Delivery address could not be verified",
+    provider: "google_geocoding",
+    providerStatus:
+      String(
+        geocodeBody?.status
+        || geocodeResponse.status
+        || "UNKNOWN"
+      ),
+    providerMessage:
+      String(
+        geocodeBody?.error_message
+        || ""
+      )
+        .trim()
+        .slice(0, 300),
+  });
+}
   const detectedCountry = String(addressComponent(geocodeResult, "country")?.short_name || "").toUpperCase();
   if (detectedCountry !== countryCode) {
     return response(409, { error: "Restaurant country does not match delivery country" });
