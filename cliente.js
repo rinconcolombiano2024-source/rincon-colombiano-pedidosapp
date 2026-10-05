@@ -4920,7 +4920,14 @@ async function customerUseLocation() {
       customerSetMapResult(customerT("locationReceived"), "ok");
       try {
         if (customerSettings.googleMapsApiKey) {
-          const addressFilled = await customerReverseGeocodeLocation(customerLocationCoords);
+          const addressFilled = await customerReverseGeocodeLocation(
+  customerLocationCoords
+).catch(() => {
+  console.warn(
+    "No se pudo obtener la direccion desde el GPS; se intentara cotizar con las coordenadas."
+  );
+  return false;
+});
           customerRenderLocationSummary();
           customerSetMapResult(
             addressFilled ? customerT("locationAddressFilled") : customerT("locationAddressUnavailable"),
