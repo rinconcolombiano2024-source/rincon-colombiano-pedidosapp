@@ -5007,21 +5007,173 @@ destinationRegion:
     if (!data?.quoteId || !data?.quoteToken || !(Number(data?.distanceKm) > 0)) {
       throw new Error(customerT("mapsRouteError", { status: "sin ruta" }));
     }
-    customerMapDistance = {
-      quoteId: data.quoteId,
-      quoteToken: data.quoteToken,
-      expiresAt: data.expiresAt,
-      distanceKm: Number(data.distanceKm),
-      distanceText: `${Number(data.distanceKm).toFixed(1)} km`,
-      durationSeconds: Number(data.durationSeconds) || 0,
-      durationText: Number(data.durationSeconds) > 0
-        ? `${Math.max(1, Math.round(Number(data.durationSeconds) / 60))} min`
-        : "",
-      finalFee: Number(data.finalFee) || 0,
-      feeBreakdown: data.feeBreakdown || {},
-      origin: customerSettings.restaurantAddress || "",
-      destination: customerDeliveryDestination(),
-    };
+   const verifiedLat =
+  Number(data.verifiedLat);
+
+const verifiedLng =
+  Number(data.verifiedLng);
+
+const hasVerifiedCoords =
+  Number.isFinite(verifiedLat)
+  && verifiedLat >= -90
+  && verifiedLat <= 90
+  && Number.isFinite(verifiedLng)
+  && verifiedLng >= -180
+  && verifiedLng <= 180;
+
+if (hasVerifiedCoords) {
+  customerLocationCoords = {
+    lat: verifiedLat,
+    lng: verifiedLng,
+  };
+}
+
+/*
+ * Sincronizamos los campos visibles con el destino
+ * que Google acaba de verificar.
+ *
+ * No disparamos eventos "input", así que la cotización
+ * recién creada no se invalida accidentalmente.
+ */
+if (
+  customerElements.addressInput
+  && data.verifiedStreet
+) {
+  customerElements.addressInput.value =
+    String(data.verifiedStreet).trim();
+}
+
+if (
+  customerElements.buildingNumberInput
+  && data.verifiedBuildingNumber
+) {
+  customerElements.buildingNumberInput.value =
+    String(data.verifiedBuildingNumber).trim();
+}
+
+if (
+  customerElements.cityInput
+  && data.verifiedCity
+) {
+  customerElements.cityInput.value =
+    String(data.verifiedCity).trim();
+}
+
+if (
+  customerElements.postalCodeInput
+  && data.verifiedPostalCode
+) {
+  customerElements.postalCodeInput.value =
+    String(data.verifiedPostalCode).trim();
+}
+
+if (
+  customerElements.neighborhoodInput
+  && data.verifiedNeighborhood
+) {
+  customerElements.neighborhoodInput.value =
+    String(data.verifiedNeighborhood).trim();
+}
+
+customerMapDistance = {
+  quoteId:
+    data.quoteId,
+
+  quoteToken:
+    data.quoteToken,
+
+  expiresAt:
+    data.expiresAt,
+
+  distanceKm:
+    Number(data.distanceKm),
+
+  distanceText:
+    `${Number(data.distanceKm).toFixed(1)} km`,
+
+  durationSeconds:
+    Number(data.durationSeconds) || 0,
+
+  durationText:
+    Number(data.durationSeconds) > 0
+      ? `${Math.max(
+          1,
+          Math.round(
+            Number(data.durationSeconds) / 60
+          )
+        )} min`
+      : "",
+
+  finalFee:
+    Number(data.finalFee) || 0,
+
+  feeBreakdown:
+    data.feeBreakdown || {},
+
+  origin:
+    customerSettings.restaurantAddress || "",
+
+  /*
+   * IMPORTANTE:
+   * El destino mostrado/transportado pasa a ser
+   * el destino canónico validado por Google.
+   */
+  destination:
+    String(
+      data.verifiedAddress
+      || customerDeliveryDestination()
+    ).trim(),
+
+  verifiedAddress:
+    String(data.verifiedAddress || "").trim(),
+
+  verifiedLat:
+    hasVerifiedCoords
+      ? verifiedLat
+      : null,
+
+  verifiedLng:
+    hasVerifiedCoords
+      ? verifiedLng
+      : null,
+
+  verifiedCountryCode:
+    String(
+      data.verifiedCountryCode || ""
+    )
+      .trim()
+      .toUpperCase(),
+
+  verifiedRegion:
+    String(
+      data.verifiedRegion || ""
+    ).trim(),
+
+  verifiedCity:
+    String(
+      data.verifiedCity || ""
+    ).trim(),
+
+  verifiedStreet:
+    String(
+      data.verifiedStreet || ""
+    ).trim(),
+
+  verifiedBuildingNumber:
+    String(
+      data.verifiedBuildingNumber || ""
+    ).trim(),
+
+  verifiedPostalCode:
+    String(
+      data.verifiedPostalCode || ""
+    ).trim(),
+
+  verifiedNeighborhood:
+    String(
+      data.verifiedNeighborhood || ""
+    ).trim(),
+};
     customerElements.distanceInput.value = customerMapDistance.distanceKm;
     customerRenderLocationSummary();
     customerSetMapResult(
