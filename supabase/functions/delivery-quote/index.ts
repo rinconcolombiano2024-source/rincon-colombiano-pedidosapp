@@ -14,8 +14,13 @@ function response(status: number, body: Record<string, unknown>) {
 }
 
 function finiteCoordinate(value: unknown, minimum: number, maximum: number) {
+  if (typeof value !== "number" && typeof value !== "string") return null;
+  if (typeof value === "string" && value.trim() === "") return null;
+
   const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed >= minimum && parsed <= maximum ? parsed : null;
+  return Number.isFinite(parsed) && parsed >= minimum && parsed <= maximum
+    ? parsed
+    : null;
 }
 
 function waypoint(address: string, latitude: number | null, longitude: number | null) {
