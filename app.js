@@ -6348,33 +6348,56 @@ function stopClientAlarm() {
 function startClientOrdersPolling(options = {}) {
   const { immediate = false } = options;
   stopClientOrdersPolling();
-  if (!canUseCustomerModule() || clientOrdersRealtimeStatus === "SUBSCRIBED") return;
+
+  // Realtime es la ruta principal. El polling solo actua como respaldo
+  // cuando la app esta visible, conectada y Realtime no esta suscrito.
+  if (
+    !canUseCustomerModule() ||
+    clientOrdersRealtimeStatus === "SUBSCRIBED" ||
+    document.visibilityState !== "visible" ||
+    !navigator.onLine
+  ) {
+    return;
+  }
 
   const generation = clientOrdersPollGeneration;
   const pollDelay = () => Math.min(CLIENT_ORDERS_POLL_MAX_MS, Math.max(
     CLIENT_ORDERS_POLL_MIN_MS, clientOrdersPollingDelay * (0.9 + Math.random() * 0.2)
   ));
+
   const poll = async () => {
     if (generation !== clientOrdersPollGeneration) return;
     clientOrdersTimer = null;
-    if (!canUseCustomerModule() || clientOrdersRealtimeStatus === "SUBSCRIBED") return;
 
-    if (document.visibilityState === "visible" && navigator.onLine) {
-      try {
-        await refreshClientOrders({ silent: true, reconcileAfterInFlight: false });
-        if (generation !== clientOrdersPollGeneration) return;
-        clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;
-      } catch (error) {
-        if (generation !== clientOrdersPollGeneration) return;
-        console.error("No fue posible actualizar los pedidos mediante el respaldo temporal.", error);
-        clientOrdersPollingDelay = Math.min(
-          clientOrdersPollingDelay * 2,
-          CLIENT_ORDERS_POLL_MAX_MS
-        );
-      }
+    if (
+      !canUseCustomerModule() ||
+      clientOrdersRealtimeStatus === "SUBSCRIBED" ||
+      document.visibilityState !== "visible" ||
+      !navigator.onLine
+    ) {
+      return;
     }
 
-    if (generation === clientOrdersPollGeneration && canUseCustomerModule() && clientOrdersRealtimeStatus !== "SUBSCRIBED") {
+    try {
+      await refreshClientOrders({ silent: true, reconcileAfterInFlight: false });
+      if (generation !== clientOrdersPollGeneration) return;
+      clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;
+    } catch (error) {
+      if (generation !== clientOrdersPollGeneration) return;
+      console.error("No fue posible actualizar los pedidos mediante el respaldo temporal.", error);
+      clientOrdersPollingDelay = Math.min(
+        clientOrdersPollingDelay * 2,
+        CLIENT_ORDERS_POLL_MAX_MS
+      );
+    }
+
+    if (
+      generation === clientOrdersPollGeneration &&
+      canUseCustomerModule() &&
+      clientOrdersRealtimeStatus !== "SUBSCRIBED" &&
+      document.visibilityState === "visible" &&
+      navigator.onLine
+    ) {
       clientOrdersTimer = window.setTimeout(poll, pollDelay());
     }
   };
@@ -7044,12 +7067,6 @@ function startCentralRealtime() {
     return;
   }
 
-  if (
-    centralSyncChannel &&
-    ["connecting", "SUBSCRIBED"].includes(centralSyncStatus)
-  ) {
-    return;
-  }
   if (
     centralSyncChannel &&
     ["connecting", "SUBSCRIBED"].includes(centralSyncStatus)
@@ -15105,6 +15122,10 @@ window.addEventListener("offline", () => {
 
   clientOrdersRealtimeNeedsCatchup = true;
 
+  // Sin red este timer no puede recuperar pedidos. Se detiene para evitar
+  // despertares inutiles; el evento online vuelve a levantar la recuperacion.
+  stopClientOrdersPolling();
+
   renderCloudState();
 });
 function recoverCloudConnection() {
@@ -15204,6 +15225,15 @@ updateCloudStatus();    cloudRecoveryLastCompletedAt = Date.now();
 window.addEventListener("online", () => {
   updateCloudStatus("Conectando...");
 
+  // Arranca inmediatamente el respaldo si Realtime aun no esta sano.
+  // refreshClientOrders ya coalesce peticiones simultaneas con la recuperacion.
+  if (
+    document.visibilityState === "visible" &&
+    clientOrdersRealtimeStatus !== "SUBSCRIBED"
+  ) {
+    startClientOrdersPolling({ immediate: true });
+  }
+
   recoverCloudConnection().catch((error) => {
     console.error(
       "Error recuperando sincronización después de volver Internet.",
@@ -15214,7 +15244,17 @@ window.addEventListener("online", () => {
 });
 
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState !== "visible") return;
+  if (document.visibilityState !== "visible") {
+    // El fallback actual no consulta pedidos en segundo plano; mantener su
+    // timer solo despertaba JavaScript. Realtime y la alarma permanecen intactos.
+    stopClientOrdersPolling();
+    return;
+  }
+
+  // Si Realtime no esta disponible, restaura el respaldo inmediatamente.
+  if (clientOrdersRealtimeStatus !== "SUBSCRIBED") {
+    startClientOrdersPolling({ immediate: true });
+  }
 
   recoverCloudConnection().catch((error) => {
     console.error(
