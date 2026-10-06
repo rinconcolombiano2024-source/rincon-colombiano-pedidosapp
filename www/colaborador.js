@@ -2970,7 +2970,33 @@ if (!sessionUser) {
       courierRegisterPushNotifications().catch((pushError) => courierLogError("resume_push", pushError));
     }
 
-    if (courierProfile?.status === "approved" && courierAvailable && navigator.geolocation && navigator.onLine) {
+   const locationLat = courierLastLocation?.lat;
+const locationLng = courierLastLocation?.lng;
+const locationAge =
+  Date.now() - Date.parse(courierLastLocation?.updatedAt || "");
+
+const hasRecentLocation =
+  locationLat !== null &&
+  locationLat !== undefined &&
+  locationLng !== null &&
+  locationLng !== undefined &&
+  String(locationLat).trim() !== "" &&
+  String(locationLng).trim() !== "" &&
+  Number.isFinite(Number(locationLat)) &&
+  Number.isFinite(Number(locationLng)) &&
+  Math.abs(Number(locationLat)) <= 90 &&
+  Math.abs(Number(locationLng)) <= 180 &&
+  Number.isFinite(locationAge) &&
+  locationAge >= 0 &&
+  locationAge < 30_000;
+
+if (
+  courierProfile?.status === "approved" &&
+  courierAvailable &&
+  navigator.geolocation &&
+  navigator.onLine &&
+  !hasRecentLocation
+) {
       try {
         const position = await courierCurrentPosition();
         courierLastLocation = {
