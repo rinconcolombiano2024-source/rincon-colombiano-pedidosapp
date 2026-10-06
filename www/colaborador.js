@@ -1163,6 +1163,22 @@ function courierActiveAssignment() {
   );
 }
 
+function courierNeedsDeliveryRuntime() {
+  return Boolean(
+    courierUser &&
+    courierProfile?.status === "approved" &&
+    (courierAvailable || courierActiveAssignment())
+  );
+}
+
+function courierShouldPollOffersFallback() {
+  return Boolean(
+    courierNeedsDeliveryRuntime() &&
+    navigator.onLine &&
+    courierDeliveryRealtimeStatus !== "SUBSCRIBED"
+  );
+}
+
 function courierSetStepButtons() {
   const active = courierActiveAssignment();
   courierActiveAssignmentId = active?.assignment_id || "";
@@ -1488,7 +1504,7 @@ function courierSyncLocationWatch() {
     navigator.geolocation &&
     courierUser &&
     courierProfile?.status === "approved" &&
-    courierAvailable
+    (courierAvailable || courierActiveAssignment())
   );
 
   if (!shouldWatch) {
@@ -1531,7 +1547,7 @@ function courierSyncLocationWatch() {
 
       if (now - courierLastLocationWriteAt >= COURIER_LOCATION_WRITE_MIN_MS) {
         courierLastLocationWriteAt = now;
-        courierPersistLiveLocation(true).catch((error) => {
+        courierPersistLiveLocation(courierAvailable).catch((error) => {
           courierSetMessage(
             courierElements.locationMessage,
             courierFriendlyDeliveryError(error),
@@ -1654,10 +1670,12 @@ function courierOffersPollDelay() {
 }
 
 function courierScheduleOffersRetry() {
-  if (courierOffersRetryTimer || !courierUser || courierProfile?.status !== "approved") return;
+  if (courierOffersRetryTimer || !courierShouldPollOffersFallback()) return;
+
   courierOffersRetryTimer = window.setTimeout(() => {
     courierOffersRetryTimer = null;
-    if (!navigator.onLine || !courierUser || courierProfile?.status !== "approved") return;
+    if (!courierShouldPollOffersFallback()) return;
+
     courierLoadDeliveryOffers({ silent: true })
       .catch((error) => courierLogError("delivery_retry", error))
       .finally(() => courierSyncOffersPolling());
@@ -1671,12 +1689,19 @@ function courierDeferOffersRetry() {
 }
 
 async function courierLoadDeliveryOffers(options = {}) {
+  const force = options.force === true;
+
+  if (!force && !courierNeedsDeliveryRuntime()) {
+    courierStopOffersPolling();
+    return false;
+  }
+
   if (courierOffersLoadInFlight) {
     if (options.reconcileAfterInFlight) courierOffersLoadPending = true;
     return courierOffersLoadInFlight;
   }
   if (!navigator.onLine) return false;
-  if (Date.now() < courierOffersRetryNotBefore) {
+  if (!force && Date.now() < courierOffersRetryNotBefore) {
     courierScheduleOffersRetry();
     return false;
   }
@@ -1763,32 +1788,40 @@ courierRenderDeliveryOffers();
 }
 
 function courierSyncOffersPolling() {
-  const shouldPoll = Boolean(courierUser && courierProfile?.status === "approved");
-  if (!shouldPoll || courierDeliveryRealtimeStatus === "SUBSCRIBED") {
+  if (!courierShouldPollOffersFallback()) {
     courierStopOffersPolling();
     return;
   }
+
   if (courierOffersTimer || courierOffersRetryTimer) return;
 
   const poll = async () => {
     courierOffersTimer = null;
-    if (!courierUser || courierProfile?.status !== "approved" || courierDeliveryRealtimeStatus === "SUBSCRIBED") return;
+    if (!courierShouldPollOffersFallback()) return;
+
     try {
       await courierLoadDeliveryOffers({ silent: true });
     } catch (error) {
       courierLogError("delivery_poll_fallback", error);
     }
-    if (courierDeliveryRealtimeStatus !== "SUBSCRIBED" && !courierOffersRetryTimer) {
+
+    if (courierShouldPollOffersFallback() && !courierOffersRetryTimer) {
       courierOffersTimer = window.setTimeout(poll, courierOffersPollDelay());
     }
   };
+
   courierOffersTimer = window.setTimeout(poll, courierOffersPollDelay());
 }
 
 function courierStopOffersPolling() {
-  if (!courierOffersTimer) return;
-  window.clearTimeout(courierOffersTimer);
-  courierOffersTimer = null;
+  if (courierOffersTimer) {
+    window.clearTimeout(courierOffersTimer);
+    courierOffersTimer = null;
+  }
+  if (courierOffersRetryTimer) {
+    window.clearTimeout(courierOffersRetryTimer);
+    courierOffersRetryTimer = null;
+  }
 }
 
 function courierStopDeliveryRealtime() {
@@ -1960,9 +1993,6 @@ async function courierUpdateAssignmentStatus(assignmentId, status) {
       : `${courierAssignmentStatusLabel(status)}.`,
     status === "delivered" && !paymentConfirmationSaved ? "error" : "ok"
   );
-  if (status === "delivered" && courierAvailable) {
-    courierLoadDeliveryOffers({ silent: true }).catch((error) => courierLogError("load_next_offer", error));
-  }
   if (["delivered", "rejected", "cancelled"].includes(status) && courierTargetAssignmentId === assignmentId) {
     courierTargetAssignmentId = "";
   }
@@ -2581,7 +2611,12 @@ function courierStartApprovalRealtime() {
         table: "courier_profiles",
         filter: `user_id=eq.${userId}`,
       },
-      () => courierLoadProfile({ force: true }).catch(() => {})
+      () => courierLoadProfile({
+        force: true,
+        refreshOffers: true,
+        refreshHistory: false,
+        refreshPayout: false,
+      }).catch(() => {})
     );
 
   courierApprovalChannel = channel;
@@ -3373,7 +3408,9 @@ courierElements.mapCenterButton?.addEventListener(
   }
 );
 courierElements.openGpsButton?.addEventListener("click", courierOpenGps);
-courierElements.refreshOffersButton?.addEventListener("click", () => courierLoadDeliveryOffers());
+courierElements.refreshOffersButton?.addEventListener("click", () =>
+  courierLoadDeliveryOffers({ force: true })
+);
 courierElements.offersList?.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-action]");
   const card = event.target.closest(".courier-offer-card");
@@ -3422,6 +3459,7 @@ document.addEventListener("visibilitychange", () => {
 window.addEventListener("pageshow", () => courierResumeRuntime());
 window.addEventListener("online", () => courierResumeRuntime({ force: true }));
 window.addEventListener("offline", () => {
+  courierStopOffersPolling();
   courierSetMessage(
     courierElements.locationMessage,
     "Sin conexion. Tu estado en linea permanece guardado y la app se sincronizara al reconectar.",
