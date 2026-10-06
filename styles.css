@@ -816,16 +816,28 @@ button:active,
 }
 
 .sign-in-top-button.alarm-pending {
+  outline: 2px solid rgba(199, 57, 47, 0.28);
+  outline-offset: 2px;
+  transform-origin: center;
+  will-change: transform;
   animation: alarmPulse 0.95s ease-in-out infinite;
 }
 
 @keyframes alarmPulse {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(199, 57, 47, 0);
+    transform: scale(1);
   }
   50% {
-    box-shadow: 0 0 0 4px rgba(199, 57, 47, 0.2);
+    transform: scale(1.025);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sign-in-top-button.alarm-pending {
+    animation: none;
+    transform: none;
+    will-change: auto;
   }
 }
 
