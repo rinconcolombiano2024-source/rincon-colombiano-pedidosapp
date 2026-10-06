@@ -348,7 +348,7 @@
     ["orders.statusUpdateFailed", "No se pudo actualizar el estado del pedido del cliente.", "Nie udało się zaktualizować statusu zamówienia klienta.", "The customer order status could not be updated."],
     ["orders.deliveredSettlementRetry", "El pedido quedo entregado; la liquidacion se reintentara de forma segura.", "Zamówienie zostało dostarczone; rozliczenie zostanie bezpiecznie ponowione.", "The order was delivered; settlement will be retried safely."],
     ["orders.signInCancel", "Necesitas internet e iniciar sesion para cancelar pedidos de clientes.", "Aby anulować zamówienia klientów, potrzebujesz internetu i aktywnej sesji.", "You need an internet connection and an active session to cancel customer orders."],
-    ["orders.cancelReasonRestaurant",
+   ["orders.cancelReasonRestaurant",
   "Cancelado por el restaurante",
   "Anulowane przez restaurację",
   "Cancelled by the restaurant"
