@@ -3067,22 +3067,23 @@ client.auth.onAuthStateChange(async (event, session) => {
   }
 
   // SOLO un cierre de sesión real debe limpiar el estado.
-  if (event === "SIGNED_OUT") {
-    courierUser = null;
-    courierProfile = null;
-    courierAssignments = [];
-    courierHistory = [];
-    courierAvailable = false;
-    courierLastLocation = null;
+if (event === "SIGNED_OUT") {
+  courierUser = null;
+  courierProfile = null;
+  courierAssignments = [];
+  courierHistory = [];
+  courierAvailable = false;
+  courierLastLocation = null;
 
-    courierStopApprovalRealtime();
-    courierStopLocationWatch();
-    courierStopOfferAlarm();
+  courierStopApprovalRealtime();
+  courierStopDeliveryRealtime();
+  courierStopLocationWatch();
+  courierStopOfferAlarm();
 
-    courierSetView("profile", { instant: true });
-    courierRender();
-    return;
-  }
+  courierSetView("profile", { instant: true });
+  courierRender();
+  return;
+}
 
   // Si por un evento temporal Supabase todavía no devuelve usuario,
   // NO interpretar eso como logout.
