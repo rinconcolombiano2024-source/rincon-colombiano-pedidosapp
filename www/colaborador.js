@@ -1412,17 +1412,41 @@ function courierCurrentPosition() {
   });
 }
 
+let courierLocationWritePending = null;
+
 async function courierPersistLiveLocation(available = courierAvailable) {
   const client = courierEnsureClient();
   if (!client || !courierUser || !courierLastLocation) return false;
-  const { error } = await client.rpc("upsert_courier_live_location", {
+  const payload = {
     p_available: Boolean(available),
     p_lat: Number(courierLastLocation.lat),
     p_lng: Number(courierLastLocation.lng),
     p_accuracy_m: Number.parseInt(courierLastLocation.accuracy, 10) || 0,
+  };
+  const signature = JSON.stringify([courierUser.id, payload]);
+
+  if (
+    courierLocationWritePending?.client === client &&
+    courierLocationWritePending.signature === signature
+  ) {
+    return courierLocationWritePending.promise;
+  }
+
+  const operation = Promise.resolve().then(async () => {
+    const { error } = await client.rpc("upsert_courier_live_location", payload);
+    if (error) throw error;
+    return true;
   });
-  if (error) throw error;
-  return true;
+
+  courierLocationWritePending = { client, signature, promise: operation };
+
+  try {
+    return await operation;
+  } finally {
+    if (courierLocationWritePending?.promise === operation) {
+      courierLocationWritePending = null;
+    }
+  }
 }
 
 async function courierShareLocation(options = {}) {
@@ -3221,4 +3245,3 @@ courierRenderRegionOptions(courierRegistrationRegion.countryCode, courierRegistr
 courierRenderVehicleRequirements();
 courierSetView(courierCurrentView, { instant: true });
 courierInitialize();
-
