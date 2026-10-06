@@ -1751,7 +1751,6 @@ const hasNewOffer = courierAssignments.some(
 courierSyncOfferAlarm();
 
 courierRenderDeliveryOffers();
-courierRender();
   
   if (hasNewOffer) {
     courierSetMessage(courierElements.locationMessage, "Nuevo pedido disponible. Revisa y acepta si puedes tomarlo.", "ok");
@@ -1852,12 +1851,17 @@ function courierStartDeliveryRealtime() {
         const assignment = payload?.new || payload?.old || {};
         const assignmentId = String(assignment.id || "");
         const index = courierAssignments.findIndex((entry) => entry.assignment_id === assignmentId);
-        if (index >= 0 && assignment.status) {
-          courierAssignments[index] = { ...courierAssignments[index], status: assignment.status, updated_at: assignment.updated_at };
-          courierRenderDeliveryOffers();
-          courierRender();
-          courierSyncOfferAlarm();
-        } else {
+       if (index >= 0 && assignment.status) {
+  courierAssignments[index] = {
+    ...courierAssignments[index],
+    status: assignment.status,
+    updated_at: assignment.updated_at
+  };
+
+  courierSyncOfferAlarm();
+  courierRenderDeliveryOffers();
+}
+       else {
           courierLoadDeliveryOffers({ silent: true, reconcileAfterInFlight: true }).catch((error) => courierLogError("realtime_delivery_reload", error));
         }
         if (["delivered", "cancelled", "rejected", "expired"].includes(assignment.status)) {
