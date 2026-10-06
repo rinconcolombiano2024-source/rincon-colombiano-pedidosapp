@@ -26,6 +26,7 @@ function courier(rpc) {
   let requests = 0;
   const h = runtime({
     courierUser: { id: "courier" }, courierProfile: { status: "approved" },
+    courierAvailable: true,
     courierOffersPollingDelay: 15000, courierOffersLoadInFlight: null,
     courierOffersLoadPending: false, courierOffersRetryNotBefore: 0,
     courierOffersRetryTimer: null, courierOffersTimer: null,
@@ -38,8 +39,20 @@ function courier(rpc) {
     courierRender() {}, courierStopOfferAlarm() {},
   });
   const s = read("colaborador.js");
-  vm.runInContext(s.slice(s.indexOf("function courierOffersPollDelay()"),
-    s.indexOf("function courierStopDeliveryRealtime()")), h.c);
+  vm.runInContext(
+    s.slice(
+      s.indexOf("function courierActiveAssignment()"),
+      s.indexOf("function courierSetStepButtons()")
+    ),
+    h.c
+  );
+  vm.runInContext(
+    s.slice(
+      s.indexOf("function courierOffersPollDelay()"),
+      s.indexOf("function courierStopDeliveryRealtime()")
+    ),
+    h.c
+  );
   h.requests = () => requests;
   return h;
 }
@@ -54,6 +67,19 @@ test("courier 503 preserves data; 100 callers cannot bypass cooldown", async () 
   assert.equal(h.timers.size, 1);
   assert.equal([...h.timers.values()][0].delay, 30000);
   assert.equal(h.microtasks.length, 0);
+});
+
+test("Realtime SUBSCRIBED keeps snapshot retry but never starts periodic polling", async () => {
+  const h = courier(async () => ({ data: null, error: { code: "PGRST002" } }));
+  assert.equal(await h.c.courierLoadDeliveryOffers({ silent: true }), false);
+  assert.equal(h.timers.size, 1);
+  assert.equal([...h.timers.values()][0].delay, 30000);
+
+  h.c.courierSyncOffersPolling();
+
+  assert.equal(h.timers.size, 1);
+  assert.equal(h.c.courierOffersTimer, null);
+  assert.ok(h.c.courierOffersRetryTimer);
 });
 
 test("concurrent ordinary reads share one request, without an empty extra round", async () => {
