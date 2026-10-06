@@ -1171,10 +1171,21 @@ function courierNeedsDeliveryRuntime() {
   );
 }
 
-function courierShouldPollOffersFallback() {
+/*
+ * Un snapshot puntual de ofertas puede fallar aunque Realtime ya esté
+ * SUBSCRIBED. En ese caso necesitamos reintentar la lectura con backoff,
+ * pero sin encender un polling periódico duplicado.
+ */
+function courierShouldRetryOffersRead() {
   return Boolean(
     courierNeedsDeliveryRuntime() &&
-    navigator.onLine &&
+    navigator.onLine
+  );
+}
+
+function courierShouldPollOffersFallback() {
+  return Boolean(
+    courierShouldRetryOffersRead() &&
     courierDeliveryRealtimeStatus !== "SUBSCRIBED"
   );
 }
@@ -1670,11 +1681,11 @@ function courierOffersPollDelay() {
 }
 
 function courierScheduleOffersRetry() {
-  if (courierOffersRetryTimer || !courierShouldPollOffersFallback()) return;
+  if (courierOffersRetryTimer || !courierShouldRetryOffersRead()) return;
 
   courierOffersRetryTimer = window.setTimeout(() => {
     courierOffersRetryTimer = null;
-    if (!courierShouldPollOffersFallback()) return;
+    if (!courierShouldRetryOffersRead()) return;
 
     courierLoadDeliveryOffers({ silent: true })
       .catch((error) => courierLogError("delivery_retry", error))
@@ -1788,8 +1799,20 @@ courierRenderDeliveryOffers();
 }
 
 function courierSyncOffersPolling() {
-  if (!courierShouldPollOffersFallback()) {
+  /*
+   * Sin runtime válido o sin red, no debe sobrevivir ningún timer.
+   */
+  if (!courierShouldRetryOffersRead()) {
     courierStopOffersPolling();
+    return;
+  }
+
+  /*
+   * Realtime sano sustituye al polling periódico, pero un retry de snapshot
+   * ya programado debe sobrevivir hasta confirmar una lectura correcta.
+   */
+  if (courierDeliveryRealtimeStatus === "SUBSCRIBED") {
+    courierStopOffersPolling({ preserveRetry: true });
     return;
   }
 
@@ -1813,12 +1836,15 @@ function courierSyncOffersPolling() {
   courierOffersTimer = window.setTimeout(poll, courierOffersPollDelay());
 }
 
-function courierStopOffersPolling() {
+function courierStopOffersPolling(options = {}) {
+  const preserveRetry = options.preserveRetry === true;
+
   if (courierOffersTimer) {
     window.clearTimeout(courierOffersTimer);
     courierOffersTimer = null;
   }
-  if (courierOffersRetryTimer) {
+
+  if (!preserveRetry && courierOffersRetryTimer) {
     window.clearTimeout(courierOffersRetryTimer);
     courierOffersRetryTimer = null;
   }
@@ -1826,8 +1852,6 @@ function courierStopOffersPolling() {
 
 function courierStopDeliveryRealtime() {
   courierStopOffersPolling();
-  if (courierOffersRetryTimer) window.clearTimeout(courierOffersRetryTimer);
-  courierOffersRetryTimer = null;
   courierOffersLoadPending = false;
   if (courierDeliveryRealtimeRetryTimer) {
     window.clearTimeout(courierDeliveryRealtimeRetryTimer);
