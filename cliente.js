@@ -137,6 +137,13 @@ const CUSTOMER_CHAT_POLL_MIN_MS = 15_000;
 const CUSTOMER_CHAT_POLL_MAX_MS = 120_000;
 const CUSTOMER_STATUS_POLL_MIN_MS = 15_000;
 const CUSTOMER_STATUS_POLL_MAX_MS = 120_000;
+const CUSTOMER_TERMINAL_ORDER_STATUSES = new Set([
+  "delivered",
+  "cancelled",
+  "rejected",
+  "failed",
+  "refunded",
+]);
 const CUSTOMER_DELIVERY_MARKUP = 1.6714285714;
 const CUSTOMER_I18N = {
   es: {
@@ -3048,37 +3055,71 @@ function customerStopDirectoryRealtime() {
   if (channel && customerClient?.removeChannel) customerClient.removeChannel(channel).catch(() => {});
 }
 function customerScheduleDirectoryRefresh() {
-  if (customerDirectoryRealtimeTimer) window.clearTimeout(customerDirectoryRealtimeTimer);
+  if (customerDirectoryRealtimeTimer) {
+    window.clearTimeout(customerDirectoryRealtimeTimer);
+    customerDirectoryRealtimeTimer = null;
+  }
+
+  if (
+    document.visibilityState !== "visible" ||
+    !window.navigator.onLine
+  ) {
+    return;
+  }
+
   customerDirectoryRealtimeTimer = window.setTimeout(() => {
     customerDirectoryRealtimeTimer = null;
+
+    if (
+      document.visibilityState !== "visible" ||
+      !window.navigator.onLine
+    ) {
+      return;
+    }
+
     customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
   }, 300);
 }
 function customerScheduleDirectoryPoll(delayMs = customerDirectoryPollingDelay) {
-  if (customerDirectoryRealtimeStatus === "SUBSCRIBED") {
+  if (
+    customerDirectoryRealtimeStatus === "SUBSCRIBED" ||
+    document.visibilityState !== "visible" ||
+    !window.navigator.onLine
+  ) {
     if (customerDirectoryPollTimer) {
       window.clearTimeout(customerDirectoryPollTimer);
       customerDirectoryPollTimer = null;
     }
     return;
   }
+
   if (customerDirectoryPollTimer) {
     window.clearTimeout(customerDirectoryPollTimer);
   }
+
   customerDirectoryPollTimer = window.setTimeout(async () => {
     customerDirectoryPollTimer = null;
-    if (customerDirectoryRealtimeStatus === "SUBSCRIBED") return;
-    if (document.visibilityState !== "visible" || !window.navigator.onLine) {
-      customerScheduleDirectoryPoll(CUSTOMER_DIRECTORY_POLL_MIN_MS);
+
+    if (
+      customerDirectoryRealtimeStatus === "SUBSCRIBED" ||
+      document.visibilityState !== "visible" ||
+      !window.navigator.onLine
+    ) {
       return;
     }
+
     const loaded = await customerLoadRestaurantDirectory({ silent: true });
+
     customerDirectoryPollingDelay = loaded
       ? CUSTOMER_DIRECTORY_POLL_MIN_MS
       : Math.min(
-          Math.max(customerDirectoryPollingDelay, CUSTOMER_DIRECTORY_POLL_MIN_MS) * 2,
+          Math.max(
+            customerDirectoryPollingDelay,
+            CUSTOMER_DIRECTORY_POLL_MIN_MS
+          ) * 2,
           CUSTOMER_DIRECTORY_POLL_MAX_MS
         );
+
     if (customerDirectoryRealtimeStatus !== "SUBSCRIBED") {
       customerScheduleDirectoryPoll(customerDirectoryPollingDelay);
     }
@@ -3157,7 +3198,10 @@ function customerStartDirectoryRealtime() {
     );
     customerDirectoryRealtimeRetryTimer = window.setTimeout(() => {
       customerDirectoryRealtimeRetryTimer = null;
-      if (window.navigator.onLine) {
+      if (
+        window.navigator.onLine &&
+        document.visibilityState === "visible"
+      ) {
         customerStartDirectoryRealtime();
       }
     }, retryDelay);
@@ -3559,11 +3603,32 @@ function customerStopMenuRealtime() {
 }
 function customerScheduleMenuRealtimeRefetch() {
   if (!customerStoreId || !customerClient) return;
-  if (customerMenuRealtimeTimer) window.clearTimeout(customerMenuRealtimeTimer);
+
+  if (customerMenuRealtimeTimer) {
+    window.clearTimeout(customerMenuRealtimeTimer);
+    customerMenuRealtimeTimer = null;
+  }
+
+  if (
+    document.visibilityState !== "visible" ||
+    !window.navigator.onLine
+  ) {
+    return;
+  }
+
   customerMenuRealtimeTimer = window.setTimeout(async () => {
     customerMenuRealtimeTimer = null;
+
+    if (
+      document.visibilityState !== "visible" ||
+      !window.navigator.onLine
+    ) {
+      return;
+    }
+
     try {
       await customerLoadMenu({ skipDirectory: true, fromRealtime: true });
+
       if (customerMenuProductCount(customerMenu)) {
         customerSetStatus(customerT("menuRealtimeUpdated"), "ok");
       }
@@ -3664,7 +3729,8 @@ function customerStartMenuRealtime() {
       customerMenuRealtimeRetryTimer = null;
       if (
         storeId === customerStoreId &&
-        window.navigator.onLine
+        window.navigator.onLine &&
+        document.visibilityState === "visible"
       ) {
         customerStartMenuRealtime();
         customerRefreshMenu().catch(() => {});
@@ -5549,24 +5615,57 @@ function customerStopChatPolling() {
   customerChatPollSignature = "";
 }
 function customerScheduleChatPoll(delayMs) {
-  if (!customerTrackedOrder?.id || !customerTrackedOrder.publicToken || !customerClient) {
+  const terminalStatus = String(customerTrackedOrder?.status || "").toLowerCase();
+  if (
+    !customerTrackedOrder?.id ||
+    !customerTrackedOrder.publicToken ||
+    !customerClient ||
+    CUSTOMER_TERMINAL_ORDER_STATUSES.has(terminalStatus)
+  ) {
     customerStopChatPolling();
     return;
   }
-  if (customerChatTimer) window.clearTimeout(customerChatTimer);
+
+  if (
+    document.visibilityState !== "visible" ||
+    !window.navigator.onLine
+  ) {
+    customerStopChatPolling();
+    return;
+  }
+
+  if (customerChatTimer) {
+    window.clearTimeout(customerChatTimer);
+  }
+
   const signature = `${customerTrackedOrder.id}:${customerTrackedOrder.publicToken}`;
   const generation = customerChatGeneration;
   const orderId = customerTrackedOrder.id;
   const publicToken = customerTrackedOrder.publicToken;
+
   customerChatPollSignature = signature;
   customerChatTimer = window.setTimeout(async () => {
     customerChatTimer = null;
-    const currentSignature = `${customerTrackedOrder?.id || ""}:${customerTrackedOrder?.publicToken || ""}`;
-    if (signature !== customerChatPollSignature || signature !== currentSignature) return;
-    if (document.visibilityState !== "visible" || !window.navigator.onLine) {
-      customerScheduleChatPoll(CUSTOMER_CHAT_POLL_MIN_MS);
+
+    const currentSignature =
+      `${customerTrackedOrder?.id || ""}:${customerTrackedOrder?.publicToken || ""}`;
+
+    if (
+      signature !== customerChatPollSignature ||
+      signature !== currentSignature ||
+      generation !== customerChatGeneration
+    ) {
       return;
     }
+
+    if (
+      document.visibilityState !== "visible" ||
+      !window.navigator.onLine
+    ) {
+      customerStopChatPolling();
+      return;
+    }
+
     const loaded = await customerLoadChatMessages({ silent: true });
 
     if (
@@ -5574,10 +5673,20 @@ function customerScheduleChatPoll(delayMs) {
       signature !== customerChatPollSignature ||
       orderId !== customerTrackedOrder?.id ||
       publicToken !== customerTrackedOrder?.publicToken
-    ) return;
+    ) {
+      return;
+    }
+
     customerChatPollingDelay = loaded
       ? CUSTOMER_CHAT_POLL_MIN_MS
-      : Math.min(Math.max(customerChatPollingDelay, CUSTOMER_CHAT_POLL_MIN_MS) * 2, CUSTOMER_CHAT_POLL_MAX_MS);
+      : Math.min(
+          Math.max(
+            customerChatPollingDelay,
+            CUSTOMER_CHAT_POLL_MIN_MS
+          ) * 2,
+          CUSTOMER_CHAT_POLL_MAX_MS
+        );
+
     customerScheduleChatPoll(customerChatPollingDelay);
   }, Math.max(0, Number(delayMs) || 0));
 }
@@ -6265,9 +6374,28 @@ function customerStopOrderTrackingRealtime() {
   if (channel && customerClient?.removeChannel) customerClient.removeChannel(channel).catch(() => {});
 }
 function customerScheduleTrackingRefresh() {
-  if (customerTrackingRefreshTimer) window.clearTimeout(customerTrackingRefreshTimer);
+  if (customerTrackingRefreshTimer) {
+    window.clearTimeout(customerTrackingRefreshTimer);
+    customerTrackingRefreshTimer = null;
+  }
+
+  if (
+    document.visibilityState !== "visible" ||
+    !window.navigator.onLine
+  ) {
+    return;
+  }
+
   customerTrackingRefreshTimer = window.setTimeout(() => {
     customerTrackingRefreshTimer = null;
+
+    if (
+      document.visibilityState !== "visible" ||
+      !window.navigator.onLine
+    ) {
+      return;
+    }
+
     customerPollOrderStatus().catch(() => {});
   }, 250);
 }
@@ -6330,8 +6458,10 @@ function customerStartOrderTrackingRealtime(row = {}) {
     if (customerTrackingRealtimeStableTimer) {
       window.clearTimeout(customerTrackingRealtimeStableTimer);
     }
+
     customerTrackingRealtimeStableTimer = window.setTimeout(() => {
       customerTrackingRealtimeStableTimer = null;
+
       if (
         channel === customerTrackingRealtimeChannel &&
         signature === customerTrackingRealtimeSignature &&
@@ -6341,6 +6471,17 @@ function customerStartOrderTrackingRealtime(row = {}) {
           CUSTOMER_REALTIME_RECONNECT_MIN_MS;
       }
     }, CUSTOMER_REALTIME_STABLE_MS);
+
+    /*
+     * Realtime es la fuente principal. Mientras el canal esté sano,
+     * el polling periódico solo despertaría JavaScript sin aportar datos.
+     */
+    customerStopStatusPolling();
+
+    /*
+     * Una reconciliación única al suscribirse evita perder un cambio
+     * ocurrido durante la conexión inicial.
+     */
     customerScheduleTrackingRefresh();
     return;
   }
@@ -6368,12 +6509,24 @@ function customerStartOrderTrackingRealtime(row = {}) {
     );
     customerTrackingRealtimeRetryTimer = window.setTimeout(() => {
       customerTrackingRealtimeRetryTimer = null;
+
       if (
-        customerTrackedOrder?.id &&
-        window.navigator.onLine
+        !customerTrackedOrder?.id ||
+        !customerTrackedOrder.publicToken ||
+        !customerClient ||
+        !window.navigator.onLine ||
+        document.visibilityState !== "visible"
       ) {
-        customerPollOrderStatus().catch(() => {});
+        return;
       }
+
+      /*
+       * Realtime cayó: restauramos el fallback completo.
+       * customerScheduleStatusPoll seguirá aplicando backoff y volverá
+       * a detenerse automáticamente cuando Realtime se recupere.
+       */
+      customerStatusPollingDelay = CUSTOMER_STATUS_POLL_MIN_MS;
+      customerScheduleStatusPoll(0);
     }, retryDelay);
   }
 });
@@ -6462,34 +6615,92 @@ function customerStopStatusPolling() {
   customerStatusPollSignature = "";
 }
 function customerScheduleStatusPoll(delayMs) {
-  if (!customerTrackedOrder?.id || !customerTrackedOrder.publicToken || !customerClient) {
+  const terminalStatus = String(customerTrackedOrder?.status || "").toLowerCase();
+
+  if (
+    !customerTrackedOrder?.id ||
+    !customerTrackedOrder.publicToken ||
+    !customerClient ||
+    CUSTOMER_TERMINAL_ORDER_STATUSES.has(terminalStatus)
+  ) {
     customerStopStatusPolling();
     return;
   }
-  if (customerStatusTimer) window.clearTimeout(customerStatusTimer);
-  const signature = `${customerTrackedOrder.id}:${customerTrackedOrder.publicToken}`;
+
+  /*
+   * No mantenemos timers de polling mientras la pestaña está oculta
+   * o no hay internet. visibilitychange/online reanudan el seguimiento.
+   */
+  if (
+    document.visibilityState !== "visible" ||
+    !window.navigator.onLine
+  ) {
+    customerStopStatusPolling();
+    return;
+  }
+
+  /*
+   * Con Realtime sano no existe razón para despertar cada 15 segundos.
+   */
+  if (customerTrackingRealtimeStatus === "SUBSCRIBED") {
+    customerStopStatusPolling();
+    return;
+  }
+
+  if (customerStatusTimer) {
+    window.clearTimeout(customerStatusTimer);
+  }
+
+  const signature =
+    `${customerTrackedOrder.id}:${customerTrackedOrder.publicToken}`;
+
   customerStatusPollSignature = signature;
   customerStatusTimer = window.setTimeout(async () => {
     customerStatusTimer = null;
-    const currentSignature = `${customerTrackedOrder?.id || ""}:${customerTrackedOrder?.publicToken || ""}`;
-    if (signature !== customerStatusPollSignature || signature !== currentSignature) return;
-    if (document.visibilityState !== "visible" || !window.navigator.onLine) {
-      customerScheduleStatusPoll(CUSTOMER_STATUS_POLL_MIN_MS);
+
+    const currentSignature =
+      `${customerTrackedOrder?.id || ""}:${customerTrackedOrder?.publicToken || ""}`;
+
+    if (
+      signature !== customerStatusPollSignature ||
+      signature !== currentSignature
+    ) {
       return;
     }
+
+    if (
+      document.visibilityState !== "visible" ||
+      !window.navigator.onLine
+    ) {
+      customerStopStatusPolling();
+      return;
+    }
+
     if (customerTrackingRealtimeStatus === "SUBSCRIBED") {
-      customerScheduleStatusPoll(CUSTOMER_STATUS_POLL_MIN_MS);
+      customerStopStatusPolling();
       return;
     }
+
     const loaded = await customerPollOrderStatus();
 
     if (
       signature !== customerStatusPollSignature ||
-      signature !== `${customerTrackedOrder?.id || ""}:${customerTrackedOrder?.publicToken || ""}`
-    ) return;
+      signature !==
+        `${customerTrackedOrder?.id || ""}:${customerTrackedOrder?.publicToken || ""}`
+    ) {
+      return;
+    }
+
     customerStatusPollingDelay = loaded
       ? CUSTOMER_STATUS_POLL_MIN_MS
-      : Math.min(Math.max(customerStatusPollingDelay, CUSTOMER_STATUS_POLL_MIN_MS) * 2, CUSTOMER_STATUS_POLL_MAX_MS);
+      : Math.min(
+          Math.max(
+            customerStatusPollingDelay,
+            CUSTOMER_STATUS_POLL_MIN_MS
+          ) * 2,
+          CUSTOMER_STATUS_POLL_MAX_MS
+        );
+
     customerScheduleStatusPoll(customerStatusPollingDelay);
   }, Math.max(0, Number(delayMs) || 0));
 }
@@ -7481,7 +7692,58 @@ if (customerElements.registerNeighborhoodInput) {
     }
   });
 });
+function customerResumeForegroundTracking() {
+  if (
+    document.visibilityState !== "visible" ||
+    !window.navigator.onLine ||
+    !customerClient ||
+    !customerTrackedOrder?.id ||
+    !customerTrackedOrder.publicToken
+  ) {
+    return;
+  }
+
+  const terminalStatus =
+    String(customerTrackedOrder.status || "").toLowerCase();
+
+  if (CUSTOMER_TERMINAL_ORDER_STATUSES.has(terminalStatus)) {
+    customerStopStatusPolling();
+    customerStopChatPolling();
+    return;
+  }
+
+  /*
+   * Si Realtime sigue conectado basta una reconciliación única.
+   * Si no está conectado, reactivamos el fallback de polling.
+   */
+  if (customerTrackingRealtimeStatus === "SUBSCRIBED") {
+    customerStopStatusPolling();
+    customerScheduleTrackingRefresh();
+  } else {
+    customerStatusPollingDelay = CUSTOMER_STATUS_POLL_MIN_MS;
+    customerScheduleStatusPoll(0);
+  }
+
+  /*
+   * El chat no usa Realtime en esta versión; se reactiva únicamente
+   * cuando el panel de chat pertenece al pedido activo.
+   */
+  if (
+    customerElements.chatPanel &&
+    !customerElements.chatPanel.hidden
+  ) {
+    customerChatPollingDelay = CUSTOMER_CHAT_POLL_MIN_MS;
+    customerScheduleChatPoll(0);
+  }
+}
+
 function customerRecoverConnection() {
+  /*
+   * Esta operación es local y barata; debe ejecutarse incluso si la
+   * recuperación pesada se encuentra dentro de la ventana de deduplicación.
+   */
+  customerResumeForegroundTracking();
+
   if (customerRecoveryInFlight) {
     return customerRecoveryInFlight;
   }
@@ -7535,19 +7797,37 @@ function customerRecoverConnection() {
   return operation;
 }
 window.addEventListener("online", () => {
+  if (document.visibilityState !== "visible") {
+    return;
+  }
+
   customerRecoverConnection().catch(() => {});
 });
 document.addEventListener("visibilitychange", () => {
-  if (
-    document.visibilityState !== "visible" ||
-    !window.navigator.onLine
-  ) {
+  if (document.visibilityState !== "visible") {
+    /*
+     * El navegador puede mantener timers activos aun con la pestaña oculta.
+     * Los detenemos y los reanudamos al volver a primer plano.
+     */
+    customerStopStatusPolling();
+    customerStopChatPolling();
     return;
   }
+
+  if (!window.navigator.onLine) {
+    return;
+  }
+
   customerRecoverConnection().catch(() => {});
 });
+
 window.addEventListener("offline", () => {
-  if (customerStoreId) customerSetStatus(customerT("noConnection"), "error");
+  customerStopStatusPolling();
+  customerStopChatPolling();
+
+  if (customerStoreId) {
+    customerSetStatus(customerT("noConnection"), "error");
+  }
 });
 window.addEventListener("beforeunload", () => {
   customerStopStatusPolling();
