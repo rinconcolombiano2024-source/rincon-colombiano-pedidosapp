@@ -8,6 +8,9 @@
   const originalText = new WeakMap();
   const originalAttributes = new WeakMap();
   const translationCacheKey = "rincon_colombiano_ui_translations_v1";
+  const TRANSLATION_CACHE_MAX_ENTRIES = 900;
+  const TRANSLATION_ROOT_QUEUE_LIMIT = 24;
+
   let language = initialLanguage();
   let renderTimer = null;
   let translating = false;
@@ -16,6 +19,14 @@
   let translationServicePausedUntil = 0;
   let translationWarningShownAt = 0;
   const translationRequests = new Map();
+
+  let cachePersistHandle = null;
+  let cachePersistMode = "";
+  let translateScheduled = false;
+  let fullTranslationRequested = false;
+  const pendingTranslateRoots = new Set();
+  let translationObserver = null;
+  let translationObserverStarted = false;
   const originalDocumentTitle = document.title;
   const nativeAlert = window.alert.bind(window);
   const nativeConfirm = window.confirm.bind(window);
@@ -614,10 +625,34 @@
     },
   };
 
+  function safeLocalStorageGet(key) {
+    try {
+      return window.localStorage?.getItem(key) ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  function safeLocalStorageSet(key, value) {
+    try {
+      window.localStorage?.setItem(key, value);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   function initialLanguage() {
-    const fromUrl = String(new URLSearchParams(window.location.search).get("lang") || "").toLowerCase();
-    const saved = String(localStorage.getItem(LANGUAGE_KEY) || localStorage.getItem("rincon_colombiano_customer_language") || "").toLowerCase();
+    const fromUrl = String(
+      new URLSearchParams(window.location.search).get("lang") || ""
+    ).toLowerCase();
+    const saved = String(
+      safeLocalStorageGet(LANGUAGE_KEY) ||
+      safeLocalStorageGet("rincon_colombiano_customer_language") ||
+      ""
+    ).toLowerCase();
     const browser = String(navigator.language || "").toLowerCase();
+
     if (SUPPORTED[fromUrl]) return fromUrl;
     if (SUPPORTED[saved]) return saved;
     if (browser.startsWith("pl")) return "pl";
@@ -625,22 +660,62 @@
     return "es";
   }
 
+  function trimTranslationCache(source) {
+    if (!source || typeof source !== "object" || Array.isArray(source)) return {};
+    const entries = Object.entries(source).slice(-TRANSLATION_CACHE_MAX_ENTRIES);
+    return Object.fromEntries(entries);
+  }
+
   function readCache() {
     try {
-      const parsed = JSON.parse(localStorage.getItem(translationCacheKey) || "{}");
-      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+      const parsed = JSON.parse(safeLocalStorageGet(translationCacheKey) || "{}");
+      return trimTranslationCache(parsed);
     } catch {
       return {};
     }
   }
 
-  function saveCache() {
-    try {
-      const entries = Object.entries(cache).slice(-900);
-      localStorage.setItem(translationCacheKey, JSON.stringify(Object.fromEntries(entries)));
-    } catch {
-      // La app sigue funcionando aunque el navegador limite almacenamiento.
+  function cancelScheduledCachePersist() {
+    if (cachePersistHandle === null) return;
+
+    if (cachePersistMode === "idle" && typeof window.cancelIdleCallback === "function") {
+      window.cancelIdleCallback(cachePersistHandle);
+    } else {
+      window.clearTimeout(cachePersistHandle);
     }
+
+    cachePersistHandle = null;
+    cachePersistMode = "";
+  }
+
+  function persistCacheNow() {
+    cancelScheduledCachePersist();
+    cache = trimTranslationCache(cache);
+    safeLocalStorageSet(translationCacheKey, JSON.stringify(cache));
+  }
+
+  function scheduleCachePersist() {
+    if (cachePersistHandle !== null) return;
+
+    if (typeof window.requestIdleCallback === "function") {
+      cachePersistMode = "idle";
+      cachePersistHandle = window.requestIdleCallback(
+        () => {
+          cachePersistHandle = null;
+          cachePersistMode = "";
+          persistCacheNow();
+        },
+        { timeout: 1500 }
+      );
+      return;
+    }
+
+    cachePersistMode = "timeout";
+    cachePersistHandle = window.setTimeout(() => {
+      cachePersistHandle = null;
+      cachePersistMode = "";
+      persistCacheNow();
+    }, 500);
   }
 
   function normalize(value) {
@@ -883,8 +958,12 @@ if (
   // 4. Los textos no incluidos en el diccionario se traducen en el servidor.
   // La clave privada del proveedor nunca se expone en el navegador.
   const operation = (async () => {
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 10_000);
+  const controller = typeof AbortController === "function"
+    ? new AbortController()
+    : null;
+  const timeout = controller
+    ? window.setTimeout(() => controller.abort(), 10_000)
+    : null;
   try {
     const config = window.RC_ORDERA_SUPABASE || {};
     const baseUrl = String(config.url || "").replace(/\/+$/, "");
@@ -892,7 +971,7 @@ if (
     if (!baseUrl || !publicKey) return clean;
     const response = await fetch(`${baseUrl}/functions/v1/translate-public-content`, {
       method: "POST",
-      signal: controller.signal,
+      ...(controller ? { signal: controller.signal } : {}),
       headers: {
         "content-type": "application/json; charset=utf-8",
         apikey: publicKey,
@@ -911,7 +990,7 @@ if (
 
     if (translated) {
       cache[key] = translated;
-      saveCache();
+      scheduleCachePersist();
       return translated;
     }
   } catch (error) {
@@ -925,7 +1004,7 @@ if (
       );
     }
   } finally {
-    window.clearTimeout(timeout);
+    if (timeout !== null) window.clearTimeout(timeout);
   }
 
   return clean;
@@ -976,268 +1055,455 @@ function setOriginalAttribute(element, attribute) {
   return state;
 }
 
- async function translateTextNode(
-  node,
-  generation = translationGeneration
-) {
-  const parent = node.parentElement;
-
-  if (!parent || shouldSkipElement(parent)) {
-    return;
-  }
-
-  const clean = normalize(node.nodeValue);
-
-  if (!shouldTranslateContent(clean)) {
-    return;
-  }
-
-  let state = originalText.get(node);
-
-  if (!state) {
-    state = {
-      source: node.nodeValue,
-      last: "",
-    };
-
-    originalText.set(node, state);
-  } else {
-    const currentNormalized = normalize(node.nodeValue);
-    const sourceNormalized = normalize(state.source);
-    const lastNormalized = normalize(state.last);
-
-    // Si otra parte de la app cambió realmente el texto,
-    // ese nuevo texto pasa a ser el nuevo original.
-    if (
-      currentNormalized !== sourceNormalized &&
-      currentNormalized !== lastNormalized
-    ) {
-      state.source = node.nodeValue;
-      state.last = "";
-    }
-  }
-
-  const sourceText = state.source;
-  const currentText = node.nodeValue;
-
-  const translated = await fetchTranslation(sourceText, language);
-   if (generation !== translationGeneration || node.nodeValue !== currentText) {
-  return;
-}
-
-  state.last = translated;
-
-  if (node.nodeValue !== translated) {
-    node.nodeValue = translated;
-  }
-}
- async function translateAttributes(
-  element,
-  generation = translationGeneration
-) {
-  if (shouldSkipAttributeElement(element)) return;
-
- const attributes = [
-  "placeholder",
-  "title",
-  "aria-label",
-  "aria-description",
-  "alt",
-];
-
-  const tagName = element.tagName?.toLowerCase();
-  const inputType = String(element.type || "").toLowerCase();
-
-  if (
-    tagName === "input" &&
-    ["button", "submit", "reset"].includes(inputType)
+  async function translateTextNode(
+    node,
+    generation = translationGeneration,
+    targetLanguage = language
   ) {
-    attributes.push("value");
-  }
+    const parent = node?.parentElement;
+    if (!parent || shouldSkipElement(parent)) return;
 
-  for (const attribute of attributes) {
-    if (!element.hasAttribute(attribute)) continue;
+    const clean = normalize(node.nodeValue);
+    if (!shouldTranslateContent(clean)) return;
 
-    const state = setOriginalAttribute(element, attribute);
-    const source = normalize(state.source);
+    let state = originalText.get(node);
+    if (!state) {
+      state = { source: node.nodeValue, last: "" };
+      originalText.set(node, state);
+    } else {
+      const currentNormalized = normalize(node.nodeValue);
+      const sourceNormalized = normalize(state.source);
+      const lastNormalized = normalize(state.last);
 
-if (!shouldTranslateContent(source)) {
-  continue;
-}
-
-    const currentAttribute = element.getAttribute(attribute);
-    const translated = await fetchTranslation(state.source, language);
-if (generation !== translationGeneration || element.getAttribute(attribute) !== currentAttribute) {
-  return;
-}
-    state.last = translated;
-
-    if (element.getAttribute(attribute) !== translated) {
-      element.setAttribute(attribute, translated);
+      // Si la app cambió el texto después de una traducción, el nuevo valor
+      // pasa a ser la fuente real para futuras traducciones.
+      if (
+        currentNormalized !== sourceNormalized &&
+        currentNormalized !== lastNormalized
+      ) {
+        state.source = node.nodeValue;
+        state.last = "";
+      }
     }
 
+    const sourceText = state.source;
+    const currentText = node.nodeValue;
+    const translated = await fetchTranslation(sourceText, targetLanguage);
+
     if (
-      attribute === "value" &&
+      generation !== translationGeneration ||
+      targetLanguage !== language ||
+      !node.isConnected ||
+      node.nodeValue !== currentText
+    ) {
+      return;
+    }
+
+    state.last = translated;
+    if (node.nodeValue !== translated) node.nodeValue = translated;
+  }
+
+  async function translateAttributes(
+    element,
+    generation = translationGeneration,
+    targetLanguage = language
+  ) {
+    if (!element?.isConnected || shouldSkipAttributeElement(element)) return;
+
+    const attributes = [
+      "placeholder",
+      "title",
+      "aria-label",
+      "aria-description",
+      "alt",
+    ];
+    const tagName = element.tagName?.toLowerCase();
+    const inputType = String(element.type || "").toLowerCase();
+
+    if (
       tagName === "input" &&
       ["button", "submit", "reset"].includes(inputType)
     ) {
-      element.value = translated;
+      attributes.push("value");
     }
-  }
-}
 
-  function elementIsVisible(element) {
-    if (!element || !element.isConnected) return false;
-    const style = window.getComputedStyle(element);
-    if (style.display === "none" || style.visibility === "hidden") return false;
-    const rect = element.getBoundingClientRect();
-    return rect.width > 0 && rect.height > 0;
+    for (const attribute of attributes) {
+      if (generation !== translationGeneration || targetLanguage !== language) return;
+      if (!element.hasAttribute(attribute)) continue;
+
+      const state = setOriginalAttribute(element, attribute);
+      const source = normalize(state.source);
+      if (!shouldTranslateContent(source)) continue;
+
+      const currentAttribute = element.getAttribute(attribute);
+      const translated = await fetchTranslation(state.source, targetLanguage);
+
+      if (
+        generation !== translationGeneration ||
+        targetLanguage !== language ||
+        !element.isConnected ||
+        element.getAttribute(attribute) !== currentAttribute
+      ) {
+        return;
+      }
+
+      state.last = translated;
+      if (element.getAttribute(attribute) !== translated) {
+        element.setAttribute(attribute, translated);
+      }
+
+      if (
+        attribute === "value" &&
+        tagName === "input" &&
+        ["button", "submit", "reset"].includes(inputType)
+      ) {
+        element.value = translated;
+      }
+    }
   }
 
   async function translateInBatches(items, worker, generation, batchSize = 6) {
     for (let index = 0; index < items.length; index += batchSize) {
       if (generation !== translationGeneration) return;
-      await Promise.all(items.slice(index, index + batchSize).map((item) => worker(item, generation)));
+      await Promise.all(
+        items.slice(index, index + batchSize).map((item) => worker(item, generation))
+      );
     }
   }
 
- async function translateTree(root = document.body) {
-  const generation = translationGeneration;
-    if (!root || translating) return;
-    translating = true;
-    document.documentElement.lang = language;
-    try {
-      const translatedTitle = await fetchTranslation(originalDocumentTitle, language);
-      if (generation !== translationGeneration) return;
-      if (translatedTitle && document.title !== translatedTitle) document.title = translatedTitle;
-      updateLocalizedManifest();
-      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-        acceptNode(node) {
-          const parent = node.parentElement;
-          if (!parent || shouldSkipElement(parent) || !normalize(node.nodeValue)) return NodeFilter.FILTER_REJECT;
-          return NodeFilter.FILTER_ACCEPT;
-        },
-      });
-      const textNodes = [];
-      while (walker.nextNode()) textNodes.push(walker.currentNode);
-      textNodes.sort((left, right) =>
-        Number(elementIsVisible(right.parentElement)) - Number(elementIsVisible(left.parentElement))
+  async function translateTree(
+    root = document.body,
+    options = {}
+  ) {
+    if (!root) return;
+
+    const generation = Number.isInteger(options.generation)
+      ? options.generation
+      : translationGeneration;
+    const targetLanguage = SUPPORTED[options.targetLanguage]
+      ? options.targetLanguage
+      : language;
+    const includeDocumentMeta = options.includeDocumentMeta === true;
+
+    document.documentElement.lang = targetLanguage;
+
+    if (includeDocumentMeta) {
+      const translatedTitle = await fetchTranslation(
+        originalDocumentTitle,
+        targetLanguage
       );
-      const localTextNodes = [];
-      const remoteTextNodes = [];
-      textNodes.forEach((node) => {
-        const source = originalText.get(node)?.source || node.nodeValue;
-        if (language === "es" || dictionaryTranslation(source, language)) localTextNodes.push(node);
-        else remoteTextNodes.push(node);
-      });
-      await translateInBatches(localTextNodes, translateTextNode, generation, 50);
-      await translateInBatches(remoteTextNodes, translateTextNode, generation);
-      
-      const elements = root.querySelectorAll
-  ? root.querySelectorAll(
-      [
-  "[placeholder]",
-  "[title]",
-  "[aria-label]",
-  "[aria-description]",
-  "[alt]",
-  'input[type="button"][value]',
-  'input[type="submit"][value]',
-  'input[type="reset"][value]',
-].join(",")
-    )
-  : [];
-      const attributeElements = [root, ...elements].filter((element) => element.nodeType === Node.ELEMENT_NODE).sort((left, right) =>
-        Number(elementIsVisible(right)) - Number(elementIsVisible(left))
-      );
-      const localAttributeElements = [];
-      const remoteAttributeElements = [];
-      attributeElements.forEach((element) => {
-        const candidates = ["placeholder", "title", "aria-label", "aria-description", "alt", "value"]
-          .map((attribute) => originalAttributes.get(element)?.[attribute]?.source || element.getAttribute(attribute) || "")
-          .filter(Boolean);
-        if (language === "es" || candidates.every((source) => dictionaryTranslation(source, language))) {
-          localAttributeElements.push(element);
-        } else {
-          remoteAttributeElements.push(element);
+      if (
+        generation !== translationGeneration ||
+        targetLanguage !== language
+      ) {
+        return;
+      }
+      if (translatedTitle && document.title !== translatedTitle) {
+        document.title = translatedTitle;
+      }
+      updateLocalizedManifest(targetLanguage);
+    }
+
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        const parent = node.parentElement;
+        if (
+          !parent ||
+          shouldSkipElement(parent) ||
+          !shouldTranslateContent(node.nodeValue)
+        ) {
+          return NodeFilter.FILTER_REJECT;
         }
-      });
-      await translateInBatches(localAttributeElements, translateAttributes, generation, 30);
-      await translateInBatches(remoteAttributeElements, translateAttributes, generation);
-    } catch {
-      // Si la traduccion externa falla, se conserva el texto original.
-    } finally {
-      translating = false;
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
+
+    const localTextNodes = [];
+    const remoteTextNodes = [];
+
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      const source = originalText.get(node)?.source || node.nodeValue;
+      if (
+        targetLanguage === "es" ||
+        dictionaryTranslation(source, targetLanguage)
+      ) {
+        localTextNodes.push(node);
+      } else {
+        remoteTextNodes.push(node);
+      }
     }
-  }
 
-function scheduleTranslate(delay = 180) {
-  if (renderTimer) {
-    window.clearTimeout(renderTimer);
-  }
+    await translateInBatches(
+      localTextNodes,
+      (node, runGeneration) =>
+        translateTextNode(node, runGeneration, targetLanguage),
+      generation,
+      50
+    );
+    await translateInBatches(
+      remoteTextNodes,
+      (node, runGeneration) =>
+        translateTextNode(node, runGeneration, targetLanguage),
+      generation,
+      6
+    );
 
-  renderTimer = window.setTimeout(async () => {
-    renderTimer = null;
-
-    if (translating) {
-      scheduleTranslate(120);
+    if (
+      generation !== translationGeneration ||
+      targetLanguage !== language
+    ) {
       return;
     }
 
-    await translateTree(document.body);
-  }, delay);
-}
+    const selector = [
+      "[placeholder]",
+      "[title]",
+      "[aria-label]",
+      "[aria-description]",
+      "[alt]",
+      'input[type="button"][value]',
+      'input[type="submit"][value]',
+      'input[type="reset"][value]',
+    ].join(",");
+
+    const descendants = root.querySelectorAll
+      ? Array.from(root.querySelectorAll(selector))
+      : [];
+    const attributeElements = [];
+
+    if (root.nodeType === Node.ELEMENT_NODE && root.matches?.(selector)) {
+      attributeElements.push(root);
+    }
+    attributeElements.push(...descendants);
+
+    const localAttributeElements = [];
+    const remoteAttributeElements = [];
+
+    for (const element of attributeElements) {
+      if (!element?.isConnected || shouldSkipAttributeElement(element)) continue;
+
+      const candidates = [
+        "placeholder",
+        "title",
+        "aria-label",
+        "aria-description",
+        "alt",
+        "value",
+      ]
+        .map(
+          (attribute) =>
+            originalAttributes.get(element)?.[attribute]?.source ||
+            element.getAttribute(attribute) ||
+            ""
+        )
+        .filter(Boolean);
+
+      if (
+        targetLanguage === "es" ||
+        candidates.every((source) => dictionaryTranslation(source, targetLanguage))
+      ) {
+        localAttributeElements.push(element);
+      } else {
+        remoteAttributeElements.push(element);
+      }
+    }
+
+    await translateInBatches(
+      localAttributeElements,
+      (element, runGeneration) =>
+        translateAttributes(element, runGeneration, targetLanguage),
+      generation,
+      30
+    );
+    await translateInBatches(
+      remoteAttributeElements,
+      (element, runGeneration) =>
+        translateAttributes(element, runGeneration, targetLanguage),
+      generation,
+      6
+    );
+  }
+
+  function requestTranslationFlush() {
+    if (
+      translateScheduled ||
+      translating ||
+      document.visibilityState === "hidden"
+    ) {
+      return;
+    }
+
+    translateScheduled = true;
+    const run = () => {
+      translateScheduled = false;
+      flushTranslationQueue().catch((error) => {
+        console.warn("RC ORDERA: error procesando la cola de traducción.", error);
+      });
+    };
+
+    if (typeof window.requestAnimationFrame === "function") {
+      window.requestAnimationFrame(run);
+    } else {
+      window.setTimeout(run, 16);
+    }
+  }
+
+  function scheduleTranslate(delay = 180) {
+    if (renderTimer !== null) {
+      window.clearTimeout(renderTimer);
+    }
+
+    renderTimer = window.setTimeout(() => {
+      renderTimer = null;
+      fullTranslationRequested = true;
+      pendingTranslateRoots.clear();
+      requestTranslationFlush();
+    }, Math.max(0, Number(delay) || 0));
+  }
+
+  function scheduleTranslateRoot(root) {
+    // Español es el idioma fuente. Los nuevos textos de la app ya llegan en
+    // español; no se necesita trabajo automático por cada mutación.
+    if (!root || language === "es") return;
+
+    const element =
+      root.nodeType === Node.ELEMENT_NODE
+        ? root
+        : root.parentElement;
+
+    if (
+      !element ||
+      !element.isConnected ||
+      shouldSkipElement(element)
+    ) {
+      return;
+    }
+
+    for (const pendingRoot of pendingTranslateRoots) {
+      if (pendingRoot === element || pendingRoot.contains(element)) return;
+      if (element.contains(pendingRoot)) pendingTranslateRoots.delete(pendingRoot);
+    }
+
+    if (pendingTranslateRoots.size >= TRANSLATION_ROOT_QUEUE_LIMIT) {
+      pendingTranslateRoots.clear();
+      if (document.body) pendingTranslateRoots.add(document.body);
+    } else {
+      pendingTranslateRoots.add(element);
+    }
+
+    requestTranslationFlush();
+  }
+
+  async function flushTranslationQueue() {
+    if (translating || document.visibilityState === "hidden") return;
+    if (!fullTranslationRequested && pendingTranslateRoots.size === 0) return;
+
+    translating = true;
+    const generation = translationGeneration;
+    const targetLanguage = language;
+
+    try {
+      if (fullTranslationRequested) {
+        fullTranslationRequested = false;
+        pendingTranslateRoots.clear();
+        if (document.body) {
+          await translateTree(document.body, {
+            generation,
+            targetLanguage,
+            includeDocumentMeta: true,
+          });
+        }
+      } else {
+        const roots = Array.from(pendingTranslateRoots).filter(
+          (root) => root?.isConnected
+        );
+        pendingTranslateRoots.clear();
+
+        for (const rootElement of roots) {
+          if (
+            generation !== translationGeneration ||
+            targetLanguage !== language
+          ) {
+            break;
+          }
+          await translateTree(rootElement, {
+            generation,
+            targetLanguage,
+            includeDocumentMeta: false,
+          });
+        }
+      }
+    } finally {
+      translating = false;
+      if (
+        fullTranslationRequested ||
+        pendingTranslateRoots.size > 0
+      ) {
+        requestTranslationFlush();
+      }
+    }
+  }
+
+  function persistLanguage(nextLanguage) {
+    safeLocalStorageSet(LANGUAGE_KEY, nextLanguage);
+    safeLocalStorageSet("rincon_colombiano_customer_language", nextLanguage);
+  }
+
+  function syncLanguageControls() {
+    const languageSelect = document.querySelector("#autoLanguageSelect");
+    if (languageSelect && languageSelect.value !== language) {
+      languageSelect.value = language;
+    }
+
+    const customerLanguageSelect = document.querySelector("#customerLanguageSelect");
+    if (customerLanguageSelect && customerLanguageSelect.value !== language) {
+      customerLanguageSelect.value = language;
+    }
+  }
+
+  function applyLanguage(nextLanguage, options = {}) {
+    const normalizedLanguage = String(nextLanguage || "").toLowerCase();
+    if (!SUPPORTED[normalizedLanguage]) return false;
+
+    const changed = normalizedLanguage !== language;
+    language = normalizedLanguage;
+    if (changed) translationGeneration += 1;
+
+    persistLanguage(language);
+    document.documentElement.lang = language;
+    syncLanguageControls();
+
+    if (options.translate !== false) scheduleTranslate(0);
+    return true;
+  }
+
+  function bindLanguageSelect(select) {
+    if (!select) return;
+    select.value = language;
+    if (select.dataset.rcAutoI18nBound === "1") return;
+
+    select.dataset.rcAutoI18nBound = "1";
+    select.addEventListener("change", () => {
+      applyLanguage(select.value);
+    });
+  }
 
   function createLanguageControl() {
     const existingSelect = document.querySelector("#autoLanguageSelect");
     if (existingSelect) {
-      existingSelect.value = language;
-      existingSelect.addEventListener("change", () => {
-  language = existingSelect.value;
-translationGeneration += 1;
-        
-  localStorage.setItem(LANGUAGE_KEY, language);
-  localStorage.setItem(
-    "rincon_colombiano_customer_language",
-    language
-  );
-
-  document.documentElement.lang = language;
-
-  scheduleTranslate(0);
-});
+      bindLanguageSelect(existingSelect);
       return;
     }
-    const customerSelect =
-  document.querySelector("#customerLanguageSelect");
 
-if (customerSelect) {
-  customerSelect.value = language;
+    const customerSelect = document.querySelector("#customerLanguageSelect");
+    if (customerSelect) {
+      bindLanguageSelect(customerSelect);
+      return;
+    }
 
-  customerSelect.addEventListener("change", () => {
-    language = String(
-      customerSelect.value || "es"
-    ).toLowerCase();
+    if (!document.body) return;
 
-    translationGeneration += 1;
-
-    localStorage.setItem(
-      LANGUAGE_KEY,
-      language
-    );
-
-    localStorage.setItem(
-      "rincon_colombiano_customer_language",
-      language
-    );
-
-    document.documentElement.lang = language;
-
-    scheduleTranslate(0);
-  });
-
-  return;
-}
     const label = document.createElement("label");
     label.className = "app-language-floating";
     label.innerHTML = `
@@ -1249,34 +1515,31 @@ if (customerSelect) {
       </select>
     `;
     document.body.appendChild(label);
-    const select = label.querySelector("select");
-    select.value = language;
-   select.addEventListener("change", () => {
-  language = select.value;
- translationGeneration += 1;
-     
-  localStorage.setItem(LANGUAGE_KEY, language);
-  localStorage.setItem(
-    "rincon_colombiano_customer_language",
-    language
-  );
-
-  document.documentElement.lang = language;
-
-  scheduleTranslate(0);
-});
+    bindLanguageSelect(label.querySelector("select"));
   }
 
-  function updateLocalizedManifest() {
+  function updateLocalizedManifest(targetLanguage = language) {
     const manifest = document.querySelector('link[rel="manifest"]');
     if (!manifest) return;
-    const original = manifest.dataset.originalHref || manifest.getAttribute("href") || "manifest.webmanifest";
+
+    const original =
+      manifest.dataset.originalHref ||
+      manifest.getAttribute("href") ||
+      "manifest.webmanifest";
     manifest.dataset.originalHref = original;
-    const base = original.replace(/\.(?:es|pl|en)\.webmanifest$/i, ".webmanifest");
-    manifest.setAttribute(
-      "href",
-      language === "es" ? base : base.replace(/\.webmanifest$/i, `.${language}.webmanifest`)
+
+    const base = original.replace(
+      /\.(?:es|pl|en)\.webmanifest$/i,
+      ".webmanifest"
     );
+    const nextHref =
+      targetLanguage === "es"
+        ? base
+        : base.replace(/\.webmanifest$/i, `.${targetLanguage}.webmanifest`);
+
+    if (manifest.getAttribute("href") !== nextHref) {
+      manifest.setAttribute("href", nextHref);
+    }
   }
 
   function translateUiMessage(message) {
@@ -1292,121 +1555,100 @@ if (customerSelect) {
   window.RCOrderaAutoTranslate = {
     translate: translateUiMessage,
     setLanguage(nextLanguage) {
-  const normalizedLanguage = String(
-    nextLanguage || ""
-  ).toLowerCase();
-
-  if (!SUPPORTED[normalizedLanguage]) {
-    return;
-  }
-
-  language = normalizedLanguage;
-      translationGeneration += 1;
-
-  localStorage.setItem(LANGUAGE_KEY, language);
-  localStorage.setItem(
-    "rincon_colombiano_customer_language",
-    language
-  );
-
-  document.documentElement.lang = language;
-
-  const languageSelect =
-    document.querySelector("#autoLanguageSelect");
-
-  if (
-    languageSelect &&
-    languageSelect.value !== language
-  ) {
-    languageSelect.value = language;
-  }
-      const customerLanguageSelect =
-  document.querySelector("#customerLanguageSelect");
-
-if (
-  customerLanguageSelect &&
-  customerLanguageSelect.value !== language
-) {
-  customerLanguageSelect.value = language;
-}
-
-  scheduleTranslate(0);
-},
+      applyLanguage(nextLanguage);
+    },
   };
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => {
-      createLanguageControl();
-      translateTree();
-    });
-  } else {
-    createLanguageControl();
-    translateTree();
-  }
+  function handleObservedMutations(mutations) {
+    if (language === "es") return;
 
- let translateScheduled = false;
-const pendingTranslateRoots = new Set();
+    for (const mutation of mutations) {
+      if (document.head?.contains(mutation.target)) continue;
 
-function scheduleTranslateRoot(root) {
-  if (!root) return;
+      if (mutation.type === "characterData") {
+        const textNode = mutation.target;
+        if (originalText.get(textNode)?.last === textNode.nodeValue) continue;
+        if (!shouldTranslateContent(textNode.nodeValue)) continue;
+        scheduleTranslateRoot(textNode.parentElement);
+        continue;
+      }
 
-  const element =
-    root.nodeType === Node.ELEMENT_NODE
-      ? root
-      : root.parentElement;
+      if (
+        mutation.type !== "childList" ||
+        !mutation.addedNodes?.length
+      ) {
+        continue;
+      }
 
-  if (!element) return;
+      const meaningfulNodes = Array.from(mutation.addedNodes).filter((node) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+          return shouldTranslateContent(node.nodeValue);
+        }
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          return !shouldSkipElement(node);
+        }
+        return false;
+      });
 
-  pendingTranslateRoots.add(element);
+      if (meaningfulNodes.length === 0) continue;
 
-  if (translateScheduled) return;
-
-  translateScheduled = true;
-
-  requestAnimationFrame(flushTranslateRoots);
-}
-
-async function flushTranslateRoots() {
-  if (translating) {
-    window.setTimeout(flushTranslateRoots, 120);
-    return;
-  }
-  const roots = Array.from(pendingTranslateRoots).filter((root) => root.isConnected);
-  pendingTranslateRoots.clear();
-  try {
-    for (const rootElement of roots) {
-      if (roots.some((other) => other !== rootElement && other.contains(rootElement))) continue;
-      await translateTree(rootElement);
-    }
-  } finally {
-    translateScheduled = false;
-    const next = pendingTranslateRoots.values().next().value;
-    if (next) scheduleTranslateRoot(next);
-  }
-}
-
-const observer = new MutationObserver((mutations) => {
-  for (const mutation of mutations) {
-    if (document.head.contains(mutation.target)) continue;
-    if (mutation.type === "characterData") {
-      if (originalText.get(mutation.target)?.last === mutation.target.nodeValue) continue;
-      scheduleTranslateRoot(mutation.target);
-      continue;
-    }
-
-    for (const node of mutation.addedNodes) {
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        scheduleTranslateRoot(node);
-      } else if (node.nodeType === Node.TEXT_NODE) {
-        scheduleTranslateRoot(node.parentElement);
+      if (meaningfulNodes.length === 1) {
+        const node = meaningfulNodes[0];
+        scheduleTranslateRoot(
+          node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement
+        );
+      } else {
+        scheduleTranslateRoot(mutation.target);
       }
     }
   }
-});
 
-observer.observe(document.documentElement, {
-  childList: true,
-  subtree: true,
-  characterData: true
-});
+  function startTranslationObserver() {
+    if (
+      translationObserverStarted ||
+      !document.body ||
+      typeof MutationObserver !== "function"
+    ) {
+      return;
+    }
+    translationObserver = new MutationObserver(handleObservedMutations);
+    translationObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+    translationObserverStarted = true;
+  }
+
+  function initializeAutoTranslate() {
+    createLanguageControl();
+    startTranslationObserver();
+    scheduleTranslate(0);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initializeAutoTranslate, {
+      once: true,
+    });
+  } else {
+    initializeAutoTranslate();
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (
+      document.visibilityState === "visible" &&
+      (fullTranslationRequested || pendingTranslateRoots.size > 0)
+    ) {
+      requestTranslationFlush();
+    }
+  });
+
+  window.addEventListener("online", () => {
+    translationServicePausedUntil = 0;
+    if (language !== "es") scheduleTranslate(250);
+  });
+
+  window.addEventListener("pagehide", () => {
+    if (cachePersistHandle !== null) persistCacheNow();
+  });
 })();
