@@ -5378,25 +5378,70 @@ function customerClearPaymentBox() {
   if (customerElements.confirmDeliveryButton) customerElements.confirmDeliveryButton.hidden = true;
   customerRenderActiveOrderState();
 }
+function customerSafeStripeCheckoutUrl(value) {
+  const rawUrl = String(value || "").trim();
+
+  if (!rawUrl || rawUrl.length > 8192) {
+    return "";
+  }
+
+  try {
+    const url = new URL(rawUrl);
+
+    if (
+      url.protocol !== "https:" ||
+      url.hostname !== "checkout.stripe.com" ||
+      url.username ||
+      url.password ||
+      (url.port && url.port !== "443")
+    ) {
+      return "";
+    }
+
+    return url.toString();
+  } catch {
+    return "";
+  }
+}
 async function customerStartOnlinePayment(orderId, publicToken) {
   if (!customerClient || !orderId || !publicToken || !navigator.onLine) {
     customerSetTrackingStatus(customerT("onlinePaymentFailed"), "error");
     return false;
   }
+
   customerSetTrackingStatus(customerT("paymentRedirecting"), "");
-  const { data, error } = await customerClient.functions.invoke("marketplace-checkout", {
-    body: { orderId, publicToken },
-  });
-  if (error || !data?.url) {
-    console.error("No fue posible iniciar el pago online:", error || data);
+
+  let data = null;
+  let error = null;
+
+  try {
+    const result = await customerClient.functions.invoke("marketplace-checkout", {
+      body: { orderId, publicToken },
+    });
+
+    data = result?.data || null;
+    error = result?.error || null;
+  } catch (requestError) {
+    error = requestError;
+  }
+
+  const checkoutUrl = customerSafeStripeCheckoutUrl(data?.url);
+
+  if (error || !checkoutUrl) {
+    console.error(
+      "No fue posible iniciar el pago online:",
+      error || { reason: "INVALID_STRIPE_CHECKOUT_URL" }
+    );
     customerSetTrackingStatus(customerT("onlinePaymentFailed"), "error");
     return false;
   }
+
   if (customerTrackedOrder?.id === orderId) {
-    customerTrackedOrder.paymentUrl = data.url;
+    customerTrackedOrder.paymentUrl = checkoutUrl;
     customerPersistTrackedOrder();
   }
-  window.location.assign(data.url);
+
+  window.location.assign(checkoutUrl);
   return true;
 }
 async function customerConfirmDelivery() {
