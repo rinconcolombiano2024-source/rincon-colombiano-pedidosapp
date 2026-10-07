@@ -4,6 +4,7 @@ const MAX_WEBHOOK_BODY_BYTES = 1_048_576; // 1 MiB
 const MAX_STRIPE_SIGNATURE_HEADER_LENGTH = 8_192;
 const STRIPE_SIGNATURE_TOLERANCE_SECONDS = 300;
 const EVENT_LEASE_MS = 120_000;
+const REFUND_REVERSAL_TRIGGER_TIMEOUT_MS = 120_000;
 
 type EventProcessingStatus = "processed" | "ignored" | "failed";
 
@@ -637,6 +638,109 @@ function verifiedRefundDetails(
   };
 }
 
+
+function scheduleRefundReversalWorker(
+  supabaseUrl: string,
+  serviceKey: string,
+  settlementSecret: string,
+  paymentTransactionId: string,
+) {
+  if (
+    !supabaseUrl ||
+    !serviceKey ||
+    !isUuid(paymentTransactionId)
+  ) {
+    return;
+  }
+
+  const task = (async () => {
+    const controller =
+      new AbortController();
+
+    const timeout =
+      setTimeout(
+        () =>
+          controller.abort(),
+        REFUND_REVERSAL_TRIGGER_TIMEOUT_MS,
+      );
+
+    try {
+      const headers:
+        Record<string, string> = {
+          Authorization:
+            `Bearer ${serviceKey}`,
+          "Content-Type":
+            "application/json",
+        };
+
+      if (
+        settlementSecret.length >=
+          24
+      ) {
+        headers[
+          "x-rc-ordera-settlement-secret"
+        ] =
+          settlementSecret;
+      }
+
+      const result =
+        await fetch(
+          `${supabaseUrl.replace(
+            /\/+$/,
+            "",
+          )}/functions/v1/marketplace-refund-reversals`,
+          {
+            method:
+              "POST",
+            headers,
+            body:
+              JSON.stringify({
+                paymentTransactionId,
+              }),
+            signal:
+              controller.signal,
+          },
+        );
+
+      if (!result.ok) {
+        console.error(
+          "marketplace-webhook refund reversal worker returned non-2xx",
+          {
+            paymentTransactionId,
+            status:
+              result.status,
+          },
+        );
+      }
+    } catch (error) {
+      console.error(
+        "marketplace-webhook refund reversal worker trigger failed",
+        {
+          paymentTransactionId,
+          error:
+            String(
+              error instanceof
+                  Error
+                ? error.message
+                : error,
+            ).slice(
+              0,
+              500,
+            ),
+        },
+      );
+    } finally {
+      clearTimeout(
+        timeout,
+      );
+    }
+  })();
+
+  EdgeRuntime.waitUntil(
+    task,
+  );
+}
+
 Deno.serve(
   async (request) => {
     if (
@@ -662,6 +766,11 @@ Deno.serve(
     const webhookSecret =
       Deno.env.get(
         "STRIPE_WEBHOOK_SECRET",
+      ) || "";
+
+    const settlementSecret =
+      Deno.env.get(
+        "PAYMENT_SETTLEMENT_SECRET",
       ) || "";
 
     if (
@@ -1157,16 +1266,6 @@ Deno.serve(
         );
       }
 
-      /*
-       * payment_intent.payment_failed
-       * representa el fallo de un intento.
-       *
-       * NO significa necesariamente que
-       * toda la sesión Checkout haya fallado.
-       *
-       * El cliente todavía puede probar
-       * otro método de pago.
-       */
       if (
         eventType ===
         "payment_intent.payment_failed"
@@ -1188,10 +1287,6 @@ Deno.serve(
         });
       }
 
-      /*
-       * Estos eventos sí representan
-       * fallo terminal del intento Checkout.
-       */
       if (
         [
           "checkout.session.async_payment_failed",
@@ -1295,6 +1390,20 @@ Deno.serve(
         }
 
         if (
+          String(
+            refund.data || "",
+          ).toLowerCase() ===
+          "refunded"
+        ) {
+          scheduleRefundReversalWorker(
+            supabaseUrl,
+            serviceKey,
+            settlementSecret,
+            transactionId,
+          );
+        }
+
+        if (
           !(await markEvent(
             "processed",
           ))
@@ -1320,6 +1429,9 @@ Deno.serve(
             "Refund payment transaction was not found",
           );
         }
+
+        let refundBecameTotal =
+          false;
 
         const refunds =
           Array.isArray(
@@ -1386,6 +1498,27 @@ Deno.serve(
           ) {
             throw refund.error;
           }
+
+          if (
+            String(
+              refund.data || "",
+            ).toLowerCase() ===
+            "refunded"
+          ) {
+            refundBecameTotal =
+              true;
+          }
+        }
+
+        if (
+          refundBecameTotal
+        ) {
+          scheduleRefundReversalWorker(
+            supabaseUrl,
+            serviceKey,
+            settlementSecret,
+            transactionId,
+          );
         }
 
         if (
