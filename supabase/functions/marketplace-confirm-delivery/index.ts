@@ -1,302 +1,237 @@
-const fs = require("fs");
-const path = require("path");
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
-const root = __dirname;
-const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
-const app = read("app.js");
-const customer = read("cliente.js");
-const courier = read("colaborador.js");
-const waiter = read("mesero.js");
-const migration = read("MIGRACION-V91-01-RENDIMIENTO-INTEGRIDAD-Y-CIERRES.sql");
-const stationContractMigration = read("MIGRACION-V91-03-CONTRATO-MULTIESTACION-Y-REALTIME.sql");
-const syncLoadMigration = read("MIGRACION-V91-04-CONTROL-CARGA-SINCRONIZACION.sql");
-const syncContractMigration = read("MIGRACION-V91-07-CONTRATO-COMPATIBILIDAD-SINCRONIZACION.sql");
-const releaseContractMigration = read("MIGRACION-V91-26-CONTRATO-RELEASE-V91-25.sql");
-const marketplaceCheckout = read("supabase/functions/marketplace-checkout/index.ts");
-const sw = read("service-worker.js");
-const failures = [];
-const check = (condition, label) => { if (!condition) failures.push(label); };
+const MAX_REQUEST_BODY_BYTES = 16_384;
+const MAX_AUTHORIZATION_HEADER_LENGTH = 8_192;
+const MAX_PUBLIC_TOKEN_LENGTH = 512;
+const SETTLEMENT_REQUEST_TIMEOUT_MS = 10_000;
 
-check(/LOCAL_ORDER_CACHE_LIMIT\s*=\s*250/.test(app), "cache de pedidos limitado");
-check(!app.includes(".limit(5000)"), "sin descarga inicial de 5.000 pedidos");
-check(app.includes('clientOrdersRealtimeStatus === "SUBSCRIBED"'), "polling suspendido con Realtime");
-check(app.includes("handleClientOrderRealtimePayload"), "actualizacion incremental de pedidos");
-check(app.includes("renderClientOrderPatch"), "render incremental de una tarjeta");
-check(app.includes('data-action="load-client-chat"'), "chat bajo demanda");
-check(app.includes('rpc("get_restaurant_closure_report"'), "cierres calculados en servidor");
-check(app.includes('rpc("void_restaurant_order"'), "cancelacion historica por RPC");
-check(!app.includes("deleteCloudOrder"), "sin borrado fisico de pedidos guardados");
-check(courier.includes('courierDeliveryRealtimeStatus === "SUBSCRIBED"'), "colaborador usa polling solo como respaldo");
-check(migration.includes("get_rc_ordera_schema_version"), "control de version de esquema");
-check(/rpc\(\s*"get_rc_ordera_sync_contract"/.test(app), "frontend verifica contrato de sincronizacion");
-check(/MINIMUM_SYNC_CONTRACT_VERSION\s*=\s*7\b/.test(app), "frontend exige contrato 7");
-check(
-  /MINIMUM_RELEASE_CONTRACT_VERSION\s*=\s*25\b/.test(app),
-  "frontend exige contrato de release V91-25"
-);
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
 
-check(
-  /rpc\(\s*"get_rc_ordera_release_contract"/.test(app),
-  "frontend verifica contrato real V91-25"
-);
+const responseHeaders = {
+  ...corsHeaders,
+  "content-type": "application/json; charset=utf-8",
+  "cache-control": "no-store",
+  "x-content-type-options": "nosniff",
+};
 
-check(
-  releaseContractMigration.includes("V91-23")
-    && releaseContractMigration.includes("V91-24")
-    && releaseContractMigration.includes("V91-25"),
-  "contrato de release valida V91-23 V91-24 V91-25"
-);
+type ConfirmPayload = {
+  orderId?: unknown;
+  publicToken?: unknown;
+  actor?: unknown;
+};
 
-check(
-  releaseContractMigration.includes(
-    "create_customer_order_v91_22_core"
-  )
-    && releaseContractMigration.includes(
-      "rc_ordera_consume_order_rate_limit"
-    ),
-  "contrato valida seguridad V91-23"
-);
-
-check(
-  releaseContractMigration.includes(
-    "v91_25_product_identity"
-  )
-    && releaseContractMigration.includes(
-      "v91_25_single_report"
-    ),
-  "contrato valida productos y motor unico V91-25"
-);
-
-check(!syncContractMigration.includes("V91-08") && syncContractMigration.includes("array['orders', 'customer_order_messages']") && syncContractMigration.includes("alter publication supabase_realtime add table public.%I"), "contrato 7 instala publicaciones sin V91-08");
-check(app.includes('"RC_ORDERA_SCHEMA_OUTDATED", "RC_ORDERA_SCHEMA_INCOMPLETE"'), "carga inicial bloquea esquema incompleto");
-check(syncContractMigration.includes("get_rc_ordera_sync_contract"), "RPC de contrato de sincronizacion disponible");
-check(syncContractMigration.includes("missing_components"), "contrato informa componentes faltantes");
-check(syncContractMigration.includes("jsonb_object_length") && syncContractMigration.includes("v_groups <> ''{}''::jsonb"), "contrato distingue correccion V91-06");
-check(migration.includes("get_restaurant_closure_report"), "RPC de cierres");
-check(migration.includes("void_restaurant_order"), "RPC de anulacion");
-check(migration.includes("process_expired_delivery_offers"), "mantenimiento de ofertas separado");
-check(migration.includes("update_delivery_assignment_status"), "estado de entrega atomico");
-check(!/drop\s+table/i.test(migration), "migracion sin DROP TABLE");
-check(!/disable\s+row\s+level\s+security/i.test(migration), "migracion no desactiva RLS");
-check(migration.includes("notify pgrst, 'reload schema'"), "recarga de esquema PostgREST");
-const criticalCodeStart = sw.indexOf("if (isCriticalCode)");
-const criticalCodeEnd = sw.indexOf("const updateCache", criticalCodeStart);
-const criticalCodeBlock = criticalCodeStart >= 0 && criticalCodeEnd > criticalCodeStart
-  ? sw.slice(criticalCodeStart, criticalCodeEnd)
-  : "";
-check(criticalCodeBlock.includes("fetch(event.request)"), "PWA intenta primero la red para codigo critico");
-check(criticalCodeBlock.includes("cache.put(event.request, responseClone)"), "PWA actualiza cache con respuesta valida");
-check(criticalCodeBlock.includes("await cachedRuntimeResource(event.request)") && sw.includes("cache.match(request, { ignoreSearch: true })"), "PWA usa cache cuando falla la red");
-check(criticalCodeBlock.includes('status: 503'), "PWA responde 503 sin red ni cache");
-check(app.includes("requestIdleCallback(persistMenuCatalogCache"), "cache del menu fuera del hilo principal");
-check(app.includes("menuSearchTimer = window.setTimeout"), "busqueda del restaurante con debounce");
-check(courier.includes('courierDeliveryRealtimeStatus === "SUBSCRIBED"'), "seguimiento de colaborador sin sondeo duplicado");
-check(/finally\s*\{[\s\S]*?cloudState\.loading\s*=\s*false;[\s\S]*?updateCloudStatus\(\);[\s\S]*?\}/s.test(app), "estado de nube siempre finaliza");
-check(app.includes("withCloudTimeout(cloudState.client.auth.getSession())"), "sesion de nube con tiempo maximo");
-check(app.includes("await withCloudTimeout((signal) => ensureMinimumDatabaseVersion(signal))"), "version de nube con tiempo maximo y signal");
-check(
-  /const settingsResponse\s*=\s*await withCloudTimeout\([\s\S]*?settingsRequest[\s\S]*?8000[\s\S]*?\.catch/s.test(app)
-    && /Promise\.all\(\[[\s\S]*?withCloudTimeout\([\s\S]*?profileRequest[\s\S]*?withCloudTimeout\([\s\S]*?ordersRequest/s.test(app),
-  "carga inicial de nube con tiempo maximo"
-);
-check(customer.includes("const requestedStoreId = customerStoreId;"), "menu conserva el restaurante solicitado");
-check(customer.includes("if (requestedStoreId !== customerStoreId) return;"), "respuesta tardia no reemplaza otro menu");
-check(/function saveMenuCatalog\(\)\s*\{[\s\S]*?markMenuPending\(\);[\s\S]*?saveMenuCache\(\{ immediate: true \}\);/.test(app), "menu local protegido antes de sincronizar");
-check(app.includes("remoteMenuHasNewerRevision") && app.includes("protectLocalMenuFromEmptyCloud"), "menu vacio confirmado conserva su revision de nube");
-check(customer.includes("customerReadMenuCache(requestedStoreId)"), "cliente recupera el menu publico cuando falla la nube");
-check(app.includes("anulacion(es) antigua(s)") && app.includes("order not found"), "cola antigua no queda pendiente para siempre");
-check(waiter.includes('code === "PGRST002"') && waiter.includes('code === "PGRST003"') && waiter.includes("[429, 502, 503].includes(status)"), "mesero conserva pedidos ante fallos temporales de Supabase");
-check(waiter.includes("remaining.push(...queue.slice(index + 1))"), "mesero corta la ronda de cola tras un fallo temporal");
-check(waiter.includes('if (!confirmedOrder?.id)'), "mesero solo confirma pedidos con respuesta real del servidor");
-check(waiter.includes('waiterOrdersRealtimeStatus === "SUBSCRIBED"') && waiter.includes("WAITER_STATION_POLL_MAX_MS"), "estaciones sondean solo como respaldo de Realtime");
-check(!waiter.includes("window.setInterval(() => waiterLoadStationOrders"), "estaciones no mantienen sondeo fijo con Realtime activo");
-check(waiter.includes("waiterMenuLoadInFlight") && waiter.includes("waiterStationLoadInFlight") && waiter.includes("waiterSentOrdersLoadInFlight"), "mesero evita lecturas simultaneas duplicadas");
-check(app.includes('centralSyncChannel &&') && app.includes('clientOrdersChannel &&'), "recuperacion no reinicia canales Realtime sanos");
-check(app.includes('.from("customer_orders")') && app.includes("publicationByRestaurantOrderId") && app.includes("publicationRow?.id"), "pedido pendiente exige publicacion confirmada para estaciones");
-check(courier.includes("courierDeliveryRealtimeRetryDelay") && courier.includes("courierScheduleDeliveryRealtimeReconnect"), "colaborador reconecta Realtime con backoff");
-check(!/courierLoadDeliveryOffers\(\{ silent: true \}\);\s*if \(courierAvailable && courierLastLocation\)/s.test(courier), "polling de ofertas no duplica escritura GPS");
-check(syncLoadMigration.includes("created_at >= now() - interval '24 hours'") && syncLoadMigration.includes("interval '2 minutes'"), "cola de domicilios limita antiguedad y frecuencia");
-check(syncLoadMigration.includes("cron.alter_job") && !syncLoadMigration.includes("active => true"), "ajuste cron conserva su estado activo o inactivo");
-check(stationContractMigration.includes("get_my_restaurant_stations"), "contrato multiestacion disponible en SQL");
-check(stationContractMigration.includes("list_my_station_orders(uuid, text)"), "lectura de estacion acepta la estacion seleccionada");
-check(stationContractMigration.includes("update_my_station_order(uuid, uuid, text, text)"), "avance de estacion acepta la estacion seleccionada");
-check(stationContractMigration.includes("alter publication supabase_realtime add table public.customer_orders"), "pedidos de cliente publicados en Realtime");
-check(stationContractMigration.includes("v_is_custom") && stationContractMigration.includes("'custom', v_is_custom"), "producto especial de mesero validado en servidor");
-check(stationContractMigration.includes("v_product->>'price'") && stationContractMigration.includes("v_product->>'station'"), "producto normal conserva precio y estacion del menu confiable");
-
-/*
- * Checkout V91 hardened:
- * - reutiliza solo una Checkout Session pending con URL Stripe segura y no expirada;
- * - recupera una reserva pending sin URL conservando la misma idempotency key;
- * - obliga a reconciliar sesiones activas malformadas;
- * - valida la respuesta de Stripe contra pedido/transaccion antes de persistirla.
- */
-check(
-  /const reusable\s*=[\s\S]*?attempt\.status\s*!==[\s\S]*?"pending"[\s\S]*?!attempt\.checkout_url[\s\S]*?expiresAt\s*<=[\s\S]*?now[\s\S]*?isSafeStripeCheckoutUrl\(/s.test(marketplaceCheckout),
-  "checkout reutiliza solo sesiones Stripe pendientes validas y no expiradas"
-);
-
-check(
-  /const unfinishedAttempt\s*=[\s\S]*?attempt\.status\s*===[\s\S]*?"pending"[\s\S]*?!attempt\.checkout_url[\s\S]*?attempt\.idempotency_key/s.test(marketplaceCheckout)
-    && /const idempotencyKey\s*=[\s\S]*?unfinishedAttempt[\s\S]*?\.idempotency_key/s.test(marketplaceCheckout),
-  "checkout recupera reserva pendiente con la misma idempotency key"
-);
-
-check(
-  marketplaceCheckout.includes("const malformedActiveAttempt")
-    && marketplaceCheckout.includes("Stored checkout requires reconciliation before another payment attempt")
-    && marketplaceCheckout.includes("Concurrent checkout requires reconciliation"),
-  "checkout no abre otra sesion encima de un intento activo inconsistente"
-);
-
-check(
-  marketplaceCheckout.includes("function validateCheckoutSession(")
-    && marketplaceCheckout.includes("amountTotal !==")
-    && marketplaceCheckout.includes("clientReferenceId !==")
-    && marketplaceCheckout.includes("metadataTransactionId !==")
-    && marketplaceCheckout.includes("metadataOrderId !==")
-    && marketplaceCheckout.includes("Stripe checkout response did not match the reserved order"),
-  "checkout reconcilia la respuesta Stripe antes de persistirla"
-);
-
-const settingsReadGuardStart = app.indexOf("if (!settingsError) {");
-const ordersReadGuardStart = app.indexOf("if (!ordersError) {");
-const postOrdersReadStart = app.indexOf("    try {", ordersReadGuardStart);
-const settingsReadGuard = settingsReadGuardStart >= 0 && ordersReadGuardStart > settingsReadGuardStart
-  ? app.slice(settingsReadGuardStart, ordersReadGuardStart)
-  : "";
-const ordersReadGuard = ordersReadGuardStart >= 0 && postOrdersReadStart > ordersReadGuardStart
-  ? app.slice(ordersReadGuardStart, postOrdersReadStart)
-  : "";
-const pendingSyncStart = app.indexOf("function syncPendingData(options = {})");
-const pendingSyncEnd = app.indexOf("async function signInWithEmail()", pendingSyncStart);
-const pendingSyncBlock = pendingSyncStart >= 0 && pendingSyncEnd > pendingSyncStart
-  ? app.slice(pendingSyncStart, pendingSyncEnd)
-  : "";
-const pendingOrderLoopStart = pendingSyncBlock.indexOf("for (const order of pendingOrdersToUpload)");
-const pendingOrderLoopEnd = pendingSyncBlock.indexOf("if (pendingOrderSyncError)", pendingOrderLoopStart);
-const pendingOrderLoop = pendingOrderLoopStart >= 0 && pendingOrderLoopEnd > pendingOrderLoopStart
-  ? pendingSyncBlock.slice(pendingOrderLoopStart, pendingOrderLoopEnd)
-  : "";
-
-const publicProfileActiveStart = app.indexOf('typeof publicProfileRow?.active === "boolean"');
-const profileFallbackStart = app.indexOf("applyRestaurantProfile(", settingsReadGuardStart);
-const settingsWritesGuardStart = app.indexOf("if (!settingsError) {", settingsReadGuardStart + 1);
-check(
-  publicProfileActiveStart >= 0
-    && publicProfileActiveStart < settingsReadGuardStart
-    && profileFallbackStart > settingsReadGuardStart
-    && profileFallbackStart < settingsWritesGuardStart
-    && /storeConfirmedCloudSettings\([\s\S]*?settingsRow\.settings \|\| \{\}\s*\);\s*}\s*}\s*\/\*\s*\* Si existen ajustes locales pendientes/.test(settingsReadGuard)
-    && settingsReadGuard.includes("Boolean(!settingsError && settingsRow)"),
-  "settings 503 conserva perfiles publicos validos sin confirmar settingsRow"
-);
-
-check(
-  ordersReadGuard.includes("savedOrders = mergeOrders(normalizedCloudOrders, localPendingOrders)")
-    && ordersReadGuard.includes("saveOrders()"),
-  "orders 503 conserva savedOrders locales"
-);
-check(
-  settingsReadGuard.includes("await saveCloudSettings()"),
-  "settings 503 no ejecuta saveCloudSettings automaticamente"
-);
-check(
-  settingsReadGuard.includes("await saveCloudMenu()"),
-  "settings 503 no ejecuta saveCloudMenu automaticamente"
-);
-check(
-  /await saveCloudMenu\(\);[\s\S]*?clearMenuPending\(\s*menuPendingToken\s*\)/s.test(pendingSyncBlock),
-  "menuPending solo se limpia tras confirmacion"
-);
-check(
-  /await saveCloudSettings\(\);[\s\S]*?clearSettingsPending\(\s*settingsPendingToken\s*\)/s.test(pendingSyncBlock),
-  "settingsPending solo se limpia tras confirmacion"
-);
-check(
-  /await setCloudNextTicket\(\s*shouldSyncTicketCounter\s*\);[\s\S]*?clearPendingTicketCounter\(\s*shouldSyncTicketCounter\s*\)/s.test(pendingSyncBlock)
-    && app.includes("pendingTicketCounter() !== expectedValue"),
-  "ticketCounterPending solo se limpia tras confirmacion"
-);
-check(
-  /const expectedUpdatedAt = order\.updatedAt;\s*await withCloudTimeout\(\s*\(signal\)\s*=>\s*saveCloudOrder\(\s*order,\s*signal\s*\),[^;]+;\s*confirmOrderSyncedIfUnchanged\(order\.id, expectedUpdatedAt\);/s.test(pendingOrderLoop),
-  "pedido pendiente conserva estado si falla saveCloudOrder"
-);
-check(
-  app.includes('setOrderSyncStatus(orderId, "synced")')
-    && app.includes("currentSavedOrder.updatedAt !== expectedUpdatedAt"),
-  "pedido confirmado pasa a synced"
-);
-check(
-  /if \(pendingDataSyncInFlight\)[\s\S]*?return pendingDataSyncInFlight;/.test(pendingSyncBlock),
-  "syncPendingData es single-flight"
-);
-check(
-  pendingSyncBlock.includes("pendingDataSyncRequested &&")
-    && pendingSyncBlock.includes("hasPendingDataToSync() &&"),
-  "llamada simultanea no programa otra ronda vacia"
-);
-check(
-  /if\s*\(isTemporarySyncInfrastructureError\(error\)\)\s*\{[\s\S]*?break;/.test(pendingOrderLoop)
-    && pendingSyncBlock.includes("SYNC_INFRASTRUCTURE_BACKOFF_MS"),
-  "error general 503 corta la ronda y aplica backoff"
-);
-const centralRealtimeReconnectStart = app.indexOf("function scheduleCentralRealtimeReconnect()");
-const centralRealtimeStart = app.indexOf("function startCentralRealtime()", centralRealtimeReconnectStart);
-const clientRealtimeReconnectStart = app.indexOf("function scheduleClientOrdersRealtimeReconnect()", centralRealtimeStart);
-const centralRealtimeReconnectBlock = centralRealtimeReconnectStart >= 0 && centralRealtimeStart > centralRealtimeReconnectStart
-  ? app.slice(centralRealtimeReconnectStart, centralRealtimeStart)
-  : "";
-const centralRealtimeSubscribeBlock = centralRealtimeStart >= 0 && clientRealtimeReconnectStart > centralRealtimeStart
-  ? app.slice(centralRealtimeStart, clientRealtimeReconnectStart)
-  : "";
-check(
-  app.includes("const CENTRAL_REALTIME_RECONNECT_MIN_MS = 1_500;")
-    && app.includes("const CENTRAL_REALTIME_RECONNECT_MAX_MS = 60_000;")
-    && centralRealtimeReconnectBlock.includes("const retryDelay = centralRealtimeReconnectDelay;")
-    && centralRealtimeReconnectBlock.includes("retryDelay * 2")
-    && centralRealtimeReconnectBlock.includes("CENTRAL_REALTIME_RECONNECT_MAX_MS")
-    && centralRealtimeReconnectBlock.includes("}, retryDelay);")
-    && !centralRealtimeReconnectBlock.includes("}, 1500);"),
-  "Realtime central aplica backoff exponencial"
-);
-check(
-  /centralRealtimeReconnectDelay\s*=\s*CENTRAL_REALTIME_RECONNECT_MIN_MS;/.test(centralRealtimeSubscribeBlock)
-    && centralRealtimeSubscribeBlock.includes('status === "SUBSCRIBED"')
-    && /scheduleCentralRefresh\(\{[\s\S]*?settings: true,[\s\S]*?profile: true,[\s\S]*?orders: true,/s.test(centralRealtimeSubscribeBlock),
-  "Realtime central recupera datos y reinicia backoff al reconectar"
-);
-check(
-  /if\s*\(!pendingOrderSyncError\)\s*\{?\s*pendingOrderSyncError\s*=\s*error;/.test(pendingOrderLoop)
-    && /if\s*\(isTemporarySyncInfrastructureError\(error\)\)\s*\{[\s\S]*?break;/.test(pendingOrderLoop),
-  "fallo logico aislado no borra otros pendientes"
-);
-check(
-  ordersReadGuard.startsWith("if (!ordersError) {")
-    && !ordersReadGuard.includes("if (ordersError)"),
-  "lectura fallida no se interpreta como lista vacia confirmada"
-);
-
-const temporaryErrorClassifierStart = app.indexOf("function isTemporarySyncInfrastructureError(error)");
-const temporaryErrorClassifierEnd = app.indexOf("function needsCloudSync", temporaryErrorClassifierStart);
-const temporaryErrorClassifierSource = temporaryErrorClassifierStart >= 0 && temporaryErrorClassifierEnd > temporaryErrorClassifierStart
-  ? app.slice(temporaryErrorClassifierStart, temporaryErrorClassifierEnd)
-  : "";
-try {
-  const classifyTemporaryError = Function(`${temporaryErrorClassifierSource}; return isTemporarySyncInfrastructureError;`)();
-  check(classifyTemporaryError({ status: 503 }), "clasifica HTTP 503 como infraestructura temporal");
-  check(classifyTemporaryError({ code: "PGRST002" }), "clasifica PGRST002 como infraestructura temporal");
-  check(classifyTemporaryError({ code: "PGRST003" }), "clasifica PGRST003 como infraestructura temporal");
-  check(classifyTemporaryError(new Error("schema cache unavailable")), "clasifica schema cache como infraestructura temporal");
-  check(classifyTemporaryError(new Error("connection pool timeout")), "clasifica timeout de pool como infraestructura temporal");
-  check(classifyTemporaryError(new Error("Failed to fetch")), "clasifica fallo de red como infraestructura temporal");
-  check(!classifyTemporaryError({ code: "42501", message: "permission denied" }), "no oculta error logico o de permisos");
-} catch {
-  check(false, "clasificador de errores temporales ejecutable");
+function response(status: number, body: Record<string, unknown>) {
+  return new Response(JSON.stringify(body), { status, headers: responseHeaders });
 }
 
-if (failures.length) {
-  failures.forEach((failure) => console.error(`FAIL: ${failure}`));
-  process.exit(1);
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
-console.log(`RC ORDERA V${JSON.parse(read("package.json")).version} QA: comprobaciones aprobadas.`);
+
+function isBearerAuthorization(value: string) {
+  return /^Bearer\s+\S+$/i.test(value);
+}
+
+async function readJsonBodyLimited(request: Request): Promise<ConfirmPayload> {
+  const contentLength = Number(request.headers.get("content-length") || 0);
+  if (Number.isFinite(contentLength) && contentLength > MAX_REQUEST_BODY_BYTES) {
+    throw new Error("REQUEST_BODY_TOO_LARGE");
+  }
+  if (!request.body) throw new SyntaxError("REQUEST_BODY_MISSING");
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+      total += value.byteLength;
+      if (total > MAX_REQUEST_BODY_BYTES) {
+        try { await reader.cancel("REQUEST_BODY_TOO_LARGE"); } catch {}
+        throw new Error("REQUEST_BODY_TOO_LARGE");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    try { reader.releaseLock(); } catch {}
+  }
+
+  const merged = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  let text = "";
+  try {
+    text = new TextDecoder("utf-8", { fatal: true }).decode(merged);
+  } catch {
+    throw new SyntaxError("REQUEST_BODY_INVALID_UTF8");
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new SyntaxError("REQUEST_BODY_INVALID_JSON");
+  }
+
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new SyntaxError("REQUEST_BODY_INVALID_JSON");
+  }
+  return parsed as ConfirmPayload;
+}
+
+function normalizeRpcRow(data: unknown) {
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row || typeof row !== "object") return null;
+  const candidate = row as Record<string, unknown>;
+  if (
+    typeof candidate.courier_confirmed !== "boolean" ||
+    typeof candidate.customer_confirmed !== "boolean" ||
+    typeof candidate.settlement_eligible !== "boolean"
+  ) return null;
+  return {
+    courierConfirmed: candidate.courier_confirmed,
+    customerConfirmed: candidate.customer_confirmed,
+    settlementEligible: candidate.settlement_eligible,
+  };
+}
+
+async function requestSettlement(
+  supabaseUrl: string,
+  serviceKey: string,
+  settlementSecret: string,
+) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), SETTLEMENT_REQUEST_TIMEOUT_MS);
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+
+  if (settlementSecret.length >= 24) {
+    headers["x-rc-ordera-settlement-secret"] = settlementSecret;
+  } else {
+    headers.Authorization = `Bearer ${serviceKey}`;
+  }
+
+  try {
+    const result = await fetch(`${supabaseUrl}/functions/v1/marketplace-settlement`, {
+      method: "POST",
+      headers,
+      body: "{}",
+      signal: controller.signal,
+    });
+    return result.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+Deno.serve(async (request) => {
+  if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (request.method !== "POST") return response(405, { error: "Method not allowed" });
+
+  const supabaseUrl = (Deno.env.get("SUPABASE_URL") || "").replace(/\/+$/, "");
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+  const settlementSecret = Deno.env.get("PAYMENT_SETTLEMENT_SECRET") || "";
+
+  if (!supabaseUrl || !anonKey || !serviceKey) {
+    return response(503, { error: "Service is not configured" });
+  }
+
+  let payload: ConfirmPayload;
+  try {
+    payload = await readJsonBodyLimited(request);
+  } catch (error) {
+    if (error instanceof Error && error.message === "REQUEST_BODY_TOO_LARGE") {
+      return response(413, { error: "Request body is too large" });
+    }
+    return response(400, { error: "Invalid request" });
+  }
+
+  const orderId = String(payload.orderId || "").trim();
+  const actor = String(payload.actor || "").trim().toLowerCase();
+  const suppliedToken = String(payload.publicToken || "").trim();
+
+  if (
+    !isUuid(orderId) ||
+    !["customer", "courier"].includes(actor) ||
+    suppliedToken.length > MAX_PUBLIC_TOKEN_LENGTH
+  ) {
+    return response(400, { error: "Invalid delivery confirmation" });
+  }
+
+  const rawAuthorization = request.headers.get("authorization") || "";
+  if (rawAuthorization.length > MAX_AUTHORIZATION_HEADER_LENGTH) {
+    return response(401, { error: "Unauthorized" });
+  }
+  if (rawAuthorization && !isBearerAuthorization(rawAuthorization)) {
+    return response(401, { error: "Unauthorized" });
+  }
+
+  if (actor === "courier" && !rawAuthorization) {
+    return response(401, { error: "Unauthorized" });
+  }
+  if (actor === "customer" && !rawAuthorization && suppliedToken.length < 8) {
+    return response(401, { error: "Unauthorized" });
+  }
+
+  const authorization = rawAuthorization || `Bearer ${anonKey}`;
+  const scopedClient = createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: authorization } },
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  });
+
+  const { data, error } = await scopedClient.rpc("record_delivery_completion_confirmation", {
+    p_customer_order_id: orderId,
+    p_public_token: actor === "customer" ? suppliedToken : "",
+    p_actor: actor,
+  });
+
+  if (error) {
+    console.error("marketplace-confirm-delivery rejected", {
+      code: error.code || "",
+      orderId,
+      actor,
+    });
+    return response(403, { error: "Delivery confirmation was rejected" });
+  }
+
+  const normalized = normalizeRpcRow(data);
+  if (!normalized) {
+    console.error("marketplace-confirm-delivery invalid RPC response", { orderId, actor });
+    return response(502, { error: "Delivery confirmation could not be verified" });
+  }
+
+  let settlementRequested = false;
+  if (normalized.settlementEligible) {
+    settlementRequested = await requestSettlement(
+      supabaseUrl,
+      serviceKey,
+      settlementSecret,
+    );
+    if (!settlementRequested) {
+      console.error("marketplace-confirm-delivery settlement trigger failed", { orderId });
+    }
+  }
+
+  return response(200, {
+    courierConfirmed: normalized.courierConfirmed,
+    customerConfirmed: normalized.customerConfirmed,
+    settlementEligible: normalized.settlementEligible,
+    settlementRequested,
+  });
+});
