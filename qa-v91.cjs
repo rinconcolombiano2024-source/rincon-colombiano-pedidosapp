@@ -13,6 +13,7 @@ const syncLoadMigration = read("MIGRACION-V91-04-CONTROL-CARGA-SINCRONIZACION.sq
 const syncContractMigration = read("MIGRACION-V91-07-CONTRATO-COMPATIBILIDAD-SINCRONIZACION.sql");
 const releaseContractMigration = read("MIGRACION-V91-26-CONTRATO-RELEASE-V91-25.sql");
 const marketplaceCheckout = read("supabase/functions/marketplace-checkout/index.ts");
+const marketplaceConfirmDelivery = read("supabase/functions/marketplace-confirm-delivery/index.ts");
 const sw = read("service-worker.js");
 const failures = [];
 const check = (condition, label) => { if (!condition) failures.push(label); };
@@ -123,8 +124,57 @@ check(stationContractMigration.includes("update_my_station_order(uuid, uuid, tex
 check(stationContractMigration.includes("alter publication supabase_realtime add table public.customer_orders"), "pedidos de cliente publicados en Realtime");
 check(stationContractMigration.includes("v_is_custom") && stationContractMigration.includes("'custom', v_is_custom"), "producto especial de mesero validado en servidor");
 check(stationContractMigration.includes("v_product->>'price'") && stationContractMigration.includes("v_product->>'station'"), "producto normal conserva precio y estacion del menu confiable");
-check(marketplaceCheckout.includes("const unfinishedAttempt") && marketplaceCheckout.includes("unfinishedAttempt?.idempotency_key"), "checkout reutiliza intentos pendientes sin crear otra sesion pagable");
-check(marketplaceCheckout.includes('attempt.status === "pending" && !attempt.checkout_url'), "checkout recupera una sesion no persistida");
+
+/*
+ * Checkout V91 hardened:
+ * - reutiliza solo una Checkout Session pending con URL Stripe segura y no expirada;
+ * - recupera una reserva pending sin URL conservando la misma idempotency key;
+ * - obliga a reconciliar sesiones activas malformadas;
+ * - valida la respuesta de Stripe contra pedido/transaccion antes de persistirla.
+ */
+check(
+  /const reusable\s*=[\s\S]*?attempt\.status\s*!==[\s\S]*?"pending"[\s\S]*?!attempt\.checkout_url[\s\S]*?expiresAt\s*<=[\s\S]*?now[\s\S]*?isSafeStripeCheckoutUrl\(/s.test(marketplaceCheckout),
+  "checkout reutiliza solo sesiones Stripe pendientes validas y no expiradas"
+);
+
+check(
+  /const unfinishedAttempt\s*=[\s\S]*?attempt\.status\s*===[\s\S]*?"pending"[\s\S]*?!attempt\.checkout_url[\s\S]*?attempt\.idempotency_key/s.test(marketplaceCheckout)
+    && /const idempotencyKey\s*=[\s\S]*?unfinishedAttempt[\s\S]*?\.idempotency_key/s.test(marketplaceCheckout),
+  "checkout recupera reserva pendiente con la misma idempotency key"
+);
+
+check(
+  marketplaceCheckout.includes("const malformedActiveAttempt")
+    && marketplaceCheckout.includes("Stored checkout requires reconciliation before another payment attempt")
+    && marketplaceCheckout.includes("Concurrent checkout requires reconciliation"),
+  "checkout no abre otra sesion encima de un intento activo inconsistente"
+);
+
+check(
+  marketplaceCheckout.includes("function validateCheckoutSession(")
+    && marketplaceCheckout.includes("amountTotal !==")
+    && marketplaceCheckout.includes("clientReferenceId !==")
+    && marketplaceCheckout.includes("metadataTransactionId !==")
+    && marketplaceCheckout.includes("metadataOrderId !==")
+    && marketplaceCheckout.includes("Stripe checkout response did not match the reserved order"),
+  "checkout reconcilia la respuesta Stripe antes de persistirla"
+);
+
+check(
+  marketplaceConfirmDelivery.includes('import { createClient }')
+    && marketplaceConfirmDelivery.includes("Deno.serve(")
+    && marketplaceConfirmDelivery.includes('"record_delivery_completion_confirmation"')
+    && !marketplaceConfirmDelivery.includes('const fs = require('),
+  "confirm-delivery sigue siendo una Edge Function y conserva la RPC financiera"
+);
+
+check(
+  marketplaceConfirmDelivery.includes("MAX_REQUEST_BODY_BYTES = 16_384")
+    && marketplaceConfirmDelivery.includes("MAX_PUBLIC_TOKEN_LENGTH = 512")
+    && marketplaceConfirmDelivery.includes("SETTLEMENT_REQUEST_TIMEOUT_MS = 10_000")
+    && marketplaceConfirmDelivery.includes("x-rc-ordera-settlement-secret"),
+  "confirm-delivery valida entrada y dispara settlement con alcance reducido"
+);
 
 const settingsReadGuardStart = app.indexOf("if (!settingsError) {");
 const ordersReadGuardStart = app.indexOf("if (!ordersError) {");
