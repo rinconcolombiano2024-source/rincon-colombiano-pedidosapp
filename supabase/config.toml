@@ -26,3 +26,10 @@ verify_jwt = false
 verify_jwt = false
 [functions.create-customer-order]
 verify_jwt = false
+
+# RC ORDERA V91-42
+# Webhook de pruebas con autenticación HMAC propia.
+# La función verifica la firma internamente.
+
+[functions.external-delivery-webhook]
+verify_jwt = false
