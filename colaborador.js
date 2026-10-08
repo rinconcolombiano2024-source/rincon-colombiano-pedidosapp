@@ -1432,7 +1432,8 @@ async function courierPersistLiveLocation(available = courierAvailable) {
     p_lng: Number(courierLastLocation.lng),
     p_accuracy_m: Number.parseInt(courierLastLocation.accuracy, 10) || 0,
   };
-  const signature = JSON.stringify([courierUser.id, payload]);
+  const userId = courierUser.id;
+  const signature = JSON.stringify([userId, payload]);
 
   if (
     courierLocationWritePending?.client === client &&
@@ -1441,7 +1442,16 @@ async function courierPersistLiveLocation(available = courierAvailable) {
     return courierLocationWritePending.promise;
   }
 
+  const previous = courierLocationWritePending;
   const operation = Promise.resolve().then(async () => {
+    if (previous) {
+      try {
+        await previous.promise;
+      } catch {
+        // El error anterior pertenece a sus llamadores; esta es otra solicitud.
+      }
+    }
+    if (client !== courierEnsureClient() || courierUser?.id !== userId) return false;
     const { error } = await client.rpc("upsert_courier_live_location", payload);
     if (error) throw error;
     return true;
