@@ -263,15 +263,16 @@ async function stripeRequest(
     );
 
   let result: Response;
+  let raw: string;
 
   try {
     result = await fetch(url, {
       ...options,
       signal: controller.signal,
     });
+    // La fecha limite cubre tambien el cuerpo, no solo las cabeceras.
+    raw = await result.text();
   } catch (error) {
-    clearTimeout(timeout);
-
     const timedOut =
       error instanceof DOMException &&
       error.name === "AbortError";
@@ -286,12 +287,9 @@ async function stripeRequest(
         ? "Stripe request timed out"
         : "Stripe request failed",
     };
+  } finally {
+    clearTimeout(timeout);
   }
-
-  clearTimeout(timeout);
-
-  const raw =
-    await result.text();
 
   let data: any = {};
 
@@ -1290,3 +1288,4 @@ Deno.serve(async (request) => {
     },
   );
 });
+
