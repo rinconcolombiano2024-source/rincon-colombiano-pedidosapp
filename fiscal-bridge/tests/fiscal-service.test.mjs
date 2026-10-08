@@ -109,3 +109,38 @@ test("Invalid totals are rejected", async () => {
 
   await service.disconnect();
 });
+
+
+test("Failed connection releases partial resources", async () => {
+  let disconnectCalls = 0;
+
+  const partialDriver = {
+    async connect() {
+      throw new Error("SIMULATED_CONNECT_FAILURE");
+    },
+
+    async disconnect() {
+      disconnectCalls++;
+      return { connected: false };
+    },
+  };
+
+  const registry = {
+    create() {
+      return partialDriver;
+    },
+  };
+
+  const service = new FiscalService(registry);
+
+  await assert.rejects(
+    service.connect("test_device"),
+    /SIMULATED_CONNECT_FAILURE/
+  );
+
+  assert.equal(disconnectCalls, 1);
+
+  const status = await service.getStatus();
+
+  assert.equal(status.connected, false);
+});
