@@ -1,5 +1,28 @@
 (function () {
   const rows = [
+    
+    ["externalInbox.title","Pedidos de plataformas externas","Zamówienia z platform zewnętrznych","External platform orders"],
+    ["externalInbox.description","Consulta segura de pedidos externos pendientes.","Bezpieczny podgląd oczekujących zamówień zewnętrznych.","Secure view of pending external orders."],
+    ["externalInbox.button","Consultar pedidos externos","Sprawdź zamówienia zewnętrzne","Check external orders"],
+    ["externalInbox.hint","Pulsa el botón para consultar los pedidos.","Kliknij przycisk, aby sprawdzić zamówienia.","Click the button to check orders."],
+    ["externalInbox.signedOut","Sesión cerrada. Inicia sesión para consultar pedidos.","Wylogowano. Zaloguj się, aby sprawdzić zamówienia.","Signed out. Sign in to check orders."],
+    ["externalInbox.order","Pedido:","Zamówienie:","Order:"],
+    ["externalInbox.status","Estado:","Status:","Status:"],
+    ["externalInbox.authRequired","Debes iniciar sesión como restaurante.","Musisz zalogować się na konto restauracji.","You must sign in with a restaurant account."],
+    ["externalInbox.loading","Consultando pedidos...","Pobieranie zamówień...","Loading orders..."],
+    ["externalInbox.sessionChanged","La sesión cambió. Consulta nuevamente.","Sesja uległa zmianie. Spróbuj ponownie.","Session changed. Please try again."],
+    ["externalInbox.fetchFailed","No se pudo consultar la bandeja externa.","Nie udało się pobrać zamówień zewnętrznych.","Could not load external orders."],
+    ["externalInbox.sessionError","SESSION_NOT_AVAILABLE","SESJA_NIEDOSTĘPNA","SESSION_NOT_AVAILABLE"],
+    ["externalInbox.responseError","INVALID_INBOX_RESPONSE","NIEPRAWIDŁOWA_ODPOWIEDŹ","INVALID_INBOX_RESPONSE"],
+    ["externalInbox.unknownPlatform","Plataforma desconocida","Nieznana platforma","Unknown platform"],
+    ["externalInbox.unknownStatus","Desconocido","Nieznany","Unknown"],
+    ["externalInbox.missingId","Sin ID","Brak identyfikatora","No ID"],
+    ["externalInbox.amount","Importe declarado:","Zadeklarowana kwota:","Declared amount:"],
+    ["externalInbox.amountPending","Importe pendiente de verificación","Kwota oczekuje na weryfikację","Amount pending verification"],
+    ["externalInbox.noOrders","No hay pedidos externos pendientes.","Brak oczekujących zamówień zewnętrznych.","No pending external orders."],
+    ["externalInbox.moreRecords","Existen más registros.","Dostępne są kolejne rekordy.","More records are available."],
+    ["externalInbox.connectionError","Verifica la conexión, sesión y configuración.","Sprawdź połączenie, sesję i konfigurację.","Check your connection, session and configuration."],
+
     ["orders.invalidResponse","La consulta de pedidos devolvio datos invalidos.","Zapytanie o zamówienia zwróciło nieprawidłowe dane.","The orders query returned invalid data."],
     ["orders.paginationStalled","La paginacion de pedidos no avanzo; se conservaran los pedidos anteriores.","Nie udało się przejść do kolejnej strony zamówień; poprzednie zamówienia zostaną zachowane.","Order pagination did not advance; previous orders will be preserved."],
     ["history.fetchFailed","No fue posible consultar el historial completo.","Nie udało się pobrać pełnej historii.","The complete history could not be retrieved."],
