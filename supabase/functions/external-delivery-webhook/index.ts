@@ -1,21 +1,43 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2.117.1";
 
-// RC ORDERA V91-42
-// Adaptador interno HMAC para STAGING.
-// NO implementa firmas oficiales de delivery.
-// Desactivado por defecto.
-// No crea ventas ni emite tickets fiscales.
+/**
+ * RC ORDERA V91-45
+ * EXTERNAL DELIVERY WEBHOOK - TEST ADAPTER
+ *
+ * - Solo plataforma rc_test.
+ * - Desactivado por defecto.
+ * - Firma HMAC-SHA256 obligatoria.
+ * - Timestamp con tolerancia de 5 minutos.
+ * - Cuerpo limitado a 64 KiB.
+ * - Identidad del restaurante desde secretos.
+ * - Registro atomico mediante V91-41.
+ * - Clasificacion de duplicados y conciliacion.
+ * - Sin operaciones fiscales.
+ *
+ * NO ES UN CONECTOR OFICIAL DE UBER, WOLT,
+ * GLOVO NI BOLT.
+ */
 
 const MAX_BYTES = 65536;
 const MAX_AGE_SECONDS = 300;
 const encoder = new TextEncoder();
 
-function reply(status: number, code: string) {
+type RpcResult = {
+  inbox_id: string;
+  event_id: string;
+  order_result: string;
+  event_result: string;
+};
+
+function reply(
+  status: number,
+  code: string,
+): Response {
   return new Response(JSON.stringify({ code }), {
     status,
     headers: {
-      "content-type": "application/json",
+      "content-type": "application/json; charset=utf-8",
       "cache-control": "no-store",
       "x-content-type-options": "nosniff",
     },
@@ -28,17 +50,22 @@ function hex(bytes: Uint8Array): string {
     .join("");
 }
 
-async function verify(
+async function verifySignature(
   secret: string,
   message: string,
-  supplied: string,
+  signature: string,
 ): Promise<boolean> {
-  if (!/^[a-f0-9]{64}$/i.test(supplied)) return false;
+  if (!/^[a-f0-9]{64}$/i.test(signature)) {
+    return false;
+  }
 
   const key = await crypto.subtle.importKey(
     "raw",
     encoder.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
+    {
+      name: "HMAC",
+      hash: "SHA-256",
+    },
     false,
     ["sign"],
   );
@@ -52,136 +79,228 @@ async function verify(
   );
 
   const expected = hex(signed);
-  const actual = supplied.toLowerCase();
+  const actual = signature.toLowerCase();
 
-  // Comparación sin salida anticipada por carácter.
   let difference = 0;
+
   for (let i = 0; i < expected.length; i++) {
     difference |= expected.charCodeAt(i) ^
       actual.charCodeAt(i);
   }
+
   return difference === 0;
 }
 
-function validId(value: unknown, max = 160) {
+function validId(
+  value: unknown,
+  max = 160,
+): value is string {
   return typeof value === "string" &&
-    value.length > 0 &&
+    value.length >= 1 &&
     value.length <= max &&
     value === value.trim() &&
     !/[\u0000-\u001f\u007f]/.test(value);
 }
 
-Deno.serve(async (request) => {
+function isObject(
+  value: unknown,
+): value is Record<string, unknown> {
+  return value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value);
+}
+
+function validUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    .test(value);
+}
+
+async function readBody(
+  request: Request,
+): Promise<string | null> {
+  const reader = request.body?.getReader();
+
+  if (!reader) return null;
+
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+
+    if (done) break;
+    if (!value) continue;
+
+    total += value.byteLength;
+
+    if (total > MAX_BYTES) {
+      await reader.cancel();
+      throw new Error("BODY_TOO_LARGE");
+    }
+
+    chunks.push(value);
+  }
+
+  const buffer = new Uint8Array(total);
+  let offset = 0;
+
+  for (const chunk of chunks) {
+    buffer.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return new TextDecoder("utf-8", {
+    fatal: true,
+  }).decode(buffer);
+}
+
+function classify(
+  row: RpcResult,
+): string | null {
+  const orderResults = new Set([
+    "created",
+    "duplicate",
+    "updated_needs_review",
+    "reconciliation_required",
+  ]);
+
+  const eventResults = new Set([
+    "created",
+    "duplicate",
+  ]);
+
+  if (
+    !validUuid(row.inbox_id) ||
+    !validUuid(row.event_id) ||
+    !orderResults.has(row.order_result) ||
+    !eventResults.has(row.event_result)
+  ) {
+    return null;
+  }
+
+  if (
+    row.order_result === "reconciliation_required" ||
+    row.order_result === "updated_needs_review"
+  ) {
+    return "REVIEW_REQUIRED";
+  }
+
+  if (
+    row.order_result === "duplicate" &&
+    row.event_result === "duplicate"
+  ) {
+    return "EVENT_DUPLICATE";
+  }
+
+  if (
+    row.order_result === "created" &&
+    row.event_result === "created"
+  ) {
+    return "ORDER_RECEIVED";
+  }
+
+  return "EVENT_RECORDED";
+}
+
+Deno.serve(async (request: Request) => {
   if (request.method !== "POST") {
     return reply(405, "METHOD_NOT_ALLOWED");
   }
 
-  // Bloqueo absoluto hasta activar pruebas.
+  // Nunca activar accidentalmente.
   if (
     Deno.env.get("RC_EXTERNAL_TEST_ENABLED") !== "true"
   ) {
     return reply(503, "CONNECTOR_DISABLED");
   }
 
-  const secret = Deno.env.get(
-    "RC_EXTERNAL_TEST_SECRET"
-  ) || "";
+  const secret =
+    Deno.env.get("RC_EXTERNAL_TEST_SECRET") || "";
 
-  const restaurantId = Deno.env.get(
-    "RC_EXTERNAL_TEST_RESTAURANT_ID"
-  ) || "";
+  const restaurantId =
+    Deno.env.get("RC_EXTERNAL_TEST_RESTAURANT_ID") ||
+    "";
 
-  const url = Deno.env.get("SUPABASE_URL") || "";
-  const serviceKey = Deno.env.get(
-    "SUPABASE_SERVICE_ROLE_KEY"
-  ) || "";
+  const supabaseUrl =
+    Deno.env.get("SUPABASE_URL") || "";
+
+  const serviceRoleKey =
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
+    "";
 
   if (
     secret.length < 32 ||
-    !/^[0-9a-f-]{36}$/i.test(restaurantId) ||
-    !url ||
-    !serviceKey
+    !validUuid(restaurantId) ||
+    !supabaseUrl ||
+    !serviceRoleKey
   ) {
     return reply(503, "CONFIGURATION_INCOMPLETE");
   }
 
-  const lengthHeader = Number(
-    request.headers.get("content-length") || "0",
-  );
+  const timestamp =
+    request.headers.get("x-rc-timestamp") || "";
 
-  if (
-    !Number.isFinite(lengthHeader) ||
-    lengthHeader > MAX_BYTES
-  ) {
-    return reply(413, "BODY_TOO_LARGE");
-  }
-
-  const timestamp = request.headers.get(
-    "x-rc-timestamp"
-  ) || "";
-
-  const signature = request.headers.get(
-    "x-rc-signature"
-  ) || "";
+  const signature =
+    request.headers.get("x-rc-signature") || "";
 
   if (!/^\d{10}$/.test(timestamp)) {
     return reply(401, "UNAUTHORIZED");
   }
 
-  const timestampNumber = Number(timestamp);
   const now = Math.floor(Date.now() / 1000);
 
   if (
-    Math.abs(now - timestampNumber) >
+    Math.abs(now - Number(timestamp)) >
     MAX_AGE_SECONDS
   ) {
     return reply(401, "UNAUTHORIZED");
   }
 
+  const contentLength =
+    request.headers.get("content-length");
+
+  if (contentLength !== null) {
+    if (!/^\d+$/.test(contentLength)) {
+      return reply(400, "INVALID_CONTENT_LENGTH");
+    }
+
+    if (Number(contentLength) > MAX_BYTES) {
+      return reply(413, "BODY_TOO_LARGE");
+    }
+  }
+
   let raw: string;
 
   try {
-    // Limitar tamaño real del cuerpo recibido.
-    const reader = request.body?.getReader();
-    if (!reader) return reply(400, "EMPTY_BODY");
+    const body = await readBody(request);
 
-    const chunks: Uint8Array[] = [];
-    let total = 0;
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (!value) continue;
-
-      total += value.byteLength;
-      if (total > MAX_BYTES) {
-        await reader.cancel();
-        return reply(413, "BODY_TOO_LARGE");
-      }
-      chunks.push(value);
+    if (!body) {
+      return reply(400, "EMPTY_BODY");
     }
 
-    const combined = new Uint8Array(total);
-    let offset = 0;
-    for (const chunk of chunks) {
-      combined.set(chunk, offset);
-      offset += chunk.byteLength;
+    raw = body;
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "BODY_TOO_LARGE"
+    ) {
+      return reply(413, "BODY_TOO_LARGE");
     }
 
-    raw = new TextDecoder("utf-8", {
-      fatal: true,
-    }).decode(combined);
-  } catch {
     return reply(400, "INVALID_BODY");
   }
 
-  // Firma interna de staging:
-  // HMAC(secret, timestamp + "." + rawBody)
-  const authorized = await verify(
-    secret,
-    `${timestamp}.${raw}`,
-    signature,
-  );
+  let authorized = false;
+
+  try {
+    authorized = await verifySignature(
+      secret,
+      `${timestamp}.${raw}`,
+      signature,
+    );
+  } catch {
+    return reply(503, "SIGNATURE_SERVICE_UNAVAILABLE");
+  }
 
   if (!authorized) {
     return reply(401, "UNAUTHORIZED");
@@ -190,14 +309,12 @@ Deno.serve(async (request) => {
   let input: Record<string, unknown>;
 
   try {
-    const parsed = JSON.parse(raw);
-    if (
-      !parsed ||
-      typeof parsed !== "object" ||
-      Array.isArray(parsed)
-    ) {
+    const parsed: unknown = JSON.parse(raw);
+
+    if (!isObject(parsed)) {
       return reply(400, "INVALID_JSON");
     }
+
     input = parsed;
   } catch {
     return reply(400, "INVALID_JSON");
@@ -212,29 +329,39 @@ Deno.serve(async (request) => {
     return reply(400, "INVALID_IDENTIFIERS");
   }
 
-  const currency = input.currency ?? "PLN";
-  if (currency !== "PLN") {
+  if (
+    input.currency !== undefined &&
+    input.currency !== "PLN"
+  ) {
     return reply(400, "UNSUPPORTED_CURRENCY");
   }
 
   const total = input.totalGrosz ?? null;
+
   if (
     total !== null &&
-    (!Number.isSafeInteger(total) ||
-      Number(total) < 0)
+    (
+      typeof total !== "number" ||
+      !Number.isSafeInteger(total) ||
+      total < 0
+    )
   ) {
     return reply(400, "INVALID_TOTAL");
   }
 
-  const client = createClient(url, serviceKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
+  const client = createClient(
+    supabaseUrl,
+    serviceRoleKey,
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
     },
-  });
+  );
 
   try {
-    const { error } = await client.rpc(
+    const { data, error } = await client.rpc(
       "rc_external_receive_atomic",
       {
         p_restaurant_user_id: restaurantId,
@@ -251,13 +378,28 @@ Deno.serve(async (request) => {
     );
 
     if (error) {
-      console.error("EXTERNAL_INGEST_FAILED", {
-        code: error.code,
+      console.error("RC_EXTERNAL_INGEST_FAILED", {
+        code: error.code || "UNKNOWN",
       });
+
+      // No confirmar un evento que no se pudo registrar.
       return reply(503, "INGEST_UNAVAILABLE");
     }
 
-    return reply(202, "EVENT_ACCEPTED");
+    if (!Array.isArray(data) || data.length !== 1) {
+      return reply(503, "INVALID_RPC_RESPONSE");
+    }
+
+    const result = classify(data[0] as RpcResult);
+
+    if (!result) {
+      return reply(503, "INVALID_RPC_RESPONSE");
+    }
+
+    // 202 reconoce persistencia en la bandeja.
+    // REVIEW_REQUIRED NO autoriza fiscalizacion
+    // ni importacion automatica.
+    return reply(202, result);
   } catch {
     return reply(503, "INGEST_UNAVAILABLE");
   }
