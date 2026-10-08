@@ -149,10 +149,18 @@ export class FiscalService {
       const result =
         await this.#driver.printReceipt(receipt);
 
+    
       if (
         !result ||
         result.simulated !== true ||
-        result.fiscal !== false
+        !["confirmed", "failed", "unknown"].includes(
+          result.status
+        ) ||
+        result.fiscal === true ||
+        (
+          result.status === "confirmed" &&
+          result.fiscal !== false
+        )
       ) {
         throw new FiscalError(
           "INVALID_SIMULATION_RESPONSE",
@@ -160,7 +168,11 @@ export class FiscalService {
         );
       }
 
-      return result;
+      return {
+        ...result,
+        simulated: true,
+        fiscal: false,
+      };
     } finally {
       this.#busy = false;
     }
