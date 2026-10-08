@@ -1,12 +1,45 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2.117.1";
 
-// RC ORDERA V91-43
-// Lectura paginada de pedidos externos.
-// Sin polling, cron ni escrituras.
-// Acceso inicial: propietario autenticado.
+/**
+ * RC ORDERA V91-44
+ * EXTERNAL DELIVERY INBOX
+ *
+ * Lectura segura y paginada de pedidos externos.
+ *
+ * - Autenticacion mediante Supabase Auth.
+ * - Acceso limitado al propietario autenticado.
+ * - No acepta restaurant_user_id del navegador.
+ * - Paginacion estable con precision PostgreSQL.
+ * - Limite maximo de 30 pedidos por solicitud.
+ * - Sin cron, timers, polling ni escrituras.
+ * - Sin acceso a datos fiscales.
+ * - No genera ventas ni pedidos internos.
+ *
+ * IMPORTANTE:
+ * Esta version requiere validacion en staging
+ * antes de utilizarse en produccion.
+ */
 
 const MAX_PAGE = 30;
+const DEFAULT_PAGE = 20;
+
+const ALLOWED_STATUSES = new Set([
+  "received",
+  "needs_review",
+  "imported",
+  "cancelled",
+]);
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+// Formato de timestamp ISO PostgreSQL.
+// Conservamos los decimales originales.
+// Aceptamos Z y desplazamiento +00:00.
+
+const TIMESTAMP_PATTERN =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|\+00:00)$/;
 
 function response(
   status: number,
@@ -18,31 +51,71 @@ function response(
       "content-type": "application/json; charset=utf-8",
       "cache-control": "no-store",
       "x-content-type-options": "nosniff",
+      "vary": "Authorization",
     },
   });
 }
 
-Deno.serve(async (request) => {
+function validTimestamp(value: string): boolean {
+  if (!TIMESTAMP_PATTERN.test(value)) {
+    return false;
+  }
+
+  // Date.parse solo comprueba que la fecha sea
+  // interpretable. NO usamos su resultado
+  // para reconstruir el cursor.
+  const milliseconds = Date.parse(value);
+
+  return Number.isFinite(milliseconds);
+}
+
+function validUuid(value: string): boolean {
+  return UUID_PATTERN.test(value);
+}
+
+function parseLimit(raw: string): number | null {
+  if (!/^\d{1,2}$/.test(raw)) {
+    return null;
+  }
+
+  const limit = Number(raw);
+
+  if (
+    !Number.isSafeInteger(limit) ||
+    limit < 1 ||
+    limit > MAX_PAGE
+  ) {
+    return null;
+  }
+
+  return limit;
+}
+
+Deno.serve(async (request: Request) => {
   if (request.method !== "GET") {
     return response(405, {
       error: "METHOD_NOT_ALLOWED",
     });
   }
 
-  const url = Deno.env.get("SUPABASE_URL") || "";
-  const serviceKey = Deno.env.get(
-    "SUPABASE_SERVICE_ROLE_KEY",
-  ) || "";
+  const supabaseUrl =
+    Deno.env.get("SUPABASE_URL") || "";
 
-  if (!url || !serviceKey) {
+  const serviceRoleKey =
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+
+  if (!supabaseUrl || !serviceRoleKey) {
     return response(503, {
       error: "SERVICE_UNAVAILABLE",
     });
   }
 
-  const token = /^Bearer (.+)$/i.exec(
-    request.headers.get("authorization") || "",
-  )?.[1];
+  const authorization =
+    request.headers.get("authorization") || "";
+
+  const token = /^Bearer\s+(.+)$/i.exec(
+    authorization.trim(),
+  )?.[1]?.trim();
 
   if (!token) {
     return response(401, {
@@ -50,122 +123,156 @@ Deno.serve(async (request) => {
     });
   }
 
-  const client = createClient(url, serviceKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
+  const client = createClient(
+    supabaseUrl,
+    serviceRoleKey,
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
     },
-  });
+  );
 
-  const { data: authData, error: authError } =
-    await client.auth.getUser(token);
+  // Autenticar cada solicitud.
+  const {
+    data: authData,
+    error: authError,
+  } = await client.auth.getUser(token);
 
-  if (authError || !authData.user) {
+  if (authError || !authData?.user?.id) {
     return response(401, {
       error: "INVALID_SESSION",
     });
   }
 
-  // Versión inicial: únicamente pedidos cuyo
-  // propietario sea el usuario autenticado.
-  // Nunca aceptar restaurant_user_id del cliente.
+  // Solo propietario.
+  // Nunca confiar en un identificador de
+  // restaurante suministrado por el cliente.
+
   const restaurantUserId = authData.user.id;
 
   const requestUrl = new URL(request.url);
 
-  const rawLimit = requestUrl.searchParams.get(
-    "limit",
-  ) || "20";
+  const rawLimit =
+    requestUrl.searchParams.get("limit") ??
+    String(DEFAULT_PAGE);
 
-  if (!/^\d{1,2}$/.test(rawLimit)) {
+  const limit = parseLimit(rawLimit);
+
+  if (limit === null) {
     return response(400, {
       error: "INVALID_LIMIT",
     });
   }
 
-  const limit = Number(rawLimit);
+  const status =
+    requestUrl.searchParams.get("status") ??
+    "received";
 
-  if (limit < 1 || limit > MAX_PAGE) {
-    return response(400, {
-      error: "INVALID_LIMIT",
-    });
-  }
-
-  const status = requestUrl.searchParams.get(
-    "status",
-  ) || "received";
-
-  const statuses = new Set([
-    "received",
-    "needs_review",
-    "imported",
-    "cancelled",
-  ]);
-
-  if (!statuses.has(status)) {
+  if (!ALLOWED_STATUSES.has(status)) {
     return response(400, {
       error: "INVALID_STATUS",
     });
   }
 
-  const cursorTime = requestUrl.searchParams.get(
-    "before",
-  );
+  const cursorTime =
+    requestUrl.searchParams.get("before");
 
-  const cursorId = requestUrl.searchParams.get(
-    "before_id",
-  );
+  const cursorId =
+    requestUrl.searchParams.get("before_id");
 
-  // No permitir cursores incompletos.
-  if ((cursorTime === null) !== (cursorId === null)) {
+  // Ambos cursores deben existir juntos.
+  if (
+    (cursorTime === null) !==
+    (cursorId === null)
+  ) {
     return response(400, {
       error: "INVALID_CURSOR",
     });
   }
 
-  let query = client
-    .from("rc_external_delivery_inbox")
-    .select(
-      "id,platform,external_order_id," +
-      "source_status,processing_status," +
-      "currency,total_grosz,received_at",
-    )
-    .eq("restaurant_user_id", restaurantUserId)
-    .eq("processing_status", status)
-    .order("received_at", { ascending: true })
-    .order("id", { ascending: true })
-    .limit(limit + 1);
-
-  if (cursorTime !== null && cursorId !== null) {
-    const milliseconds = Date.parse(cursorTime);
-
+  if (
+    cursorTime !== null &&
+    cursorId !== null
+  ) {
     if (
-      !Number.isFinite(milliseconds) ||
-      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-        .test(cursorId)
+      !validTimestamp(cursorTime) ||
+      !validUuid(cursorId)
     ) {
       return response(400, {
         error: "INVALID_CURSOR",
       });
     }
+  }
 
-    // Cursor estable: timestamp + UUID.
-    // Utilizamos el filtro PostgreSQL compuesto.
-    const safeTime = new Date(milliseconds)
-      .toISOString();
+  // Consulta indexada:
+  // restaurante -> estado -> fecha -> ID.
 
+  let query = client
+    .from("rc_external_delivery_inbox")
+    .select(
+      [
+        "id",
+        "platform",
+        "external_order_id",
+        "source_status",
+        "processing_status",
+        "currency",
+        "total_grosz",
+        "received_at",
+      ].join(","),
+    )
+    .eq(
+      "restaurant_user_id",
+      restaurantUserId,
+    )
+    .eq(
+      "processing_status",
+      status,
+    )
+    .order("received_at", {
+      ascending: true,
+    })
+    .order("id", {
+      ascending: true,
+    })
+    .limit(limit + 1);
+
+  // Cursor compuesto y sin redondeos.
+  //
+  // received_at > cursorTime
+  // OR
+  // (
+  //   received_at = cursorTime
+  //   AND id > cursorId
+  // )
+  //
+  // Mantiene la precision original
+  // del timestamp de PostgreSQL.
+
+  if (
+    cursorTime !== null &&
+    cursorId !== null
+  ) {
     query = query.or(
-      `received_at.gt.${safeTime},` +
-      `and(received_at.eq.${safeTime},id.gt.${cursorId})`,
+      `received_at.gt.${cursorTime},` +
+      `and(received_at.eq.${cursorTime},id.gt.${cursorId})`,
     );
   }
 
-  const { data, error } = await query;
+  const {
+    data,
+    error,
+  } = await query;
 
   if (error) {
-    console.error("EXTERNAL_INBOX_READ", {
-      code: error.code,
-    });
+    console.error(
+      "RC_EXTERNAL_INBOX_READ_FAILED",
+      {
+        code: error.code || "unknown",
+      },
+    );
 
     return response(503, {
       error: "INBOX_UNAVAILABLE",
@@ -173,19 +280,26 @@ Deno.serve(async (request) => {
   }
 
   const rows = data || [];
+
   const hasMore = rows.length > limit;
+
   const page = rows.slice(0, limit);
-  const last = page[page.length - 1];
+
+  const last = page.length > 0
+    ? page[page.length - 1]
+    : null;
+
+  const nextCursor =
+    hasMore && last
+      ? {
+          before: last.received_at,
+          before_id: last.id,
+        }
+      : null;
 
   return response(200, {
     orders: page,
     hasMore,
-    nextCursor:
-      hasMore && last
-        ? {
-            before: last.received_at,
-            before_id: last.id,
-          }
-        : null,
+    nextCursor,
   });
 });
