@@ -166,6 +166,47 @@ export class FiscalService {
     }
   }
 
+  async reconcileSimulation(operationId) {
+    if (
+      this.#busy ||
+      !this.#driver ||
+      this.#driverId !== "mock"
+    ) {
+      throw new FiscalError(
+        "RECONCILIATION_NOT_AVAILABLE",
+        "Mock driver must be connected and idle"
+      );
+    }
+
+    this.#busy = true;
+
+    try {
+      const result =
+        await this.#driver.reconcile(operationId);
+
+      if (
+        !result ||
+        result.simulated !== true ||
+        !["confirmed", "failed", "unknown"].includes(
+          result.status
+        )
+      ) {
+        throw new FiscalError(
+          "INVALID_RECONCILIATION_RESULT",
+          "Invalid simulator response"
+        );
+      }
+
+      return {
+        ...result,
+        simulated: true,
+        fiscal: false,
+      };
+    } finally {
+      this.#busy = false;
+    }
+  }
+
   async disconnect() {
     if (this.#busy) {
       throw new FiscalError(
