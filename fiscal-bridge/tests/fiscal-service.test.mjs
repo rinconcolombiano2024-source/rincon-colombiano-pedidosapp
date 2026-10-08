@@ -17,41 +17,104 @@ import {
 /**
  * RC ORDERA — FISCAL SERVICE REGRESSION TESTS
  *
- * Compatible with FiscalService V1.1.
- *
- * Tests:
- * - Connection management
- * - Unknown devices
- * - Simulated receipts
- * - Idempotency
- * - Invalid totals
- * - Connection cleanup
- * - Lost acknowledgements
- * - Concurrent requests
- * - Unknown-operation retry protection
- * - Disconnect protection during processing
+ * Target: FiscalService V1.2
  *
  * SIMULATION ONLY.
- * No physical printer, database or fiscal issuance.
- * No polling, cron or background processes.
+ *
+ * No physical printer.
+ * No legal fiscal issuance.
+ * No database writes.
+ * No network requests.
+ * No timers, polling or background processes.
+ *
+ * Tests cover:
+ * - Connection management
+ * - Unsupported devices
+ * - Simulation safety
+ * - Idempotency
+ * - Financial validation
+ * - Failed connection cleanup
+ * - Lost acknowledgements
+ * - Concurrency
+ * - Unknown-operation protection
+ * - Disconnect protection
+ * - Reconciliation operation identity
+ * - Invalid simulator responses
+ * - Reconciliation error recovery
  */
 
+const OPERATION_ID =
+  "11111111-1111-4111-8111-111111111111";
+
+const RESTAURANT_ID =
+  "22222222-2222-4222-8222-222222222222";
+
+const ORDER_ID =
+  "33333333-3333-4333-8333-333333333333";
+
+const OTHER_OPERATION_ID =
+  "99999999-9999-4999-8999-999999999999";
+
 const receipt = () => ({
-  operationId:
-    "11111111-1111-4111-8111-111111111111",
-  restaurantId:
-    "22222222-2222-4222-8222-222222222222",
-  orderId:
-    "33333333-3333-4333-8333-333333333333",
+  operationId: OPERATION_ID,
+  restaurantId: RESTAURANT_ID,
+  orderId: ORDER_ID,
   currency: "PLN",
   totalGrosz: 6000,
-  items: [{
-    name: "Bandeja paisa",
-    quantityMilli: 1000,
-    grossTotalGrosz: 6000,
-    taxCode: "VAT_FOOD",
-  }],
+  items: [
+    {
+      name: "Bandeja paisa",
+      quantityMilli: 1000,
+      grossTotalGrosz: 6000,
+      taxCode: "VAT_FOOD",
+    },
+  ],
 });
+
+/**
+ * Isolated test registry.
+ *
+ * Never connects to real hardware.
+ * Used only to simulate malformed driver responses.
+ */
+function createControlledService(overrides = {}) {
+  const driver = {
+    async connect() {
+      return {
+        connected: true,
+        simulated: true,
+      };
+    },
+
+    async reconcile(operationId) {
+      return {
+        operationId,
+        status: "confirmed",
+        simulated: true,
+        fiscal: false,
+      };
+    },
+
+    async disconnect() {
+      return {
+        connected: false,
+      };
+    },
+
+    ...overrides,
+  };
+
+  const registry = {
+    create() {
+      return driver;
+    },
+  };
+
+  return {
+    service: new FiscalService(registry),
+    driver,
+  };
+}
 
 // ----------------------------------------------------------
 // 1. Initial state
@@ -63,6 +126,7 @@ test("Starts disconnected", async () => {
   const status = await service.getStatus();
 
   assert.equal(status.connected, false);
+  assert.equal(status.driverId, null);
 });
 
 // ----------------------------------------------------------
@@ -74,7 +138,9 @@ test("Rejects unsupported fiscal device", async () => {
 
   await assert.rejects(
     service.connect("posnet"),
-    { code: "UNSUPPORTED_FISCAL_DEVICE" }
+    {
+      code: "UNSUPPORTED_FISCAL_DEVICE",
+    }
   );
 
   const status = await service.getStatus();
@@ -93,6 +159,7 @@ test("Connects simulator explicitly", async () => {
 
   assert.equal(result.connected, true);
   assert.equal(result.simulated, true);
+  assert.equal(result.driverId, "mock");
 
   await service.disconnect();
 
@@ -110,7 +177,9 @@ test("Simulation requires connection", async () => {
 
   await assert.rejects(
     service.simulateReceipt(receipt()),
-    { code: "SIMULATION_NOT_AVAILABLE" }
+    {
+      code: "SIMULATION_NOT_AVAILABLE",
+    }
   );
 });
 
@@ -126,6 +195,7 @@ test("Simulated receipt is never fiscal", async () => {
   const result =
     await service.simulateReceipt(receipt());
 
+  assert.equal(result.operationId, OPERATION_ID);
   assert.equal(result.status, "confirmed");
   assert.equal(result.simulated, true);
   assert.equal(result.fiscal, false);
@@ -176,11 +246,14 @@ test("Invalid totals are rejected", async () => {
   await service.connect("mock");
 
   const invalid = receipt();
+
   invalid.totalGrosz = 7000;
 
   await assert.rejects(
     service.simulateReceipt(invalid),
-    { code: "TOTAL_MISMATCH" }
+    {
+      code: "TOTAL_MISMATCH",
+    }
   );
 
   const status = await service.getStatus();
@@ -271,9 +344,10 @@ test("Lost fiscal ACK reconciles without duplicate", async () => {
 
   const reconciled =
     await service.reconcileSimulation(
-      receipt().operationId
+      OPERATION_ID
     );
 
+  assert.equal(reconciled.operationId, OPERATION_ID);
   assert.equal(reconciled.status, "confirmed");
   assert.equal(reconciled.simulated, true);
   assert.equal(reconciled.fiscal, false);
@@ -287,7 +361,7 @@ test("Lost fiscal ACK reconciles without duplicate", async () => {
 });
 
 // ----------------------------------------------------------
-// 10. Concurrent requests
+// 10. Concurrent fiscal requests
 // ----------------------------------------------------------
 
 test("Concurrent fiscal requests cannot run together", async () => {
@@ -334,7 +408,7 @@ test("Concurrent fiscal requests cannot run together", async () => {
 });
 
 // ----------------------------------------------------------
-// 11. Unknown operation cannot be sent again
+// 11. Unknown operation cannot be resent
 // ----------------------------------------------------------
 
 test("Unknown operation blocks automatic retry", async () => {
@@ -377,7 +451,7 @@ test("Unknown operation blocks automatic retry", async () => {
 
   const reconciliation =
     await service.reconcileSimulation(
-      receipt().operationId
+      OPERATION_ID
     );
 
   assert.equal(reconciliation.status, "unknown");
@@ -387,7 +461,7 @@ test("Unknown operation blocks automatic retry", async () => {
 });
 
 // ----------------------------------------------------------
-// 12. Disconnect is blocked during an operation
+// 12. Disconnect protection
 // ----------------------------------------------------------
 
 test("Cannot disconnect during a pending operation", async () => {
@@ -400,7 +474,9 @@ test("Cannot disconnect during a pending operation", async () => {
 
   await assert.rejects(
     service.disconnect(),
-    { code: "SERVICE_BUSY" }
+    {
+      code: "SERVICE_BUSY",
+    }
   );
 
   const result = await operation;
@@ -413,4 +489,183 @@ test("Cannot disconnect during a pending operation", async () => {
   const status = await service.getStatus();
 
   assert.equal(status.connected, false);
+});
+
+// ----------------------------------------------------------
+// 13. Reconciliation identity protection
+// ----------------------------------------------------------
+
+test("Rejects reconciliation with mismatched operation ID", async () => {
+  const { service } = createControlledService({
+    async reconcile() {
+      return {
+        operationId: OTHER_OPERATION_ID,
+        status: "confirmed",
+        simulated: true,
+        fiscal: false,
+      };
+    },
+  });
+
+  await service.connect("mock");
+
+  await assert.rejects(
+    service.reconcileSimulation(OPERATION_ID),
+    {
+      code: "INVALID_RECONCILIATION_RESULT",
+    }
+  );
+
+  await service.disconnect();
+});
+
+// ----------------------------------------------------------
+// 14. Reject real fiscal confirmations from simulator
+// ----------------------------------------------------------
+
+test("Rejects fiscal=true during simulation reconciliation", async () => {
+  const { service } = createControlledService({
+    async reconcile(operationId) {
+      return {
+        operationId,
+        status: "confirmed",
+        simulated: true,
+        fiscal: true,
+      };
+    },
+  });
+
+  await service.connect("mock");
+
+  await assert.rejects(
+    service.reconcileSimulation(OPERATION_ID),
+    {
+      code: "INVALID_RECONCILIATION_RESULT",
+    }
+  );
+
+  await service.disconnect();
+});
+
+// ----------------------------------------------------------
+// 15. Reject invalid reconciliation status
+// ----------------------------------------------------------
+
+test("Rejects invalid reconciliation status", async () => {
+  const { service } = createControlledService({
+    async reconcile(operationId) {
+      return {
+        operationId,
+        status: "printed_without_confirmation",
+        simulated: true,
+        fiscal: false,
+      };
+    },
+  });
+
+  await service.connect("mock");
+
+  await assert.rejects(
+    service.reconcileSimulation(OPERATION_ID),
+    {
+      code: "INVALID_RECONCILIATION_RESULT",
+    }
+  );
+
+  await service.disconnect();
+});
+
+// ----------------------------------------------------------
+// 16. Reject missing operation identity
+// ----------------------------------------------------------
+
+test("Rejects reconciliation without operation ID", async () => {
+  const { service } = createControlledService({
+    async reconcile() {
+      return {
+        status: "confirmed",
+        simulated: true,
+        fiscal: false,
+      };
+    },
+  });
+
+  await service.connect("mock");
+
+  await assert.rejects(
+    service.reconcileSimulation(OPERATION_ID),
+    {
+      code: "INVALID_RECONCILIATION_RESULT",
+    }
+  );
+
+  await service.disconnect();
+});
+
+// ----------------------------------------------------------
+// 17. Recover after reconciliation throws an error
+// ----------------------------------------------------------
+
+test("Reconciliation error does not permanently lock service", async () => {
+  let shouldFail = true;
+
+  const { service } = createControlledService({
+    async reconcile(operationId) {
+      if (shouldFail) {
+        shouldFail = false;
+
+        throw new Error(
+          "SIMULATED_RECONCILIATION_FAILURE"
+        );
+      }
+
+      return {
+        operationId,
+        status: "unknown",
+        simulated: true,
+        fiscal: false,
+      };
+    },
+  });
+
+  await service.connect("mock");
+
+  await assert.rejects(
+    service.reconcileSimulation(OPERATION_ID),
+    /SIMULATED_RECONCILIATION_FAILURE/
+  );
+
+  const result =
+    await service.reconcileSimulation(
+      OPERATION_ID
+    );
+
+  assert.equal(result.operationId, OPERATION_ID);
+  assert.equal(result.status, "unknown");
+  assert.equal(result.fiscal, false);
+
+  await service.disconnect();
+});
+
+// ----------------------------------------------------------
+// 18. Reject malformed reconciliation response
+// ----------------------------------------------------------
+
+test("Rejects null reconciliation response", async () => {
+  const { service } = createControlledService({
+    async reconcile() {
+      return null;
+    },
+  });
+
+  await service.connect("mock");
+
+  await assert.rejects(
+    service.reconcileSimulation(OPERATION_ID),
+    {
+      code: "INVALID_RECONCILIATION_RESULT",
+    }
+  );
+
+  await service.disconnect();
 });
