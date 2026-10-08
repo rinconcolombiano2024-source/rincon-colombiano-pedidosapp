@@ -15462,17 +15462,19 @@ initializeCloud().catch((error) => {
       const { data: latestSessionData } =
         await client.auth.getSession();
 
+
       if (
         currentRequest !== requestVersion ||
+        cloudState.client !== client ||
         cloudState.user?.id !== expectedUserId ||
         latestSessionData?.session?.user?.id !==
           expectedUserId
       ) {
-        clearRows();
-        status.textContent =
-          "La sesión cambió. Consulta nuevamente.";
+        // Una respuesta antigua nunca debe modificar
+        // la bandeja de una sesión posterior.
         return;
       }
+
 
       if (!Array.isArray(data?.orders)) {
         throw new Error("INVALID_INBOX_RESPONSE");
