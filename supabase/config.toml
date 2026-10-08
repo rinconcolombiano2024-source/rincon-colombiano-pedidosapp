@@ -33,3 +33,6 @@ verify_jwt = false
 
 [functions.external-delivery-webhook]
 verify_jwt = false
+
+[functions.external-delivery-inbox]
+verify_jwt = true
