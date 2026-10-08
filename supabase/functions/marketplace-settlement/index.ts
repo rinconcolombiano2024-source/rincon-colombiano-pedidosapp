@@ -371,6 +371,33 @@ async function assertCurrentTransferEligibility(
   }
 }
 
+// Persist each verified provider receipt before contacting another recipient.
+// A late hold must not hide an already-created transfer from reconciliation.
+async function persistConfirmedTransfer(
+  admin: any,
+  allocation: any,
+  recipient: "restaurant" | "courier",
+  transferId: string,
+) {
+  const transferredAt = allocation[`${recipient}_transferred_at`] || new Date().toISOString();
+  const { data, error } = await admin
+    .from("marketplace_payment_allocations")
+    .update({
+      [`${recipient}_transfer_id`]: transferId,
+      [`${recipient}_transferred_at`]: transferredAt,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", allocation.id)
+    .eq("payment_transaction_id", allocation.payment_transaction_id)
+    .eq(`${recipient}_transfer_id`, allocation[`${recipient}_transfer_id`] || "")
+    .select("id")
+    .maybeSingle();
+  if (error || !data || data.id !== allocation.id) {
+    throw new Error("Could not persist confirmed transfer receipt; reconciliation required");
+  }
+  allocation[`${recipient}_transferred_at`] = transferredAt;
+}
+
 Deno.serve(
   async (request) => {
     if (
@@ -631,6 +658,7 @@ Deno.serve(
 
       const errors:
         string[] = [];
+      let receiptPersistenceFailed = false;
 
       const paymentTransaction =
         Array.isArray(
@@ -706,6 +734,9 @@ Deno.serve(
             String(
               transfer.id,
             );
+          receiptPersistenceFailed = true;
+          await persistConfirmedTransfer(admin, allocation, "restaurant", restaurantTransferId);
+          receiptPersistenceFailed = false;
         } catch (
           restaurantError
         ) {
@@ -719,6 +750,7 @@ Deno.serve(
       }
 
       if (
+        !receiptPersistenceFailed &&
         allocation.courier_release_eligible_at &&
         !courierTransferId &&
         Number(
@@ -779,6 +811,7 @@ Deno.serve(
             String(
               transfer.id,
             );
+          await persistConfirmedTransfer(admin, allocation, "courier", courierTransferId);
         } catch (
           courierError
         ) {
