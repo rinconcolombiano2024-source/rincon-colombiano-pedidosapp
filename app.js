@@ -3760,6 +3760,8 @@ async function initializeCloud() {
     },
   }
 );
+  // Notifica a los módulos UI que Supabase ya existe. Sin polling ni credenciales en el evento.
+  window.dispatchEvent(new Event("rc-ordera-cloud-client-ready"));
   if (
   typeof cloudState.client.removeAllChannels ===
   "function"
@@ -15347,6 +15349,57 @@ initializeCloud().catch((error) => {
     "signOutButton"
   );
 
+  let inboxOwnerId = cloudState.user?.id || null;
+
+  function invalidateExternalInbox() {
+    requestVersion++;
+    list.replaceChildren();
+    status.textContent =
+      "Pulsa el botón para consultar los pedidos.";
+  }
+
+  function handleExternalInboxAuth(event, session) {
+    const nextOwnerId = session?.user?.id || null;
+
+    if (
+      event === "SIGNED_OUT" ||
+      nextOwnerId !== inboxOwnerId
+    ) {
+      inboxOwnerId = nextOwnerId;
+      invalidateExternalInbox();
+    }
+  }
+
+  let subscribedClient = null;
+  let authSubscription = null;
+
+  function subscribeExternalInboxAuth() {
+    const client = cloudState.client;
+    if (!client || client === subscribedClient) return;
+
+    // Si se recrea Supabase durante una recuperación, no dejamos listeners antiguos.
+    authSubscription?.unsubscribe();
+    authSubscription = null;
+    subscribedClient = null;
+    invalidateExternalInbox();
+    inboxOwnerId = cloudState.user?.id || null;
+
+    const { data } = client.auth.onAuthStateChange(handleExternalInboxAuth);
+    authSubscription = data?.subscription || null;
+    subscribedClient = client;
+  }
+
+  // La creación del cliente es asíncrona. El evento evita el sondeo periódico.
+  window.addEventListener("rc-ordera-cloud-client-ready", subscribeExternalInboxAuth);
+  subscribeExternalInboxAuth();
+
+  window.addEventListener("beforeunload", () => {
+    window.removeEventListener("rc-ordera-cloud-client-ready", subscribeExternalInboxAuth);
+    authSubscription?.unsubscribe();
+    authSubscription = null;
+    subscribedClient = null;
+  }, { once: true });
+
   if (signOutButton) {
     signOutButton.addEventListener("click", () => {
       requestVersion++;
@@ -15493,6 +15546,7 @@ initializeCloud().catch((error) => {
     } catch (error) {
       if (
         currentRequest !== requestVersion ||
+        cloudState.client !== client ||
         cloudState.user?.id !== expectedUserId
       ) {
         return;
