@@ -15284,3 +15284,234 @@ initializeCloud().catch((error) => {
   const friendlyMessage = navigator.onLine ? setCloudError(error) : "Sin internet. Puedes continuar con los datos guardados.";
   elements.authMessage.textContent = friendlyMessage;
 });
+
+/**
+ * RC ORDERA — EXTERNAL DELIVERY INBOX PANEL V1
+ *
+ * Read-only integration.
+ * No automatic imports, fiscal operations or payments.
+ * No polling, cron or background requests.
+ * Requires authenticated restaurant session.
+ */
+
+(function installExternalDeliveryPanel() {
+  const root = document.querySelector("main.app-shell");
+
+  if (!root || document.getElementById("rcExternalDeliveryPanel")) {
+    return;
+  }
+
+  const section = document.createElement("section");
+  section.id = "rcExternalDeliveryPanel";
+  section.setAttribute(
+    "aria-labelledby",
+    "rcExternalDeliveryTitle"
+  );
+
+  section.style.cssText =
+    "margin:20px 0;padding:16px;" +
+    "border:1px solid #ccc;border-radius:12px";
+
+  const title = document.createElement("h2");
+  title.id = "rcExternalDeliveryTitle";
+  title.textContent = "Pedidos de plataformas externas";
+
+  const description = document.createElement("p");
+  description.textContent =
+    "Consulta segura de pedidos externos pendientes. " +
+    "Los pedidos no se importan automáticamente.";
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.textContent = "Consultar pedidos externos";
+
+  const status = document.createElement("p");
+  status.setAttribute("role", "status");
+  status.setAttribute("aria-live", "polite");
+  status.textContent =
+    "Pulsa el botón para consultar los pedidos.";
+
+  const list = document.createElement("div");
+  list.setAttribute(
+    "aria-label",
+    "Listado de pedidos externos"
+  );
+
+  section.append(title, description, button, status, list);
+  root.appendChild(section);
+
+  let loading = false;
+  let requestVersion = 0;
+
+  const signOutButton = document.getElementById(
+    "signOutButton"
+  );
+
+  if (signOutButton) {
+    signOutButton.addEventListener("click", () => {
+      requestVersion++;
+      list.replaceChildren();
+      status.textContent =
+        "Sesión cerrada. Inicia sesión para consultar pedidos.";
+    });
+  }
+
+  function clearRows() {
+    list.replaceChildren();
+  }
+
+  function renderRows(rows) {
+    clearRows();
+
+    for (const order of rows) {
+      const article = document.createElement("article");
+
+      article.style.cssText =
+        "padding:12px;margin:8px 0;" +
+        "border:1px solid #ddd;border-radius:8px";
+
+      const heading = document.createElement("h3");
+
+      const platform =
+        typeof order.platform === "string"
+          ? order.platform
+          : "Plataforma desconocida";
+
+      heading.textContent = platform;
+
+      const externalId = document.createElement("p");
+      externalId.textContent =
+        "Pedido: " +
+        String(order.external_order_id ?? "Sin ID");
+
+      const orderStatus = document.createElement("p");
+      orderStatus.textContent =
+        "Estado: " +
+        String(order.processing_status ?? "Desconocido");
+
+      const amount = document.createElement("p");
+
+      const grosz = order.total_grosz;
+
+      amount.textContent =
+        Number.isSafeInteger(grosz) && grosz >= 0
+          ? `Importe declarado: ${(grosz / 100).toFixed(2)} PLN`
+          : "Importe pendiente de verificación";
+
+      article.append(
+        heading,
+        externalId,
+        orderStatus,
+        amount
+      );
+
+      list.appendChild(article);
+    }
+  }
+
+  button.addEventListener("click", async () => {
+    if (loading) return;
+
+    const client = cloudState.client;
+    const expectedUserId = cloudState.user?.id;
+
+    if (!client || !expectedUserId) {
+      clearRows();
+      status.textContent =
+        "Debes iniciar sesión como restaurante.";
+      return;
+    }
+
+    loading = true;
+    button.disabled = true;
+
+    const currentRequest = ++requestVersion;
+
+    status.textContent = "Consultando pedidos...";
+    clearRows();
+
+    try {
+      const { data: sessionData, error: sessionError } =
+        await client.auth.getSession();
+
+      if (sessionError) throw sessionError;
+
+      const session = sessionData?.session;
+
+      if (
+        !session?.access_token ||
+        session.user?.id !== expectedUserId
+      ) {
+        throw new Error("SESSION_NOT_AVAILABLE");
+      }
+
+      const { data, error } =
+        await client.functions.invoke(
+          "external-delivery-inbox",
+          {
+            method: "GET",
+            headers: {
+              Authorization:
+                `Bearer ${session.access_token}`
+            }
+          }
+        );
+
+      if (error) throw error;
+
+      const { data: latestSessionData } =
+        await client.auth.getSession();
+
+      if (
+        currentRequest !== requestVersion ||
+        cloudState.user?.id !== expectedUserId ||
+        latestSessionData?.session?.user?.id !==
+          expectedUserId
+      ) {
+        clearRows();
+        status.textContent =
+          "La sesión cambió. Consulta nuevamente.";
+        return;
+      }
+
+      if (!Array.isArray(data?.orders)) {
+        throw new Error("INVALID_INBOX_RESPONSE");
+      }
+
+      renderRows(data.orders);
+
+      status.textContent = data.orders.length
+        ? `${data.orders.length} pedidos encontrados.` +
+          (data.hasMore
+            ? " Existen más registros."
+            : "")
+        : "No hay pedidos externos pendientes.";
+    
+   
+    } catch (error) {
+      if (
+        currentRequest !== requestVersion ||
+        cloudState.user?.id !== expectedUserId
+      ) {
+        return;
+      }
+
+      clearRows();
+
+      status.textContent =
+        "No se pudo consultar la bandeja externa. " +
+        "Verifica la conexión, sesión y configuración.";
+
+
+      
+
+      console.warn(
+        "RC_EXTERNAL_INBOX_READ_FAILED",
+        error?.name || "UNKNOWN_ERROR"
+      );
+    } finally {
+      loading = false;
+      button.disabled = false;
+    }
+  });
+})();
