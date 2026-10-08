@@ -204,6 +204,7 @@ async function createTransfer(
     );
 
   let result: Response;
+  let rawBody: string;
 
   try {
     result =
@@ -237,6 +238,8 @@ async function createTransfer(
             controller.signal,
         },
       );
+    // Keep the deadline active until the response body has been read.
+    rawBody = await result.text();
   } catch (error) {
     if (
       error instanceof
@@ -255,9 +258,6 @@ async function createTransfer(
       timeout,
     );
   }
-
-  const rawBody =
-    await result.text();
 
   let body: any = {};
 
@@ -965,4 +965,3 @@ Deno.serve(
     );
   },
 );
-
