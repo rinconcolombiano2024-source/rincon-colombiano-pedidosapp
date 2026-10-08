@@ -9,19 +9,25 @@ import {
 } from "./driver-registry.mjs";
 
 /**
- * RC ORDERA — Fiscal Service V1.1
+ * RC ORDERA — Fiscal Service V1.2
  *
  * Universal fiscal-driver orchestration.
  *
+ * Security:
  * - Explicit driver selection
  * - Cleanup on failed connection
- * - No automatic printing
+ * - No automatic physical printing
  * - No polling, timers or background retries
  * - Mock-only receipt simulation
  * - Fail-closed on uncertain device state
+ * - Strict fiscal reconciliation identity validation
+ * - Reject inconsistent simulator responses
  *
  * Real fiscal issuance requires durable server-side
  * claims, authorized hardware drivers and reconciliation.
+ *
+ * IMPORTANT:
+ * This service does not issue real fiscal receipts.
  */
 
 export class FiscalService {
@@ -80,20 +86,22 @@ export class FiscalService {
         driverId,
         simulated: result.simulated === true,
       };
+
     } catch (error) {
       if (driver) {
         try {
           const cleanup = await driver.disconnect();
 
           if (cleanup?.connected !== false) {
-            // Physical state remains uncertain.
             this.#driver = driver;
             this.#driverId = driverId;
+
             throw new FiscalError(
               "DEVICE_CLEANUP_UNCONFIRMED",
               "Cleanup was not confirmed"
             );
           }
+
         } catch (cleanupError) {
           this.#driver = driver;
           this.#driverId = driverId;
@@ -106,6 +114,7 @@ export class FiscalService {
       }
 
       throw error;
+
     } finally {
       this.#busy = false;
     }
@@ -149,7 +158,6 @@ export class FiscalService {
       const result =
         await this.#driver.printReceipt(receipt);
 
-    
       if (
         !result ||
         result.simulated !== true ||
@@ -173,6 +181,7 @@ export class FiscalService {
         simulated: true,
         fiscal: false,
       };
+
     } finally {
       this.#busy = false;
     }
@@ -196,16 +205,33 @@ export class FiscalService {
       const result =
         await this.#driver.reconcile(operationId);
 
+      /*
+       * SECURITY HARDENING V1.2
+       *
+       * Never accept reconciliation for a different
+       * operation.
+       *
+       * Never accept real fiscal issuance from mock.
+       *
+       * Never trust malformed driver responses.
+       */
+
       if (
         !result ||
+        result.operationId !== operationId ||
         result.simulated !== true ||
+        result.fiscal === true ||
         !["confirmed", "failed", "unknown"].includes(
           result.status
+        ) ||
+        (
+          result.status === "confirmed" &&
+          result.fiscal !== false
         )
       ) {
         throw new FiscalError(
           "INVALID_RECONCILIATION_RESULT",
-          "Invalid simulator response"
+          "Invalid or mismatched simulator reconciliation response"
         );
       }
 
@@ -214,6 +240,7 @@ export class FiscalService {
         simulated: true,
         fiscal: false,
       };
+
     } finally {
       this.#busy = false;
     }
@@ -250,6 +277,7 @@ export class FiscalService {
       this.#driverId = null;
 
       return result;
+
     } finally {
       this.#busy = false;
     }
