@@ -1339,8 +1339,8 @@ Deno.serve(
       }
 
       if (
-        eventType ===
-          "refund.updated" &&
+        (eventType === "refund.created" ||
+          eventType === "refund.updated") &&
         String(
           object?.status ||
             "",
@@ -1695,3 +1695,5 @@ Deno.serve(
     }
   },
 );
+```
+
