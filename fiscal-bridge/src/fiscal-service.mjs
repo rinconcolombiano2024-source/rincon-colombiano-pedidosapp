@@ -9,14 +9,19 @@ import {
 } from "./driver-registry.mjs";
 
 /**
- * RC ORDERA — Fiscal Service V1
+ * RC ORDERA — Fiscal Service V1.1
  *
- * Local orchestration layer.
- * Does not connect to Supabase or issue legal receipts.
- * No cron, timers, polling or automatic retries.
+ * Universal fiscal-driver orchestration.
  *
- * A production implementation must use durable,
- * server-side operation claims and reconciliation.
+ * - Explicit driver selection
+ * - Cleanup on failed connection
+ * - No automatic printing
+ * - No polling, timers or background retries
+ * - Mock-only receipt simulation
+ * - Fail-closed on uncertain device state
+ *
+ * Real fiscal issuance requires durable server-side
+ * claims, authorized hardware drivers and reconciliation.
  */
 
 export class FiscalService {
@@ -45,14 +50,15 @@ export class FiscalService {
     if (this.#busy || this.#driver) {
       throw new FiscalError(
         "SERVICE_BUSY",
-        "Fiscal service is busy or connected"
+        "Service is busy or already connected"
       );
     }
 
     this.#busy = true;
+    let driver = null;
 
     try {
-      const driver = this.#registry.create(
+      driver = this.#registry.create(
         driverId,
         options
       );
@@ -62,7 +68,7 @@ export class FiscalService {
       if (result?.connected !== true) {
         throw new FiscalError(
           "CONNECTION_NOT_CONFIRMED",
-          "Device connection was not confirmed"
+          "Device did not confirm connection"
         );
       }
 
@@ -74,12 +80,45 @@ export class FiscalService {
         driverId,
         simulated: result.simulated === true,
       };
+    } catch (error) {
+      if (driver) {
+        try {
+          const cleanup = await driver.disconnect();
+
+          if (cleanup?.connected !== false) {
+            // Physical state remains uncertain.
+            this.#driver = driver;
+            this.#driverId = driverId;
+            throw new FiscalError(
+              "DEVICE_CLEANUP_UNCONFIRMED",
+              "Cleanup was not confirmed"
+            );
+          }
+        } catch (cleanupError) {
+          this.#driver = driver;
+          this.#driverId = driverId;
+
+          throw new FiscalError(
+            "DEVICE_CLEANUP_UNCONFIRMED",
+            "Connection failed and cleanup is uncertain"
+          );
+        }
+      }
+
+      throw error;
     } finally {
       this.#busy = false;
     }
   }
 
   async getStatus() {
+    if (this.#busy) {
+      throw new FiscalError(
+        "SERVICE_BUSY",
+        "Device operation in progress"
+      );
+    }
+
     if (!this.#driver) {
       return {
         connected: false,
@@ -98,7 +137,7 @@ export class FiscalService {
     ) {
       throw new FiscalError(
         "SIMULATION_NOT_AVAILABLE",
-        "Connect the mock driver first"
+        "Connect mock driver first"
       );
     }
 
@@ -131,7 +170,7 @@ export class FiscalService {
     if (this.#busy) {
       throw new FiscalError(
         "SERVICE_BUSY",
-        "Cannot disconnect during an operation"
+        "Cannot disconnect during operation"
       );
     }
 
@@ -150,7 +189,7 @@ export class FiscalService {
       if (result?.connected !== false) {
         throw new FiscalError(
           "DISCONNECT_NOT_CONFIRMED",
-          "Device disconnection was not confirmed"
+          "Device disconnection is uncertain"
         );
       }
 
