@@ -331,6 +331,46 @@ async function createTransfer(
   return body;
 }
 
+// Defensa contra snapshots antiguos; no es un bloqueo entre PostgreSQL y Stripe.
+async function assertCurrentTransferEligibility(
+  admin: any,
+  allocation: any,
+  recipient: "restaurant" | "courier",
+) {
+  const { data: current, error } = await admin
+    .from("marketplace_payment_allocations")
+    .select("*,payment_transactions!inner(transfer_group,status)")
+    .eq("id", allocation.id)
+    .maybeSingle();
+
+  if (error || !current) {
+    throw new Error("Could not verify current transfer eligibility");
+  }
+  const payment = Array.isArray(current.payment_transactions)
+    ? current.payment_transactions[0] : current.payment_transactions;
+  const previousPayment = Array.isArray(allocation.payment_transactions)
+    ? allocation.payment_transactions[0] : allocation.payment_transactions;
+  const amountField = `${recipient}_net_amount`;
+  const ownerField = `${recipient}_user_id`;
+  if (
+    current.financial_hold !== false ||
+    Number(current.refund_amount) !== 0 ||
+    payment?.status !== "paid" ||
+    !["funds_held", "partially_released", "eligible", "failed"].includes(current.status) ||
+    !current[`${recipient}_release_eligible_at`] ||
+    current[`${recipient}_transfer_id`] ||
+    current.payment_transaction_id !== allocation.payment_transaction_id ||
+    current.customer_order_id !== allocation.customer_order_id ||
+    current.currency !== allocation.currency ||
+    current[ownerField] !== allocation[ownerField] ||
+    !Number.isFinite(Number(current[amountField])) ||
+    Number(current[amountField]) !== Number(allocation[amountField]) ||
+    String(payment?.transfer_group || "") !== String(previousPayment?.transfer_group || "")
+  ) {
+    throw new Error("Transfer eligibility changed; settlement requires reconciliation");
+  }
+}
+
 Deno.serve(
   async (request) => {
     if (
@@ -648,6 +688,8 @@ Deno.serve(
             );
           }
 
+          await assertCurrentTransferEligibility(admin, allocation, "restaurant");
+
           const transfer =
             await createTransfer(
               stripeKey,
@@ -718,6 +760,8 @@ Deno.serve(
               "Courier payout account is not ready",
             );
           }
+
+          await assertCurrentTransferEligibility(admin, allocation, "courier");
 
           const transfer =
             await createTransfer(
