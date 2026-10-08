@@ -144,3 +144,60 @@ test("Failed connection releases partial resources", async () => {
 
   assert.equal(status.connected, false);
 });
+
+test("Lost fiscal ACK reconciles without duplicate", async () => {
+  const { MOCK_FISCAL_OUTCOMES } =
+    await import("../src/mock-driver.mjs");
+
+  const { createDefaultFiscalRegistry } =
+    await import("../src/driver-registry.mjs");
+
+  let mockDriver;
+
+  const registry = createDefaultFiscalRegistry();
+
+  const controlledRegistry = {
+    create(id, options) {
+      mockDriver = registry.create(id, options);
+      return mockDriver;
+    },
+  };
+
+  const service = new FiscalService(
+    controlledRegistry
+  );
+
+  await service.connect("mock");
+
+  mockDriver.setNextOutcome(
+    MOCK_FISCAL_OUTCOMES.UNKNOWN_AFTER
+  );
+
+  const first = await service.simulateReceipt(
+    receipt()
+  );
+
+  assert.equal(first.status, "unknown");
+  assert.equal(first.fiscal, false);
+
+  assert.equal(
+    mockDriver.getDiagnostics().issuedCount,
+    1
+  );
+
+  const reconciled =
+    await service.reconcileSimulation(
+      receipt().operationId
+    );
+
+  assert.equal(reconciled.status, "confirmed");
+  assert.equal(reconciled.simulated, true);
+  assert.equal(reconciled.fiscal, false);
+
+  assert.equal(
+    mockDriver.getDiagnostics().issuedCount,
+    1
+  );
+
+  await service.disconnect();
+});
