@@ -9,7 +9,7 @@ import {
 } from "./driver-registry.mjs";
 
 /**
- * RC ORDERA — Fiscal Service V1.3
+ * RC ORDERA — Fiscal Service V1.4
  *
  * Universal fiscal-driver orchestration.
  *
@@ -19,13 +19,13 @@ import {
  * - No automatic physical printing
  * - No polling or background retries
  * - Mock-only receipt simulation
- * - Single operation at a time
+ * - Single operation at a time, including status reads
  * - Fail-closed on uncertain device state
  * - Strict operation identity validation
  * - Reject inconsistent driver responses
  *
  * COMPATIBILITY:
- * - Preserves FiscalService V1.2 public API
+ * - Preserves FiscalService V1.3 public API
  * - Compatible with existing mock driver
  * - No database changes
  * - No network requests
@@ -143,6 +143,9 @@ export class FiscalService {
   /**
    * Read current driver status.
    *
+   * Serialized with connect, disconnect and
+   * simulation/reconciliation operations.
+   * The lock is always released, including errors.
    * No polling or automatic refresh.
    */
   async getStatus() {
@@ -160,7 +163,13 @@ export class FiscalService {
       };
     }
 
-    return this.#driver.getStatus();
+    this.#busy = true;
+
+    try {
+      return await this.#driver.getStatus();
+    } finally {
+      this.#busy = false;
+    }
   }
 
   /**
