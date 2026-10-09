@@ -1,6 +1,7 @@
 
 import {
   FiscalError,
+  requireUuid,
   validateFiscalReceipt,
 } from "./fiscal-contract.mjs";
 
@@ -9,7 +10,7 @@ import {
 } from "./driver-registry.mjs";
 
 /**
- * RC ORDERA — Fiscal Service V1.4
+ * RC ORDERA — Fiscal Service V1.5
  *
  * Universal fiscal-driver orchestration.
  *
@@ -23,9 +24,10 @@ import {
  * - Fail-closed on uncertain device state
  * - Strict operation identity validation
  * - Reject inconsistent driver responses
+ * - Validate reconciliation UUID before driver calls
  *
  * COMPATIBILITY:
- * - Preserves FiscalService V1.3 public API
+ * - Preserves FiscalService V1.4 public API
  * - Compatible with existing mock driver
  * - No database changes
  * - No network requests
@@ -145,7 +147,9 @@ export class FiscalService {
    *
    * Serialized with connect, disconnect and
    * simulation/reconciliation operations.
+   *
    * The lock is always released, including errors.
+   *
    * No polling or automatic refresh.
    */
   async getStatus() {
@@ -238,6 +242,13 @@ export class FiscalService {
    *
    * The driver's result MUST reference the
    * exact operation requested.
+   *
+   * V1.5:
+   * UUID validation occurs before accessing
+   * the driver.
+   *
+   * Invalid identifiers cannot reach
+   * the fiscal adapter.
    */
   async reconcileSimulation(operationId) {
     if (
@@ -251,17 +262,24 @@ export class FiscalService {
       );
     }
 
+    const validatedOperationId = requireUuid(
+      operationId,
+      "operationId"
+    );
+
     this.#busy = true;
 
     try {
       const result =
-        await this.#driver.reconcile(operationId);
+        await this.#driver.reconcile(
+          validatedOperationId
+        );
 
       if (
         !result ||
         typeof result !== "object" ||
         Array.isArray(result) ||
-        result.operationId !== operationId ||
+        result.operationId !== validatedOperationId ||
         result.simulated !== true ||
         !VALID_RESULTS.has(result.status) ||
         result.fiscal === true ||
