@@ -5,9 +5,10 @@
   "private": true,
   "description": "RC ORDERA multi-restaurante",
   "scripts": {
-    "qa": "node qa-v91.cjs && node qa-i18n-v87.cjs && node --test tests/*.test.cjs && npm run qa:fiscal && npm run qa:delivery",
+    "qa": "node qa-v91.cjs && node qa-i18n-v87.cjs && node --test tests/*.test.cjs && npm run qa:fiscal && npm run qa:delivery && npm run qa:readiness",
     "qa:fiscal": "node --test fiscal-bridge/tests/*.test.mjs",
     "qa:delivery": "node --test delivery-bridge/tests/*.test.mjs",
+    "qa:readiness": "node --test integrations/tests/*.test.mjs",
     "qa:i18n": "node qa-i18n-v87.cjs",
     "qa:e2e": "playwright test",
     "qa:integration": "node --test tests/integration/supabase-isolation.test.cjs tests/integration/concurrency-harness.test.cjs",
