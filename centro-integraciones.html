@@ -1,0 +1,580 @@
+
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#102c25">
+  <title>RC ORDERA | Centro de Integraciones</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: system-ui, -apple-system,
+        BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0b1916;
+      color: #f3f8f5;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    button, a { font: inherit; }
+    button:focus-visible,
+    a:focus-visible {
+      outline: 3px solid #f8cb4d;
+      outline-offset: 3px;
+    }
+    .shell {
+      max-width: 1180px;
+      margin: auto;
+      padding: 25px 18px 60px;
+    }
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 30px;
+    }
+    .brand {
+      font-size: 23px;
+      font-weight: 850;
+      letter-spacing: -.8px;
+    }
+    .brand span { color: #f8cb4d; }
+    .back {
+      color: #d4e7df;
+      text-decoration: none;
+      font-size: 14px;
+    }
+    h1 {
+      font-size: clamp(29px, 5vw, 46px);
+      line-height: 1.12;
+      margin: 0 0 12px;
+      letter-spacing: -1.5px;
+    }
+    h2 { font-size: 22px; margin: 0 0 10px; }
+    h3 { font-size: 17px; margin: 0; }
+    p {
+      color: #a9bfb6;
+      line-height: 1.55;
+      margin: 0;
+    }
+    .intro { margin-bottom: 24px; }
+    .intro p { max-width: 690px; }
+    .notice {
+      border: 1px solid #66552a;
+      background: #302919;
+      color: #fbe6a5;
+      padding: 14px 16px;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.55;
+      margin-bottom: 22px;
+    }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 13px;
+      margin-bottom: 26px;
+    }
+    .metric, .panel, .item {
+      border: 1px solid #2b4640;
+      background: #142824;
+      border-radius: 17px;
+    }
+    .metric { padding: 19px; }
+    .metric small {
+      display: block;
+      color: #a9bfb6;
+      margin-bottom: 12px;
+    }
+    .metric strong {
+      display: block;
+      font-size: 24px;
+      letter-spacing: -.5px;
+    }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .tab {
+      border: 1px solid #35534a;
+      background: #152b26;
+      color: #d9e7e0;
+      padding: 12px 19px;
+      border-radius: 11px;
+      cursor: pointer;
+      min-height: 45px;
+    }
+    .tab[aria-selected="true"] {
+      background: #26a76a;
+      color: #061e13;
+      border-color: #26a76a;
+      font-weight: 800;
+    }
+    .panel { padding: 23px; }
+    .panel[hidden] { display: none; }
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 13px;
+    }
+    .item { padding: 20px; background: #19322b; }
+    .item-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .symbol { font-size: 27px; margin-bottom: 12px; }
+    .status {
+      display: inline-flex;
+      font-size: 12px;
+      border-radius: 20px;
+      padding: 6px 10px;
+      background: #473b25;
+      color: #ffe29b;
+      white-space: nowrap;
+    }
+    .status.neutral {
+      background: #30413c;
+      color: #d0dfd7;
+    }
+    .item p { font-size: 13px; min-height: 42px; }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin-top: 18px;
+    }
+    .action {
+      background: #26a76a;
+      color: #061e13;
+      border: 0;
+      padding: 11px 14px;
+      font-size: 13px;
+      font-weight: 750;
+      border-radius: 10px;
+      min-height: 43px;
+    }
+    .action.secondary {
+      color: #e6f3ec;
+      background: #2c4940;
+    }
+    .action:disabled {
+      opacity: .46;
+      cursor: not-allowed;
+    }
+    .requirements {
+      margin: 16px 0 0;
+      padding-left: 19px;
+      color: #bdd0c7;
+      font-size: 13px;
+      line-height: 1.85;
+    }
+    .foot {
+      margin-top: 25px;
+      color: #8fa9a0;
+      font-size: 12px;
+      text-align: center;
+    }
+    @media(max-width: 700px) {
+      .summary { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr; }
+      .panel { padding: 16px; }
+      .metric strong { font-size: 21px; }
+      .tab { flex: 1; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="top">
+      <div class="brand">RC <span>ORDERA</span></div>
+      <a class="back" href="restaurante.html">
+        ← Volver al restaurante
+      </a>
+    </header>
+
+    <section class="intro">
+      <h1>Centro de Integraciones</h1>
+      <p>
+        Gestiona desde un solo lugar la preparación
+        de dispositivos fiscales, plataformas de
+        reparto y sistemas de pago.
+      </p>
+    </section>
+
+    <div class="notice" role="note">
+      VERSIÓN DE PREPARACIÓN:
+      Esta pantalla no muestra conexiones en tiempo
+      real ni concede acceso administrativo.
+      Las operaciones sensibles permanecerán
+      bloqueadas hasta integrar autenticación,
+      autorización y servicios verificados.
+      No introduzcas claves ni credenciales aquí.
+    </div>
+
+    <section class="summary"
+             aria-label="Resumen de preparación">
+      <div class="metric">
+        <small>Caja fiscal</small>
+        <strong>Por conectar</strong>
+      </div>
+      <div class="metric">
+        <small>Apps de reparto</small>
+        <strong>5 previstas</strong>
+      </div>
+      <div class="metric">
+        <small>Pagos</small>
+        <strong>Por verificar</strong>
+      </div>
+    </section>
+
+    <div class="tabs"
+         role="tablist"
+         aria-label="Categorías">
+      <button class="tab"
+              id="tab-fiscal"
+              type="button"
+              role="tab"
+              aria-controls="panel-fiscal"
+              aria-selected="true"
+              data-tab="fiscal">
+        🧾 Fiscal
+      </button>
+      <button class="tab"
+              id="tab-delivery"
+              type="button"
+              role="tab"
+              aria-controls="panel-delivery"
+              aria-selected="false"
+              tabindex="-1"
+              data-tab="delivery">
+        🛵 Reparto
+      </button>
+      <button class="tab"
+              id="tab-payment"
+              type="button"
+              role="tab"
+              aria-controls="panel-payment"
+              aria-selected="false"
+              tabindex="-1"
+              data-tab="payment">
+        💳 Pagos
+      </button>
+    </div>
+
+    <section class="panel"
+             id="panel-fiscal"
+             role="tabpanel"
+             aria-labelledby="tab-fiscal">
+      <div class="section-head">
+        <div>
+          <h2>Dispositivos fiscales</h2>
+          <p>
+            Preparación para POSNET y otros fabricantes.
+          </p>
+        </div>
+        <span class="status">Sin conexión verificada</span>
+      </div>
+
+      <div class="grid">
+        <article class="item">
+          <div class="symbol">🖨️</div>
+          <div class="item-head">
+            <h3>Impresora principal</h3>
+            <span class="status neutral">No configurada</span>
+          </div>
+          <p>
+            POSNET · Modelo, firmware y protocolo
+            pendientes de identificación.
+          </p>
+          <div class="actions">
+            <button class="action" disabled>
+              Configurar
+            </button>
+            <button class="action secondary" disabled>
+              Probar conexión
+            </button>
+            <button class="action secondary" disabled>
+              Consultar estado
+            </button>
+          </div>
+        </article>
+
+        <article class="item">
+          <div class="symbol">📋</div>
+          <div class="item-head">
+            <h3>Operaciones fiscales</h3>
+            <span class="status neutral">Bloqueadas</span>
+          </div>
+          <p>
+            Emisión, seguimiento, conciliación y
+            protección frente a duplicados.
+          </p>
+          <div class="actions">
+            <button class="action" disabled>
+              Imprimir recibo
+            </button>
+            <button class="action secondary" disabled>
+              Conciliar
+            </button>
+            <button class="action secondary" disabled>
+              Ver historial
+            </button>
+          </div>
+        </article>
+      </div>
+
+      <ul class="requirements">
+        <li>Identidad autenticada de cada dispositivo</li>
+        <li>Controlador compatible con el fabricante</li>
+        <li>Configuración VAT verificada</li>
+        <li>Operaciones persistentes e idempotentes</li>
+        <li>Conciliación segura de estados desconocidos</li>
+      </ul>
+    </section>
+
+    <section class="panel"
+             id="panel-delivery"
+             role="tabpanel"
+             aria-labelledby="tab-delivery"
+             hidden>
+      <div class="section-head">
+        <div>
+          <h2>Plataformas de reparto</h2>
+          <p>
+            Cinco proveedores, una única operación.
+          </p>
+        </div>
+        <span class="status">Conexiones pendientes</span>
+      </div>
+      <div class="grid" id="provider-list"></div>
+      <ul class="requirements">
+        <li>Autenticación oficial de cada proveedor</li>
+        <li>Mapeo de productos e impuestos</li>
+        <li>Prevención de pedidos duplicados</li>
+        <li>Sincronización de estados de cocina y entrega</li>
+        <li>Conciliación de pagos y comisiones</li>
+      </ul>
+    </section>
+
+    <section class="panel"
+             id="panel-payment"
+             role="tabpanel"
+             aria-labelledby="tab-payment"
+             hidden>
+      <div class="section-head">
+        <div>
+          <h2>Pagos y liquidaciones</h2>
+          <p>
+            Control de cobros, devoluciones y saldos.
+          </p>
+        </div>
+        <span class="status">Verificación pendiente</span>
+      </div>
+
+      <div class="grid">
+        <article class="item">
+          <div class="symbol">💳</div>
+          <h3>Stripe</h3>
+          <p>
+            Checkout, webhooks, confirmaciones
+            y liquidaciones.
+          </p>
+          <div class="actions">
+            <button class="action" disabled>
+              Ver transacciones
+            </button>
+            <button class="action secondary" disabled>
+              Conciliar
+            </button>
+          </div>
+        </article>
+
+        <article class="item">
+          <div class="symbol">📱</div>
+          <h3>BLIK</h3>
+          <p>
+            Método de pago sujeto a disponibilidad
+            y configuración del proveedor.
+          </p>
+          <div class="actions">
+            <button class="action" disabled>
+              Verificar disponibilidad
+            </button>
+          </div>
+        </article>
+
+        <article class="item">
+          <div class="symbol">↩️</div>
+          <h3>Reembolsos</h3>
+          <p>
+            Reversión, seguimiento y conciliación
+            de operaciones.
+          </p>
+          <div class="actions">
+            <button class="action secondary" disabled>
+              Consultar reembolsos
+            </button>
+          </div>
+        </article>
+
+        <article class="item">
+          <div class="symbol">📊</div>
+          <h3>Contabilidad</h3>
+          <p>
+            Ventas, importes, comisiones e impuestos
+            consistentes entre los sistemas.
+          </p>
+          <div class="actions">
+            <button class="action secondary" disabled>
+              Ver informes
+            </button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <footer class="foot">
+      RC ORDERA · Arquitectura multi-restaurante
+      · Preparación de integraciones
+    </footer>
+  </main>
+
+  <script>
+    "use strict";
+
+    const providers = Object.freeze([
+      ["Uber Eats", "uber_eats"],
+      ["Wolt", "wolt"],
+      ["Glovo", "glovo"],
+      ["Bolt Food", "bolt_food"],
+      ["Pyszne.pl", "pyszne"]
+    ]);
+
+    const providerList =
+      document.getElementById("provider-list");
+
+    for (const [name] of providers) {
+      const card = document.createElement("article");
+      card.className = "item";
+
+      const symbol = document.createElement("div");
+      symbol.className = "symbol";
+      symbol.textContent = "🛵";
+
+      const header = document.createElement("div");
+      header.className = "item-head";
+
+      const title = document.createElement("h3");
+      title.textContent = name;
+
+      const status = document.createElement("span");
+      status.className = "status neutral";
+      status.textContent = "Sin conectar";
+
+      header.append(title, status);
+
+      const description = document.createElement("p");
+      description.textContent =
+        "Conexión oficial, pedidos, estados y " +
+        "conciliación pendientes de verificar.";
+
+      const actions = document.createElement("div");
+      actions.className = "actions";
+
+      for (const label of [
+        "Configurar",
+        "Sincronizar pedidos"
+      ]) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className =
+          label === "Configurar"
+            ? "action"
+            : "action secondary";
+        button.textContent = label;
+        button.disabled = true;
+        actions.append(button);
+      }
+
+      card.append(
+        symbol,
+        header,
+        description,
+        actions
+      );
+
+      providerList.append(card);
+    }
+
+    const tabs = [
+      ...document.querySelectorAll("[data-tab]")
+    ];
+
+    function activateTab(name, focus = false) {
+      for (const tab of tabs) {
+        const selected = tab.dataset.tab === name;
+        tab.setAttribute(
+          "aria-selected",
+          String(selected)
+        );
+        tab.tabIndex = selected ? 0 : -1;
+        if (selected && focus) tab.focus();
+      }
+
+      for (const namePart of [
+        "fiscal", "delivery", "payment"
+      ]) {
+        document.getElementById(
+          `panel-${namePart}`
+        ).hidden = namePart !== name;
+      }
+    }
+
+    tabs.forEach((tab, index) => {
+      tab.addEventListener("click", () => {
+        activateTab(tab.dataset.tab);
+      });
+
+      tab.addEventListener("keydown", event => {
+        let nextIndex = index;
+
+        if (event.key === "ArrowRight") {
+          nextIndex = (index + 1) % tabs.length;
+        } else if (event.key === "ArrowLeft") {
+          nextIndex =
+            (index + tabs.length - 1) % tabs.length;
+        } else if (event.key === "Home") {
+          nextIndex = 0;
+        } else if (event.key === "End") {
+          nextIndex = tabs.length - 1;
+        } else {
+          return;
+        }
+
+        event.preventDefault();
+        activateTab(
+          tabs[nextIndex].dataset.tab,
+          true
+        );
+      });
+    });
+  </script>
+</body>
+</html>
