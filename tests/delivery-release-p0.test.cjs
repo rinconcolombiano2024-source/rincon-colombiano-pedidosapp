@@ -447,3 +447,21 @@ test('dispatch con configuracion PostgreSQL default: el parche no cambia el erro
     }
   } finally { await db.close(); }
 });
+
+test('hardening: dispatch funciona con variable_conflict=error y conserva prueba fiscal/financiera', async () => {
+ const db=new PGlite({extensions:{pgcrypto}});try{
+  await setup(db,'error');await db.exec(patch);
+  await db.exec(read('MIGRACION-V5-20261010-07-DISPATCH-COLUMN-ALIAS.sql'));
+  const home=await seed(db,'Domicilio');const before=await state(db,home.order);
+  await assert.rejects(actor(db,staff,'select * from update_my_station_order($1,$2,$3,$4)',[owner,home.order,'completed','dispatch']),{code:'42501'});
+  assert.deepEqual(await state(db,home.order),before);
+  for(const type of ['Comer en el punto','Recoger en el punto']){
+   const order=await seed(db,type);
+   const result=await actor(db,staff,'select * from update_my_station_order($1,$2,$3,$4)',[owner,order.order,'completed','dispatch']);
+   assert.equal(result.rows[0].order_status,'delivered');assert.equal((await state(db,order.order)).status,'delivered');
+  }
+  const other=await seed(db,'Recoger en el punto');
+  await assert.rejects(actor(db,stranger,'select * from update_my_station_order($1,$2,$3,$4)',[owner,other.order,'completed','dispatch']),/not authorized/);
+  await assert.rejects(actor(db,null,'select * from update_my_station_order($1,$2,$3,$4)',[owner,other.order,'completed','dispatch'],'anon'),/permission denied/);
+ }finally{await db.close();}
+});

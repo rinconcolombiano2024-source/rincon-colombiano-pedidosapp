@@ -1,3 +1,4 @@
+import { withCors } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
 const MAX_REQUEST_BODY_BYTES = 16_384;
@@ -300,7 +301,7 @@ async function triggerSettlement(
   }
 }
 
-Deno.serve(
+Deno.serve(withCors(
   async (
     request,
   ) => {
@@ -924,4 +925,4 @@ Deno.serve(
       },
     );
   },
-);
+));

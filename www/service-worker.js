@@ -1,4 +1,4 @@
-const CACHE_NAME = "rc-ordera-v91-0-4-offline-r4-products-closures";
+const CACHE_NAME = "rc-ordera-v91-0-4-v6-verified-20261010";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -17,6 +17,8 @@ const APP_FILES = [
   "./auto-translate.js",
   "./supabase-config.js",
   "./vendor/supabase-2.57.4.js",
+  "./vendor/qrcode-generator-2.0.4.js",
+  "./local-qr.js",
   "./manifest.webmanifest",
   "./restaurante-manifest.webmanifest",
   "./restaurante-manifest.pl.webmanifest",

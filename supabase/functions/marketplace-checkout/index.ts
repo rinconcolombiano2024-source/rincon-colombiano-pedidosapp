@@ -1,3 +1,4 @@
+import { withCors } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
 const STRIPE_REQUEST_TIMEOUT_MS = 15_000;
@@ -411,7 +412,7 @@ function validateCheckoutSession(
   };
 }
 
-Deno.serve(
+Deno.serve(withCors(
   async (request) => {
     if (
       request.method ===
@@ -1713,4 +1714,4 @@ Deno.serve(
       },
     );
   },
-);
+));

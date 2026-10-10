@@ -18,9 +18,10 @@
     }
     * { box-sizing: border-box; }
     body { margin: 0; }
-    button, a { font: inherit; }
+    button, a, select { font: inherit; }
+    #integrationLanguage {min-height:44px; padding:8px; background:#152b26; color:#f3f8f5; border:1px solid #35534a; border-radius:8px;}
     button:focus-visible,
-    a:focus-visible {
+    a:focus-visible, select:focus-visible {
       outline: 3px solid #f8cb4d;
       outline-offset: 3px;
     }
@@ -204,6 +205,7 @@
   <main class="shell">
     <header class="top">
       <div class="brand">RC <span>ORDERA</span></div>
+      <label>Idioma <select id="integrationLanguage" aria-label="Language / Język / Idioma"><option value="es">Español</option><option value="pl">Polski</option><option value="en">English</option></select></label>
       <a class="back" href="restaurante.html">
         ← Volver al restaurante
       </a>
@@ -231,7 +233,7 @@
     <section class="summary"
              aria-label="Resumen de preparación">
       <div class="metric">
-        <small>Caja fiscal</small>
+        <small>Impresora fiscal</small>
         <strong>Por conectar</strong>
       </div>
       <div class="metric">
@@ -579,7 +581,8 @@
   
 <script src="vendor/supabase-2.57.4.js"></script>
 <script src="supabase-config.js?v=91.0.4"></script>
-<script src="centro-integraciones-status.js?v=1"></script>
+<script src="offline-i18n.js?v=91.0.4"></script>
+<script src="centro-integraciones-status.js?v=2"></script>
 
 </body>
 </html>

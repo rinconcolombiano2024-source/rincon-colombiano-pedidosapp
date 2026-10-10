@@ -1,3 +1,4 @@
+import { withCors } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
 const MAX_REQUEST_BODY_BYTES = 16_384;
@@ -135,7 +136,7 @@ async function requestSettlement(
   }
 }
 
-Deno.serve(async (request) => {
+Deno.serve(withCors(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (request.method !== "POST") return response(405, { error: "Method not allowed" });
 
@@ -234,4 +235,4 @@ Deno.serve(async (request) => {
     settlementEligible: normalized.settlementEligible,
     settlementRequested,
   });
-});
+}));

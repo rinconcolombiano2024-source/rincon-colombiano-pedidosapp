@@ -1,0 +1,159 @@
+{
+  "runtime": "v24.19.0",
+  "baseline": "b90112556aba4ea08799499b46f083e677b4f659",
+  "environment": "local PGlite single process; no Supabase/network/hardware",
+  "outbox": [
+    {
+      "version": "V5",
+      "historicalRows": 1000,
+      "cycles": 20,
+      "queryCount": 40,
+      "returnedRows": 20000,
+      "returnedBytes": 7897920,
+      "wallMs": 172.31985600000007,
+      "cpuMs": 233.099,
+      "p50Ms": 8.272690000000011,
+      "p95Ms": 10.392630000000054,
+      "maxObservedHeapGrowthBytes": 19515920,
+      "rssBeforeBytes": 609210368,
+      "rssAfterBytes": 612298752
+    },
+    {
+      "version": "hardened",
+      "historicalRows": 1000,
+      "cycles": 20,
+      "queryCount": 40,
+      "returnedRows": 0,
+      "returnedBytes": 80,
+      "wallMs": 41.5381010000001,
+      "cpuMs": 114.569,
+      "p50Ms": 1.906518999999662,
+      "p95Ms": 3.100075999999717,
+      "maxObservedHeapGrowthBytes": 7056184,
+      "rssBeforeBytes": 610156544,
+      "rssAfterBytes": 610418688
+    },
+    {
+      "version": "V5",
+      "historicalRows": 10000,
+      "cycles": 20,
+      "queryCount": 40,
+      "returnedRows": 200000,
+      "returnedBytes": 79177940,
+      "wallMs": 1846.0944449999997,
+      "cpuMs": 2506.724,
+      "p50Ms": 89.08128899999974,
+      "p95Ms": 110.05891900000006,
+      "maxObservedHeapGrowthBytes": 52530048,
+      "rssBeforeBytes": 752267264,
+      "rssAfterBytes": 788058112
+    },
+    {
+      "version": "hardened",
+      "historicalRows": 10000,
+      "cycles": 20,
+      "queryCount": 40,
+      "returnedRows": 0,
+      "returnedBytes": 80,
+      "wallMs": 37.67069099999935,
+      "cpuMs": 68.619,
+      "p50Ms": 1.7187459999995554,
+      "p95Ms": 2.681445000000167,
+      "maxObservedHeapGrowthBytes": 7031072,
+      "rssBeforeBytes": 783892480,
+      "rssAfterBytes": 783892480
+    },
+    {
+      "version": "V5",
+      "historicalRows": 50000,
+      "cycles": 20,
+      "queryCount": 40,
+      "returnedRows": 1000000,
+      "returnedBytes": 396777940,
+      "wallMs": 8873.009574999998,
+      "cpuMs": 11929.029,
+      "p50Ms": 433.4369430000006,
+      "p95Ms": 494.719129000001,
+      "maxObservedHeapGrowthBytes": 90526568,
+      "rssBeforeBytes": 854642688,
+      "rssAfterBytes": 950714368
+    },
+    {
+      "version": "hardened",
+      "historicalRows": 50000,
+      "cycles": 20,
+      "queryCount": 40,
+      "returnedRows": 0,
+      "returnedBytes": 80,
+      "wallMs": 34.185287999996945,
+      "cpuMs": 56.257,
+      "p50Ms": 1.484033000000636,
+      "p95Ms": 2.1774469999982102,
+      "maxObservedHeapGrowthBytes": 6844376,
+      "rssBeforeBytes": 946642944,
+      "rssAfterBytes": 946642944
+    }
+  ],
+  "orders": [
+    {
+      "version": "V5",
+      "menuSize": 100,
+      "items": 60,
+      "requests": 25,
+      "wallMs": 228.01051099999677,
+      "cpuMs": 283.923,
+      "p50Ms": 8.235584000001836,
+      "p95Ms": 10.218989000000875
+    },
+    {
+      "version": "hardened",
+      "menuSize": 100,
+      "items": 60,
+      "requests": 25,
+      "wallMs": 153.56137600000147,
+      "cpuMs": 173.273,
+      "p50Ms": 5.881430999997974,
+      "p95Ms": 7.303891999999905
+    },
+    {
+      "version": "V5",
+      "menuSize": 1000,
+      "items": 60,
+      "requests": 25,
+      "wallMs": 825.027355000002,
+      "cpuMs": 865.27,
+      "p50Ms": 31.948621999999887,
+      "p95Ms": 42.320221000001766
+    },
+    {
+      "version": "hardened",
+      "menuSize": 1000,
+      "items": 60,
+      "requests": 25,
+      "wallMs": 219.5064289999973,
+      "cpuMs": 227.409,
+      "p50Ms": 8.601754999999685,
+      "p95Ms": 9.761340000000928
+    }
+  ],
+  "accounting": [
+    {
+      "version": "V5",
+      "orders": 2000,
+      "closes": 20,
+      "wallMs": 2068.496524000002,
+      "cpuMs": 2163.384,
+      "p50Ms": 103.44943199999761,
+      "p95Ms": 118.4429229999987
+    },
+    {
+      "version": "hardened",
+      "orders": 2000,
+      "closes": 20,
+      "wallMs": 257.53559699999823,
+      "cpuMs": 361.405,
+      "p50Ms": 12.455056000002514,
+      "p95Ms": 17.17636300000231
+    }
+  ]
+}

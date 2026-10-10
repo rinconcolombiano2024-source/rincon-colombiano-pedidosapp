@@ -1,11 +1,10 @@
-
 {
   "name": "rc-ordera",
   "version": "91.0.4",
   "private": true,
   "description": "RC ORDERA multi-restaurante",
   "scripts": {
-    "qa": "node qa-v91.cjs && node qa-i18n-v87.cjs && node --test tests/*.test.cjs && npm run qa:fiscal && npm run qa:delivery && npm run qa:readiness",
+    "qa": "node qa-v91.cjs && node qa-i18n-v87.cjs && node --test tests/*.test.cjs && npm run qa:fiscal && npm run qa:delivery && npm run qa:readiness && npm run qa:fiscal-agent && npm run qa:shared && npm run qa:secrets && npm run qa:accounting && npm run qa:concurrency-selftest && npm run qa:v5 && npm run qa:hardening && npm run qa:policy",
     "qa:fiscal": "node --test fiscal-bridge/tests/*.test.mjs",
     "qa:delivery": "node --test delivery-bridge/tests/*.test.mjs",
     "qa:readiness": "node --test integrations/tests/*.test.mjs",
@@ -15,18 +14,36 @@
     "android:prepare-web": "node scripts/prepare-capacitor.mjs",
     "android:add": "npm run android:prepare-web && npx cap add android",
     "android:sync": "npm run android:prepare-web && npx cap sync android",
-    "android:open": "npm run android:sync && npx cap open android"
+    "android:open": "npm run android:sync && npx cap open android",
+    "qa:shared": "node --experimental-strip-types --no-warnings --test tests/shared/*.test.mjs",
+    "qa:secrets": "node scripts/scan-secrets.mjs",
+    "qa:fiscal-agent": "node --test fiscal-agent/tests/*.test.mjs",
+    "qa:browser": "python3 scripts/browser-smoke.py && python3 scripts/browser-menu-vat.py",
+    "verify:deploy": "node scripts/verify-deployment.mjs",
+    "qa:accounting": "node --test accounting/tests/*.test.mjs",
+    "qa:concurrency-selftest": "node scripts/concurrency-test.mjs --self-test",
+    "verify:concurrency": "node scripts/concurrency-test.mjs",
+    "qa:v5": "node --test tests/v5/*.test.mjs",
+    "qa:hardening": "node --experimental-strip-types --no-warnings --test tests/hardening/*.test.mjs",
+    "qa:policy": "node scripts/check-hardening.mjs"
   },
   "dependencies": {
-    "@capacitor/android": "8.5.0",
-    "@capacitor/core": "8.5.0"
+    "@capacitor/android": "8.5.3",
+    "@capacitor/core": "8.5.3",
+    "qrcode-generator": "2.0.4"
   },
   "devDependencies": {
-    "@capacitor/cli": "8.5.0",
+    "@capacitor/cli": "8.5.3",
     "@electric-sql/pglite": "0.5.8",
-    "@playwright/test": "1.62.1"
+    "@playwright/test": "1.62.1",
+    "jsqr": "1.4.0"
   },
   "engines": {
     "node": ">=22.0.0"
+  },
+  "overrides": {
+    "xcode": {
+      "uuid": "11.1.1"
+    }
   }
 }

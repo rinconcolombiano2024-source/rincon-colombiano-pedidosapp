@@ -1,3 +1,4 @@
+import { withCors } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
 const corsHeaders = {
@@ -331,7 +332,7 @@ function checkoutBelongsToTransaction(
   );
 }
 
-Deno.serve(
+Deno.serve(withCors(
   async (request) => {
     if (
       request.method ===
@@ -1325,4 +1326,4 @@ Deno.serve(
 
     return await cancelThroughCore();
   },
-);
+));

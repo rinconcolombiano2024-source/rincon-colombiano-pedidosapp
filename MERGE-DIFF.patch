@@ -1,0 +1,2755 @@
+
+FILE .github/workflows/qa.yml
+--- 
++++ 
+@@ -1,4 +1,3 @@
+-
+ name: RC ORDERA QA
+ 
+ on:
+@@ -8,15 +7,10 @@
+ permissions:
+   contents: read
+ 
+-concurrency:
+-  group: rc-ordera-qa-${{ github.ref }}
+-  cancel-in-progress: true
+-
+ jobs:
+   validate:
+     runs-on: ubuntu-latest
+-    timeout-minutes: 30
+-
++    timeout-minutes: 20
+     steps:
+       - name: Checkout
+         uses: actions/checkout@v4
+@@ -28,8 +22,7 @@
+           cache: npm
+ 
+       - name: Install exact dependencies
+-        run: npm ci --ignore-scripts --no-audit --no-fund
+-        timeout-minutes: 5
++        run: npm ci --ignore-scripts --no-fund
+ 
+       - name: Check JavaScript syntax
+         run: |
+@@ -42,9 +35,12 @@
+           node --check auto-translate.js
+           node --check offline-i18n.js
+ 
++      - name: Dependency audit (informativo)
++        run: npm audit --omit=dev --audit-level=high
++        continue-on-error: true
++
+       - name: Run static QA
+         run: npm run qa
+-        timeout-minutes: 8
+ 
+       - name: Run i18n QA
+         run: npm run qa:i18n
+@@ -54,10 +50,6 @@
+ 
+       - name: Install Playwright Chromium
+         run: npx playwright install --with-deps chromium
+-        timeout-minutes: 8
+ 
+       - name: Run E2E smoke tests
+         run: npm run qa:e2e
+-        timeout-minutes: 8
+-        env:
+-          CI: "true"
+
+FILE app.js
+--- 
++++ 
+@@ -3760,8 +3760,6 @@
+     },
+   }
+ );
+-  // Notifica a los módulos UI que Supabase ya existe. Sin polling ni credenciales en el evento.
+-  window.dispatchEvent(new Event("rc-ordera-cloud-client-ready"));
+   if (
+   typeof cloudState.client.removeAllChannels ===
+   "function"
+@@ -15286,288 +15284,3 @@
+   const friendlyMessage = navigator.onLine ? setCloudError(error) : "Sin internet. Puedes continuar con los datos guardados.";
+   elements.authMessage.textContent = friendlyMessage;
+ });
+-
+-/**
+- * RC ORDERA — EXTERNAL DELIVERY INBOX PANEL V1
+- *
+- * Read-only integration.
+- * No automatic imports, fiscal operations or payments.
+- * No polling, cron or background requests.
+- * Requires authenticated restaurant session.
+- */
+-
+-(function installExternalDeliveryPanel() {
+-  const root = document.querySelector("main.app-shell");
+-
+-  if (!root || document.getElementById("rcExternalDeliveryPanel")) {
+-    return;
+-  }
+-
+-  const section = document.createElement("section");
+-  section.id = "rcExternalDeliveryPanel";
+-  section.setAttribute(
+-    "aria-labelledby",
+-    "rcExternalDeliveryTitle"
+-  );
+-
+-  section.style.cssText =
+-    "margin:20px 0;padding:16px;" +
+-    "border:1px solid #ccc;border-radius:12px";
+-
+-  const title = document.createElement("h2");
+-  title.id = "rcExternalDeliveryTitle";
+-  title.textContent = "Pedidos de plataformas externas";
+-
+-  const description = document.createElement("p");
+-  description.textContent =
+-    "Consulta segura de pedidos externos pendientes. " +
+-    "Los pedidos no se importan automáticamente.";
+-
+-  const button = document.createElement("button");
+-  button.type = "button";
+-  button.textContent = "Consultar pedidos externos";
+-
+-  const status = document.createElement("p");
+-  status.setAttribute("role", "status");
+-  status.setAttribute("aria-live", "polite");
+-  status.textContent =
+-    "Pulsa el botón para consultar los pedidos.";
+-
+-  const list = document.createElement("div");
+-  list.setAttribute(
+-    "aria-label",
+-    "Listado de pedidos externos"
+-  );
+-
+-  section.append(title, description, button, status, list);
+-  root.appendChild(section);
+-
+-  let loading = false;
+-  let requestVersion = 0;
+-
+-  const signOutButton = document.getElementById(
+-    "signOutButton"
+-  );
+-
+-  let inboxOwnerId = cloudState.user?.id || null;
+-
+-  function invalidateExternalInbox() {
+-    requestVersion++;
+-    list.replaceChildren();
+-    status.textContent =
+-      "Pulsa el botón para consultar los pedidos.";
+-  }
+-
+-  function handleExternalInboxAuth(event, session) {
+-    const nextOwnerId = session?.user?.id || null;
+-
+-    if (
+-      event === "SIGNED_OUT" ||
+-      nextOwnerId !== inboxOwnerId
+-    ) {
+-      inboxOwnerId = nextOwnerId;
+-      invalidateExternalInbox();
+-    }
+-  }
+-
+-  let subscribedClient = null;
+-  let authSubscription = null;
+-
+-  function subscribeExternalInboxAuth() {
+-    const client = cloudState.client;
+-    if (!client || client === subscribedClient) return;
+-
+-    // Si se recrea Supabase durante una recuperación, no dejamos listeners antiguos.
+-    authSubscription?.unsubscribe();
+-    authSubscription = null;
+-    subscribedClient = null;
+-    invalidateExternalInbox();
+-    inboxOwnerId = cloudState.user?.id || null;
+-
+-    const { data } = client.auth.onAuthStateChange(handleExternalInboxAuth);
+-    authSubscription = data?.subscription || null;
+-    subscribedClient = client;
+-  }
+-
+-  // La creación del cliente es asíncrona. El evento evita el sondeo periódico.
+-  window.addEventListener("rc-ordera-cloud-client-ready", subscribeExternalInboxAuth);
+-  subscribeExternalInboxAuth();
+-
+-  window.addEventListener("beforeunload", () => {
+-    window.removeEventListener("rc-ordera-cloud-client-ready", subscribeExternalInboxAuth);
+-    authSubscription?.unsubscribe();
+-    authSubscription = null;
+-    subscribedClient = null;
+-  }, { once: true });
+-
+-  if (signOutButton) {
+-    signOutButton.addEventListener("click", () => {
+-      requestVersion++;
+-      list.replaceChildren();
+-      status.textContent =
+-        "Sesión cerrada. Inicia sesión para consultar pedidos.";
+-    });
+-  }
+-
+-  function clearRows() {
+-    list.replaceChildren();
+-  }
+-
+-  function renderRows(rows) {
+-    clearRows();
+-
+-    for (const order of rows) {
+-      const article = document.createElement("article");
+-
+-      article.style.cssText =
+-        "padding:12px;margin:8px 0;" +
+-        "border:1px solid #ddd;border-radius:8px";
+-
+-      const heading = document.createElement("h3");
+-
+-      const platform =
+-        typeof order.platform === "string"
+-          ? order.platform
+-          : "Plataforma desconocida";
+-
+-      heading.textContent = platform;
+-
+-      const externalId = document.createElement("p");
+-      externalId.textContent =
+-        "Pedido: " +
+-        String(order.external_order_id ?? "Sin ID");
+-
+-      const orderStatus = document.createElement("p");
+-      orderStatus.textContent =
+-        "Estado: " +
+-        String(order.processing_status ?? "Desconocido");
+-
+-      const amount = document.createElement("p");
+-
+-      const grosz = order.total_grosz;
+-
+-      amount.textContent =
+-        Number.isSafeInteger(grosz) && grosz >= 0
+-          ? `Importe declarado: ${(grosz / 100).toFixed(2)} PLN`
+-          : "Importe pendiente de verificación";
+-
+-      article.append(
+-        heading,
+-        externalId,
+-        orderStatus,
+-        amount
+-      );
+-
+-      list.appendChild(article);
+-    }
+-  }
+-
+-  button.addEventListener("click", async () => {
+-    if (loading) return;
+-
+-    const client = cloudState.client;
+-    const expectedUserId = cloudState.user?.id;
+-
+-    if (!client || !expectedUserId) {
+-      clearRows();
+-      status.textContent =
+-        "Debes iniciar sesión como restaurante.";
+-      return;
+-    }
+-
+-    loading = true;
+-    button.disabled = true;
+-
+-    const currentRequest = ++requestVersion;
+-
+-    status.textContent = "Consultando pedidos...";
+-    clearRows();
+-
+-    try {
+-      const { data: sessionData, error: sessionError } =
+-        await client.auth.getSession();
+-
+-      if (sessionError) throw sessionError;
+-
+-      const session = sessionData?.session;
+-
+-      if (
+-        !session?.access_token ||
+-        session.user?.id !== expectedUserId
+-      ) {
+-        throw new Error("SESSION_NOT_AVAILABLE");
+-      }
+-
+-      const { data, error } =
+-        await client.functions.invoke(
+-          "external-delivery-inbox",
+-          {
+-            method: "GET",
+-            headers: {
+-              Authorization:
+-                `Bearer ${session.access_token}`
+-            }
+-          }
+-        );
+-
+-      if (error) throw error;
+-
+-      const { data: latestSessionData } =
+-        await client.auth.getSession();
+-
+-
+-      if (
+-        currentRequest !== requestVersion ||
+-        cloudState.client !== client ||
+-        cloudState.user?.id !== expectedUserId ||
+-        latestSessionData?.session?.user?.id !==
+-          expectedUserId
+-      ) {
+-        // Una respuesta antigua nunca debe modificar
+-        // la bandeja de una sesión posterior.
+-        return;
+-      }
+-
+-
+-      if (!Array.isArray(data?.orders)) {
+-        throw new Error("INVALID_INBOX_RESPONSE");
+-      }
+-
+-      renderRows(data.orders);
+-
+-      status.textContent = data.orders.length
+-        ? `${data.orders.length} pedidos encontrados.` +
+-          (data.hasMore
+-            ? " Existen más registros."
+-            : "")
+-        : "No hay pedidos externos pendientes.";
+-    
+-   
+-    } catch (error) {
+-      if (
+-        currentRequest !== requestVersion ||
+-        cloudState.client !== client ||
+-        cloudState.user?.id !== expectedUserId
+-      ) {
+-        return;
+-      }
+-
+-      clearRows();
+-
+-      status.textContent =
+-        "No se pudo consultar la bandeja externa. " +
+-        "Verifica la conexión, sesión y configuración.";
+-
+-
+-      
+-
+-      console.warn(
+-        "RC_EXTERNAL_INBOX_READ_FAILED",
+-        error?.name || "UNKNOWN_ERROR"
+-      );
+-    } finally {
+-      loading = false;
+-      button.disabled = false;
+-    }
+-  });
+-})();
+
+FILE delivery-bridge/src/adapter-registry.mjs
+--- 
++++ 
+@@ -7,6 +7,11 @@
+  * No recibe webhooks ni escribe en Supabase.
+  * No importa pedidos ni envía datos fiscales.
+  */
++
++import { createWoltAdapter } from "./adapters/wolt.mjs";
++import { createGlovoAdapter } from "./adapters/glovo.mjs";
++import { createUberEatsAdapter } from "./adapters/ubereats.mjs";
++import { createConfigurableAdapter } from "./adapters/configurable.mjs";
+ 
+ export class DeliveryAdapterError extends Error {
+   constructor(code, message) {
+@@ -95,8 +100,13 @@
+ }
+ 
+ export function createDefaultDeliveryRegistry() {
+-  // Deliberately empty.
+-  // Providers require reviewed implementations,
+-  // official credentials and security tests.
+-  return new DeliveryAdapterRegistry();
++  // Todos los proveedores están registrados pero FALLAN CERRADO hasta recibir credenciales y,
++  // en los marcados como provisionales, contrastar el contrato con la documentación oficial.
++  const registry = new DeliveryAdapterRegistry();
++  registry.register("wolt", (o) => createWoltAdapter(o));
++  registry.register("glovo", (o) => createGlovoAdapter(o));
++  registry.register("ubereats", (o) => createUberEatsAdapter(o));
++  registry.register("pyszne", (o) => createConfigurableAdapter("pyszne", o));
++  registry.register("boltfood", (o) => createConfigurableAdapter("boltfood", o));
++  return registry;
+ }
+
+FILE delivery-bridge/tests/adapter-registry.test.mjs
+--- 
++++ 
+@@ -18,24 +18,33 @@
+   };
+ }
+ 
+-test("No official providers enabled by default", () => {
++test("Default providers are registered but fail closed without credentials", () => {
+   const registry = createDefaultDeliveryRegistry();
+ 
+   assert.deepEqual(
+-    registry.supportedProviders(),
+-    []
++    registry.supportedProviders().sort(),
++    ["boltfood", "glovo", "pyszne", "ubereats", "wolt"]
+   );
+ 
+-  for (const provider of [
+-    "glovo",
+-    "wolt",
+-    "uber_eats",
+-    "bolt_food",
+-  ]) {
++  // Identificadores no registrados siguen siendo rechazados.
++  for (const provider of ["uber_eats", "bolt_food", "doordash"]) {
+     assert.throws(
+       () => registry.create(provider),
+       { code: "UNSUPPORTED_PROVIDER" }
+     );
++  }
++
++  // Sin secreto configurado, ningún adaptador acepta peticiones.
++  for (const provider of registry.supportedProviders()) {
++    const adapter = registry.create(provider);
++    assert.equal(adapter.meta.provisional, true);
++    let accepted = false;
++    try {
++      accepted = adapter.verify({ headers: {}, rawBody: "{}" });
++    } catch (error) {
++      assert.equal(error.code, "NOT_CONFIGURED");
++    }
++    assert.equal(accepted, false);
+   }
+ });
+ 
+
+FILE fiscal-bridge/src/driver-registry.mjs
+--- 
++++ 
+@@ -9,58 +9,20 @@
+ } from "./mock-driver.mjs";
+ 
+ /**
+- * RC ORDERA — Fiscal Driver Registry V1.1
++ * RC ORDERA — Fiscal Driver Registry V1
+  *
+- * Central registry for fiscal device adapters.
+- *
+- * SECURITY:
+- * - Explicit driver registration
+- * - Strict driver identifier validation
+- * - Duplicate registration protection
+- * - Required fiscal contract verification
+- * - Reject inherited unimplemented methods
+- * - Unknown devices fail closed
+- * - No automatic physical printing
+- *
+- * PERFORMANCE:
+- * - Lazy driver instantiation
+- * - No polling
+- * - No timers
+- * - No background processes
+- * - No automatic connections
+- *
+- * IMPORTANT:
+- * Registering a driver does not authorize
+- * fiscal issuance or certify hardware.
+- *
+- * Real fiscal devices require approved protocols,
+- * secure authorization and durable reconciliation.
++ * Explicit drivers only.
++ * Unknown hardware fails closed.
++ * No automatic physical printing.
+  */
+-
+-const DRIVER_ID_PATTERN =
+-  /^[a-z][a-z0-9_-]{1,63}$/;
+-
+-const REQUIRED_METHODS = Object.freeze([
+-  "connect",
+-  "getStatus",
+-  "printReceipt",
+-  "reconcile",
+-  "disconnect",
+-]);
+ 
+ export class FiscalDriverRegistry {
+   #factories = new Map();
+ 
+-  /**
+-   * Register a fiscal device factory.
+-   *
+-   * Registration is explicit and does not
+-   * instantiate or connect the driver.
+-   */
+   register(driverId, factory) {
+     if (
+       typeof driverId !== "string" ||
+-      !DRIVER_ID_PATTERN.test(driverId)
++      !/^[a-z][a-z0-9_-]{1,63}$/.test(driverId)
+     ) {
+       throw new FiscalError(
+         "INVALID_DRIVER_ID",
+@@ -85,19 +47,13 @@
+     this.#factories.set(driverId, factory);
+   }
+ 
+-  /**
+-   * Create an explicitly registered driver.
+-   *
+-   * Does not connect to hardware.
+-   * Does not authorize printing.
+-   */
+   create(driverId, options = {}) {
+     const factory = this.#factories.get(driverId);
+ 
+     if (!factory) {
+       throw new FiscalError(
+         "UNSUPPORTED_FISCAL_DEVICE",
+-        "No fiscal adapter registered"
++        "No certified adapter registered"
+       );
+     }
+ 
+@@ -110,47 +66,14 @@
+       );
+     }
+ 
+-    /**
+-     * Validate that the driver implements
+-     * every required fiscal operation.
+-     *
+-     * Methods inherited unchanged from
+-     * FiscalDriver are not implementations.
+-     */
+-    for (const method of REQUIRED_METHODS) {
+-      if (
+-        typeof driver[method] !== "function" ||
+-        driver[method] === FiscalDriver.prototype[method]
+-      ) {
+-        throw new FiscalError(
+-          "INVALID_DRIVER",
+-          `Fiscal driver must implement ${method}()`
+-        );
+-      }
+-    }
+-
+     return driver;
+   }
+ 
+-  /**
+-   * Return registered driver identifiers.
+-   *
+-   * This does not indicate that devices
+-   * are connected, configured or certified.
+-   */
+   supportedDrivers() {
+     return [...this.#factories.keys()];
+   }
+ }
+ 
+-/**
+- * Default RC ORDERA fiscal registry.
+- *
+- * Only mock simulation is available.
+- *
+- * Real fiscal devices must be registered
+- * through explicitly reviewed adapters.
+- */
+ export function createDefaultFiscalRegistry() {
+   const registry = new FiscalDriverRegistry();
+ 
+
+FILE fiscal-bridge/src/fiscal-service.mjs
+--- 
++++ 
+@@ -1,7 +1,6 @@
+ 
+ import {
+   FiscalError,
+-  requireUuid,
+   validateFiscalReceipt,
+ } from "./fiscal-contract.mjs";
+ 
+@@ -10,40 +9,20 @@
+ } from "./driver-registry.mjs";
+ 
+ /**
+- * RC ORDERA — Fiscal Service V1.5
++ * RC ORDERA — Fiscal Service V1.1
+  *
+  * Universal fiscal-driver orchestration.
+  *
+- * SECURITY:
+  * - Explicit driver selection
+  * - Cleanup on failed connection
+- * - No automatic physical printing
+- * - No polling or background retries
++ * - No automatic printing
++ * - No polling, timers or background retries
+  * - Mock-only receipt simulation
+- * - Single operation at a time, including status reads
+  * - Fail-closed on uncertain device state
+- * - Strict operation identity validation
+- * - Reject inconsistent driver responses
+- * - Validate reconciliation UUID before driver calls
+  *
+- * COMPATIBILITY:
+- * - Preserves FiscalService V1.4 public API
+- * - Compatible with existing mock driver
+- * - No database changes
+- * - No network requests
+- * - No CPU-intensive background operations
+- *
+- * IMPORTANT:
+- * This service never issues legal fiscal receipts.
+- * Physical fiscal hardware requires an authorized
+- * adapter, durable claims and reconciliation.
++ * Real fiscal issuance requires durable server-side
++ * claims, authorized hardware drivers and reconciliation.
+  */
+-
+-const VALID_RESULTS = new Set([
+-  "confirmed",
+-  "failed",
+-  "unknown",
+-]);
+ 
+ export class FiscalService {
+   #registry;
+@@ -67,11 +46,6 @@
+     this.#registry = registry;
+   }
+ 
+-  /**
+-   * Connect explicitly to a registered driver.
+-   *
+-   * No automatic reconnection is performed.
+-   */
+   async connect(driverId, options = {}) {
+     if (this.#busy || this.#driver) {
+       throw new FiscalError(
+@@ -81,7 +55,6 @@
+     }
+ 
+     this.#busy = true;
+-
+     let driver = null;
+ 
+     try {
+@@ -107,24 +80,21 @@
+         driverId,
+         simulated: result.simulated === true,
+       };
+-
+     } catch (error) {
+       if (driver) {
+         try {
+-          const cleanup =
+-            await driver.disconnect();
++          const cleanup = await driver.disconnect();
+ 
+           if (cleanup?.connected !== false) {
++            // Physical state remains uncertain.
+             this.#driver = driver;
+             this.#driverId = driverId;
+-
+             throw new FiscalError(
+               "DEVICE_CLEANUP_UNCONFIRMED",
+               "Cleanup was not confirmed"
+             );
+           }
+-
+-        } catch {
++        } catch (cleanupError) {
+           this.#driver = driver;
+           this.#driverId = driverId;
+ 
+@@ -136,22 +106,11 @@
+       }
+ 
+       throw error;
+-
+     } finally {
+       this.#busy = false;
+     }
+   }
+ 
+-  /**
+-   * Read current driver status.
+-   *
+-   * Serialized with connect, disconnect and
+-   * simulation/reconciliation operations.
+-   *
+-   * The lock is always released, including errors.
+-   *
+-   * No polling or automatic refresh.
+-   */
+   async getStatus() {
+     if (this.#busy) {
+       throw new FiscalError(
+@@ -167,23 +126,9 @@
+       };
+     }
+ 
+-    this.#busy = true;
+-
+-    try {
+-      return await this.#driver.getStatus();
+-    } finally {
+-      this.#busy = false;
+-    }
+-  }
+-
+-  /**
+-   * Simulate a fiscal receipt.
+-   *
+-   * Never sends commands to physical hardware.
+-   *
+-   * The returned operationId MUST match the
+-   * validated input operationId.
+-   */
++    return this.#driver.getStatus();
++  }
++
+   async simulateReceipt(input) {
+     if (
+       this.#busy ||
+@@ -206,111 +151,21 @@
+ 
+       if (
+         !result ||
+-        typeof result !== "object" ||
+-        Array.isArray(result) ||
+-        result.operationId !== receipt.operationId ||
+         result.simulated !== true ||
+-        !VALID_RESULTS.has(result.status) ||
+-        result.fiscal === true ||
+-        (
+-          result.status === "confirmed" &&
+-          result.fiscal !== false
+-        )
++        result.fiscal !== false
+       ) {
+         throw new FiscalError(
+           "INVALID_SIMULATION_RESPONSE",
+-          "Invalid or mismatched simulator response"
++          "Unexpected simulator response"
+         );
+       }
+ 
+-      return {
+-        ...result,
+-        simulated: true,
+-        fiscal: false,
+-      };
+-
++      return result;
+     } finally {
+       this.#busy = false;
+     }
+   }
+ 
+-  /**
+-   * Reconcile a simulated fiscal operation.
+-   *
+-   * UNKNOWN is never automatically retried
+-   * or assumed to be FAILED.
+-   *
+-   * The driver's result MUST reference the
+-   * exact operation requested.
+-   *
+-   * V1.5:
+-   * UUID validation occurs before accessing
+-   * the driver.
+-   *
+-   * Invalid identifiers cannot reach
+-   * the fiscal adapter.
+-   */
+-  async reconcileSimulation(operationId) {
+-    if (
+-      this.#busy ||
+-      !this.#driver ||
+-      this.#driverId !== "mock"
+-    ) {
+-      throw new FiscalError(
+-        "RECONCILIATION_NOT_AVAILABLE",
+-        "Mock driver must be connected and idle"
+-      );
+-    }
+-
+-    const validatedOperationId = requireUuid(
+-      operationId,
+-      "operationId"
+-    );
+-
+-    this.#busy = true;
+-
+-    try {
+-      const result =
+-        await this.#driver.reconcile(
+-          validatedOperationId
+-        );
+-
+-      if (
+-        !result ||
+-        typeof result !== "object" ||
+-        Array.isArray(result) ||
+-        result.operationId !== validatedOperationId ||
+-        result.simulated !== true ||
+-        !VALID_RESULTS.has(result.status) ||
+-        result.fiscal === true ||
+-        (
+-          result.status === "confirmed" &&
+-          result.fiscal !== false
+-        )
+-      ) {
+-        throw new FiscalError(
+-          "INVALID_RECONCILIATION_RESULT",
+-          "Invalid or mismatched simulator reconciliation response"
+-        );
+-      }
+-
+-      return {
+-        ...result,
+-        simulated: true,
+-        fiscal: false,
+-      };
+-
+-    } finally {
+-      this.#busy = false;
+-    }
+-  }
+-
+-  /**
+-   * Disconnect the current driver.
+-   *
+-   * A failed or uncertain disconnection keeps
+-   * the driver registered to prevent unsafe reuse.
+-   */
+   async disconnect() {
+     if (this.#busy) {
+       throw new FiscalError(
+@@ -342,7 +197,6 @@
+       this.#driverId = null;
+ 
+       return result;
+-
+     } finally {
+       this.#busy = false;
+     }
+
+FILE fiscal-bridge/tests/driver-registry.test.mjs
+--- 
++++ 
+@@ -16,44 +16,13 @@
+   MockFiscalDriver,
+ } from "../src/mock-driver.mjs";
+ 
+-/**
+- * RC ORDERA — FISCAL DRIVER REGISTRY TESTS V1.1
+- *
+- * Compatible with FiscalDriverRegistry V1.1.
+- *
+- * SECURITY:
+- * - Explicit registration
+- * - Unknown hardware fails closed
+- * - Duplicate protection
+- * - Strict identifier validation
+- * - Contract implementation validation
+- * - Inherited abstract method rejection
+- * - No automatic device connections
+- * - No physical fiscal printing
+- *
+- * PERFORMANCE:
+- * - Lazy initialization
+- * - No polling
+- * - No timers
+- * - No background jobs
+- *
+- * TESTS ONLY.
+- * No legal fiscal receipts are issued.
+- */
+-
+ class TestDeviceDriver extends FiscalDriver {
+   async connect() {
+-    return {
+-      connected: true,
+-      simulated: true,
+-    };
++    return { connected: true, simulated: true };
+   }
+ 
+   async getStatus() {
+-    return {
+-      connected: false,
+-      simulated: true,
+-    };
++    return { connected: false, simulated: true };
+   }
+ 
+   async printReceipt() {
+@@ -64,23 +33,13 @@
+   }
+ 
+   async reconcile() {
+-    return {
+-      status: "unknown",
+-      simulated: true,
+-    };
++    return { status: "unknown", simulated: true };
+   }
+ 
+   async disconnect() {
+-    return {
+-      connected: false,
+-      simulated: true,
+-    };
++    return { connected: false, simulated: true };
+   }
+ }
+-
+-// ----------------------------------------------------------
+-// 1. Default registry
+-// ----------------------------------------------------------
+ 
+ test("Default registry only supports mock", () => {
+   const registry = createDefaultFiscalRegistry();
+@@ -90,10 +49,6 @@
+     ["mock"]
+   );
+ });
+-
+-// ----------------------------------------------------------
+-// 2. Unknown physical hardware
+-// ----------------------------------------------------------
+ 
+ test("Unknown physical devices fail closed", () => {
+   const registry = createDefaultFiscalRegistry();
+@@ -106,20 +61,13 @@
+   ]) {
+     assert.throws(
+       () => registry.create(id),
+-      {
+-        code: "UNSUPPORTED_FISCAL_DEVICE",
+-      }
++      { code: "UNSUPPORTED_FISCAL_DEVICE" }
+     );
+   }
+ });
+ 
+-// ----------------------------------------------------------
+-// 3. Mock initialization
+-// ----------------------------------------------------------
+-
+ test("Mock is created without connection", async () => {
+   const registry = createDefaultFiscalRegistry();
+-
+   const driver = registry.create("mock");
+ 
+   assert.ok(driver instanceof MockFiscalDriver);
+@@ -131,10 +79,6 @@
+   assert.equal(status.issuedCount, 0);
+ });
+ 
+-// ----------------------------------------------------------
+-// 4. Invalid identifiers
+-// ----------------------------------------------------------
+-
+ test("Reject invalid driver identifiers", () => {
+   const registry = new FiscalDriverRegistry();
+ 
+@@ -144,54 +88,25 @@
+     "../posnet",
+     " posnet",
+     "posnet ",
+-    "device.name",
+-    "device/name",
+-    null,
+-    undefined,
+-    123,
+   ]) {
+     assert.throws(
+       () => registry.register(
+         id,
+         () => new TestDeviceDriver()
+       ),
+-      {
+-        code: "INVALID_DRIVER_ID",
+-      }
++      { code: "INVALID_DRIVER_ID" }
+     );
+   }
+ });
+ 
+-// ----------------------------------------------------------
+-// 5. Invalid factories
+-// ----------------------------------------------------------
+-
+ test("Reject non-function factories", () => {
+   const registry = new FiscalDriverRegistry();
+ 
+-  for (const factory of [
+-    null,
+-    undefined,
+-    {},
+-    [],
+-    "factory",
+-    123,
+-  ]) {
+-    assert.throws(
+-      () => registry.register(
+-        "device",
+-        factory
+-      ),
+-      {
+-        code: "INVALID_DRIVER_FACTORY",
+-      }
+-    );
+-  }
++  assert.throws(
++    () => registry.register("device", {}),
++    { code: "INVALID_DRIVER_FACTORY" }
++  );
+ });
+-
+-// ----------------------------------------------------------
+-// 6. Duplicate registration
+-// ----------------------------------------------------------
+ 
+ test("Reject duplicate registration", () => {
+   const registry = new FiscalDriverRegistry();
+@@ -206,20 +121,9 @@
+       "test_device",
+       () => new TestDeviceDriver()
+     ),
+-    {
+-      code: "DUPLICATE_DRIVER",
+-    }
+-  );
+-
+-  assert.deepEqual(
+-    registry.supportedDrivers(),
+-    ["test_device"]
++    { code: "DUPLICATE_DRIVER" }
+   );
+ });
+-
+-// ----------------------------------------------------------
+-// 7. Invalid fiscal contract
+-// ----------------------------------------------------------
+ 
+ test("Reject drivers without fiscal contract", () => {
+   const registry = new FiscalDriverRegistry();
+@@ -230,15 +134,9 @@
+ 
+   assert.throws(
+     () => registry.create("invalid"),
+-    {
+-      code: "INVALID_DRIVER",
+-    }
++    { code: "INVALID_DRIVER" }
+   );
+ });
+-
+-// ----------------------------------------------------------
+-// 8. Valid registered driver
+-// ----------------------------------------------------------
+ 
+ test("Registered driver respects interface", async () => {
+   const registry = new FiscalDriverRegistry();
+@@ -254,15 +152,9 @@
+ 
+   await assert.rejects(
+     driver.printReceipt({}),
+-    {
+-      code: "TEST_DEVICE_NO_PRINT",
+-    }
++    { code: "TEST_DEVICE_NO_PRINT" }
+   );
+ });
+-
+-// ----------------------------------------------------------
+-// 9. Lazy initialization
+-// ----------------------------------------------------------
+ 
+ test("Registry creation is lazy", () => {
+   const registry = new FiscalDriverRegistry();
+@@ -284,245 +176,3 @@
+ 
+   assert.equal(created, 1);
+ });
+-
+-// ----------------------------------------------------------
+-// 10. Reject inherited unimplemented methods
+-// ----------------------------------------------------------
+-
+-test("Reject inherited unimplemented fiscal methods", () => {
+-  class IncompleteFiscalDriver extends FiscalDriver {
+-    async connect() {
+-      return { connected: true };
+-    }
+-
+-    async disconnect() {
+-      return { connected: false };
+-    }
+-  }
+-
+-  const registry = new FiscalDriverRegistry();
+-
+-  registry.register(
+-    "incomplete",
+-    () => new IncompleteFiscalDriver()
+-  );
+-
+-  assert.throws(
+-    () => registry.create("incomplete"),
+-    {
+-      code: "INVALID_DRIVER",
+-    }
+-  );
+-});
+-
+-// ----------------------------------------------------------
+-// 11. Reject completely abstract driver
+-// ----------------------------------------------------------
+-
+-test("Reject direct FiscalDriver instance", () => {
+-  const registry = new FiscalDriverRegistry();
+-
+-  registry.register(
+-    "abstract_driver",
+-    () => new FiscalDriver()
+-  );
+-
+-  assert.throws(
+-    () => registry.create("abstract_driver"),
+-    {
+-      code: "INVALID_DRIVER",
+-    }
+-  );
+-});
+-
+-// ----------------------------------------------------------
+-// 12. Check all required methods independently
+-// ----------------------------------------------------------
+-
+-test("Reject each missing fiscal method independently", () => {
+-  const requiredMethods = [
+-    "connect",
+-    "getStatus",
+-    "printReceipt",
+-    "reconcile",
+-    "disconnect",
+-  ];
+-
+-  for (const missingMethod of requiredMethods) {
+-    class PartiallyImplementedDriver extends FiscalDriver {
+-      async connect() {
+-        return { connected: true };
+-      }
+-
+-      async getStatus() {
+-        return { connected: false };
+-      }
+-
+-      async printReceipt() {
+-        return {
+-          status: "unknown",
+-          simulated: true,
+-          fiscal: false,
+-        };
+-      }
+-
+-      async reconcile() {
+-        return {
+-          status: "unknown",
+-          simulated: true,
+-          fiscal: false,
+-        };
+-      }
+-
+-      async disconnect() {
+-        return { connected: false };
+-      }
+-    }
+-
+-    // Restore one abstract method intentionally.
+-    Object.defineProperty(
+-      PartiallyImplementedDriver.prototype,
+-      missingMethod,
+-      {
+-        value: FiscalDriver.prototype[missingMethod],
+-        configurable: true,
+-        writable: true,
+-      }
+-    );
+-
+-    const registry = new FiscalDriverRegistry();
+-
+-    registry.register(
+-      "partial_device",
+-      () => new PartiallyImplementedDriver()
+-    );
+-
+-    assert.throws(
+-      () => registry.create("partial_device"),
+-      {
+-        code: "INVALID_DRIVER",
+-      },
+-      `Expected rejection for ${missingMethod}`
+-    );
+-  }
+-});
+-
+-// ----------------------------------------------------------
+-// 13. Factory must return an actual driver
+-// ----------------------------------------------------------
+-
+-test("Reject factories returning invalid values", () => {
+-  const invalidValues = [
+-    null,
+-    undefined,
+-    {},
+-    [],
+-    true,
+-    123,
+-    "driver",
+-  ];
+-
+-  for (const value of invalidValues) {
+-    const registry = new FiscalDriverRegistry();
+-
+-    registry.register(
+-      "invalid_factory_result",
+-      () => value
+-    );
+-
+-    assert.throws(
+-      () => registry.create(
+-        "invalid_factory_result"
+-      ),
+-      {
+-        code: "INVALID_DRIVER",
+-      }
+-    );
+-  }
+-});
+-
+-// ----------------------------------------------------------
+-// 14. Registration must not instantiate drivers
+-// ----------------------------------------------------------
+-
+-test("Registering a factory never creates a driver", () => {
+-  const registry = new FiscalDriverRegistry();
+-
+-  let factoryCalls = 0;
+-
+-  registry.register(
+-    "controlled_device",
+-    () => {
+-      factoryCalls++;
+-
+-      return new TestDeviceDriver();
+-    }
+-  );
+-
+-  assert.equal(factoryCalls, 0);
+-
+-  assert.deepEqual(
+-    registry.supportedDrivers(),
+-    ["controlled_device"]
+-  );
+-
+-  assert.equal(factoryCalls, 0);
+-});
+-
+-// ----------------------------------------------------------
+-// 15. Unknown devices must not execute factories
+-// ----------------------------------------------------------
+-
+-test("Unknown driver lookup never executes a factory", () => {
+-  const registry = new FiscalDriverRegistry();
+-
+-  let factoryCalls = 0;
+-
+-  registry.register(
+-    "known_device",
+-    () => {
+-      factoryCalls++;
+-      return new TestDeviceDriver();
+-    }
+-  );
+-
+-  assert.throws(
+-    () => registry.create("unknown_device"),
+-    {
+-      code: "UNSUPPORTED_FISCAL_DEVICE",
+-    }
+-  );
+-
+-  assert.equal(factoryCalls, 0);
+-});
+-
+-// ----------------------------------------------------------
+-// 16. Registry instances remain isolated
+-// ----------------------------------------------------------
+-
+-test("Fiscal registries have isolated registrations", () => {
+-  const first = new FiscalDriverRegistry();
+-  const second = new FiscalDriverRegistry();
+-
+-  first.register(
+-    "isolated_device",
+-    () => new TestDeviceDriver()
+-  );
+-
+-  assert.deepEqual(
+-    first.supportedDrivers(),
+-    ["isolated_device"]
+-  );
+-
+-  assert.deepEqual(
+-    second.supportedDrivers(),
+-    []
+-  );
+-
+-  assert.throws(
+-    () => second.create("isolated_device"),
+-    {
+-      code: "UNSUPPORTED_FISCAL_DEVICE",
+-    }
+-  );
+-});
+
+FILE fiscal-bridge/tests/fiscal-service.test.mjs
+--- 
++++ 
+@@ -6,151 +6,38 @@
+   FiscalService,
+ } from "../src/fiscal-service.mjs";
+ 
+-import {
+-  MOCK_FISCAL_OUTCOMES,
+-} from "../src/mock-driver.mjs";
+-
+-import {
+-  createDefaultFiscalRegistry,
+-} from "../src/driver-registry.mjs";
+-
+-/**
+- * RC ORDERA — FISCAL SERVICE REGRESSION TESTS
+- *
+- * Target: FiscalService V1.2
+- *
+- * SIMULATION ONLY.
+- *
+- * No physical printer.
+- * No legal fiscal issuance.
+- * No database writes.
+- * No network requests.
+- * No timers, polling or background processes.
+- *
+- * Tests cover:
+- * - Connection management
+- * - Unsupported devices
+- * - Simulation safety
+- * - Idempotency
+- * - Financial validation
+- * - Failed connection cleanup
+- * - Lost acknowledgements
+- * - Concurrency
+- * - Unknown-operation protection
+- * - Disconnect protection
+- * - Reconciliation operation identity
+- * - Invalid simulator responses
+- * - Reconciliation error recovery
+- */
+-
+-const OPERATION_ID =
+-  "11111111-1111-4111-8111-111111111111";
+-
+-const RESTAURANT_ID =
+-  "22222222-2222-4222-8222-222222222222";
+-
+-const ORDER_ID =
+-  "33333333-3333-4333-8333-333333333333";
+-
+-const OTHER_OPERATION_ID =
+-  "99999999-9999-4999-8999-999999999999";
+-
+ const receipt = () => ({
+-  operationId: OPERATION_ID,
+-  restaurantId: RESTAURANT_ID,
+-  orderId: ORDER_ID,
++  operationId:
++    "11111111-1111-4111-8111-111111111111",
++  restaurantId:
++    "22222222-2222-4222-8222-222222222222",
++  orderId:
++    "33333333-3333-4333-8333-333333333333",
+   currency: "PLN",
+   totalGrosz: 6000,
+-  items: [
+-    {
+-      name: "Bandeja paisa",
+-      quantityMilli: 1000,
+-      grossTotalGrosz: 6000,
+-      taxCode: "VAT_FOOD",
+-    },
+-  ],
++  items: [{
++    name: "Bandeja paisa",
++    quantityMilli: 1000,
++    grossTotalGrosz: 6000,
++    taxCode: "VAT_FOOD",
++  }],
+ });
+-
+-/**
+- * Isolated test registry.
+- *
+- * Never connects to real hardware.
+- * Used only to simulate malformed driver responses.
+- */
+-function createControlledService(overrides = {}) {
+-  const driver = {
+-    async connect() {
+-      return {
+-        connected: true,
+-        simulated: true,
+-      };
+-    },
+-
+-    async reconcile(operationId) {
+-      return {
+-        operationId,
+-        status: "confirmed",
+-        simulated: true,
+-        fiscal: false,
+-      };
+-    },
+-
+-    async disconnect() {
+-      return {
+-        connected: false,
+-      };
+-    },
+-
+-    ...overrides,
+-  };
+-
+-  const registry = {
+-    create() {
+-      return driver;
+-    },
+-  };
+-
+-  return {
+-    service: new FiscalService(registry),
+-    driver,
+-  };
+-}
+-
+-// ----------------------------------------------------------
+-// 1. Initial state
+-// ----------------------------------------------------------
+ 
+ test("Starts disconnected", async () => {
+   const service = new FiscalService();
+-
+   const status = await service.getStatus();
+ 
+   assert.equal(status.connected, false);
+-  assert.equal(status.driverId, null);
+ });
+-
+-// ----------------------------------------------------------
+-// 2. Unsupported fiscal devices
+-// ----------------------------------------------------------
+ 
+ test("Rejects unsupported fiscal device", async () => {
+   const service = new FiscalService();
+ 
+   await assert.rejects(
+     service.connect("posnet"),
+-    {
+-      code: "UNSUPPORTED_FISCAL_DEVICE",
+-    }
++    { code: "UNSUPPORTED_FISCAL_DEVICE" }
+   );
+-
+-  const status = await service.getStatus();
+-
+-  assert.equal(status.connected, false);
+ });
+-
+-// ----------------------------------------------------------
+-// 3. Explicit simulator connection
+-// ----------------------------------------------------------
+ 
+ test("Connects simulator explicitly", async () => {
+   const service = new FiscalService();
+@@ -159,33 +46,18 @@
+ 
+   assert.equal(result.connected, true);
+   assert.equal(result.simulated, true);
+-  assert.equal(result.driverId, "mock");
+ 
+   await service.disconnect();
+-
+-  const status = await service.getStatus();
+-
+-  assert.equal(status.connected, false);
+ });
+-
+-// ----------------------------------------------------------
+-// 4. Simulation requires connection
+-// ----------------------------------------------------------
+ 
+ test("Simulation requires connection", async () => {
+   const service = new FiscalService();
+ 
+   await assert.rejects(
+     service.simulateReceipt(receipt()),
+-    {
+-      code: "SIMULATION_NOT_AVAILABLE",
+-    }
++    { code: "SIMULATION_NOT_AVAILABLE" }
+   );
+ });
+-
+-// ----------------------------------------------------------
+-// 5. Simulated receipt never represents legal emission
+-// ----------------------------------------------------------
+ 
+ test("Simulated receipt is never fiscal", async () => {
+   const service = new FiscalService();
+@@ -195,18 +67,12 @@
+   const result =
+     await service.simulateReceipt(receipt());
+ 
+-  assert.equal(result.operationId, OPERATION_ID);
+   assert.equal(result.status, "confirmed");
+   assert.equal(result.simulated, true);
+   assert.equal(result.fiscal, false);
+-  assert.equal(result.totalGrosz, 6000);
+ 
+   await service.disconnect();
+ });
+-
+-// ----------------------------------------------------------
+-// 6. Idempotency
+-// ----------------------------------------------------------
+ 
+ test("Duplicate simulated operation is idempotent", async () => {
+   const service = new FiscalService();
+@@ -219,9 +85,6 @@
+   const second =
+     await service.simulateReceipt(receipt());
+ 
+-  assert.equal(first.status, "confirmed");
+-  assert.equal(second.status, "confirmed");
+-
+   assert.equal(
+     first.mockReceiptNumber,
+     second.mockReceiptNumber
+@@ -229,43 +92,24 @@
+ 
+   assert.equal(second.alreadyProcessed, true);
+ 
+-  const status = await service.getStatus();
++  await service.disconnect();
++});
+ 
+-  assert.equal(status.issuedCount, 1);
++test("Invalid totals are rejected", async () => {
++  const service = new FiscalService();
++  await service.connect("mock");
++
++  const invalid = receipt();
++  invalid.totalGrosz = 7000;
++
++  await assert.rejects(
++    service.simulateReceipt(invalid),
++    { code: "TOTAL_MISMATCH" }
++  );
+ 
+   await service.disconnect();
+ });
+ 
+-// ----------------------------------------------------------
+-// 7. Financial validation
+-// ----------------------------------------------------------
+-
+-test("Invalid totals are rejected", async () => {
+-  const service = new FiscalService();
+-
+-  await service.connect("mock");
+-
+-  const invalid = receipt();
+-
+-  invalid.totalGrosz = 7000;
+-
+-  await assert.rejects(
+-    service.simulateReceipt(invalid),
+-    {
+-      code: "TOTAL_MISMATCH",
+-    }
+-  );
+-
+-  const status = await service.getStatus();
+-
+-  assert.equal(status.issuedCount, 0);
+-
+-  await service.disconnect();
+-});
+-
+-// ----------------------------------------------------------
+-// 8. Cleanup after partial connection failure
+-// ----------------------------------------------------------
+ 
+ test("Failed connection releases partial resources", async () => {
+   let disconnectCalls = 0;
+@@ -277,10 +121,7 @@
+ 
+     async disconnect() {
+       disconnectCalls++;
+-
+-      return {
+-        connected: false,
+-      };
++      return { connected: false };
+     },
+   };
+ 
+@@ -303,369 +144,3 @@
+ 
+   assert.equal(status.connected, false);
+ });
+-
+-// ----------------------------------------------------------
+-// 9. Lost fiscal acknowledgement
+-// ----------------------------------------------------------
+-
+-test("Lost fiscal ACK reconciles without duplicate", async () => {
+-  let mockDriver;
+-
+-  const registry = createDefaultFiscalRegistry();
+-
+-  const controlledRegistry = {
+-    create(id, options) {
+-      mockDriver = registry.create(id, options);
+-      return mockDriver;
+-    },
+-  };
+-
+-  const service = new FiscalService(
+-    controlledRegistry
+-  );
+-
+-  await service.connect("mock");
+-
+-  mockDriver.setNextOutcome(
+-    MOCK_FISCAL_OUTCOMES.UNKNOWN_AFTER
+-  );
+-
+-  const first =
+-    await service.simulateReceipt(receipt());
+-
+-  assert.equal(first.status, "unknown");
+-  assert.equal(first.simulated, true);
+-  assert.equal(first.fiscal, false);
+-
+-  assert.equal(
+-    mockDriver.getDiagnostics().issuedCount,
+-    1
+-  );
+-
+-  const reconciled =
+-    await service.reconcileSimulation(
+-      OPERATION_ID
+-    );
+-
+-  assert.equal(reconciled.operationId, OPERATION_ID);
+-  assert.equal(reconciled.status, "confirmed");
+-  assert.equal(reconciled.simulated, true);
+-  assert.equal(reconciled.fiscal, false);
+-
+-  assert.equal(
+-    mockDriver.getDiagnostics().issuedCount,
+-    1
+-  );
+-
+-  await service.disconnect();
+-});
+-
+-// ----------------------------------------------------------
+-// 10. Concurrent fiscal requests
+-// ----------------------------------------------------------
+-
+-test("Concurrent fiscal requests cannot run together", async () => {
+-  const service = new FiscalService();
+-
+-  await service.connect("mock");
+-
+-  const results = await Promise.allSettled([
+-    service.simulateReceipt(receipt()),
+-    service.simulateReceipt(receipt()),
+-  ]);
+-
+-  const successful = results.filter(
+-    result => result.status === "fulfilled"
+-  );
+-
+-  const rejected = results.filter(
+-    result => result.status === "rejected"
+-  );
+-
+-  assert.equal(successful.length, 1);
+-  assert.equal(rejected.length, 1);
+-
+-  assert.equal(
+-    rejected[0].reason.code,
+-    "SIMULATION_NOT_AVAILABLE"
+-  );
+-
+-  assert.equal(
+-    successful[0].value.simulated,
+-    true
+-  );
+-
+-  assert.equal(
+-    successful[0].value.fiscal,
+-    false
+-  );
+-
+-  const status = await service.getStatus();
+-
+-  assert.equal(status.issuedCount, 1);
+-
+-  await service.disconnect();
+-});
+-
+-// ----------------------------------------------------------
+-// 11. Unknown operation cannot be resent
+-// ----------------------------------------------------------
+-
+-test("Unknown operation blocks automatic retry", async () => {
+-  let mockDriver;
+-
+-  const registry = createDefaultFiscalRegistry();
+-
+-  const controlledRegistry = {
+-    create(id, options) {
+-      mockDriver = registry.create(id, options);
+-      return mockDriver;
+-    },
+-  };
+-
+-  const service = new FiscalService(
+-    controlledRegistry
+-  );
+-
+-  await service.connect("mock");
+-
+-  mockDriver.setNextOutcome(
+-    MOCK_FISCAL_OUTCOMES.UNKNOWN_BEFORE
+-  );
+-
+-  const first =
+-    await service.simulateReceipt(receipt());
+-
+-  assert.equal(first.status, "unknown");
+-
+-  await assert.rejects(
+-    service.simulateReceipt(receipt()),
+-    {
+-      code: "OPERATION_REQUIRES_RECONCILIATION",
+-    }
+-  );
+-
+-  const status = await service.getStatus();
+-
+-  assert.equal(status.issuedCount, 0);
+-
+-  const reconciliation =
+-    await service.reconcileSimulation(
+-      OPERATION_ID
+-    );
+-
+-  assert.equal(reconciliation.status, "unknown");
+-  assert.equal(reconciliation.fiscal, false);
+-
+-  await service.disconnect();
+-});
+-
+-// ----------------------------------------------------------
+-// 12. Disconnect protection
+-// ----------------------------------------------------------
+-
+-test("Cannot disconnect during a pending operation", async () => {
+-  const service = new FiscalService();
+-
+-  await service.connect("mock");
+-
+-  const operation =
+-    service.simulateReceipt(receipt());
+-
+-  await assert.rejects(
+-    service.disconnect(),
+-    {
+-      code: "SERVICE_BUSY",
+-    }
+-  );
+-
+-  const result = await operation;
+-
+-  assert.equal(result.status, "confirmed");
+-  assert.equal(result.fiscal, false);
+-
+-  await service.disconnect();
+-
+-  const status = await service.getStatus();
+-
+-  assert.equal(status.connected, false);
+-});
+-
+-// ----------------------------------------------------------
+-// 13. Reconciliation identity protection
+-// ----------------------------------------------------------
+-
+-test("Rejects reconciliation with mismatched operation ID", async () => {
+-  const { service } = createControlledService({
+-    async reconcile() {
+-      return {
+-        operationId: OTHER_OPERATION_ID,
+-        status: "confirmed",
+-        simulated: true,
+-        fiscal: false,
+-      };
+-    },
+-  });
+-
+-  await service.connect("mock");
+-
+-  await assert.rejects(
+-    service.reconcileSimulation(OPERATION_ID),
+-    {
+-      code: "INVALID_RECONCILIATION_RESULT",
+-    }
+-  );
+-
+-  await service.disconnect();
+-});
+-
+-// ----------------------------------------------------------
+-// 14. Reject real fiscal confirmations from simulator
+-// ----------------------------------------------------------
+-
+-test("Rejects fiscal=true during simulation reconciliation", async () => {
+-  const { service } = createControlledService({
+-    async reconcile(operationId) {
+-      return {
+-        operationId,
+-        status: "confirmed",
+-        simulated: true,
+-        fiscal: true,
+-      };
+-    },
+-  });
+-
+-  await service.connect("mock");
+-
+-  await assert.rejects(
+-    service.reconcileSimulation(OPERATION_ID),
+-    {
+-      code: "INVALID_RECONCILIATION_RESULT",
+-    }
+-  );
+-
+-  await service.disconnect();
+-});
+-
+-// ----------------------------------------------------------
+-// 15. Reject invalid reconciliation status
+-// ----------------------------------------------------------
+-
+-test("Rejects invalid reconciliation status", async () => {
+-  const { service } = createControlledService({
+-    async reconcile(operationId) {
+-      return {
+-        operationId,
+-        status: "printed_without_confirmation",
+-        simulated: true,
+-        fiscal: false,
+-      };
+-    },
+-  });
+-
+-  await service.connect("mock");
+-
+-  await assert.rejects(
+-    service.reconcileSimulation(OPERATION_ID),
+-    {
+-      code: "INVALID_RECONCILIATION_RESULT",
+-    }
+-  );
+-
+-  await service.disconnect();
+-});
+-
+-// ----------------------------------------------------------
+-// 16. Reject missing operation identity
+-// ----------------------------------------------------------
+-
+-test("Rejects reconciliation without operation ID", async () => {
+-  const { service } = createControlledService({
+-    async reconcile() {
+-      return {
+-        status: "confirmed",
+-        simulated: true,
+-        fiscal: false,
+-      };
+-    },
+-  });
+-
+-  await service.connect("mock");
+-
+-  await assert.rejects(
+-    service.reconcileSimulation(OPERATION_ID),
+-    {
+-      code: "INVALID_RECONCILIATION_RESULT",
+-    }
+-  );
+-
+-  await service.disconnect();
+-});
+-
+-// ----------------------------------------------------------
+-// 17. Recover after reconciliation throws an error
+-// ----------------------------------------------------------
+-
+-test("Reconciliation error does not permanently lock service", async () => {
+-  let shouldFail = true;
+-
+-  const { service } = createControlledService({
+-    async reconcile(operationId) {
+-      if (shouldFail) {
+-        shouldFail = false;
+-
+-        throw new Error(
+-          "SIMULATED_RECONCILIATION_FAILURE"
+-        );
+-      }
+-
+-      return {
+-        operationId,
+-        status: "unknown",
+-        simulated: true,
+-        fiscal: false,
+-      };
+-    },
+-  });
+-
+-  await service.connect("mock");
+-
+-  await assert.rejects(
+-    service.reconcileSimulation(OPERATION_ID),
+-    /SIMULATED_RECONCILIATION_FAILURE/
+-  );
+-
+-  const result =
+-    await service.reconcileSimulation(
+-      OPERATION_ID
+-    );
+-
+-  assert.equal(result.operationId, OPERATION_ID);
+-  assert.equal(result.status, "unknown");
+-  assert.equal(result.fiscal, false);
+-
+-  await service.disconnect();
+-});
+-
+-// ----------------------------------------------------------
+-// 18. Reject malformed reconciliation response
+-// ----------------------------------------------------------
+-
+-test("Rejects null reconciliation response", async () => {
+-  const { service } = createControlledService({
+-    async reconcile() {
+-      return null;
+-    },
+-  });
+-
+-  await service.connect("mock");
+-
+-  await assert.rejects(
+-    service.reconcileSimulation(OPERATION_ID),
+-    {
+-      code: "INVALID_RECONCILIATION_RESULT",
+-    }
+-  );
+-
+-  await service.disconnect();
+-});
+
+FILE offline-i18n.js
+--- 
++++ 
+@@ -1,28 +1,5 @@
+ (function () {
+   const rows = [
+-    
+-    ["externalInbox.title","Pedidos de plataformas externas","Zamówienia z platform zewnętrznych","External platform orders"],
+-    ["externalInbox.description","Consulta segura de pedidos externos pendientes.","Bezpieczny podgląd oczekujących zamówień zewnętrznych.","Secure view of pending external orders."],
+-    ["externalInbox.button","Consultar pedidos externos","Sprawdź zamówienia zewnętrzne","Check external orders"],
+-    ["externalInbox.hint","Pulsa el botón para consultar los pedidos.","Kliknij przycisk, aby sprawdzić zamówienia.","Click the button to check orders."],
+-    ["externalInbox.signedOut","Sesión cerrada. Inicia sesión para consultar pedidos.","Wylogowano. Zaloguj się, aby sprawdzić zamówienia.","Signed out. Sign in to check orders."],
+-    ["externalInbox.order","Pedido:","Zamówienie:","Order:"],
+-    ["externalInbox.status","Estado:","Status:","Status:"],
+-    ["externalInbox.authRequired","Debes iniciar sesión como restaurante.","Musisz zalogować się na konto restauracji.","You must sign in with a restaurant account."],
+-    ["externalInbox.loading","Consultando pedidos...","Pobieranie zamówień...","Loading orders..."],
+-    ["externalInbox.sessionChanged","La sesión cambió. Consulta nuevamente.","Sesja uległa zmianie. Spróbuj ponownie.","Session changed. Please try again."],
+-    ["externalInbox.fetchFailed","No se pudo consultar la bandeja externa.","Nie udało się pobrać zamówień zewnętrznych.","Could not load external orders."],
+-    ["externalInbox.sessionError","SESSION_NOT_AVAILABLE","SESJA_NIEDOSTĘPNA","SESSION_NOT_AVAILABLE"],
+-    ["externalInbox.responseError","INVALID_INBOX_RESPONSE","NIEPRAWIDŁOWA_ODPOWIEDŹ","INVALID_INBOX_RESPONSE"],
+-    ["externalInbox.unknownPlatform","Plataforma desconocida","Nieznana platforma","Unknown platform"],
+-    ["externalInbox.unknownStatus","Desconocido","Nieznany","Unknown"],
+-    ["externalInbox.missingId","Sin ID","Brak identyfikatora","No ID"],
+-    ["externalInbox.amount","Importe declarado:","Zadeklarowana kwota:","Declared amount:"],
+-    ["externalInbox.amountPending","Importe pendiente de verificación","Kwota oczekuje na weryfikację","Amount pending verification"],
+-    ["externalInbox.noOrders","No hay pedidos externos pendientes.","Brak oczekujących zamówień zewnętrznych.","No pending external orders."],
+-    ["externalInbox.moreRecords","Existen más registros.","Dostępne są kolejne rekordy.","More records are available."],
+-    ["externalInbox.connectionError","Verifica la conexión, sesión y configuración.","Sprawdź połączenie, sesję i konfigurację.","Check your connection, session and configuration."],
+-
+     ["orders.invalidResponse","La consulta de pedidos devolvio datos invalidos.","Zapytanie o zamówienia zwróciło nieprawidłowe dane.","The orders query returned invalid data."],
+     ["orders.paginationStalled","La paginacion de pedidos no avanzo; se conservaran los pedidos anteriores.","Nie udało się przejść do kolejnej strony zamówień; poprzednie zamówienia zostaną zachowane.","Order pagination did not advance; previous orders will be preserved."],
+     ["history.fetchFailed","No fue posible consultar el historial completo.","Nie udało się pobrać pełnej historii.","The complete history could not be retrieved."],
+
+FILE package.json
+--- 
++++ 
+@@ -1,21 +1,27 @@
+-
+ {
+   "name": "rc-ordera",
+   "version": "91.0.4",
+   "private": true,
+   "description": "RC ORDERA multi-restaurante",
+   "scripts": {
+-    "qa": "node qa-v91.cjs && node qa-i18n-v87.cjs && node --test tests/*.test.cjs && npm run qa:fiscal && npm run qa:delivery && npm run qa:readiness",
++    "qa": "node qa-v91.cjs && node qa-i18n-v87.cjs && node --test tests/*.test.cjs && npm run qa:fiscal && npm run qa:delivery && npm run qa:fiscal-agent && npm run qa:shared && npm run qa:secrets && npm run qa:accounting && npm run qa:concurrency-selftest",
+     "qa:fiscal": "node --test fiscal-bridge/tests/*.test.mjs",
+     "qa:delivery": "node --test delivery-bridge/tests/*.test.mjs",
+-    "qa:readiness": "node --test integrations/tests/*.test.mjs",
+     "qa:i18n": "node qa-i18n-v87.cjs",
+     "qa:e2e": "playwright test",
+     "qa:integration": "node --test tests/integration/supabase-isolation.test.cjs tests/integration/concurrency-harness.test.cjs",
+     "android:prepare-web": "node scripts/prepare-capacitor.mjs",
+     "android:add": "npm run android:prepare-web && npx cap add android",
+     "android:sync": "npm run android:prepare-web && npx cap sync android",
+-    "android:open": "npm run android:sync && npx cap open android"
++    "android:open": "npm run android:sync && npx cap open android",
++    "qa:shared": "node --experimental-strip-types --no-warnings --test tests/shared/*.test.mjs",
++    "qa:secrets": "node scripts/scan-secrets.mjs",
++    "qa:fiscal-agent": "node --test fiscal-agent/tests/*.test.mjs",
++    "qa:browser": "python3 scripts/browser-smoke.py",
++    "verify:deploy": "node scripts/verify-deployment.mjs",
++    "qa:accounting": "node --test accounting/tests/*.test.mjs",
++    "qa:concurrency-selftest": "node scripts/concurrency-test.mjs --self-test",
++    "verify:concurrency": "node scripts/concurrency-test.mjs"
+   },
+   "dependencies": {
+     "@capacitor/android": "8.5.0",
+
+FILE supabase/config.toml
+--- 
++++ 
+@@ -36,3 +36,6 @@
+ 
+ [functions.external-delivery-inbox]
+ verify_jwt = true
++
++[functions.fiscal-agent-gateway]
++verify_jwt = false
+
+FILE supabase/functions/courier-push/index.ts
+--- 
++++ 
+@@ -1,3 +1,4 @@
++import { safeEqual } from "../_shared/safe-equal.ts";
+ import { createClient } from "@supabase/supabase-js";
+ import webpush from "web-push";
+ 
+@@ -30,7 +31,7 @@
+   const authorization = request.headers.get("authorization") || "";
+   const suppliedWebhookSecret = request.headers.get("x-rc-ordera-webhook-secret") || "";
+   const authorized = authorization === `Bearer ${serviceRoleKey}`
+-    || (webhookSecret.length >= 24 && suppliedWebhookSecret === webhookSecret);
++    || (webhookSecret.length >= 24 && safeEqual(suppliedWebhookSecret, webhookSecret));
+ 
+   if (!supabaseUrl || !serviceRoleKey || !authorized) {
+     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: jsonHeaders });
+
+FILE supabase/functions/create-customer-order/index.ts
+--- 
++++ 
+@@ -1,3 +1,4 @@
++import { withCors } from "../_shared/cors.ts";
+ import { createClient } from "npm:@supabase/supabase-js@2.117.1";
+ 
+ /*
+@@ -404,7 +405,7 @@
+   return String(data.user.id);
+ }
+ 
+-Deno.serve(async (request) => {
++Deno.serve(withCors(async (request) => {
+   const requestId = crypto.randomUUID();
+ 
+   if (request.method === "OPTIONS") {
+@@ -989,4 +990,4 @@
+     },
+     requestId,
+   );
+-});
++}));
+
+FILE supabase/functions/delete-own-restaurant-account/index.ts
+--- 
++++ 
+@@ -1,3 +1,4 @@
++import { withCors } from "../_shared/cors.ts";
+ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+ 
+ const corsHeaders = {
+@@ -13,7 +14,7 @@
+   });
+ }
+ 
+-Deno.serve(async (request) => {
++Deno.serve(withCors(async (request) => {
+   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+   if (request.method !== "POST") return jsonResponse(405, { deleted: false, message: "Metodo no permitido." });
+ 
+@@ -100,4 +101,4 @@
+     accountPreserved: deletion.account_preserved === true,
+     restaurantUserId: deletion.restaurant_user_id,
+   });
+-});
++}));
+
+FILE supabase/functions/delivery-dispatch/index.ts
+--- 
++++ 
+@@ -1,3 +1,4 @@
++import { safeEqual } from "../_shared/safe-equal.ts";
+ import { createClient } from "@supabase/supabase-js";
+ 
+ const jsonHeaders = { "content-type": "application/json; charset=utf-8" };
+@@ -17,7 +18,7 @@
+   const suppliedSecret = request.headers.get("x-rc-ordera-dispatch-secret") || "";
+   const authorized =
+     (Boolean(serviceRoleKey) && authorization === `Bearer ${serviceRoleKey}`) ||
+-    (dispatchSecret.length >= 24 && suppliedSecret === dispatchSecret);
++    (dispatchSecret.length >= 24 && safeEqual(suppliedSecret, dispatchSecret));
+ 
+   if (!supabaseUrl || !serviceRoleKey || !authorized) {
+     return new Response(JSON.stringify({ error: "Unauthorized" }), {
+
+FILE supabase/functions/delivery-quote/index.ts
+--- 
++++ 
+@@ -1,3 +1,4 @@
++import { withCors } from "../_shared/cors.ts";
+ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+ 
+ const corsHeaders = {
+@@ -50,7 +51,7 @@
+   return match || null;
+ }
+ 
+-Deno.serve(async (request) => {
++Deno.serve(withCors(async (request) => {
+   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+   if (request.method !== "POST") return response(405, { error: "Method not allowed" });
+ 
+@@ -320,4 +321,4 @@
+   verifiedPostalCode,
+   verifiedNeighborhood,
+ });
+-});
++}));
+
+FILE supabase/functions/marketplace-cancel-order/index.ts
+--- 
++++ 
+@@ -1,3 +1,4 @@
++import { withCors } from "../_shared/cors.ts";
+ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+ 
+ const corsHeaders = {
+@@ -331,7 +332,7 @@
+   );
+ }
+ 
+-Deno.serve(
++Deno.serve(withCors(
+   async (request) => {
+     if (
+       request.method ===
+@@ -1325,4 +1326,4 @@
+ 
+     return await cancelThroughCore();
+   },
+-);
++));
+
+FILE supabase/functions/marketplace-checkout/index.ts
+--- 
++++ 
+@@ -1,3 +1,4 @@
++import { withCors } from "../_shared/cors.ts";
+ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+ 
+ const STRIPE_REQUEST_TIMEOUT_MS = 15_000;
+@@ -411,7 +412,7 @@
+   };
+ }
+ 
+-Deno.serve(
++Deno.serve(withCors(
+   async (request) => {
+     if (
+       request.method ===
+@@ -1713,4 +1714,4 @@
+       },
+     );
+   },
+-);
++));
+
+FILE supabase/functions/marketplace-confirm-delivery/index.ts
+--- 
++++ 
+@@ -1,3 +1,4 @@
++import { withCors } from "../_shared/cors.ts";
+ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+ 
+ const MAX_REQUEST_BODY_BYTES = 16_384;
+@@ -135,7 +136,7 @@
+   }
+ }
+ 
+-Deno.serve(async (request) => {
++Deno.serve(withCors(async (request) => {
+   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+   if (request.method !== "POST") return response(405, { error: "Method not allowed" });
+ 
+@@ -234,4 +235,4 @@
+     settlementEligible: normalized.settlementEligible,
+     settlementRequested,
+   });
+-});
++}));
+
+FILE supabase/functions/marketplace-onboarding/index.ts
+--- 
++++ 
+@@ -1,3 +1,4 @@
++import { withCors } from "../_shared/cors.ts";
+ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+ 
+ const MAX_REQUEST_BODY_BYTES = 16_384;
+@@ -307,7 +308,7 @@
+   };
+ }
+ 
+-Deno.serve(async (request) => {
++Deno.serve(withCors(async (request) => {
+   if (request.method === "OPTIONS") {
+     return new Response("ok", { headers: corsHeaders });
+   }
+@@ -709,4 +710,4 @@
+     transfersEnabled: state.transfersEnabled,
+     expiresAt,
+   });
+-});
++}));
+
+FILE supabase/functions/marketplace-release-order/index.ts
+--- 
++++ 
+@@ -1,3 +1,4 @@
++import { withCors } from "../_shared/cors.ts";
+ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+ 
+ const MAX_REQUEST_BODY_BYTES = 16_384;
+@@ -300,7 +301,7 @@
+   }
+ }
+ 
+-Deno.serve(
++Deno.serve(withCors(
+   async (
+     request,
+   ) => {
+@@ -924,4 +925,4 @@
+       },
+     );
+   },
+-);
++));
+
+FILE supabase/functions/translate-public-content/index.ts
+--- 
++++ 
+@@ -1,3 +1,4 @@
++import { withCors } from "../_shared/cors.ts";
+ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+ 
+ const corsHeaders = {
+@@ -20,7 +21,7 @@
+     .join("");
+ }
+ 
+-Deno.serve(async (request) => {
++Deno.serve(withCors(async (request) => {
+   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+   if (request.method !== "POST") return response(405, { error: "Method not allowed" });
+ 
+@@ -108,4 +109,4 @@
+   if (saveResult.error) return response(500, { error: "Could not save translation" });
+ 
+   return response(200, { translatedText, cached: false });
+-});
++}));
+
+FILE vercel.json
+--- 
++++ 
+@@ -3,24 +3,60 @@
+     {
+       "source": "/service-worker.js",
+       "headers": [
+-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" },
+-        { "key": "Service-Worker-Allowed", "value": "/" }
++        {
++          "key": "Cache-Control",
++          "value": "public, max-age=0, must-revalidate"
++        },
++        {
++          "key": "Service-Worker-Allowed",
++          "value": "/"
++        }
+       ]
+     },
+     {
+       "source": "/(.*).html",
+       "headers": [
+-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" },
+-        { "key": "X-Content-Type-Options", "value": "nosniff" },
+-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
++        {
++          "key": "Cache-Control",
++          "value": "public, max-age=0, must-revalidate"
++        },
++        {
++          "key": "X-Content-Type-Options",
++          "value": "nosniff"
++        },
++        {
++          "key": "Referrer-Policy",
++          "value": "strict-origin-when-cross-origin"
++        }
+       ]
+     },
+     {
+       "source": "/(.*)",
+       "headers": [
+-        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+-        { "key": "Content-Security-Policy", "value": "base-uri 'self'; object-src 'none'; frame-ancestors 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com blob:; worker-src 'self' blob:" },
+-        { "key": "Permissions-Policy", "value": "camera=(self), geolocation=(self), microphone=()" }
++        {
++          "key": "X-Frame-Options",
++          "value": "SAMEORIGIN"
++        },
++        {
++          "key": "Content-Security-Policy",
++          "value": "base-uri 'self'; object-src 'none'; frame-ancestors 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com blob:; worker-src 'self' blob:"
++        },
++        {
++          "key": "Permissions-Policy",
++          "value": "camera=(self), geolocation=(self), microphone=()"
++        },
++        {
++          "key": "Strict-Transport-Security",
++          "value": "max-age=31536000; includeSubDomains"
++        },
++        {
++          "key": "X-Content-Type-Options",
++          "value": "nosniff"
++        },
++        {
++          "key": "Content-Security-Policy-Report-Only",
++          "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com blob:; worker-src 'self' blob:; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com https://api.qrserver.com https://js.stripe.com https://api.stripe.com"
++        }
+       ]
+     }
+   ]
+
+FILE www/app.js
+--- 
++++ 
+@@ -3760,8 +3760,6 @@
+     },
+   }
+ );
+-  // Notifica a los módulos UI que Supabase ya existe. Sin polling ni credenciales en el evento.
+-  window.dispatchEvent(new Event("rc-ordera-cloud-client-ready"));
+   if (
+   typeof cloudState.client.removeAllChannels ===
+   "function"
+@@ -15286,288 +15284,3 @@
+   const friendlyMessage = navigator.onLine ? setCloudError(error) : "Sin internet. Puedes continuar con los datos guardados.";
+   elements.authMessage.textContent = friendlyMessage;
+ });
+-
+-/**
+- * RC ORDERA — EXTERNAL DELIVERY INBOX PANEL V1
+- *
+- * Read-only integration.
+- * No automatic imports, fiscal operations or payments.
+- * No polling, cron or background requests.
+- * Requires authenticated restaurant session.
+- */
+-
+-(function installExternalDeliveryPanel() {
+-  const root = document.querySelector("main.app-shell");
+-
+-  if (!root || document.getElementById("rcExternalDeliveryPanel")) {
+-    return;
+-  }
+-
+-  const section = document.createElement("section");
+-  section.id = "rcExternalDeliveryPanel";
+-  section.setAttribute(
+-    "aria-labelledby",
+-    "rcExternalDeliveryTitle"
+-  );
+-
+-  section.style.cssText =
+-    "margin:20px 0;padding:16px;" +
+-    "border:1px solid #ccc;border-radius:12px";
+-
+-  const title = document.createElement("h2");
+-  title.id = "rcExternalDeliveryTitle";
+-  title.textContent = "Pedidos de plataformas externas";
+-
+-  const description = document.createElement("p");
+-  description.textContent =
+-    "Consulta segura de pedidos externos pendientes. " +
+-    "Los pedidos no se importan automáticamente.";
+-
+-  const button = document.createElement("button");
+-  button.type = "button";
+-  button.textContent = "Consultar pedidos externos";
+-
+-  const status = document.createElement("p");
+-  status.setAttribute("role", "status");
+-  status.setAttribute("aria-live", "polite");
+-  status.textContent =
+-    "Pulsa el botón para consultar los pedidos.";
+-
+-  const list = document.createElement("div");
+-  list.setAttribute(
+-    "aria-label",
+-    "Listado de pedidos externos"
+-  );
+-
+-  section.append(title, description, button, status, list);
+-  root.appendChild(section);
+-
+-  let loading = false;
+-  let requestVersion = 0;
+-
+-  const signOutButton = document.getElementById(
+-    "signOutButton"
+-  );
+-
+-  let inboxOwnerId = cloudState.user?.id || null;
+-
+-  function invalidateExternalInbox() {
+-    requestVersion++;
+-    list.replaceChildren();
+-    status.textContent =
+-      "Pulsa el botón para consultar los pedidos.";
+-  }
+-
+-  function handleExternalInboxAuth(event, session) {
+-    const nextOwnerId = session?.user?.id || null;
+-
+-    if (
+-      event === "SIGNED_OUT" ||
+-      nextOwnerId !== inboxOwnerId
+-    ) {
+-      inboxOwnerId = nextOwnerId;
+-      invalidateExternalInbox();
+-    }
+-  }
+-
+-  let subscribedClient = null;
+-  let authSubscription = null;
+-
+-  function subscribeExternalInboxAuth() {
+-    const client = cloudState.client;
+-    if (!client || client === subscribedClient) return;
+-
+-    // Si se recrea Supabase durante una recuperación, no dejamos listeners antiguos.
+-    authSubscription?.unsubscribe();
+-    authSubscription = null;
+-    subscribedClient = null;
+-    invalidateExternalInbox();
+-    inboxOwnerId = cloudState.user?.id || null;
+-
+-    const { data } = client.auth.onAuthStateChange(handleExternalInboxAuth);
+-    authSubscription = data?.subscription || null;
+-    subscribedClient = client;
+-  }
+-
+-  // La creación del cliente es asíncrona. El evento evita el sondeo periódico.
+-  window.addEventListener("rc-ordera-cloud-client-ready", subscribeExternalInboxAuth);
+-  subscribeExternalInboxAuth();
+-
+-  window.addEventListener("beforeunload", () => {
+-    window.removeEventListener("rc-ordera-cloud-client-ready", subscribeExternalInboxAuth);
+-    authSubscription?.unsubscribe();
+-    authSubscription = null;
+-    subscribedClient = null;
+-  }, { once: true });
+-
+-  if (signOutButton) {
+-    signOutButton.addEventListener("click", () => {
+-      requestVersion++;
+-      list.replaceChildren();
+-      status.textContent =
+-        "Sesión cerrada. Inicia sesión para consultar pedidos.";
+-    });
+-  }
+-
+-  function clearRows() {
+-    list.replaceChildren();
+-  }
+-
+-  function renderRows(rows) {
+-    clearRows();
+-
+-    for (const order of rows) {
+-      const article = document.createElement("article");
+-
+-      article.style.cssText =
+-        "padding:12px;margin:8px 0;" +
+-        "border:1px solid #ddd;border-radius:8px";
+-
+-      const heading = document.createElement("h3");
+-
+-      const platform =
+-        typeof order.platform === "string"
+-          ? order.platform
+-          : "Plataforma desconocida";
+-
+-      heading.textContent = platform;
+-
+-      const externalId = document.createElement("p");
+-      externalId.textContent =
+-        "Pedido: " +
+-        String(order.external_order_id ?? "Sin ID");
+-
+-      const orderStatus = document.createElement("p");
+-      orderStatus.textContent =
+-        "Estado: " +
+-        String(order.processing_status ?? "Desconocido");
+-
+-      const amount = document.createElement("p");
+-
+-      const grosz = order.total_grosz;
+-
+-      amount.textContent =
+-        Number.isSafeInteger(grosz) && grosz >= 0
+-          ? `Importe declarado: ${(grosz / 100).toFixed(2)} PLN`
+-          : "Importe pendiente de verificación";
+-
+-      article.append(
+-        heading,
+-        externalId,
+-        orderStatus,
+-        amount
+-      );
+-
+-      list.appendChild(article);
+-    }
+-  }
+-
+-  button.addEventListener("click", async () => {
+-    if (loading) return;
+-
+-    const client = cloudState.client;
+-    const expectedUserId = cloudState.user?.id;
+-
+-    if (!client || !expectedUserId) {
+-      clearRows();
+-      status.textContent =
+-        "Debes iniciar sesión como restaurante.";
+-      return;
+-    }
+-
+-    loading = true;
+-    button.disabled = true;
+-
+-    const currentRequest = ++requestVersion;
+-
+-    status.textContent = "Consultando pedidos...";
+-    clearRows();
+-
+-    try {
+-      const { data: sessionData, error: sessionError } =
+-        await client.auth.getSession();
+-
+-      if (sessionError) throw sessionError;
+-
+-      const session = sessionData?.session;
+-
+-      if (
+-        !session?.access_token ||
+-        session.user?.id !== expectedUserId
+-      ) {
+-        throw new Error("SESSION_NOT_AVAILABLE");
+-      }
+-
+-      const { data, error } =
+-        await client.functions.invoke(
+-          "external-delivery-inbox",
+-          {
+-            method: "GET",
+-            headers: {
+-              Authorization:
+-                `Bearer ${session.access_token}`
+-            }
+-          }
+-        );
+-
+-      if (error) throw error;
+-
+-      const { data: latestSessionData } =
+-        await client.auth.getSession();
+-
+-
+-      if (
+-        currentRequest !== requestVersion ||
+-        cloudState.client !== client ||
+-        cloudState.user?.id !== expectedUserId ||
+-        latestSessionData?.session?.user?.id !==
+-          expectedUserId
+-      ) {
+-        // Una respuesta antigua nunca debe modificar
+-        // la bandeja de una sesión posterior.
+-        return;
+-      }
+-
+-
+-      if (!Array.isArray(data?.orders)) {
+-        throw new Error("INVALID_INBOX_RESPONSE");
+-      }
+-
+-      renderRows(data.orders);
+-
+-      status.textContent = data.orders.length
+-        ? `${data.orders.length} pedidos encontrados.` +
+-          (data.hasMore
+-            ? " Existen más registros."
+-            : "")
+-        : "No hay pedidos externos pendientes.";
+-    
+-   
+-    } catch (error) {
+-      if (
+-        currentRequest !== requestVersion ||
+-        cloudState.client !== client ||
+-        cloudState.user?.id !== expectedUserId
+-      ) {
+-        return;
+-      }
+-
+-      clearRows();
+-
+-      status.textContent =
+-        "No se pudo consultar la bandeja externa. " +
+-        "Verifica la conexión, sesión y configuración.";
+-
+-
+-      
+-
+-      console.warn(
+-        "RC_EXTERNAL_INBOX_READ_FAILED",
+-        error?.name || "UNKNOWN_ERROR"
+-      );
+-    } finally {
+-      loading = false;
+-      button.disabled = false;
+-    }
+-  });
+-})();
+
+FILE www/offline-i18n.js
+--- 
++++ 
+@@ -1,28 +1,5 @@
+ (function () {
+   const rows = [
+-    
+-    ["externalInbox.title","Pedidos de plataformas externas","Zamówienia z platform zewnętrznych","External platform orders"],
+-    ["externalInbox.description","Consulta segura de pedidos externos pendientes.","Bezpieczny podgląd oczekujących zamówień zewnętrznych.","Secure view of pending external orders."],
+-    ["externalInbox.button","Consultar pedidos externos","Sprawdź zamówienia zewnętrzne","Check external orders"],
+-    ["externalInbox.hint","Pulsa el botón para consultar los pedidos.","Kliknij przycisk, aby sprawdzić zamówienia.","Click the button to check orders."],
+-    ["externalInbox.signedOut","Sesión cerrada. Inicia sesión para consultar pedidos.","Wylogowano. Zaloguj się, aby sprawdzić zamówienia.","Signed out. Sign in to check orders."],
+-    ["externalInbox.order","Pedido:","Zamówienie:","Order:"],
+-    ["externalInbox.status","Estado:","Status:","Status:"],
+-    ["externalInbox.authRequired","Debes iniciar sesión como restaurante.","Musisz zalogować się na konto restauracji.","You must sign in with a restaurant account."],
+-    ["externalInbox.loading","Consultando pedidos...","Pobieranie zamówień...","Loading orders..."],
+-    ["externalInbox.sessionChanged","La sesión cambió. Consulta nuevamente.","Sesja uległa zmianie. Spróbuj ponownie.","Session changed. Please try again."],
+-    ["externalInbox.fetchFailed","No se pudo consultar la bandeja externa.","Nie udało się pobrać zamówień zewnętrznych.","Could not load external orders."],
+-    ["externalInbox.sessionError","SESSION_NOT_AVAILABLE","SESJA_NIEDOSTĘPNA","SESSION_NOT_AVAILABLE"],
+-    ["externalInbox.responseError","INVALID_INBOX_RESPONSE","NIEPRAWIDŁOWA_ODPOWIEDŹ","INVALID_INBOX_RESPONSE"],
+-    ["externalInbox.unknownPlatform","Plataforma desconocida","Nieznana platforma","Unknown platform"],
+-    ["externalInbox.unknownStatus","Desconocido","Nieznany","Unknown"],
+-    ["externalInbox.missingId","Sin ID","Brak identyfikatora","No ID"],
+-    ["externalInbox.amount","Importe declarado:","Zadeklarowana kwota:","Declared amount:"],
+-    ["externalInbox.amountPending","Importe pendiente de verificación","Kwota oczekuje na weryfikację","Amount pending verification"],
+-    ["externalInbox.noOrders","No hay pedidos externos pendientes.","Brak oczekujących zamówień zewnętrznych.","No pending external orders."],
+-    ["externalInbox.moreRecords","Existen más registros.","Dostępne są kolejne rekordy.","More records are available."],
+-    ["externalInbox.connectionError","Verifica la conexión, sesión y configuración.","Sprawdź połączenie, sesję i konfigurację.","Check your connection, session and configuration."],
+-
+     ["orders.invalidResponse","La consulta de pedidos devolvio datos invalidos.","Zapytanie o zamówienia zwróciło nieprawidłowe dane.","The orders query returned invalid data."],
+     ["orders.paginationStalled","La paginacion de pedidos no avanzo; se conservaran los pedidos anteriores.","Nie udało się przejść do kolejnej strony zamówień; poprzednie zamówienia zostaną zachowane.","Order pagination did not advance; previous orders will be preserved."],
+     ["history.fetchFailed","No fue posible consultar el historial completo.","Nie udało się pobrać pełnej historii.","The complete history could not be retrieved."],

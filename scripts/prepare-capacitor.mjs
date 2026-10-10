@@ -12,6 +12,9 @@ if (!output.startsWith(`${root}\\`) && !output.startsWith(`${root}/`)) {
 
 const runtimeFiles = [
   "index.html",
+  "portal.html",
+  "centro-integraciones.html",
+  "centro-integraciones-status.js",
   "restaurante.html",
   "cliente.html",
   "colaborador.html",
@@ -27,6 +30,10 @@ const runtimeFiles = [
   "auto-translate.js",
   "supabase-config.js",
   "vendor/supabase-2.57.4.js",
+  "vendor/qrcode-generator-2.0.4.js",
+  "vendor/QRCODE-LICENSE.txt",
+  "local-qr.js",
+  "vendor/SUPABASE-LICENSE.txt",
   "service-worker.js",
   "manifest.webmanifest",
   "restaurante-manifest.webmanifest",

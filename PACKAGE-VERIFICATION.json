@@ -1,0 +1,69 @@
+{
+  "release": "RC ORDERA V6 CONSOLIDADA VERIFICADA",
+  "testedImplementationCommit": "2d8b8d1576828e7cc071fc3a1d5ff56fff7d8485",
+  "inputZipSha256": "41f6557de3371bd040fab87b38c99e41cfeeb8c53a6b9b6363280b97f95c3c34",
+  "archiveEntries": 510,
+  "manifestEntries": 509,
+  "crcPassed": true,
+  "cleanExtraction": true,
+  "freshNpmCi": {
+    "command": "npm ci --ignore-scripts --no-audit --no-fund",
+    "passed": true
+  },
+  "qa": {
+    "nodePassed": 370,
+    "nodeFailed": 0,
+    "syntaxFiles": 159,
+    "wwwAssets": 45,
+    "migrationIds": 10,
+    "i18nChecks": 2324
+  },
+  "e2e": {
+    "passedExecutions": 63,
+    "logicalScenarios": 21,
+    "deviceProjects": 3,
+    "failed": 0,
+    "supabaseMocked": true
+  },
+  "liveIntegration": {
+    "passed": 0,
+    "failed": 0,
+    "skipped": 9,
+    "todo": 0
+  },
+  "dependencyAuditVulnerabilities": 0,
+  "androidPrepareWeb": {
+    "passed": true,
+    "assets": 45,
+    "byteChanges": 0,
+    "apkBuilt": false
+  },
+  "filesComparedAfterCleanTests": 510,
+  "sourceByteMismatches": 0,
+  "githubTransfer": {
+    "patchApplied": true,
+    "filesCompared": 503,
+    "byteMismatches": 0,
+    "excludedDeliveryMetadata": [
+      "GITHUB-BRANCH.patch",
+      "AUDIT-INVENTORY.json",
+      "GITHUB-TRANSFER-RESULTS.json",
+      "PACKAGE-VERIFICATION.json",
+      "MANIFEST-SHA256.txt",
+      "QA-RESULTS.json",
+      "DELIVERY-METADATA.json"
+    ]
+  },
+  "finalPackagingPolicy": "Only seven delivery metadata files may be updated after clean tests; all implementation, test, dependency and report bytes remain identical. Final archive CRC, manifest and all510 branch bytes checked again.",
+  "noProductionActions": true,
+  "externalGates": [
+    "Supabase staging fixtures and RLS live",
+    "native PostgreSQL independent connections",
+    "official Stripe BLIK sandbox",
+    "delivery official contracts",
+    "POSNET model protocol and hardware",
+    "Deno native deploy and APK GPS devices",
+    "production CPU Realtime observability",
+    "GitHub write403"
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "sourceCommit": "2730150506122ae59ba142ca1ba84ec820acb301",
+  "automaticApplication": false,
+  "historicalRepeatedIdsPreserved": true,
+  "plan": [
+    {
+      "file": "MIGRACION-V5-20261010-01-FISCAL-AGENT-RESULT.sql",
+      "requires": [
+        "MIGRACION-V91-34-FISCAL-BASE.sql",
+        "MIGRACION-V91-35-FISCAL-CLAIM.sql"
+      ],
+      "v4Original": "MIGRACION-V91-69-FISCAL-AGENT-RESULT.sql"
+    },
+    {
+      "file": "MIGRACION-V5-20261010-02-ORDEN-IDEMPOTENTE-IVA.sql",
+      "requires": [
+        "MIGRACION-V91-29A-RPC-INTERNO-PEDIDOS.sql"
+      ],
+      "expectedExistingRpcBodyMd5": "4753a0ba2396730e21197ef14d71a632",
+      "v4Original": "MIGRACION-V91-70-ORDEN-IDEMPOTENTE-IVA.sql"
+    },
+    {
+      "file": "MIGRACION-V5-20261010-03-DELIVERY-OUTBOX.sql",
+      "requires": [
+        "auth.users",
+        "roles anon authenticated service_role"
+      ],
+      "v4Original": null
+    },
+    {
+      "file": "MIGRACION-V5-20261010-04-VAT-CATEGORIES.sql",
+      "requires": [
+        "MIGRACION-V5-20261010-02-ORDEN-IDEMPOTENTE-IVA.sql"
+      ],
+      "automaticDataRewrite": false
+    },
+    {
+      "file": "MIGRACION-V5-20261010-05-ORDER-MENU-INTEGRITY.sql",
+      "requires": [
+        "MIGRACION-V5-20261010-04-VAT-CATEGORIES.sql"
+      ],
+      "expectedExistingRpcBodyMd5": "5aaa82803193575067cdf83facde7069"
+    },
+    {
+      "file": "MIGRACION-V5-20261010-06-OUTBOX-BOUNDS.sql",
+      "requires": [
+        "MIGRACION-V5-20261010-03-DELIVERY-OUTBOX.sql"
+      ]
+    },
+    {
+      "file": "MIGRACION-V5-20261010-07-DISPATCH-COLUMN-ALIAS.sql",
+      "requires": [
+        "MIGRACION-V91-03-CONTRATO-MULTIESTACION-Y-REALTIME.sql",
+        "MIGRACION-V91-13-P0-01-ENTREGA-Y-LIBERACION.sql"
+      ],
+      "expectedExistingRpcBodyMd5": "3480fb705ff7a4cf9928f9f033acf0e0"
+    },
+    {
+      "file": "MIGRACION-V5-20261010-08-TRANSLATION-GLOBAL-CAP.sql",
+      "requires": [
+        "MIGRACION-V86-04-TRADUCCIONES-SEGURAS.sql"
+      ],
+      "additive": true,
+      "note": "tope global + limpieza acotada; la Edge Function cae a v1 si a\u00fan no est\u00e1 aplicada"
+    },
+    {
+      "file": "MIGRACION-V5-20261010-09-TRANSLATION-BUDGET-FENCE.sql",
+      "requires": [
+        "MIGRACION-V5-20261010-08-TRANSLATION-GLOBAL-CAP.sql"
+      ],
+      "expectedExistingRpcBodyMd5": "14254830bf0df8ce08854ea8b2e656d7",
+      "automaticDataRewrite": false
+    },
+    {
+      "file": "MIGRACION-V5-20261010-10-EXPLICIT-VAT-UNKNOWN.sql",
+      "requires": [
+        "MIGRACION-V5-20261010-05-ORDER-MENU-INTEGRITY.sql"
+      ],
+      "expectedExistingRpcBodyMd5": "e7ce54f93f6002fd476e1cbfb7fcff1c",
+      "automaticDataRewrite": false
+    }
+  ]
+}

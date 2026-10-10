@@ -14,6 +14,29 @@
 
 (() => {
   const config = window.RC_ORDERA_SUPABASE;
+  let statusClient = null;
+  const languages = new Set(["es","pl","en"]);
+  const selector = document.getElementById("integrationLanguage");
+  let language = "es";
+  try { language = new URLSearchParams(window.location.search).get("lang") || localStorage.getItem("rincon_colombiano_app_language") || "es"; } catch {}
+  if (!languages.has(language)) language="es";
+  const originalText = new WeakMap();
+  function applyLanguage() {
+    if(!window.RC_ORDERA_OFFLINE_I18N || !document.createTreeWalker)return;
+    document.documentElement.lang=language;
+    const walker=document.createTreeWalker(document,NodeFilter.SHOW_TEXT);
+    for(let node=walker.nextNode();node;node=walker.nextNode()){
+      if(["SCRIPT","STYLE","OPTION"].includes(node.parentElement?.tagName))continue;
+      const source=originalText.get(node) || node.nodeValue;originalText.set(node,source);
+      const translated=window.RC_ORDERA_OFFLINE_I18N.translate(source.trim(),language);
+      if(translated)node.nodeValue=translated;
+    }
+  }
+  if(selector){selector.value=language;selector.addEventListener("change",()=>{
+    if(!languages.has(selector.value))return;language=selector.value;
+    try{localStorage.setItem("rincon_colombiano_app_language",language);}catch{}
+    applyLanguage();
+  });}
 
   const fiscalPanel =
     document.getElementById("panel-fiscal");
@@ -67,6 +90,7 @@
   );
 
   fiscalPanel.prepend(controls);
+  applyLanguage();
 
   function addResult(label, value) {
     const row = document.createElement("p");
@@ -98,6 +122,7 @@
 
     message.textContent =
       "Consultando información del servidor...";
+    applyLanguage();
 
     try {
       if (
@@ -120,13 +145,13 @@
         throw new Error("INVALID_PROJECT_URL");
       }
 
-      const client = window.supabase.createClient(
+      const client = statusClient ||= window.supabase.createClient(
         config.url,
         config.anonKey,
         {
           auth: {
             persistSession: true,
-            autoRefreshToken: true
+            autoRefreshToken: false
           }
         }
       );
@@ -155,6 +180,7 @@
           mode: "cors",
           cache: "no-store",
           credentials: "omit",
+          signal: AbortSignal.timeout(10000),
           headers: {
             Authorization: `Bearer ${token}`,
             apikey: config.anonKey
@@ -167,6 +193,8 @@
       }
 
       const data = await response.json();
+      const current = await client.auth.getSession();
+      if (current.error || current.data?.session?.access_token !== token) throw new Error("LOGIN_REQUIRED");
 
       if (
         !data ||
@@ -247,6 +275,7 @@
       results.replaceChildren();
     } finally {
       refreshButton.disabled = false;
+      applyLanguage();
     }
   }
 

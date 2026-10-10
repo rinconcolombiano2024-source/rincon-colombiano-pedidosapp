@@ -672,6 +672,35 @@
                   <option value="salads">Ensaladas</option>
                 </select>
               </label>
+              <label>
+                IVA del producto
+                <select id="productVatSelect">
+                  <option value="__unverified__" disabled>IVA sin verificar: revisar</option>
+                  <option value="">Heredar del restaurante</option>
+                  <option value="23">23 %</option>
+                  <option value="8">8 %</option>
+                  <option value="5">5 %</option>
+                  <option value="0">0 %</option>
+                  <option value="ZW">Exento (ZW)</option>
+                  <option value="NP">No sujeto (NP)</option>
+                  <option value="NP I">No sujeto (NP I)</option>
+                  <option value="NP II">No sujeto (NP II)</option>
+                </select>
+              </label>
+              <label>
+                IVA por defecto del restaurante
+                <select id="restaurantDefaultVatSelect">
+                  <option value="">Sin definir</option>
+                  <option value="23">23 %</option>
+                  <option value="8">8 %</option>
+                  <option value="5">5 %</option>
+                  <option value="0">0 %</option>
+                  <option value="ZW">Exento (ZW)</option>
+                  <option value="NP">No sujeto (NP)</option>
+                  <option value="NP I">No sujeto (NP I)</option>
+                  <option value="NP II">No sujeto (NP II)</option>
+                </select>
+              </label>
               <!-- ESPAÑOL -->
 <label class="product-name-field">
   🇪🇸 Nombre ES
@@ -1111,6 +1140,8 @@
     <script src="supabase-config.js?v=91.0.4"></script>
     <script src="offline-i18n.js?v=91.0.4"></script>
     <script src="auto-translate.js?v=91.0.4"></script>
+    <script src="vendor/qrcode-generator-2.0.4.js"></script>
+    <script src="local-qr.js"></script>
     <script src="app.js?v=91.0.4"></script>
   </body>
 </html>

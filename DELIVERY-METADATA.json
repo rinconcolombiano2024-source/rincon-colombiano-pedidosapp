@@ -1,0 +1,19 @@
+{
+  "release": "RC ORDERA V6 CONSOLIDADA VERIFICADA",
+  "githubBaseCommit": "2730150506122ae59ba142ca1ba84ec820acb301",
+  "v5BaseCommit": "fae1e3cc62eb792eb2ef67ea4de44ecf38d9f35f",
+  "inputV6Sha256": "41f6557de3371bd040fab87b38c99e41cfeeb8c53a6b9b6363280b97f95c3c34",
+  "implementationCommit": "2d8b8d1576828e7cc071fc3a1d5ff56fff7d8485",
+  "localBranch": "codex/rc-ordera-v6-consolidada-verificada",
+  "remoteBranchCreated": false,
+  "pullRequestCreated": false,
+  "githubWriteBlocker": "HTTP403 Resource not accessible by integration",
+  "productionReady": false,
+  "productionActionsPerformed": false,
+  "packageName": "RC-ORDERA-V6-CONSOLIDADA-VERIFICADA.zip",
+  "reports": [
+    "MERGE-REPORT.md",
+    "QA-REPORT.md",
+    "DEPLOYMENT-CHECKLIST.md"
+  ]
+}

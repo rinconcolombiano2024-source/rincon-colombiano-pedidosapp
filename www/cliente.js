@@ -5996,6 +5996,8 @@ async function customerHandlePaymentReturn() {
   nextUrl.searchParams.delete("order");
   window.history.replaceState({}, "", nextUrl.toString());
 }
+let customerOrderFlight = null;
+let customerPendingOrderMemory = null;
 function customerOrderFingerprint(orderPayload) {
   const fingerprintPayload = { ...orderPayload };
   delete fingerprintPayload.createdAt;
@@ -6030,7 +6032,21 @@ function customerReadPendingOrder(fingerprint) {
   }
   return null;
 }
-async function customerCreateCustomerOrder(
+function customerCreateCustomerOrder(orderPayload, total, tableLabel, customerName, orderType) {
+  const context = JSON.stringify([customerStoreId,customerUser?.id || null]);
+  const key = JSON.stringify([context,customerOrderFingerprint(orderPayload),tableLabel,customerName,orderType]);
+  if (customerOrderFlight) {
+    if (customerOrderFlight.key === key) return customerOrderFlight.promise;
+    return Promise.reject(new Error("ORDER_ALREADY_SENDING"));
+  }
+  const promise = customerCreateCustomerOrderRequest(orderPayload,total,tableLabel,customerName,orderType)
+    .then(result=>{
+      if(context!==JSON.stringify([customerStoreId,customerUser?.id || null]))throw new Error("ORDER_SESSION_CHANGED");
+      return result;
+    }).finally(()=>{customerOrderFlight=null;});
+  customerOrderFlight={key,promise};return promise;
+}
+async function customerCreateCustomerOrderRequest(
   orderPayload,
   total,
   tableLabel,
@@ -6041,7 +6057,10 @@ async function customerCreateCustomerOrder(
     throw new Error("ORDER_SERVICE_UNAVAILABLE");
   }
   const fingerprint = customerOrderFingerprint(orderPayload);
-  const pendingOrder = customerReadPendingOrder(fingerprint);
+  const context = JSON.stringify([customerStoreId,customerUser?.id || null]);
+  const memoryOrder = customerPendingOrderMemory;
+  const pendingOrder = memoryOrder?.context === context && memoryOrder.fingerprint === fingerprint
+    && Date.now() - memoryOrder.createdAt < 30 * 60 * 1000 ? memoryOrder : customerReadPendingOrder(fingerprint);
   const orderId =
     pendingOrder?.orderId ||
     customerGenerateId();
@@ -6067,6 +6086,7 @@ async function customerCreateCustomerOrder(
    */
   payloadForServer.clientGuardId =
     customerOrderGuardId();
+  customerPendingOrderMemory = {context,fingerprint,orderId,publicToken,createdAt:pendingOrder?.createdAt || Date.now()};
   const pendingStorageKey =
     customerPendingOrderStorageKey();
   /*
@@ -6220,8 +6240,8 @@ async function customerCreateCustomerOrder(
    * de empezar tracking/chat/pago con credenciales corruptas.
    */
   if (
-    !returnedId ||
-    !returnedPublicToken
+    returnedId !== orderId ||
+    returnedPublicToken !== publicToken
   ) {
     throw new Error(
       "ORDER_CREATE_INVALID_RESPONSE"
@@ -6231,6 +6251,7 @@ async function customerCreateCustomerOrder(
    * El pedido fue confirmado por el servidor.
    * La estructura de reintento ya no es necesaria.
    */
+  customerPendingOrderMemory = null;
   try {
     sessionStorage.removeItem(
       pendingStorageKey

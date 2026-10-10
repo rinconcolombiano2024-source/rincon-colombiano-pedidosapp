@@ -1,0 +1,159 @@
+{
+  "runtime": "v24.19.0",
+  "baseline": "fae1e3cc62eb792eb2ef67ea4de44ecf38d9f35f",
+  "environment": "local PGlite single process; no Supabase/network/hardware",
+  "outbox": [
+    {
+      "version": "V5-latest",
+      "historicalRows": 1000,
+      "cycles": 20,
+      "queryCount": 40,
+      "returnedRows": 0,
+      "returnedBytes": 80,
+      "wallMs": 37.487395000000106,
+      "cpuMs": 69.324,
+      "p50Ms": 1.7716159999999945,
+      "p95Ms": 2.314137999999957,
+      "maxObservedHeapGrowthBytes": 7095176,
+      "rssBeforeBytes": 583286784,
+      "rssAfterBytes": 583286784
+    },
+    {
+      "version": "V6",
+      "historicalRows": 1000,
+      "cycles": 20,
+      "queryCount": 40,
+      "returnedRows": 0,
+      "returnedBytes": 80,
+      "wallMs": 34.87906100000009,
+      "cpuMs": 77.086,
+      "p50Ms": 1.647617000000082,
+      "p95Ms": 2.096528000000035,
+      "maxObservedHeapGrowthBytes": 7096584,
+      "rssBeforeBytes": 583286784,
+      "rssAfterBytes": 583417856
+    },
+    {
+      "version": "V5-latest",
+      "historicalRows": 10000,
+      "cycles": 20,
+      "queryCount": 40,
+      "returnedRows": 0,
+      "returnedBytes": 80,
+      "wallMs": 35.64877700000034,
+      "cpuMs": 50.63,
+      "p50Ms": 1.7401780000000144,
+      "p95Ms": 2.3423200000002,
+      "maxObservedHeapGrowthBytes": 7027448,
+      "rssBeforeBytes": 729526272,
+      "rssAfterBytes": 729526272
+    },
+    {
+      "version": "V6",
+      "historicalRows": 10000,
+      "cycles": 20,
+      "queryCount": 40,
+      "returnedRows": 0,
+      "returnedBytes": 80,
+      "wallMs": 35.93639399999984,
+      "cpuMs": 67.929,
+      "p50Ms": 1.7235820000000786,
+      "p95Ms": 2.1101079999998547,
+      "maxObservedHeapGrowthBytes": 7027192,
+      "rssBeforeBytes": 729526272,
+      "rssAfterBytes": 729526272
+    },
+    {
+      "version": "V5-latest",
+      "historicalRows": 50000,
+      "cycles": 20,
+      "queryCount": 40,
+      "returnedRows": 0,
+      "returnedBytes": 80,
+      "wallMs": 33.18199999999979,
+      "cpuMs": 56.14,
+      "p50Ms": 1.509939000000486,
+      "p95Ms": 2.323352000000341,
+      "maxObservedHeapGrowthBytes": 6993368,
+      "rssBeforeBytes": 730902528,
+      "rssAfterBytes": 730902528
+    },
+    {
+      "version": "V6",
+      "historicalRows": 50000,
+      "cycles": 20,
+      "queryCount": 40,
+      "returnedRows": 0,
+      "returnedBytes": 80,
+      "wallMs": 31.213834999999563,
+      "cpuMs": 46.09,
+      "p50Ms": 1.4681450000007317,
+      "p95Ms": 1.7283500000003187,
+      "maxObservedHeapGrowthBytes": 7013856,
+      "rssBeforeBytes": 730902528,
+      "rssAfterBytes": 730902528
+    }
+  ],
+  "orders": [
+    {
+      "version": "V5-latest",
+      "menuSize": 100,
+      "items": 60,
+      "requests": 25,
+      "wallMs": 178.1629899999989,
+      "cpuMs": 223.167,
+      "p50Ms": 6.15170500000022,
+      "p95Ms": 7.489443000000392
+    },
+    {
+      "version": "V6",
+      "menuSize": 100,
+      "items": 60,
+      "requests": 25,
+      "wallMs": 159.62302600000112,
+      "cpuMs": 181.596,
+      "p50Ms": 6.2982670000001235,
+      "p95Ms": 7.038839000000735
+    },
+    {
+      "version": "V5-latest",
+      "menuSize": 1000,
+      "items": 60,
+      "requests": 25,
+      "wallMs": 253.21047,
+      "cpuMs": 289.634,
+      "p50Ms": 9.298534999999902,
+      "p95Ms": 11.940375000000131
+    },
+    {
+      "version": "V6",
+      "menuSize": 1000,
+      "items": 60,
+      "requests": 25,
+      "wallMs": 235.79980799999976,
+      "cpuMs": 250.112,
+      "p50Ms": 9.09488599999895,
+      "p95Ms": 12.277611000001343
+    }
+  ],
+  "accounting": [
+    {
+      "version": "V5-latest",
+      "orders": 2000,
+      "closes": 20,
+      "wallMs": 262.19419799999923,
+      "cpuMs": 380.603,
+      "p50Ms": 12.17520599999989,
+      "p95Ms": 16.777031999999963
+    },
+    {
+      "version": "V6",
+      "orders": 2000,
+      "closes": 20,
+      "wallMs": 244.6378760000007,
+      "cpuMs": 381.188,
+      "p50Ms": 11.774397999999564,
+      "p95Ms": 14.567473000000973
+    }
+  ]
+}

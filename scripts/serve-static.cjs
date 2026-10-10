@@ -3,6 +3,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
+const securityHeaders = Object.fromEntries(JSON.parse(fs.readFileSync(path.join(root,"vercel.json"),"utf8")).headers
+  .filter(rule=>rule.source==="/(.*)").flatMap(rule=>rule.headers.map(h=>[h.key,h.value])));
 const contentTypes = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
@@ -31,6 +33,7 @@ function createStaticServer() {
       }
 
       response.writeHead(200, {
+        ...securityHeaders,
         "Cache-Control": "no-store",
         "Content-Type": contentTypes[path.extname(filePath).toLowerCase()] || "application/octet-stream",
       });

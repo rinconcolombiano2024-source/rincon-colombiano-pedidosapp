@@ -1,3 +1,4 @@
+import { withCors } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
 const corsHeaders = {
@@ -13,7 +14,7 @@ function jsonResponse(status: number, body: Record<string, unknown>) {
   });
 }
 
-Deno.serve(async (request) => {
+Deno.serve(withCors(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (request.method !== "POST") return jsonResponse(405, { deleted: false, message: "Metodo no permitido." });
 
@@ -100,4 +101,4 @@ Deno.serve(async (request) => {
     accountPreserved: deletion.account_preserved === true,
     restaurantUserId: deletion.restaurant_user_id,
   });
-});
+}));

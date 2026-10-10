@@ -1,0 +1,244 @@
+{
+  "cliente.js": {
+    "sha256": "733e8e132c69d88a86f04e873dda06bacd4f333ea2f7247d2aa4dbdf2246a098",
+    "regressionTests": "tests/hardening/frontend.test.mjs",
+    "edits": [
+      {
+        "before": "",
+        "after": "let customerOrderFlight = null;\r\nlet customerPendingOrderMemory = null;\r\n",
+        "afterByteOffset": 238818
+      },
+      {
+        "before": "async function customerCreateCustomerOrder(\r\n",
+        "after": "function customerCreateCustomerOrder(orderPayload, total, tableLabel, customerName, orderType) {\r\n  const context = JSON.stringify([customerStoreId,customerUser?.id || null]);\r\n  const key = JSON.stringify([context,customerOrderFingerprint(orderPayload),tableLabel,customerName,orderType]);\r\n  if (customerOrderFlight) {\r\n    if (customerOrderFlight.key === key) return customerOrderFlight.promise;\r\n    return Promise.reject(new Error(\"ORDER_ALREADY_SENDING\"));\r\n  }\r\n  const promise = customerCreateCustomerOrderRequest(orderPayload,total,tableLabel,customerName,orderType)\r\n    .then(result=>{\r\n      if(context!==JSON.stringify([customerStoreId,customerUser?.id || null]))throw new Error(\"ORDER_SESSION_CHANGED\");\r\n      return result;\r\n    }).finally(()=>{customerOrderFlight=null;});\r\n  customerOrderFlight={key,promise};return promise;\r\n}\r\nasync function customerCreateCustomerOrderRequest(\r\n",
+        "afterByteOffset": 239965
+      },
+      {
+        "before": "  const pendingOrder = customerReadPendingOrder(fingerprint);\r\n",
+        "after": "  const context = JSON.stringify([customerStoreId,customerUser?.id || null]);\r\n  const memoryOrder = customerPendingOrderMemory;\r\n  const pendingOrder = memoryOrder?.context === context && memoryOrder.fingerprint === fingerprint\r\n    && Date.now() - memoryOrder.createdAt < 30 * 60 * 1000 ? memoryOrder : customerReadPendingOrder(fingerprint);\r\n",
+        "afterByteOffset": 241086
+      },
+      {
+        "before": "",
+        "after": "  customerPendingOrderMemory = {context,fingerprint,orderId,publicToken,createdAt:pendingOrder?.createdAt || Date.now()};\r\n",
+        "afterByteOffset": 242143
+      },
+      {
+        "before": "    !returnedId ||\r\n    !returnedPublicToken\r\n",
+        "after": "    returnedId !== orderId ||\r\n    returnedPublicToken !== publicToken\r\n",
+        "afterByteOffset": 246000
+      },
+      {
+        "before": "",
+        "after": "  customerPendingOrderMemory = null;\r\n",
+        "afterByteOffset": 246267
+      }
+    ]
+  },
+  "centro-integraciones.html": {
+    "sha256": "3011b328ec7cb5c5e0c0829c4249b416555102bb15bbe54282c0d0dc290e6883",
+    "regressionTests": "tests/hardening/frontend.test.mjs",
+    "edits": [
+      {
+        "before": "    button, a { font: inherit; }\n",
+        "after": "    button, a, select { font: inherit; }\n    #integrationLanguage {min-height:44px; padding:8px; background:#152b26; color:#f3f8f5; border:1px solid #35534a; border-radius:8px;}\n",
+        "afterByteOffset": 552
+      },
+      {
+        "before": "    a:focus-visible {\n",
+        "after": "    a:focus-visible, select:focus-visible {\n",
+        "afterByteOffset": 756
+      },
+      {
+        "before": "",
+        "after": "      <label>Idioma <select id=\"integrationLanguage\" aria-label=\"Language / Język / Idioma\"><option value=\"es\">Español</option><option value=\"pl\">Polski</option><option value=\"en\">English</option></select></label>\n",
+        "afterByteOffset": 4922
+      },
+      {
+        "before": "        <small>Caja fiscal</small>\n",
+        "after": "        <small>Impresora fiscal</small>\n",
+        "afterByteOffset": 5962
+      },
+      {
+        "before": "<script src=\"centro-integraciones-status.js?v=1\"></script>\n",
+        "after": "<script src=\"offline-i18n.js?v=91.0.4\"></script>\n<script src=\"centro-integraciones-status.js?v=2\"></script>\n",
+        "afterByteOffset": 15698
+      }
+    ]
+  },
+  "centro-integraciones-status.js": {
+    "sha256": "d2c7580ad61b74a8744fe9a2d7410fba60e848d41e0dcef04226051f0419b87b",
+    "regressionTests": "tests/hardening/frontend.test.mjs",
+    "edits": [
+      {
+        "before": "",
+        "after": "  let statusClient = null;\n  const languages = new Set([\"es\",\"pl\",\"en\"]);\n  const selector = document.getElementById(\"integrationLanguage\");\n  let language = \"es\";\n  try { language = new URLSearchParams(window.location.search).get(\"lang\") || localStorage.getItem(\"rincon_colombiano_app_language\") || \"es\"; } catch {}\n  if (!languages.has(language)) language=\"es\";\n  const originalText = new WeakMap();\n  function applyLanguage() {\n    if(!window.RC_ORDERA_OFFLINE_I18N || !document.createTreeWalker)return;\n    document.documentElement.lang=language;\n    const walker=document.createTreeWalker(document,NodeFilter.SHOW_TEXT);\n    for(let node=walker.nextNode();node;node=walker.nextNode()){\n      if([\"SCRIPT\",\"STYLE\",\"OPTION\"].includes(node.parentElement?.tagName))continue;\n      const source=originalText.get(node) || node.nodeValue;originalText.set(node,source);\n      const translated=window.RC_ORDERA_OFFLINE_I18N.translate(source.trim(),language);\n      if(translated)node.nodeValue=translated;\n    }\n  }\n  if(selector){selector.value=language;selector.addEventListener(\"change\",()=>{\n    if(!languages.has(selector.value))return;language=selector.value;\n    try{localStorage.setItem(\"rincon_colombiano_app_language\",language);}catch{}\n    applyLanguage();\n  });}\n",
+        "afterByteOffset": 332
+      },
+      {
+        "before": "",
+        "after": "  applyLanguage();\n",
+        "afterByteOffset": 2858
+      },
+      {
+        "before": "",
+        "after": "    applyLanguage();\n",
+        "afterByteOffset": 3555
+      },
+      {
+        "before": "      const client = window.supabase.createClient(\n",
+        "after": "      const client = statusClient ||= window.supabase.createClient(\n",
+        "afterByteOffset": 4056
+      },
+      {
+        "before": "            autoRefreshToken: true\n",
+        "after": "            autoRefreshToken: false\n",
+        "afterByteOffset": 4230
+      },
+      {
+        "before": "",
+        "after": "          signal: AbortSignal.timeout(10000),\n",
+        "afterByteOffset": 4859
+      },
+      {
+        "before": "",
+        "after": "      const current = await client.auth.getSession();\n      if (current.error || current.data?.session?.access_token !== token) throw new Error(\"LOGIN_REQUIRED\");\n",
+        "afterByteOffset": 5163
+      },
+      {
+        "before": "",
+        "after": "      applyLanguage();\n",
+        "afterByteOffset": 7022
+      }
+    ]
+  },
+  "offline-i18n.js": {
+    "sha256": "62e30f2cd8133f9f96f92de6356e4b0de8d48225f51e6a051e824f2f03d3b584",
+    "regressionTests": "tests/hardening/frontend.test.mjs",
+    "edits": [
+      {
+        "before": "",
+        "after": "    [\"integration.centre.00\", \"RC ORDERA | Centro de Integraciones\", \"RC ORDERA | Centrum integracji\", \"RC ORDERA | Integration centre\"],\n    [\"integration.centre.01\", \"← Volver al restaurante\", \"← Powrót do restauracji\", \"← Back to restaurant\"],\n    [\"integration.centre.02\", \"Idioma\", \"Język\", \"Language\"],\n    [\"integration.centre.03\", \"Centro de Integraciones\", \"Centrum integracji\", \"Integration centre\"],\n    [\"integration.centre.04\", \"Gestiona desde un solo lugar la preparación de dispositivos fiscales, plataformas de reparto y sistemas de pago.\", \"Przygotuj w jednym miejscu urządzenia fiskalne, platformy dostaw i systemy płatności.\", \"Prepare fiscal devices, delivery platforms and payment systems in one place.\"],\n    [\"integration.centre.05\", \"VERSIÓN DE PREPARACIÓN: Esta pantalla no muestra conexiones en tiempo real ni concede acceso administrativo. Las operaciones sensibles permanecerán bloqueadas hasta integrar autenticación, autorización y servicios verificados. No introduzcas claves ni credenciales aquí.\", \"WERSJA PRZYGOTOWAWCZA: Ten ekran nie pokazuje połączeń w czasie rzeczywistym ani nie nadaje uprawnień administracyjnych. Operacje wrażliwe pozostają zablokowane do czasu zweryfikowania usług i uprawnień. Nie wpisuj tutaj kluczy ani danych uwierzytelniających.\", \"PREPARATION VERSION: This screen does not show live connections or grant administrative access. Sensitive operations remain blocked until services and permissions are verified. Do not enter keys or credentials here.\"],\n    [\"integration.centre.06\", \"Impresora fiscal\", \"Drukarka fiskalna\", \"Fiscal printer\"],\n    [\"integration.centre.07\", \"Por conectar\", \"Do podłączenia\", \"Awaiting connection\"],\n    [\"integration.centre.08\", \"Apps de reparto\", \"Platformy dostaw\", \"Delivery platforms\"],\n    [\"integration.centre.09\", \"5 previstas\", \"5 planowanych\", \"5 planned\"],\n    [\"integration.centre.10\", \"Pagos\", \"Płatności\", \"Payments\"],\n    [\"integration.centre.11\", \"Por verificar\", \"Do weryfikacji\", \"Awaiting verification\"],\n    [\"integration.centre.12\", \"🧾 Fiscal\", \"🧾 Fiskalne\", \"🧾 Fiscal\"],\n    [\"integration.centre.13\", \"🛵 Reparto\", \"🛵 Dostawy\", \"🛵 Delivery\"],\n    [\"integration.centre.14\", \"💳 Pagos\", \"💳 Płatności\", \"💳 Payments\"],\n    [\"integration.centre.15\", \"Dispositivos fiscales\", \"Urządzenia fiskalne\", \"Fiscal devices\"],\n    [\"integration.centre.16\", \"Preparación para POSNET y otros fabricantes.\", \"Przygotowanie do POSNET i innych producentów.\", \"Preparation for POSNET and other manufacturers.\"],\n    [\"integration.centre.17\", \"Sin conexión verificada\", \"Brak zweryfikowanego połączenia\", \"No verified connection\"],\n    [\"integration.centre.18\", \"Impresora principal\", \"Główna drukarka\", \"Primary printer\"],\n    [\"integration.centre.19\", \"No configurada\", \"Nie skonfigurowano\", \"Not configured\"],\n    [\"integration.centre.20\", \"POSNET · Modelo, firmware y protocolo pendientes de identificación.\", \"POSNET · Model, oprogramowanie i protokół wymagają identyfikacji.\", \"POSNET · Model, firmware and protocol await identification.\"],\n    [\"integration.centre.21\", \"Configurar\", \"Konfiguruj\", \"Configure\"],\n    [\"integration.centre.22\", \"Probar conexión\", \"Testuj połączenie\", \"Test connection\"],\n    [\"integration.centre.23\", \"Consultar estado\", \"Sprawdź status\", \"Check status\"],\n    [\"integration.centre.24\", \"Operaciones fiscales\", \"Operacje fiskalne\", \"Fiscal operations\"],\n    [\"integration.centre.25\", \"Bloqueadas\", \"Zablokowane\", \"Blocked\"],\n    [\"integration.centre.26\", \"Emisión, seguimiento, conciliación y protección frente a duplicados.\", \"Wydruk, śledzenie, uzgadnianie i ochrona przed duplikatami.\", \"Issuing, tracking, reconciliation and duplicate prevention.\"],\n    [\"integration.centre.27\", \"Imprimir recibo\", \"Drukuj paragon\", \"Print receipt\"],\n    [\"integration.centre.28\", \"Conciliar\", \"Uzgodnij\", \"Reconcile\"],\n    [\"integration.centre.29\", \"Ver historial\", \"Zobacz historię\", \"View history\"],\n    [\"integration.centre.30\", \"Identidad autenticada de cada dispositivo\", \"Uwierzytelniona tożsamość każdego urządzenia\", \"Authenticated identity for each device\"],\n    [\"integration.centre.31\", \"Controlador compatible con el fabricante\", \"Sterownik zgodny z producentem\", \"Manufacturer-compatible driver\"],\n    [\"integration.centre.32\", \"Configuración VAT verificada\", \"Zweryfikowana konfiguracja VAT\", \"Verified VAT configuration\"],\n    [\"integration.centre.33\", \"Operaciones persistentes e idempotentes\", \"Trwałe i idempotentne operacje\", \"Persistent and idempotent operations\"],\n    [\"integration.centre.34\", \"Conciliación segura de estados desconocidos\", \"Bezpieczne uzgadnianie nieznanych stanów\", \"Safe reconciliation of unknown states\"],\n    [\"integration.centre.35\", \"Plataformas de reparto\", \"Platformy dostaw\", \"Delivery platforms\"],\n    [\"integration.centre.36\", \"Cinco proveedores, una única operación.\", \"Pięciu dostawców, jeden system operacyjny.\", \"Five providers, one operational system.\"],\n    [\"integration.centre.37\", \"Conexiones pendientes\", \"Połączenia oczekujące\", \"Connections pending\"],\n    [\"integration.centre.38\", \"Autenticación oficial de cada proveedor\", \"Oficjalne uwierzytelnianie każdego dostawcy\", \"Official authentication for each provider\"],\n    [\"integration.centre.39\", \"Mapeo de productos e impuestos\", \"Mapowanie produktów i podatków\", \"Product and tax mapping\"],\n    [\"integration.centre.40\", \"Prevención de pedidos duplicados\", \"Zapobieganie duplikatom zamówień\", \"Duplicate order prevention\"],\n    [\"integration.centre.41\", \"Sincronización de estados de cocina y entrega\", \"Synchronizacja statusów kuchni i dostawy\", \"Kitchen and delivery status synchronization\"],\n    [\"integration.centre.42\", \"Conciliación de pagos y comisiones\", \"Uzgadnianie płatności i prowizji\", \"Payment and commission reconciliation\"],\n    [\"integration.centre.43\", \"Pagos y liquidaciones\", \"Płatności i rozliczenia\", \"Payments and settlements\"],\n    [\"integration.centre.44\", \"Control de cobros, devoluciones y saldos.\", \"Kontrola płatności, zwrotów i sald.\", \"Track charges, refunds and balances.\"],\n    [\"integration.centre.45\", \"Verificación pendiente\", \"Oczekuje na weryfikację\", \"Verification pending\"],\n    [\"integration.centre.46\", \"Checkout, webhooks, confirmaciones y liquidaciones.\", \"Checkout, webhooki, potwierdzenia i rozliczenia.\", \"Checkout, webhooks, confirmations and settlements.\"],\n    [\"integration.centre.47\", \"Ver transacciones\", \"Zobacz transakcje\", \"View transactions\"],\n    [\"integration.centre.48\", \"Método de pago sujeto a disponibilidad y configuración del proveedor.\", \"Metoda płatności zależy od dostępności i konfiguracji dostawcy.\", \"Payment method subject to provider availability and configuration.\"],\n    [\"integration.centre.49\", \"Verificar disponibilidad\", \"Sprawdź dostępność\", \"Check availability\"],\n    [\"integration.centre.50\", \"Reembolsos\", \"Zwroty\", \"Refunds\"],\n    [\"integration.centre.51\", \"Reversión, seguimiento y conciliación de operaciones.\", \"Odwracanie, śledzenie i uzgadnianie operacji.\", \"Reversal, tracking and reconciliation of operations.\"],\n    [\"integration.centre.52\", \"Consultar reembolsos\", \"Sprawdź zwroty\", \"Check refunds\"],\n    [\"integration.centre.53\", \"Contabilidad\", \"Księgowość\", \"Accounting\"],\n    [\"integration.centre.54\", \"Ventas, importes, comisiones e impuestos consistentes entre los sistemas.\", \"Spójne dane sprzedaży, kwot, prowizji i podatków między systemami.\", \"Consistent sales, amounts, commissions and taxes across systems.\"],\n    [\"integration.centre.55\", \"Ver informes\", \"Zobacz raporty\", \"View reports\"],\n    [\"integration.centre.56\", \"RC ORDERA · Arquitectura multi-restaurante · Preparación de integraciones\", \"RC ORDERA · Architektura wielu restauracji · Przygotowanie integracji\", \"RC ORDERA · Multi-restaurant architecture · Integration preparation\"],\n    [\"integration.centre.57\", \"No verificado\", \"Niezweryfikowane\", \"Unverified\"],\n    [\"integration.centre.58\", \"Conexión oficial, pedidos, estados y conciliación pendientes de verificar.\", \"Oficjalne połączenie, zamówienia, statusy i uzgadnianie wymagają weryfikacji.\", \"Official connection, orders, statuses and reconciliation await verification.\"],\n    [\"integration.centre.59\", \"Sincronizar pedidos\", \"Synchronizuj zamówienia\", \"Synchronize orders\"],\n    [\"integration.centre.60\", \"Diagnóstico del sistema\", \"Diagnostyka systemu\", \"System diagnostics\"],\n    [\"integration.centre.61\", \"Consulta manual. No se realizan conexiones automáticas.\", \"Sprawdzanie ręczne. Brak automatycznych połączeń.\", \"Manual check. No automatic connections are made.\"],\n    [\"integration.centre.62\", \"Consultando información del servidor...\", \"Pobieranie informacji z serwera...\", \"Loading server information...\"],\n    [\"integration.centre.63\", \"Dispositivos registrados:\", \"Zarejestrowane urządzenia:\", \"Registered devices:\"],\n    [\"integration.centre.64\", \"Operaciones fiscales por conciliar:\", \"Operacje fiskalne do uzgodnienia:\", \"Fiscal operations to reconcile:\"],\n    [\"integration.centre.65\", \"Pedidos externos por revisar:\", \"Zamówienia zewnętrzne do sprawdzenia:\", \"External orders awaiting review:\"],\n    [\"integration.centre.66\", \"Impresión fiscal:\", \"Wydruk fiskalny:\", \"Fiscal printing:\"],\n    [\"integration.centre.67\", \"No autorizada\", \"Brak autoryzacji\", \"Not authorized\"],\n    [\"integration.centre.68\", \"Conectores de reparto:\", \"Integracje dostaw:\", \"Delivery connectors:\"],\n    [\"integration.centre.69\", \"No verificados\", \"Niezweryfikowane\", \"Unverified\"],\n    [\"integration.centre.70\", \"Stripe y BLIK:\", \"Stripe i BLIK:\", \"Stripe and BLIK:\"],\n    [\"integration.centre.71\", \"Diagnóstico consultado correctamente. Los controles operativos permanecen bloqueados.\", \"Diagnostyka pobrana poprawnie. Funkcje operacyjne pozostają zablokowane.\", \"Diagnostics loaded successfully. Operational controls remain blocked.\"],\n    [\"integration.centre.72\", \"Inicia sesión en RC ORDERA para consultar el estado.\", \"Zaloguj się do RC ORDERA, aby sprawdzić status.\", \"Sign in to RC ORDERA to check status.\"],\n    [\"integration.centre.73\", \"No fue posible verificar el estado. Comprueba la sesión y el despliegue del servicio.\", \"Nie udało się sprawdzić statusu. Sprawdź sesję i wdrożenie usługi.\", \"Could not verify status. Check your session and service deployment.\"],\n",
+        "afterByteOffset": 32
+      },
+      {
+        "before": "",
+        "after": "    [\"menu.vat\", \"IVA del producto\", \"Stawka VAT produktu\", \"Product VAT rate\"],\n    [\"menu.vatInherit\", \"Heredar del restaurante\", \"Dziedzicz z restauracji\", \"Inherit from restaurant\"],\n    [\"qr.localError\", \"No se pudo generar el QR. Copia el enlace o vuelve a intentarlo.\", \"Nie udało się wygenerować kodu QR. Skopiuj link lub spróbuj ponownie.\", \"Could not generate the QR code. Copy the link or try again.\"],\n    [\"menu.vatNP\", \"No sujeto (NP)\", \"Nie podlega (NP)\", \"Not taxable (NP)\"],\n    [\"menu.vatNPI\", \"No sujeto (NP I)\", \"Nie podlega (NP I)\", \"Not taxable (NP I)\"],\n    [\"menu.vatNPII\", \"No sujeto (NP II)\", \"Nie podlega (NP II)\", \"Not taxable (NP II)\"],\n    [\"menu.vatUnknown\", \"IVA sin verificar: revisar\", \"VAT niezweryfikowany: sprawdź\", \"Unverified VAT: review\"],\n    [\"menu.vatReview\", \"Revisa la categoría de IVA antes de guardar.\", \"Sprawdź kategorię VAT przed zapisaniem.\", \"Review the VAT category before saving.\"],\n    [\"menu.vatExempt\", \"Exento (ZW)\", \"Zwolniony (ZW)\", \"Exempt (ZW)\"],\n    [\"menu.vatDefault\", \"IVA por defecto del restaurante\", \"Domyślna stawka VAT restauracji\", \"Restaurant default VAT rate\"],\n    [\"menu.vatDefaultNone\", \"Sin definir\", \"Nie określono\", \"Not set\"],\n",
+        "afterByteOffset": 33123
+      }
+    ]
+  },
+  "service-worker.js": {
+    "sha256": "941b4f6f18b46cf79221b7067aa4aaafbc12ed1453619665a99abb0bc5ac17c8",
+    "regressionTests": "tests/hardening/frontend.test.mjs",
+    "edits": [
+      {
+        "before": "const CACHE_NAME = \"rc-ordera-v91-0-4-offline-r4-products-closures\";\n",
+        "after": "const CACHE_NAME = \"rc-ordera-v91-0-4-v6-verified-20261010\";\r\n",
+        "afterByteOffset": 0
+      },
+      {
+        "before": "",
+        "after": "  \"./vendor/qrcode-generator-2.0.4.js\",\r\n  \"./local-qr.js\",\r\n",
+        "afterByteOffset": 443
+      }
+    ]
+  },
+  "app.js": {
+    "sha256": "5307d9a1400eaace611e2aa21e477a2d4aac8d170113cc1c256da67f479c1fd5",
+    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs",
+    "edits": [
+      {
+        "before": "",
+        "after": "  defaultVatRate: \"rc_ordera_default_vat_rate\",\r\n",
+        "afterByteOffset": 1640
+      },
+      {
+        "before": "",
+        "after": "  productVatSelect: document.querySelector(\"#productVatSelect\"),\r\n  restaurantDefaultVatSelect: document.querySelector(\"#restaurantDefaultVatSelect\"),\r\n",
+        "afterByteOffset": 23774
+      },
+      {
+        "before": "",
+        "after": "let defaultVatRate = normalizeVatRate(localStorage.getItem(STORAGE_KEYS.defaultVatRate));\r\n",
+        "afterByteOffset": 29437
+      },
+      {
+        "before": "",
+        "after": "    defaultVatRate,\r\n",
+        "afterByteOffset": 99305
+      },
+      {
+        "before": "",
+        "after": "  localStorage.setItem(STORAGE_KEYS.defaultVatRate, defaultVatRate);\r\n",
+        "afterByteOffset": 115573
+      },
+      {
+        "before": "",
+        "after": "  defaultVatRate = Object.hasOwn(settings, \"defaultVatRate\") ? normalizeVatRate(settings.defaultVatRate) : \"\";\r\n",
+        "afterByteOffset": 118807
+      },
+      {
+        "before": "  elements.qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(link)}`;\r\n",
+        "after": "  try {\r\n    elements.qrImage.src = window.RC_ORDERA_QR.image(link);\r\n  } catch (error) {\r\n    elements.qrImage.removeAttribute(\"src\");\r\n    elements.qrHint.textContent = (window.RC_ORDERA_OFFLINE_I18N?.translate(\"No se pudo generar el QR. Copia el enlace o vuelve a intentarlo.\", currentAppLanguage()) || \"No se pudo generar el QR. Copia el enlace o vuelve a intentarlo.\");\r\n    return;\r\n  }\r\n",
+        "afterByteOffset": 267534
+      },
+      {
+        "before": "",
+        "after": "}\r\n\r\n// Tasas de IVA admitidas (Polonia): \"23\", \"8\", \"5\", \"0\" y \"ZW\" (exento). Devuelve \"\" si no es válida.\r\n// Una tasa vacía significa \"heredar del restaurante\": la clave vatRate NO se guarda en el plato.\r\nfunction normalizeVatRate(value) {\r\n  // Fiscal device letters require its verified PTU configuration; never infer a tax category.\r\n  const raw = String(value ?? \"\").trim().toUpperCase().replace(/^VAT[_\\s-]*/, \"\").replace(/\\s*%$/, \"\").replace(/\\s+/g, \" \");\r\n  return [\"23\", \"8\", \"5\", \"0\", \"ZW\", \"NP\", \"NP I\", \"NP II\"].includes(raw) ? raw : \"\";\r\n}\r\nfunction menuVatSnapshot(dish) {\r\n  const field = Object.hasOwn(dish || {}, \"vatRate\") ? \"vatRate\"\r\n    : Object.hasOwn(dish || {}, \"vat_rate\") ? \"vat_rate\" : null;\r\n  if (!field) return {};\r\n  const value = dish[field];\r\n  // Preserve an explicitly unknown category: it must not inherit a different restaurant default.\r\n  return { vatRate: normalizeVatRate(value) || value };\r\n",
+        "afterByteOffset": 272740
+      },
+      {
+        "before": "",
+        "after": "          ...menuVatSnapshot(dish),\r\n",
+        "afterByteOffset": 339955
+      },
+      {
+        "before": "",
+        "after": "  if (elements.restaurantDefaultVatSelect) elements.restaurantDefaultVatSelect.value = defaultVatRate;\r\n",
+        "afterByteOffset": 390915
+      },
+      {
+        "before": "",
+        "after": "  if (elements.productVatSelect) elements.productVatSelect.value = \"\";\r\n",
+        "afterByteOffset": 392167
+      },
+      {
+        "before": "",
+        "after": "  const vatSelection = elements.productVatSelect?.value || \"\";\r\n  const vatRate = normalizeVatRate(vatSelection);\r\n  if (vatSelection && !vatRate) {\r\n    alert((window.RC_ORDERA_OFFLINE_I18N?.translate(\"Revisa la categoría de IVA antes de guardar.\", currentAppLanguage()) || \"Revisa la categoría de IVA antes de guardar.\"));\r\n    return;\r\n  }\r\n",
+        "afterByteOffset": 399047
+      },
+      {
+        "before": "",
+        "after": "      ...(vatRate ? { vatRate } : {}),\r\n",
+        "afterByteOffset": 400666
+      },
+      {
+        "before": "",
+        "after": "  }\r\n  if (elements.productVatSelect) {\r\n    const explicit = Object.hasOwn(product, \"vatRate\") || Object.hasOwn(product, \"vat_rate\");\r\n    const category = normalizeVatRate(product.vatRate ?? product.vat_rate);\r\n    elements.productVatSelect.value = explicit && !category ? \"__unverified__\" : category;\r\n",
+        "afterByteOffset": 403006
+      },
+      {
+        "before": "",
+        "after": "elements.restaurantDefaultVatSelect?.addEventListener(\"change\", async () => {\r\n  defaultVatRate = normalizeVatRate(elements.restaurantDefaultVatSelect.value);\r\n  localStoreCurrentSettings();\r\n  await saveSettingsWhenPossible();\r\n});\r\n",
+        "afterByteOffset": 493227
+      }
+    ]
+  },
+  "restaurante.html": {
+    "sha256": "4f4295584e7c7dabf8f574c432a5c392825e704d2d2ae2daa969d8717158ab1d",
+    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs",
+    "edits": [
+      {
+        "before": "",
+        "after": "              <label>\n                IVA del producto\n                <select id=\"productVatSelect\">\n                  <option value=\"__unverified__\" disabled>IVA sin verificar: revisar</option>\n                  <option value=\"\">Heredar del restaurante</option>\n                  <option value=\"23\">23 %</option>\n                  <option value=\"8\">8 %</option>\n                  <option value=\"5\">5 %</option>\n                  <option value=\"0\">0 %</option>\n                  <option value=\"ZW\">Exento (ZW)</option>\n                  <option value=\"NP\">No sujeto (NP)</option>\n                  <option value=\"NP I\">No sujeto (NP I)</option>\n                  <option value=\"NP II\">No sujeto (NP II)</option>\n                </select>\n              </label>\n              <label>\n                IVA por defecto del restaurante\n                <select id=\"restaurantDefaultVatSelect\">\n                  <option value=\"\">Sin definir</option>\n                  <option value=\"23\">23 %</option>\n                  <option value=\"8\">8 %</option>\n                  <option value=\"5\">5 %</option>\n                  <option value=\"0\">0 %</option>\n                  <option value=\"ZW\">Exento (ZW)</option>\n                  <option value=\"NP\">No sujeto (NP)</option>\n                  <option value=\"NP I\">No sujeto (NP I)</option>\n                  <option value=\"NP II\">No sujeto (NP II)</option>\n                </select>\n              </label>\n",
+        "afterByteOffset": 30174
+      },
+      {
+        "before": "",
+        "after": "    <script src=\"vendor/qrcode-generator-2.0.4.js\"></script>\n    <script src=\"local-qr.js\"></script>\n",
+        "afterByteOffset": 47225
+      }
+    ]
+  }
+}

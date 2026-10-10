@@ -42,6 +42,12 @@ jobs:
           node --check auto-translate.js
           node --check offline-i18n.js
 
+      - name: Audit locked dependencies including build tools
+        run: npm audit --audit-level=moderate
+
+      - name: Assert distribution matches committed sources
+        run: npm run qa:policy
+
       - name: Run static QA
         run: npm run qa
         timeout-minutes: 8
@@ -49,8 +55,14 @@ jobs:
       - name: Run i18n QA
         run: npm run qa:i18n
 
+      - name: Verify integration harness availability
+        run: npm run qa:integration
+
       - name: Prepare Android web runtime
-        run: npm run android:prepare-web
+        run: |
+          npm run android:prepare-web
+          git diff --exit-code -- www/
+
 
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
@@ -61,3 +73,4 @@ jobs:
         timeout-minutes: 8
         env:
           CI: "true"
+          RC_E2E_FULL_MATRIX: "1"
