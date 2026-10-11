@@ -136,6 +136,7 @@ async function stripeRequest(
       {
         ...init,
         headers,
+        redirect: "error",
         signal:
           AbortSignal.timeout(
             STRIPE_TIMEOUT_MS,
