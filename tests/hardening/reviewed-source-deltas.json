@@ -67,7 +67,7 @@
     ]
   },
   "centro-integraciones-status.js": {
-    "sha256": "d2c7580ad61b74a8744fe9a2d7410fba60e848d41e0dcef04226051f0419b87b",
+    "sha256": "d20ae59578575184633913b8035a405ed2025707c3fbdd91ce5b9965bf43c830",
     "regressionTests": "tests/hardening/frontend.test.mjs",
     "edits": [
       {
@@ -109,6 +109,11 @@
         "before": "",
         "after": "      applyLanguage();\n",
         "afterByteOffset": 7022
+      },
+      {
+        "before": "persistSession: true,\n            autoRefreshToken: false",
+        "after": "persistSession: true,\n            autoRefreshToken: false,\n            detectSessionInUrl: false,\n            storageKey: \"rc-ordera-restaurant-auth\"",
+        "afterByteOffset": 4208
       }
     ]
   },
