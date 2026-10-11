@@ -105,6 +105,39 @@ function isValidCheckoutSessionId(
   );
 }
 
+// A missing or untrusted Content-Length must never bypass the actual body cap.
+// This protects memory before an authenticated cancellation touches any order.
+async function readCancellationBody(request: Request): Promise<Record<string, unknown>> {
+  const reader = request.body?.getReader();
+  if (!reader) throw new SyntaxError("INVALID_BODY");
+  let total = 0;
+  const chunks: Uint8Array[] = [];
+  try {
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      if (!value) continue;
+      total += value.byteLength;
+      if (total > MAX_REQUEST_BYTES) {
+        void reader.cancel("BODY_TOO_LARGE").catch(() => {});
+        throw new RangeError("BODY_TOO_LARGE");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  const value: unknown = JSON.parse(new TextDecoder("utf-8", {fatal: true}).decode(bytes));
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new SyntaxError("INVALID_BODY");
+  return value as Record<string, unknown>;
+}
+
 async function readJsonSafe(
   result: Response,
 ) {
@@ -395,27 +428,13 @@ Deno.serve(withCors(
       );
     }
 
-    const declaredLength =
-      Number(
-        request.headers.get(
-          "content-length",
-        ) || "0",
-      );
-
-    if (
-      Number.isFinite(
-        declaredLength,
-      ) &&
-      declaredLength >
-        MAX_REQUEST_BYTES
-    ) {
-      return response(
-        413,
-        {
-          error:
-            "Payload too large",
-        },
-      );
+    const lengthHeader = request.headers.get("content-length");
+    if (lengthHeader !== null && (!/^\d+$/.test(lengthHeader) ||
+      !Number.isSafeInteger(Number(lengthHeader)))) {
+      return response(400, {error: "Invalid Content-Length"});
+    }
+    if (lengthHeader !== null && Number(lengthHeader) > MAX_REQUEST_BYTES) {
+      return response(413, {error: "Payload too large"});
     }
 
     const authorization =
@@ -518,22 +537,14 @@ Deno.serve(withCors(
       );
     }
 
-    let payload: {
-      orderId?: string;
-      reason?: string;
-    } = {};
-
+    let payload: {orderId?: string; reason?: string} = {};
     try {
-      payload =
-        await request.json();
-    } catch {
-      return response(
-        400,
-        {
-          error:
-            "Invalid request",
-        },
-      );
+      payload = await readCancellationBody(request);
+    } catch (error) {
+      if (error instanceof RangeError && error.message === "BODY_TOO_LARGE") {
+        return response(413, {error: "Payload too large"});
+      }
+      return response(400, {error: "Invalid request"});
     }
 
     const orderId =
