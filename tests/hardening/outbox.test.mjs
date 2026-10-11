@@ -50,3 +50,35 @@ test('100 ticks on one instance coalesce; fresh lease timestamp for each sequent
  for(let i=0;i<3;i++)await b.enqueue({provider:'wolt',orderId:'fresh-'+i,action:'accept'});
  const results=await Promise.all(Array.from({length:100},()=>b.tick()));assert.equal(n,3);assert.ok(results.every(r=>r.sent===3));assert.deepEqual(leases,[1000,3000,5000]);
 });
+
+test('deferred accept cannot starve executable cancel in a one-row SQL batch',async()=>{
+ const s=store(),b=box(s),now=Date.now(),id=randomUUID();
+ const ready=await b.enqueue({provider:'wolt',orderId:id,action:'ready'});
+ const accept=await b.enqueue({provider:'wolt',orderId:id,action:'accept'});
+ const owned=await s.claim(accept.id,'owner',now+100,30000);
+ await s.finish({...owned,state:'pending',nextAttemptAt:now+60000},'owner');
+ const cancel=await b.enqueue({provider:'wolt',orderId:'cancel-'+id,action:'cancel'});
+ const page=await s.due(now+1000,1);
+ assert.equal(page[0].id,cancel.id);assert.equal(await s.claim(ready.id,'blocked',now+1000,30000),null);
+});
+test('processing accept cannot consume ready slot; ready appears once accept confirmed',async()=>{
+ const s=store(),b=box(s),now=Date.now(),id=randomUUID();
+ const ready=await b.enqueue({provider:'glovo',orderId:id,action:'ready'});
+ const accept=await b.enqueue({provider:'glovo',orderId:id,action:'accept'});
+ const owned=await s.claim(accept.id,'owner',now+100,30000);
+ assert.ok(!(await s.due(now+1000,500)).some(e=>e.id===ready.id));
+ await s.finish({...owned,state:'sent'},'owner');
+ assert.ok((await s.due(now+1000,500)).some(e=>e.id===ready.id));
+});
+test('memory queue matches dependency filtering and preserves executable commands',async()=>{
+ const s=new MemoryOutboxStore(),b=new DeliveryOutbox({store:s,registry,simulationOnly:true,now:()=>1000,fetchImpl:async()=>({ok:true})});
+ const ready=await b.enqueue({provider:'wolt',orderId:'delayed',action:'ready'});
+ const accept=await b.enqueue({provider:'wolt',orderId:'delayed',action:'accept'});
+ const owned=await s.claim(accept.id,'owner',1000,30000);
+ assert.ok(!(await s.due(1000,500)).some(e=>e.id===ready.id));
+ await s.finish({...owned,state:'pending',nextAttemptAt:2000},'owner');
+ const cancel=await b.enqueue({provider:'wolt',orderId:'other',action:'cancel'});
+ assert.equal((await s.due(1000,1))[0].id,cancel.id);
+ assert.equal(await s.claim(ready.id,'blocked',1000,30000),null);
+ assert.ok((await s.due(2000,500)).some(e=>e.id===ready.id));
+});

@@ -25,7 +25,8 @@ export class PostgresOutboxStore {
       and (entry->>'action'<>'ready' or exists(select 1 from public.rc_delivery_outbox_v5 accepted
         where accepted.restaurant_user_id=$1 and accepted.entry->>'provider'=rc_delivery_outbox_v5.entry->>'provider'
         and accepted.entry->>'orderId'=rc_delivery_outbox_v5.entry->>'orderId'
-        and accepted.entry->>'action'='accept' and accepted.entry->>'state' in ('sent','pending','processing')))
+        and accepted.entry->>'action'='accept' and (accepted.entry->>'state'='sent'
+          or (accepted.entry->>'state'='pending' and (accepted.entry->>'nextAttemptAt')::bigint <= $2))))
       order by case entry->>'action' when 'accept' then 0 when 'reject' then 0 when 'ready' then 1 when 'delivered' then 2 else 9 end,
       (entry->>'createdAt')::bigint,id limit $3`,[this.restaurantId,now,limit,blockedProviders])).rows.map(r=>r.entry);
   }

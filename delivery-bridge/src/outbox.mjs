@@ -18,7 +18,7 @@ export class MemoryOutboxStore {
   }
   async due(now,limit=100,blockedProviders=[]) {
     return [...this.#m.values()].filter(e=>e.state==='pending'&&e.nextAttemptAt<=now&&!blockedProviders.includes(e.provider)
-      &&(e.action!=='ready'||[...this.#m.values()].some(a=>a.restaurantId===e.restaurantId&&a.provider===e.provider&&a.orderId===e.orderId&&a.action==='accept'&&['sent','pending','processing'].includes(a.state))))
+      &&(e.action!=='ready'||[...this.#m.values()].some(a=>a.restaurantId===e.restaurantId&&a.provider===e.provider&&a.orderId===e.orderId&&a.action==='accept'&&(a.state==='sent'||(a.state==='pending'&&a.nextAttemptAt<=now)))))
       .sort((a,b)=>PRECEDENCE[a.action]-PRECEDENCE[b.action]||a.createdAt-b.createdAt||a.id.localeCompare(b.id)).slice(0,limit).map(copy);
   }
   async insert(e) { if (this.#m.has(e.id)) return false; this.#m.set(e.id,copy(e)); this.events.push({id:e.id,type:'enqueued'}); return true; }
