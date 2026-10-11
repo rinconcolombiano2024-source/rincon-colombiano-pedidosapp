@@ -11,5 +11,9 @@ export function toGrosz(value) {
   if (!Number.isSafeInteger(n)) throw new AccountingError("MONEY_OVERFLOW", "Amount exceeds safe range");
   return m[1] ? -n : n;
 }
-export const fromGrosz = (g) => `${g < 0 ? "-" : ""}${Math.floor(Math.abs(g) / 100)}.${String(Math.abs(g) % 100).padStart(2, "0")}`;
+export function fromGrosz(g) {
+  if (!Number.isSafeInteger(g)) throw new AccountingError("INVALID_MONEY", "Minor units must be a safe integer");
+  const units = BigInt(g), absolute = units < 0n ? -units : units;
+  return `${units < 0n ? "-" : ""}${absolute / 100n}.${String(absolute % 100n).padStart(2, "0")}`;
+}
 export const sum = (arr, f = (x) => x) => arr.reduce((a, x) => { const n = a + f(x); if (!Number.isSafeInteger(n)) throw new AccountingError("MONEY_OVERFLOW", "Unsafe total"); return n; }, 0);

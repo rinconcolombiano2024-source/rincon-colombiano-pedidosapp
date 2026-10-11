@@ -6,10 +6,24 @@ export function fromCustomerOrderRow(row) {
   function quantity(i) {
     const n = Number(i.quantity ?? i.qty ?? 1);
     if (!Number.isSafeInteger(n) || n < 1 || n > 999) throw new AccountingError("INVALID_QUANTITY", "Invalid item quantity");
+    if (i.quantity != null && i.qty != null && Number(i.quantity) !== Number(i.qty))
+      throw new AccountingError("INVALID_QUANTITY", "Conflicting quantity aliases");
     return n;
   }
+  function lineTotal(i) {
+    if (i.total_snapshot != null) {
+      const total = toGrosz(i.total_snapshot);
+      if (total < 0) throw new AccountingError("INVALID_MONEY", "Negative item total");
+      return fromGrosz(total);
+    }
+    const price = i.unit_price_snapshot ?? i.price;
+    if (price == null) throw new AccountingError("INVALID_MONEY", "Missing item price and total snapshot");
+    const unit = toGrosz(price);
+    if (unit < 0) throw new AccountingError("INVALID_MONEY", "Negative item price");
+    return fromGrosz(unit * quantity(i));
+  }
   const items = Array.isArray(j.items) ? j.items.map((i) => ({
-    lineTotal: i.total_snapshot ?? fromGrosz(toGrosz(i.unit_price_snapshot ?? i.price ?? 0) * quantity(i)),
+    lineTotal: lineTotal(i),
     productId: i.product_id ?? i.productId ?? null,
     quantity: quantity(i),
     vatRate: i.vat_rate_snapshot ?? null,

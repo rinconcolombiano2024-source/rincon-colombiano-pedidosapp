@@ -1,3 +1,5 @@
+> Última revisión: QA-TERCERA-MEJORA-20261011.md; 387 pruebas locales. CI de la segunda mejora aprobado. Hardware, servicios comerciales y pruebas reales siguen pendientes.
+
 > Actualización 2026-10-11: consultar QA-SEGUNDA-MEJORA-20261011.md. La tabla siguiente conserva el contexto anterior. El borrador anterior 0350440 aprobó dos ejecuciones CI; esto no certifica conexiones externas. Diagnóstico autenticado de integraciones probado por el propietario. Supabase producción no recibió la migración compatible.
 
 > Informe de consolidación V5 anterior. Estado actual y correcciones: HARDENING-REPORT.md y QA-REPORT.md. Las cifras anteriores son históricas; conexiones externas siguen pendientes.

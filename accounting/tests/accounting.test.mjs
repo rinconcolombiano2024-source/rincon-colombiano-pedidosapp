@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { toGrosz, fromGrosz } from "../src/money.mjs";
+import { toGrosz, fromGrosz, AccountingError } from "../src/money.mjs";
 import { splitGross, vatSummary, normalizeRate } from "../src/vat.mjs";
 import { buildDailyClose, localDate } from "../src/daily-close.mjs";
 import { buildMonthlyClose } from "../src/monthly-close.mjs";
@@ -144,4 +144,22 @@ test("Supabase payment adapter preserves refund amount through reconciliation", 
  assert.equal(p.refunded_amount,"10.00");
  assert.equal(reconcileProvider([p],[{reference:"pi",amount:"40.00",currency:"PLN"}]).ok,true);
  assert.equal(reconcileProvider([p],[{reference:"pi",amount:"50.00",currency:"PLN"}]).ok,false);
+});
+
+test("minor unit formatting rejects fractional/nonfinite/unsafe inputs and preserves boundaries", () => {
+ for (const value of [1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER+1, "100", null])
+  assert.throws(() => fromGrosz(value), {code:"INVALID_MONEY"});
+ assert.equal(fromGrosz(Number.MAX_SAFE_INTEGER),"90071992547409.91");
+ assert.equal(fromGrosz(-Number.MAX_SAFE_INTEGER),"-90071992547409.91");
+ assert.equal(fromGrosz(-0),"0.00");
+});
+test("adapter rejects missing/negative prices, unsafe multiplication and conflicting quantities", () => {
+ for (const item of [{quantity:2}, {price:"-1.00"}, {total_snapshot:"-1.00"}, {price:"999999999999.99",quantity:999}, {price:"1.00",quantity:2,qty:3}])
+  assert.throws(() => fromCustomerOrderRow({order_json:{items:[item]}}), AccountingError);
+});
+test("adapter preserves explicit zero prices and exact multiple quantities", () => {
+ const adapt = item => fromCustomerOrderRow({order_json:{items:[item]}}).items[0];
+ assert.equal(adapt({price:"0.00",quantity:3}).lineTotal,"0.00");
+ assert.equal(adapt({price:"0.10",quantity:3,qty:"3"}).lineTotal,"0.30");
+ assert.equal(adapt({total_snapshot:"0.00",quantity:1}).lineTotal,"0.00");
 });
