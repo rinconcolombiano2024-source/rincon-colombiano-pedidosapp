@@ -113,7 +113,9 @@ export class DeliveryOutbox {
       req=adapter.buildOutbound(e.action,{...e.payload,orderId:e.orderId});
     } catch(error){return {state:'dead',reason:`build_failed:${error?.code??'ERR'}`};}
     try {
-      const res=await this.#fetch(req.url,{method:req.method,headers:{...req.headers,'idempotency-key':e.id},body:req.body,signal:AbortSignal.timeout(this.#cfg.timeoutMs)});
+      // Never forward operational commands to a redirected endpoint. A rejected
+      // redirect is uncertain: the original endpoint may have applied the command.
+      const res=await this.#fetch(req.url,{redirect:'error',method:req.method,headers:{...req.headers,'idempotency-key':e.id},body:req.body,signal:AbortSignal.timeout(this.#cfg.timeoutMs)});
       if(res.ok)return {state:'sent'};
       // HTTP 409 does not prove acceptance of this command.
       if(res.status===409)return {state:'unknown',reason:'http_409_requires_reconciliation'};

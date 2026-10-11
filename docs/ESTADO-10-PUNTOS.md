@@ -1,13 +1,13 @@
 # Estado de los diez objetivos — 2026-10-11
 
-Última revisión: QA-DECIMOTERCERA-MEJORA-20261011.md. 429 pruebas en primera ejecución completa y una prueba adicional de recuperación aprobada; las verificaciones externas pendientes no se cuentan como aprobadas. Los dos CI de la duodécima mejora aprobaron; comprobar los de esta revisión. Sin porcentaje global de funcionamiento.
+Última revisión: QA-DECIMOCUARTA-MEJORA-20261011.md. 431 pruebas locales aprobadas; las verificaciones externas pendientes no se cuentan como aprobadas. Ambos CI de la decimotercera mejora aprobaron; consultar los del nuevo commit por separado. Sin porcentaje global de funcionamiento.
 
 |Objetivo|Evidencia actual|Pendiente para aprobar producción|
 |---|---|---|
 |1 Pedidos|Idempotencia, cantidades y compatibilidad RPC probadas localmente; controles preservados.|Aplicar únicamente ruta SQL revisada en staging; probar clientes y concurrencia real.|
 |2 POS/cocina/meseros|Módulos conservados y regresiones automatizadas.|Flujo multidispositivo, desconexión y estados con roles reales.|
 |3 Impresora fiscal|UNKNOWN protegido frente a reasignación; conciliación persistida antes de reporte; diario persistente validado y bloqueo ante corrupción; acuses estrictos; simulación identificada.|Modelo POSNET, protocolo oficial, controlador y hardware. SQL fiscal faltante por verificar/aplicar en staging.|
-|4 Reparto externo|Importes externos exactos, adaptadores preparados, outbox SQL atómica; selección evita bloqueo por ready no ejecutable.|Acceso y contratos oficiales, webhooks y workers en staging; concurrencia independiente.|
+|4 Reparto externo|Importes externos exactos, adaptadores preparados, outbox SQL atómica; selección evita bloqueo por ready no ejecutable; redirecciones bloqueadas y resultado incierto sin reenvío automático.|Acceso y contratos oficiales, webhooks y workers en staging; concurrencia independiente.|
 |5 Pagos|Motor Stripe conservado; regresiones simuladas; reembolsos trazables.|Stripe test, webhooks reales de prueba, BLIK elegibilidad y liquidaciones.|
 |6 Contabilidad|Dinero exacto, duplicados, reembolsos netos, snapshots y cantidades auditados.|IVA completo de datos reales, cierres integrales y revisión contable.|
 |7 Repartidores|Módulos GPS/asignación/push conservados.|Móvil real, permisos negativos, recuperación y notificaciones.|
