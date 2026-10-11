@@ -126,7 +126,7 @@ test("conciliación con el proveedor: coincide, faltantes, importe distinto", ()
   assert.equal(reconcileProvider([mkPay("a", "o1", 10)], [{ reference: "pi_a", amount: 10, currency:"PLN" }]).ok, true);
 });
 
-import { fromCustomerOrderRow } from "../src/adapters.mjs";
+import { fromCustomerOrderRow, fromPaymentRow } from "../src/adapters.mjs";
 test("adaptador de filas reales: usa snapshots del RPC V91-70 y métodos de pago de la app", () => {
   const row = { id: "o1", status: "delivered", total: "29.50", currency: "PLN", payment_method: "Pago al recoger", payment_status: "pending",
     created_at: "2026-10-10T10:00:00Z", final_delivery_fee: "5.00",
@@ -137,4 +137,11 @@ test("adaptador de filas reales: usa snapshots del RPC V91-70 y métodos de pago
   assert.equal(c.vat.byRate["8"].gross, 2450); assert.equal(c.vat.byRate["23"].gross, 500); // envío al 23% por defecto
   const old = { ...row, order_json: { items: [{ total_snapshot: 24.5 }] } };
   assert.ok(buildDailyClose({ orders: [fromCustomerOrderRow(old)], payments: [], allocations: [] }, { date: "2026-10-10" }).issues.some((i) => i.code === "VAT_RATE_MISSING"));
+});
+
+test("Supabase payment adapter preserves refund amount through reconciliation", () => {
+ const p = fromPaymentRow({id:"p",customer_order_id:"o",status:"partially_refunded",amount:"50.00",refunded_amount:"10.00",currency:"PLN",provider_reference:"pi"});
+ assert.equal(p.refunded_amount,"10.00");
+ assert.equal(reconcileProvider([p],[{reference:"pi",amount:"40.00",currency:"PLN"}]).ok,true);
+ assert.equal(reconcileProvider([p],[{reference:"pi",amount:"50.00",currency:"PLN"}]).ok,false);
 });

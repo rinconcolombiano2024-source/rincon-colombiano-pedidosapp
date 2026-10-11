@@ -1,4 +1,6 @@
-> Informe de consolidación V5 anterior. Estado actual y correcciones: HARDENING-REPORT.md y QA-REPORT.md. La matriz E2E actual pasa51 ejecuciones; conexiones externas siguen pendientes.
+> Actualización 2026-10-11: consultar QA-SEGUNDA-MEJORA-20261011.md. La tabla siguiente conserva el contexto anterior. El borrador anterior 0350440 aprobó dos ejecuciones CI; esto no certifica conexiones externas. Diagnóstico autenticado de integraciones probado por el propietario. Supabase producción no recibió la migración compatible.
+
+> Informe de consolidación V5 anterior. Estado actual y correcciones: HARDENING-REPORT.md y QA-REPORT.md. Las cifras anteriores son históricas; conexiones externas siguen pendientes.
 
 # Estado verificado de los diez objetivos V5
 

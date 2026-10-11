@@ -100,3 +100,23 @@ test('V5: lost POST acknowledgement, invalid creation response and confirmation 
  test("rejects conflicting numeric VAT mappings before transmission", () => {
   assert.throws(() => taxLetter("23", { "23": "A", "8": "A" }), /Distinct numeric VAT/);
 });
+
+ test("failed HTTP response cannot confirm even with done body; no second command", async () => {
+  const dev = fakeDevice(); const original = dev.fetchImpl;
+  dev.fetchImpl = async (url, init) => {
+    if (init.method === "GET" && new URL(url).pathname === "/api/command/c1")
+      return { ok: false, status: 500, json: async () => ({status: "done", receiptNumber: 77}) };
+    return original(url, init);
+  };
+  const d = mk(dev); await d.connect();
+  assert.equal((await d.printReceipt(receipt())).status, "unknown");
+  assert.equal(dev.log.filter(x => x === "POST /api/command").length, 1);
+});
+test("poll configuration rejects unbounded and invalid work", () => {
+  for (const extra of [{maxPolls: Infinity}, {maxPolls: 101}, {maxPolls: 0}, {pollIntervalMs: 0}, {timeoutMs: 60001}, {sleep: false}])
+    assert.throws(() => mk(fakeDevice(), extra), {code: "NOT_CONFIGURED"});
+});
+test("simulated device status is explicitly marked as non-fiscal", async () => {
+ const d = mk(fakeDevice()); const s = await d.getStatus();
+ assert.equal(s.simulated, true); assert.equal(s.fiscal, false);
+});

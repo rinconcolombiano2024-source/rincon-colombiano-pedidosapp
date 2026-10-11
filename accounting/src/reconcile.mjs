@@ -1,5 +1,6 @@
 import { toGrosz, sum } from "./money.mjs";
 
+/** Single provider rows represent net settlement after refunds; aggregate rows sum signed movements. */
 /** Never collapse duplicate references into a Map: ambiguous groups cannot match. */
 /**
  * aggregateProviderRows (opt-in): el proveedor puede tener VARIAS filas por referencia (cargo, reembolso, ajuste).
@@ -44,8 +45,8 @@ export function reconcileProvider(localPayments, providerRows, { aggregateProvid
     const p = payments[0], r = rows[0];
     if (aggregateProviderRows && new Set(rows.map((x) => String(x.currency ?? '').toUpperCase())).size > 1) { out.currencyMismatch.push(ref); continue; }
     if (!/^[A-Z]{3}$/.test(String(r.currency ?? '').toUpperCase()) || !/^[A-Z]{3}$/.test(String(p.currency ?? '').toUpperCase()) || String(r.currency).toUpperCase() !== String(p.currency).toUpperCase()) { out.currencyMismatch.push(ref); continue; }
-    const gross = toGrosz(p.amount), refund = aggregateProviderRows && p.refunded_amount != null ? toGrosz(p.refunded_amount) : 0;
-    if (gross < 0 || refund < 0 || refund > gross || (aggregateProviderRows && ((p.status === 'paid' && refund !== 0) || (p.status === 'refunded' && refund !== gross) || (p.status === 'partially_refunded' && (refund <= 0 || refund >= gross))))) {
+    const gross = toGrosz(p.amount), refund = p.refunded_amount != null ? toGrosz(p.refunded_amount) : 0;
+    if (gross < 0 || refund < 0 || refund > gross || ((p.status === 'paid' && refund !== 0) || (p.status === 'refunded' && refund !== gross) || (p.status === 'partially_refunded' && (refund <= 0 || refund >= gross)))) {
       out.amountMismatch.push({ ref, reason: 'invalid_local_refund' }); continue;
     }
     const a = sum([gross, -refund]);

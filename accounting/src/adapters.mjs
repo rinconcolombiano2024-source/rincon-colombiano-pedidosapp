@@ -25,4 +25,4 @@ export function fromCustomerOrderRow(row) {
     ...(items ? { items } : {}),
   };
 }
-export const fromPaymentRow = (r) => ({ id: r.id, customer_order_id: r.customer_order_id, status: r.status, amount: r.amount, currency: r.currency, provider_reference: r.provider_reference, paid_at: r.paid_at });
+export const fromPaymentRow = (r) => ({ id: r.id, customer_order_id: r.customer_order_id, status: r.status, amount: r.amount, refunded_amount: r.refunded_amount, currency: r.currency, provider_reference: r.provider_reference, paid_at: r.paid_at });

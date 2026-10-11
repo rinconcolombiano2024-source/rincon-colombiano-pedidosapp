@@ -50,6 +50,13 @@ export class NovitusNoviApiDriver extends FiscalDriver {
     if (options.simulationOnly !== true || typeof options.fetchImpl !== "function" || options.fetchImpl === globalThis.fetch) {
       throw new FiscalError("PROTOCOL_UNVERIFIED", "NoviAPI template is simulation-only until official protocol and hardware review");
     }
+    const limits = { pollIntervalMs: 500, maxPolls: 20, timeoutMs: 8000, ...options };
+    if (!Number.isSafeInteger(limits.maxPolls) || limits.maxPolls < 1 || limits.maxPolls > 100
+      || !Number.isSafeInteger(limits.pollIntervalMs) || limits.pollIntervalMs < 1 || limits.pollIntervalMs > 60000
+      || !Number.isSafeInteger(limits.timeoutMs) || limits.timeoutMs < 1 || limits.timeoutMs > 60000
+      || typeof (options.sleep ?? (() => {})) !== "function") {
+      throw new FiscalError("NOT_CONFIGURED", "Invalid bounded polling configuration");
+    }
     const taxMap = assertTaxMap(options.taxMap);
     this.#o = {
       fetchImpl: globalThis.fetch, pollIntervalMs: 500, maxPolls: 20, timeoutMs: 8000,
@@ -80,7 +87,7 @@ export class NovitusNoviApiDriver extends FiscalDriver {
   async disconnect() { this.#token = null; return { connected: false }; }
   async getStatus() {
     const r = await this.#http("GET", this.#o.endpoints.status);
-    return { connected: r.ok, deviceStatus: r.ok ? String(r.data.status ?? "ok") : "unreachable" };
+    return { simulated: true, fiscal: false, connected: r.ok, deviceStatus: r.ok ? String(r.data.status ?? "ok") : "unreachable" };
   }
 
   async printReceipt(receipt) {
@@ -105,6 +112,7 @@ export class NovitusNoviApiDriver extends FiscalDriver {
       if (!confirm.ok) return { status: "unknown", operationId: receipt.operationId };
       for (let i = 0; i < this.#o.maxPolls; i++) {
         const s = await this.#http("GET", `${this.#o.endpoints.command}/${id}`);
+        if (!s.ok) return { status: "unknown", operationId: receipt.operationId };
         const state = String(s.data?.status ?? "").toLowerCase();
         if (state === "done") return { status: "confirmed", operationId: receipt.operationId, fiscal: false, simulated: true, fiscalNumber: s.data.receiptNumber ? String(s.data.receiptNumber) : undefined };
         if (state === "error") return { status: "unknown", operationId: receipt.operationId };

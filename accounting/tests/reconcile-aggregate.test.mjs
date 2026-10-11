@@ -42,3 +42,15 @@ test("negative or excessive refunds and paid/refunded status discrepancies canno
   const r=reconcileProvider([p],[row("charge","40.00")],{aggregateProviderRows:true});assert.equal(r.ok,false);
  }
 });
+
+test("single provider row reconciles net refund amount and rejects gross false match", () => {
+ for (const [status, refunded, net] of [["partially_refunded", "10.00", "40.00"], ["refunded", "50.00", "0.00"]]) {
+  const p = pay({status, refunded_amount: refunded});
+  assert.equal(reconcileProvider([p], [{reference:"pi_1", amount:"50.00", currency:"PLN"}]).ok, false);
+  assert.equal(reconcileProvider([p], [{reference:"pi_1", amount:net, currency:"PLN"}]).ok, true);
+ }
+});
+test("refund/status contradictions fail also without aggregation", () => {
+ for (const p of [pay({refunded_amount:"10.00"}), pay({status:"refunded"}), pay({status:"partially_refunded",refunded_amount:"0.00"})])
+  assert.equal(reconcileProvider([p], [{reference:"pi_1", amount:"50.00", currency:"PLN"}]).ok, false);
+});
