@@ -31,21 +31,29 @@ export class FiscalAgent {
     await this.#recovery;
   }
   async #recover() {
-    for (const entry of await this.#journal.list()) {
+    const entries = await this.#journal.list();
+    const pending = new Set(entries.map(entry => entry.operationId));
+    for (const entry of entries) {
       let { outcome, result } = entry;
       if (entry.phase === "sending") {
         outcome = "unknown"; result = { reason: "agent_restart_during_print" };
         const rec = await this.#tryReconcile(entry.operationId);
         if (rec) { outcome = rec.status; result = rec.result; }
       } else if (entry.phase === "unknown") {
+        outcome = "unknown";
         const rec = await this.#tryReconcile(entry.operationId);
         if (rec) { outcome = rec.status; result = rec.result; }
       }
       if (!OUTCOMES.has(outcome)) continue;
+      // Persist reconciliation evidence before any network report or acknowledgement.
+      await this.#journal.put({ ...entry, phase: outcome === "unknown" ? "unknown" : "reported_pending", outcome, result });
       const ok = await this.#report(entry, outcome, result);
-      if (ok && outcome !== "unknown") await this.#journal.remove(entry.operationId);
-      else await this.#journal.put({ ...entry, phase: outcome === "unknown" ? "unknown" : "reported_pending", outcome, result });
+      if (ok && outcome !== "unknown") {
+        await this.#journal.remove(entry.operationId);
+        pending.delete(entry.operationId);
+      }
     }
+    return pending;
   }
 
   async #tryReconcile(operationId) {
@@ -73,13 +81,17 @@ export class FiscalAgent {
   }
   async #runOnce() {
     if(this.#recovery)await this.#recovery;
-    await this.#recover();
+    const pending = await this.#recover();
 
     const claimToken = this.#newToken();
     const claimed = await this.#client.claim(claimToken);
     if (!claimed) return { idle: true };
 
     const operationId = claimed.operation_id ?? claimed.operationId;
+    // A server retry must never overwrite unresolved local evidence or reprint.
+    if (pending.has(operationId)) {
+      throw new FiscalError("JOURNAL_OPERATION_PENDING", "Reconcile the existing operation before processing it again");
+    }
     const base = { operationId, claimToken };
 
     let receipt;

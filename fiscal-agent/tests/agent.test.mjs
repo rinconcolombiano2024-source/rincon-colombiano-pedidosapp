@@ -102,3 +102,42 @@ test('V5: lost report of invalid receipt persists for recovery without printing'
  const j=new MemoryJournal(),d=new FakeDriver(),agent=new FiscalAgent({client:c,driver:d,journal:j});
  await agent.runOnce();assert.equal((await j.list()).length,1);await agent.runOnce();assert.equal(d.prints,0);assert.equal(c.results[0].outcome,'failed');
 });
+
+test('reclaimed UNKNOWN operation is never printed or overwritten', async()=>{
+  const j=new MemoryJournal();
+  await j.put({operationId:OP,claimToken:'original',phase:'unknown',outcome:'unknown',result:{reason:'lost_response'}});
+  const c=new FakeClient(),d=new FakeDriver();
+  await assert.rejects(new FiscalAgent({client:c,driver:d,journal:j}).runOnce(),{code:"JOURNAL_OPERATION_PENDING"});
+  assert.equal(d.prints,0);assert.equal(c.calls.includes('sending'),false);
+  assert.equal((await j.list())[0].claimToken,'original');
+});
+
+test('reconciliation confirmation is durable before reporting, even if reporting throws',async()=>{
+  const j=new MemoryJournal();await j.put({operationId:OP,claimToken:'original',phase:'unknown',outcome:'unknown'});
+  const c=new FakeClient(null),d=new FakeDriver({reconcile:()=>({status:'confirmed',fiscalNumber:'99'})});
+  let savedAtReport;
+  c.result=async()=>{
+    [savedAtReport]=await j.list();
+    throw new Error('network');
+  };
+  await new FiscalAgent({client:c,driver:d,journal:j}).recover();
+  assert.equal(savedAtReport.outcome,'confirmed');assert.equal(savedAtReport.result.fiscalNumber,'99');
+  assert.equal(savedAtReport.phase,'reported_pending');
+  assert.equal((await j.list())[0].outcome,'confirmed');assert.equal(d.prints,0);
+});
+
+test('failed durable reconciliation write prevents report and claim',async()=>{
+  const j=new MemoryJournal();await j.put({operationId:OP,claimToken:'original',phase:'sending'});
+  j.put=async()=>{throw new Error('disk_full');};
+  const c=new FakeClient(),d=new FakeDriver({reconcile:()=>({status:'confirmed',fiscalNumber:'99'})});
+  await assert.rejects(new FiscalAgent({client:c,driver:d,journal:j}).runOnce(),/disk_full/);
+  assert.deepEqual(c.calls,[]);assert.equal(d.prints,0);
+});
+
+test('legacy UNKNOWN without outcome is reported and remains blocked',async()=>{
+  const j=new MemoryJournal();await j.put({operationId:OP,claimToken:'original',phase:'unknown'});
+  const c=new FakeClient(null),d=new FakeDriver();
+  await new FiscalAgent({client:c,driver:d,journal:j}).runOnce();
+  assert.equal(c.results.length,1);assert.equal(c.results[0].outcome,'unknown');
+  assert.equal((await j.list())[0].outcome,'unknown');assert.equal(d.prints,0);
+});
