@@ -53,3 +53,46 @@ test("lost result ACK retains journal and recovery reports without reprinting",a
  await agent.runOnce();assert.equal((await journal.list()).length,1);
  valid=true;await agent.recover();assert.equal((await journal.list()).length,0);assert.equal(printed,1);
 });
+
+
+test("claim: 409 CLAIM_FAILED is never treated as an empty fiscal queue", async () => {
+ for (const reason of ["CLAIM_FAILED", "PAYLOAD_TENANT_MISMATCH", "SERVER_CONFLICT"]) {
+  const c = createGatewayClient({...config,fetchImpl: async () => ({
+    ok:false,status:409,json:async()=>({error:reason})
+  })});
+  await assert.rejects(()=>c.claim("claim-token"),{name:"GatewayError",code:reason,status:409});
+ }
+});
+
+test("claim: server errors stop the agent without printing, not a successful idle", async () => {
+ let printed=0;
+ const client=createGatewayClient({...config,fetchImpl:async()=>({
+  ok:false,status:409,json:async()=>({error:"CLAIM_FAILED"})
+ })});
+ const agent=new FiscalAgent({
+  client,journal:new MemoryJournal(),
+  driver:{printReceipt:async()=>{printed++;},reconcile:async()=>null}
+ });
+ await assert.rejects(()=>agent.runOnce(),{code:"CLAIM_FAILED"});
+ assert.equal(printed,0);
+});
+
+test("claim: only 200 operation:null indicates an empty queue", async () => {
+ const c=createGatewayClient({...config,fetchImpl:async()=>response({operation:null})});
+ assert.equal(await c.claim("claim-token"),null);
+});
+
+test("claim: malformed operation envelopes fail closed before local printing", async () => {
+ const bad=[
+  {},{operationId:"not-an-id",fiscal_payload:{}},
+  {operation_id:OP},{operation_id:OP,fiscal_payload:null},
+  {operation_id:OP,fiscal_payload:[]},
+  {operation_id:OP,fiscal_payload:"payload"}
+ ];
+ for (const operation of bad) {
+  const client=createGatewayClient({...config,fetchImpl:async()=>response({operation})});
+  await assert.rejects(()=>client.claim("claim-token"),{code:"INVALID_CLAIM_OPERATION"});
+ }
+ const valid=createGatewayClient({...config,fetchImpl:async()=>response({operation:{operation_id:OP,fiscal_payload:{restaurantId:OP}}})});
+ assert.equal((await valid.claim("claim-token")).operation_id,OP);
+});

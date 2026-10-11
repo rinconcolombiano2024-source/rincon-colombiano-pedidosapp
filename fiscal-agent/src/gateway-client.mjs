@@ -35,8 +35,17 @@ export function createGatewayClient({ url, deviceId, deviceToken, fetchImpl = gl
   }
   return {
     async claim(claimToken) {
-      try { return (await call({ action: "claim", claimToken })).operation ?? null; }
-      catch (e) { if (e instanceof GatewayError && e.status === 409) return null; throw e; }
+      // A successful 200 response with operation:null is the ONLY idle signal.
+      // HTTP 409 is also returned for CLAIM_FAILED and PAYLOAD_TENANT_MISMATCH:
+      // suppressing it as idle would hide fiscal server failures indefinitely.
+      const { operation } = await call({ action: "claim", claimToken });
+      if (operation === null) return null;
+      const id = operation.operation_id ?? operation.operationId;
+      if (typeof id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id) ||
+        !operation.fiscal_payload || typeof operation.fiscal_payload !== "object" || Array.isArray(operation.fiscal_payload)) {
+        throw new GatewayError("INVALID_CLAIM_OPERATION", 200);
+      }
+      return operation;
     },
     sending: (operationId, claimToken) => call({ action: "sending", operationId, claimToken }),
     result: (operationId, claimToken, outcome, result) => call({ action: "result", operationId, claimToken, outcome, result }),

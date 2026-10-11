@@ -15,9 +15,11 @@ export class MemoryJournal {
 }
 
 const OUTCOMES = new Set(["confirmed", "failed", "unknown"]);
+// A large unresolved journal must not trigger an unbounded number of device queries per poll.
+const MAX_RECOVERY_PER_PASS = 25;
 
 export class FiscalAgent {
-  #client; #driver; #journal; #log; #newToken; #flight=null; #recovery=null;
+  #client; #driver; #journal; #log; #newToken; #flight=null; #recovery=null; #recoveryCursor=0;
 
   constructor({ client, driver, journal = new MemoryJournal(), log = () => {}, newToken = () => randomBytes(32).toString("hex") }) {
     if (!client || !driver) throw new FiscalError("INVALID_AGENT", "client and driver are required");
@@ -32,8 +34,16 @@ export class FiscalAgent {
   }
   async #recover() {
     const entries = await this.#journal.list();
+    // Track ALL unresolved ids: even entries outside this pass must never be reprinted.
     const pending = new Set(entries.map(entry => entry.operationId));
-    for (const entry of entries) {
+    if (!entries.length) { this.#recoveryCursor = 0; return pending; }
+    // Round-robin prevents old UNKNOWN operations from monopolizing CPU, disk fsync,
+    // printer reconciliation and the Supabase gateway on every idle poll.
+    const start = this.#recoveryCursor % entries.length;
+    const count = Math.min(entries.length, MAX_RECOVERY_PER_PASS);
+    const batch = Array.from({length:count}, (_, i) => entries[(start + i) % entries.length]);
+    this.#recoveryCursor = (start + count) % entries.length;
+    for (const entry of batch) {
       let { outcome, result } = entry;
       if (entry.phase === "sending") {
         outcome = "unknown"; result = { reason: "agent_restart_during_print" };

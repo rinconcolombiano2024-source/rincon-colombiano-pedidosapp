@@ -9922,3 +9922,17 @@ body.customer-page .customer-cart-close {
     border-radius: 14px;
   }
 }
+
+
+/* RC ORDERA: preserve comfortable mobile cart/profile touch targets.
+   Legacy <=360px rules shrink these controls below 44px. This final
+   override keeps the grid balanced at 320px without altering JS behavior. */
+@media (max-width: 480px) {
+  .customer-client-header-actions .customer-notification-button,
+  .customer-client-header-actions .customer-profile-avatar {
+    flex: 0 0 44px;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+  }
+}
