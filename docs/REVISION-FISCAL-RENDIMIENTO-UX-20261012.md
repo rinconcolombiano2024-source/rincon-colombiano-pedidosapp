@@ -22,7 +22,7 @@
 ### QA de interfaces y español/polaco/inglés
 - Archivo: `tests/e2e/customer-mobile-ux.spec.js`.
 - Verifica vista cliente a 320 px en ES/PL/EN: botones esenciales visibles, dimensiones táctiles, sin desbordamiento horizontal y cierre del diálogo de instalación. Las pruebas se repiten en la matriz de dispositivos configurada por Playwright.
-- Esta ampliación de pruebas no representa un rediseño completo ni una inspección visual humana de todas las pantallas.
+- **Defecto reproducido en Chromium CI**: el carrito tenía 38px de ancho a 320px, en los tres idiomas y proyectos móvil/tableta/escritorio. Se corrige en `styles.css` y `www/styles.css` el tamaño efectivo de botones de carrito y perfil a 44x44px en ancho estrecho; se exige ahora >=44px en las pruebas. No es un rediseño de todas las pantallas.
 
 ## Pruebas añadidas
 - `fiscal-agent/tests/gateway-client.test.mjs`: 4 casos sobre códigos 409, inactividad real, agente sin impresión y payload malformado.
