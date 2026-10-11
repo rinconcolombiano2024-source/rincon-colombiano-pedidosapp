@@ -13,7 +13,7 @@ test('dashboard manual refresh translates only diagnostics, not 200 static cards
  assert.equal(h.heading.textContent,'Centro de Integraciones');
 });
 test('dashboard selecting the same language causes no redundant text writes',()=>{
- const h=dashboardHarness();h.changeLanguage('pl');const before=h.stats();h.changeLanguage('pl');assert.equal(h.stats().writes,before.writes);
+ const h=dashboardHarness();h.changeLanguage('pl');const before=h.stats();h.changeLanguage('pl');assert.equal(h.stats().writes,before.writes);assert.equal(h.stats().translations,before.translations);
 });
 test('screen reader labels switch ES/PL/EN and restore their Spanish source',async()=>{
  const h=dashboardHarness();
