@@ -393,6 +393,7 @@ calculateMaps: "Calcular con Google Maps",
     noConnection: "No hay conexion con el restaurante.",
     addProductFirst: "Agrega al menos un producto.",
     sendingOrder: "Enviando pedido...",
+    orderSessionChanged: "La sesión o el restaurante cambió. Revisa el pedido antes de volver a enviarlo.",
     sendOrderError: "No se pudo enviar. Revisa internet o avisa al restaurante.",
     orderRateLimited: "Has enviado varios pedidos en poco tiempo. Espera unos minutos antes de intentarlo de nuevo.",
     menuChangedBeforeOrder: "El menu cambio antes de confirmar el pedido. Ya cargamos los precios y productos actuales; revisa el carrito.",
@@ -728,6 +729,7 @@ kitchenNotesLabel: "Uwagi do kuchni",
     noConnection: "Brak polaczenia z restauracja.",
     addProductFirst: "Dodaj przynajmniej jeden produkt.",
     sendingOrder: "Wysylanie zamowienia...",
+    orderSessionChanged: "Sesja lub restauracja uległa zmianie. Sprawdź zamówienie przed ponownym wysłaniem.",
     sendOrderError: "Nie udalo sie wyslac. Sprawdz internet albo powiadom restauracje.",
     orderRateLimited: "Wysłano zbyt wiele zamówień w krótkim czasie. Odczekaj kilka minut i spróbuj ponownie.",
     menuChangedBeforeOrder: "Menu zmienilo sie przed potwierdzeniem zamowienia. Zaladowalismy aktualne produkty i ceny; sprawdz koszyk.",
@@ -1063,6 +1065,7 @@ kitchenNotesLabel: "Kitchen notes",
     noConnection: "No connection with the restaurant.",
     addProductFirst: "Add at least one product.",
     sendingOrder: "Sending order...",
+    orderSessionChanged: "Your session or restaurant changed. Review the order before sending it again.",
     sendOrderError: "Could not send. Check internet or tell the restaurant.",
     orderRateLimited: "Too many orders were sent in a short time. Wait a few minutes before trying again.",
     menuChangedBeforeOrder: "The menu changed before the order was confirmed. Current products and prices are loaded; review your cart.",
@@ -3487,6 +3490,7 @@ async function customerLoadRestaurantDirectoryNow(options = {}) {
   return true;
 }
 async function customerSelectRestaurant(storeId, options = {}) {
+  if (customerCheckoutBusy) { customerSetStatus(customerT("sendingOrder"), ""); return; }
   const nextStoreId = customerNormalizeText(storeId);
   if (!nextStoreId) return;
   const previousStoreId = customerStoreId;
@@ -6941,12 +6945,12 @@ function customerRenderCart() {
   customerElements.cartTotal.textContent = customerFormatMoney(customerCartTotal());
   customerElements.deliveryFeeRow.hidden = customerElements.orderType.value !== "Domicilio";
   customerElements.deliveryFeeLabel.textContent = customerFormatMoney(customerDeliveryFee());
-customerElements.sendButton.disabled =
-  customerCart.length === 0;
+customerRenderCheckoutState();
 customerRenderHeaderCart();
 customerRenderSelectedRestaurantDetails();
 }
 function customerAddItem(dish) {
+  if (customerCheckoutBusy) { customerSetStatus(customerT("sendingOrder"), ""); return; }
   const productId =
     customerNormalizeProductId(dish.id || dish.productId) ||
     customerStableProductId(customerActiveCategory, dish.name, dish.description || "");
@@ -7125,7 +7129,33 @@ async function customerRefreshMenu() {
     customerSetStatus(customerT("menuLoadError"), "error");
   }
 }
+let customerCheckoutBusy = false;
+const customerCheckoutControls = new Map();
+function customerRenderCheckoutState() {
+  const controls = [...customerElements.cartItems.querySelectorAll("button,input,textarea"),
+    ...["tableInput", "nameInput", "orderType", "paymentMethod", "notesInput", "distanceInput", "phoneInput", "cityInput", "postalCodeInput", "addressInput", "buildingNumberInput", "apartmentInput", "neighborhoodInput", "referenceInput", "useLocationButton", "chooseMapLocationButton", "calculateDistanceButton"].map(key => customerElements[key]).filter(Boolean)];
+  if (customerCheckoutBusy) {
+    for (const control of controls) {
+      if (!customerCheckoutControls.has(control)) customerCheckoutControls.set(control, control.disabled);
+      control.disabled = true;
+    }
+  } else {
+    for (const [control, disabled] of customerCheckoutControls) control.disabled = disabled;
+    customerCheckoutControls.clear();
+  }
+  customerElements.sendButton.disabled = customerCheckoutBusy || customerCart.length === 0;
+  customerElements.sendButton.textContent = customerT(customerCheckoutBusy ? "sendingOrder" : "sendOrder");
+  customerElements.sendButton.setAttribute("aria-busy", String(customerCheckoutBusy));
+}
 async function customerSendOrder() {
+  if (customerCheckoutBusy) return;
+  customerCheckoutBusy = true;
+  customerRenderCheckoutState();
+  try { return await customerSendOrderRequest(); }
+  finally { customerCheckoutBusy = false; customerRenderCheckoutState(); }
+}
+async function customerSendOrderRequest() {
+  const checkoutContext = JSON.stringify([customerStoreId, customerUser?.id || null]);
   if (!customerClient || !customerStoreId) {
     customerSetStatus(customerT("noConnection"), "error");
     return;
@@ -7217,6 +7247,9 @@ try {
     await customerSaveProfile();
   }
 
+  if (checkoutContext !== JSON.stringify([customerStoreId, customerUser?.id || null])) {
+    throw new Error("ORDER_SESSION_CHANGED");
+  }
   insertedOrder = await customerCreateCustomerOrder(
     orderPayload,
     total,
@@ -7226,7 +7259,9 @@ try {
   );
 } catch (error) {
   console.error("ERROR REAL create_customer_order:", error);
-if (/ORDER_RATE_LIMITED/i.test(String(error?.message || ""))) {
+if (/ORDER_SESSION_CHANGED/i.test(String(error?.message || ""))) {
+  customerSetStatus(customerT("orderSessionChanged"), "error");
+} else if (/ORDER_RATE_LIMITED/i.test(String(error?.message || ""))) {
   customerSetStatus(customerT("orderRateLimited"), "error");
 } else if (/restaurant is closed/i.test(String(error?.message || ""))) {
   customerSetStatus(customerT("restaurantClosedOrder"), "error");
@@ -7246,7 +7281,7 @@ if (/ORDER_RATE_LIMITED/i.test(String(error?.message || ""))) {
   }
   if (!insertedOrder) {
     customerElements.sendButton.disabled = false;
- if (![customerT("orderRateLimited"), customerT("restaurantClosedOrder"), customerT("restaurantRegionMismatch"), customerT("deliveryQuoteRequired"), customerT("menuChangedBeforeOrder")].includes(customerElements.status.textContent)) {
+ if (![customerT("orderSessionChanged"), customerT("orderRateLimited"), customerT("restaurantClosedOrder"), customerT("restaurantRegionMismatch"), customerT("deliveryQuoteRequired"), customerT("menuChangedBeforeOrder")].includes(customerElements.status.textContent)) {
       customerSetStatus(customerT("sendOrderError"), "error");
     }
     return;
@@ -7321,6 +7356,7 @@ customerElements.menuGrid.addEventListener("click", (event) => {
   if (dish) customerAddItem(dish);
 });
 customerElements.cartItems.addEventListener("click", (event) => {
+  if (customerCheckoutBusy) return;
   const row = event.target.closest(".customer-cart-item");
   const action = event.target.dataset.action;
   if (!row || !action) return;
@@ -7332,6 +7368,7 @@ customerElements.cartItems.addEventListener("click", (event) => {
   customerRenderCart();
 });
 customerElements.cartItems.addEventListener("input", (event) => {
+  if (customerCheckoutBusy) return;
   const row = event.target.closest(".customer-cart-item");
   const action = event.target.dataset.action;
   if (!row || !action) return;

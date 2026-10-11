@@ -1,6 +1,6 @@
 {
   "cliente.js": {
-    "sha256": "733e8e132c69d88a86f04e873dda06bacd4f333ea2f7247d2aa4dbdf2246a098",
+    "sha256": "0bb550540cfe499d1561ee507338d475cbfc3ea87e3e1c96c14743dc298dcf6c",
     "regressionTests": "tests/hardening/frontend.test.mjs",
     "edits": [
       {
@@ -32,6 +32,76 @@
         "before": "",
         "after": "  customerPendingOrderMemory = null;\r\n",
         "afterByteOffset": 246267
+      },
+      {
+        "before": "",
+        "after": "  if (customerCheckoutBusy) { customerSetStatus(customerT(\"sendingOrder\"), \"\"); return; }\r\n",
+        "afterByteOffset": 162800
+      },
+      {
+        "before": "customerElements.sendButton.disabled =\r\n  customerCart.length === 0;\r\n",
+        "after": "customerRenderCheckoutState();\r\n",
+        "afterByteOffset": 272924
+      },
+      {
+        "before": "",
+        "after": "  if (customerCheckoutBusy) { customerSetStatus(customerT(\"sendingOrder\"), \"\"); return; }\r\n",
+        "afterByteOffset": 273066
+      },
+      {
+        "before": "",
+        "after": "let customerCheckoutBusy = false;\r\nconst customerCheckoutControls = new Map();\r\nfunction customerRenderCheckoutState() {\r\n  const controls = [...customerElements.cartItems.querySelectorAll(\"button,input,textarea\"),\r\n    ...[\"tableInput\", \"nameInput\", \"orderType\", \"paymentMethod\", \"notesInput\", \"distanceInput\"].map(key => customerElements[key]).filter(Boolean)];\r\n  if (customerCheckoutBusy) {\r\n    for (const control of controls) {\r\n      if (!customerCheckoutControls.has(control)) customerCheckoutControls.set(control, control.disabled);\r\n      control.disabled = true;\r\n    }\r\n  } else {\r\n    for (const [control, disabled] of customerCheckoutControls) control.disabled = disabled;\r\n    customerCheckoutControls.clear();\r\n  }\r\n  customerElements.sendButton.disabled = customerCheckoutBusy || customerCart.length === 0;\r\n  customerElements.sendButton.textContent = customerT(customerCheckoutBusy ? \"sendingOrder\" : \"sendOrder\");\r\n  customerElements.sendButton.setAttribute(\"aria-busy\", String(customerCheckoutBusy));\r\n}\r\n",
+        "afterByteOffset": 280716
+      },
+      {
+        "before": "",
+        "after": "  if (customerCheckoutBusy) return;\r\n  customerCheckoutBusy = true;\r\n  customerRenderCheckoutState();\r\n  try { return await customerSendOrderRequest(); }\r\n  finally { customerCheckoutBusy = false; customerRenderCheckoutState(); }\r\n}\r\nasync function customerSendOrderRequest() {\r\n  const checkoutContext = JSON.stringify([customerStoreId, customerUser?.id || null]);\r\n",
+        "afterByteOffset": 281779
+      },
+      {
+        "before": "",
+        "after": "  if (checkoutContext !== JSON.stringify([customerStoreId, customerUser?.id || null])) {\r\n    throw new Error(\"ORDER_SESSION_CHANGED\");\r\n  }\r\n",
+        "afterByteOffset": 285390
+      },
+      {
+        "before": "",
+        "after": "  if (customerCheckoutBusy) return;\r\n",
+        "afterByteOffset": 290049
+      },
+      {
+        "before": "",
+        "after": "  if (customerCheckoutBusy) return;\r\n",
+        "afterByteOffset": 290622
+      },
+      {
+        "before": "",
+        "after": "    orderSessionChanged: \"La sesión o el restaurante cambió. Revisa el pedido antes de volver a enviarlo.\",\r\n",
+        "afterByteOffset": 22613
+      },
+      {
+        "before": "",
+        "after": "    orderSessionChanged: \"Sesja lub restauracja uległa zmianie. Sprawdź zamówienie przed ponownym wysłaniem.\",\r\n",
+        "afterByteOffset": 42150
+      },
+      {
+        "before": "",
+        "after": "    orderSessionChanged: \"Your session or restaurant changed. Review the order before sending it again.\",\r\n",
+        "afterByteOffset": 61196
+      },
+      {
+        "before": "    ...[\"tableInput\", \"nameInput\", \"orderType\", \"paymentMethod\", \"notesInput\", \"distanceInput\"].map(key => customerElements[key]).filter(Boolean)];\r\n",
+        "after": "    ...[\"tableInput\", \"nameInput\", \"orderType\", \"paymentMethod\", \"notesInput\", \"distanceInput\", \"phoneInput\", \"cityInput\", \"postalCodeInput\", \"addressInput\", \"buildingNumberInput\", \"apartmentInput\", \"neighborhoodInput\", \"referenceInput\", \"useLocationButton\", \"chooseMapLocationButton\", \"calculateDistanceButton\"].map(key => customerElements[key]).filter(Boolean)];\r\n",
+        "afterByteOffset": 281266
+      },
+      {
+        "before": "if (/ORDER_RATE_LIMITED/i.test(String(error?.message || \"\"))) {\r\n",
+        "after": "if (/ORDER_SESSION_CHANGED/i.test(String(error?.message || \"\"))) {\r\n  customerSetStatus(customerT(\"orderSessionChanged\"), \"error\");\r\n} else if (/ORDER_RATE_LIMITED/i.test(String(error?.message || \"\"))) {\r\n",
+        "afterByteOffset": 286306
+      },
+      {
+        "before": " if (![customerT(\"orderRateLimited\"), customerT(\"restaurantClosedOrder\"), customerT(\"restaurantRegionMismatch\"), customerT(\"deliveryQuoteRequired\"), customerT(\"menuChangedBeforeOrder\")].includes(customerElements.status.textContent)) {\r\n",
+        "after": " if (![customerT(\"orderSessionChanged\"), customerT(\"orderRateLimited\"), customerT(\"restaurantClosedOrder\"), customerT(\"restaurantRegionMismatch\"), customerT(\"deliveryQuoteRequired\"), customerT(\"menuChangedBeforeOrder\")].includes(customerElements.status.textContent)) {\r\n",
+        "afterByteOffset": 287651
       }
     ]
   },
