@@ -19,6 +19,31 @@ async function sha256Hex(text: string): Promise<string> {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/** Bound request memory even when Content-Length is absent or untrusted. */
+async function readBodyBounded(request: Request): Promise<string | null> {
+  const reader = request.body?.getReader();
+  if (!reader) return "";
+  const decoder = new TextDecoder("utf-8", { fatal: true });
+  let length = 0;
+  let text = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      length += value.byteLength;
+      if (length > MAX_BYTES) {
+        // Reject immediately; do not wait for the remaining stream to arrive.
+        void reader.cancel("BODY_TOO_LARGE").catch(() => {});
+        return null;
+      }
+      text += decoder.decode(value, { stream: true });
+    }
+    return text + decoder.decode();
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 Deno.serve(async (request: Request) => {
   if (Deno.env.get("RC_FISCAL_AGENT_ENABLED") !== "test") return reply(503, { error: "FISCAL_GATEWAY_DISABLED" });
   if (request.method !== "POST") return reply(405, { error: "METHOD_NOT_ALLOWED" });
@@ -35,10 +60,10 @@ Deno.serve(async (request: Request) => {
   const len = request.headers.get("content-length");
   if (len !== null && (!/^\d+$/.test(len) || Number(len) > MAX_BYTES)) return reply(413, { error: "BODY_TOO_LARGE" });
 
-  const raw = await request.text();
-  if (new TextEncoder().encode(raw).byteLength > MAX_BYTES) return reply(413, { error: "BODY_TOO_LARGE" });
   let body: Record<string, unknown>;
   try {
+    const raw = await readBodyBounded(request);
+    if (raw === null) return reply(413, { error: "BODY_TOO_LARGE" });
     const parsed = JSON.parse(raw);
     if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error();
     body = parsed;
