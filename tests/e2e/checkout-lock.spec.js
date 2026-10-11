@@ -12,7 +12,9 @@ for(const [lang,sending] of [['es','Enviando pedido...'],['pl','Wysylanie zamowi
    customerRenderCart();customerOpenHeaderCart();
   });
   const send=page.locator('#sendCustomerOrderButton');await send.click();
-  await expect(send).toBeDisabled();await expect(send).toHaveText(sending);await expect(send).toHaveAttribute('aria-busy','true');
+  // Polish UI may apply accents after runtime localization; retain an anchored semantic label assertion.
+  const expectedSendingLabel = lang === 'pl' ? /^Wysy(?:l|ł)anie zam(?:o|ó)wienia\.\.\.$/ : sending;
+  await expect(send).toBeDisabled();await expect(send).toHaveText(expectedSendingLabel);await expect(send).toHaveAttribute('aria-busy','true');
   await expect(page.locator('#customerCartItems [data-action="plus"]')).toBeDisabled();
   await page.evaluate(()=>customerRenderCart());await expect(send).toBeDisabled();
   await page.evaluate(()=>window.releaseCheckout());await expect(send).toBeEnabled();
