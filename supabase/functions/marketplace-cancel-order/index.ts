@@ -547,7 +547,7 @@ Deno.serve(withCors(
       return response(400, {error: "Invalid request"});
     }
     if (typeof payload.orderId !== "string" ||
-        (payload.reason !== undefined && typeof payload.reason !== "string")) {
+        (payload.reason != null && typeof payload.reason !== "string")) {
       return response(400, {error: "Invalid request"});
     }
 
