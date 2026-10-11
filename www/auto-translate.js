@@ -991,7 +991,16 @@ if (
     }
 
     const data = await response.json();
-    const translated = normalize(data?.translatedText || "");
+    // A successful HTTP status does not guarantee a valid translation.
+    // Never coerce objects/numbers into visible text or persist them as translations.
+    const rawTranslation = data?.translatedText;
+    const translated = typeof rawTranslation === "string" && rawTranslation.length <= 2000
+      ? normalize(rawTranslation)
+      : "";
+    if (!translated) {
+      translationServicePausedUntil = Date.now() + 20_000;
+      return clean;
+    }
 
     if (translated) {
       cache[key] = translated;

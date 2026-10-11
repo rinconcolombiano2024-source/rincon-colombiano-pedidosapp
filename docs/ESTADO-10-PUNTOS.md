@@ -1,6 +1,6 @@
 # Estado de los diez objetivos — 2026-10-11
 
-Última revisión: QA-DUODECIMA-MEJORA-20261011.md. 425 pruebas locales; las verificaciones externas pendientes no se cuentan como aprobadas. Los dos CI de la undécima mejora aprobaron; comprobar los de esta revisión. Sin porcentaje global de funcionamiento.
+Última revisión: QA-DECIMOTERCERA-MEJORA-20261011.md. 429 pruebas en primera ejecución completa y una prueba adicional de recuperación aprobada; las verificaciones externas pendientes no se cuentan como aprobadas. Los dos CI de la duodécima mejora aprobaron; comprobar los de esta revisión. Sin porcentaje global de funcionamiento.
 
 |Objetivo|Evidencia actual|Pendiente para aprobar producción|
 |---|---|---|
