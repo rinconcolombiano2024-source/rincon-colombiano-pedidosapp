@@ -1,6 +1,6 @@
 # Estado de los diez objetivos — 2026-10-11
 
-Última revisión: QA-DECIMA-MEJORA-20261011.md. 420 pruebas locales; las verificaciones externas pendientes no se cuentan como aprobadas. Los dos CI de la novena mejora aprobaron; comprobar los de esta revisión. Sin porcentaje global de funcionamiento.
+Última revisión: QA-UNDECIMA-MEJORA-20261011.md. 421 pruebas locales; las verificaciones externas pendientes no se cuentan como aprobadas. Los dos CI de la décima mejora aprobaron; comprobar los de esta revisión. Sin porcentaje global de funcionamiento.
 
 |Objetivo|Evidencia actual|Pendiente para aprobar producción|
 |---|---|---|
@@ -12,7 +12,7 @@
 |6 Contabilidad|Dinero exacto, duplicados, reembolsos netos, snapshots y cantidades auditados.|IVA completo de datos reales, cierres integrales y revisión contable.|
 |7 Repartidores|Módulos GPS/asignación/push conservados.|Móvil real, permisos negativos, recuperación y notificaciones.|
 |8 Seguridad/recursos|CSP, límites, aislamiento SQL local, tokens y CI; trabajo de traducción reducido en benchmark del módulo.|RLS negativo en proyecto de pruebas, concurrencia real y medición CPU/memoria.|
-|9 Administración|Descarga PWA con manifiestos ES/PL/EN del portal y estados de instalación precisos, visible en portal/cliente/colaborador; centro ES/PL/EN con espaciado corregido; propietario comprobó diagnóstico autenticado.|Gestión operativa oficial, navegación y pruebas UI con cuentas reales.|
+|9 Administración|Descarga PWA con manifiestos ES/PL/EN del portal y estados de instalación precisos, visible en portal/cliente/colaborador; centro ES/PL/EN con espaciado y nombres accesibles traducidos; propietario comprobó diagnóstico autenticado.|Gestión operativa oficial, navegación y pruebas UI con cuentas reales.|
 |10 Producción|Borrador y ZIP alineados, manifiesto, instalación y QA limpio.|Staging, pruebas externas, migraciones controladas, monitoreo/rollback autorizado.|
 
 Main no se modifica; no hay nuevas acciones de producción. Consultar DEPLOYED-COMPAT-20261011.md: migración preparada pero no aplicada. No ejecutar archivos SQL históricos en bloque. Los informes incrementales anteriores son evidencia histórica, no certificación de esta revisión.

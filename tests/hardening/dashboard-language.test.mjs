@@ -15,3 +15,11 @@ test('dashboard manual refresh translates only diagnostics, not 200 static cards
 test('dashboard selecting the same language causes no redundant text writes',()=>{
  const h=dashboardHarness();h.changeLanguage('pl');const before=h.stats();h.changeLanguage('pl');assert.equal(h.stats().writes,before.writes);
 });
+test('screen reader labels switch ES/PL/EN and restore their Spanish source',async()=>{
+ const h=dashboardHarness();
+ for(const [lang,categories,diagnostics] of [['pl','Kategorie','Diagnostyka integracji'],['en','Categories','Integration diagnostics'],['es','Categorías','Diagnóstico de integraciones']]){
+  h.changeLanguage(lang);await h.load();
+  assert.equal(h.categories.getAttribute('aria-label'),categories);
+  assert.equal(h.controls.getAttribute('aria-label'),diagnostics);
+ }
+});

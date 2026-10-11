@@ -43,3 +43,12 @@ test('diagnostics retain readable spacing across ES/PL/EN and mobile layout',asy
   expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(2);
  }
 });
+
+test('integration centre accessible names follow language changes',async({page})=>{
+ await installSupabaseMock(page);await page.goto('/centro-integraciones.html?lang=pl');
+ await expect(page.getByRole('tablist',{name:'Kategorie',exact:true})).toBeVisible();
+ await expect(page.getByRole('region',{name:'Diagnostyka integracji',exact:true})).toBeVisible();
+ await page.locator('#integrationLanguage').selectOption('en');
+ await expect(page.getByRole('tablist',{name:'Categories',exact:true})).toBeVisible();
+ await expect(page.getByRole('region',{name:'Integration diagnostics',exact:true})).toBeVisible();
+});

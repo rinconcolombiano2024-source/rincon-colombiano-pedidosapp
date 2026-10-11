@@ -102,7 +102,7 @@
     ]
   },
   "centro-integraciones-status.js": {
-    "sha256": "43f173cca6d4a1ad5ac9ec42c2e8559ccfae5344ca9aa38fe0c85be89d097bca",
+    "sha256": "e87385f46da122ce5216a690c4b6f27234d60d17b85d30d5fb48154d8ff56241",
     "regressionTests": "tests/hardening/dashboard-language.test.mjs; tests/e2e/hardening.spec.js",
     "edits": [
       {
@@ -219,11 +219,21 @@
         "before": "",
         "after": "controls",
         "afterByteOffset": 7285
+      },
+      {
+        "before": "",
+        "after": "  const originalLabels = new WeakMap();\n",
+        "afterByteOffset": 734
+      },
+      {
+        "before": "",
+        "after": "    const labelled = [...(root.querySelectorAll?.('[aria-label]') || [])];\n    if (root.hasAttribute?.('aria-label')) labelled.unshift(root);\n    for (const element of labelled) {\n      const source = originalLabels.get(element) || element.getAttribute('aria-label');\n      originalLabels.set(element, source);\n      const value = window.RC_ORDERA_OFFLINE_I18N.translate(source, language) || source;\n      if (element.getAttribute('aria-label') !== value) element.setAttribute('aria-label', value);\n    }\n",
+        "afterByteOffset": 938
       }
     ]
   },
   "offline-i18n.js": {
-    "sha256": "62e30f2cd8133f9f96f92de6356e4b0de8d48225f51e6a051e824f2f03d3b584",
+    "sha256": "802c97c7f7fee447c97dcb085f44cf932fee6e21e91f112b724cd704959cc18d",
     "regressionTests": "tests/hardening/frontend.test.mjs",
     "edits": [
       {
@@ -235,6 +245,11 @@
         "before": "",
         "after": "    [\"menu.vat\", \"IVA del producto\", \"Stawka VAT produktu\", \"Product VAT rate\"],\n    [\"menu.vatInherit\", \"Heredar del restaurante\", \"Dziedzicz z restauracji\", \"Inherit from restaurant\"],\n    [\"qr.localError\", \"No se pudo generar el QR. Copia el enlace o vuelve a intentarlo.\", \"Nie udało się wygenerować kodu QR. Skopiuj link lub spróbuj ponownie.\", \"Could not generate the QR code. Copy the link or try again.\"],\n    [\"menu.vatNP\", \"No sujeto (NP)\", \"Nie podlega (NP)\", \"Not taxable (NP)\"],\n    [\"menu.vatNPI\", \"No sujeto (NP I)\", \"Nie podlega (NP I)\", \"Not taxable (NP I)\"],\n    [\"menu.vatNPII\", \"No sujeto (NP II)\", \"Nie podlega (NP II)\", \"Not taxable (NP II)\"],\n    [\"menu.vatUnknown\", \"IVA sin verificar: revisar\", \"VAT niezweryfikowany: sprawdź\", \"Unverified VAT: review\"],\n    [\"menu.vatReview\", \"Revisa la categoría de IVA antes de guardar.\", \"Sprawdź kategorię VAT przed zapisaniem.\", \"Review the VAT category before saving.\"],\n    [\"menu.vatExempt\", \"Exento (ZW)\", \"Zwolniony (ZW)\", \"Exempt (ZW)\"],\n    [\"menu.vatDefault\", \"IVA por defecto del restaurante\", \"Domyślna stawka VAT restauracji\", \"Restaurant default VAT rate\"],\n    [\"menu.vatDefaultNone\", \"Sin definir\", \"Nie określono\", \"Not set\"],\n",
         "afterByteOffset": 33123
+      },
+      {
+        "before": "",
+        "after": "    [\"integration.a11y.summary\", \"Resumen de preparación\", \"Podsumowanie gotowości\", \"Readiness summary\"],\n    [\"integration.a11y.categories\", \"Categorías\", \"Kategorie\", \"Categories\"],\n    [\"integration.a11y.diagnostics\", \"Diagnóstico de integraciones\", \"Diagnostyka integracji\", \"Integration diagnostics\"],\n",
+        "afterByteOffset": 32
       }
     ]
   },

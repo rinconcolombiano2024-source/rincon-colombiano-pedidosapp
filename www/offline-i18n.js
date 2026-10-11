@@ -1,5 +1,8 @@
 (function () {
   const rows = [
+    ["integration.a11y.summary", "Resumen de preparación", "Podsumowanie gotowości", "Readiness summary"],
+    ["integration.a11y.categories", "Categorías", "Kategorie", "Categories"],
+    ["integration.a11y.diagnostics", "Diagnóstico de integraciones", "Diagnostyka integracji", "Integration diagnostics"],
     ["integration.centre.00", "RC ORDERA | Centro de Integraciones", "RC ORDERA | Centrum integracji", "RC ORDERA | Integration centre"],
     ["integration.centre.01", "← Volver al restaurante", "← Powrót do restauracji", "← Back to restaurant"],
     ["integration.centre.02", "Idioma", "Język", "Language"],

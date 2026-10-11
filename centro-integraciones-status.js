@@ -21,9 +21,18 @@
   try { language = new URLSearchParams(window.location.search).get("lang") || localStorage.getItem("rincon_colombiano_app_language") || "es"; } catch {}
   if (!languages.has(language)) language="es";
   const originalText = new WeakMap();
+  const originalLabels = new WeakMap();
   function applyLanguage(root = document) {
     if(!window.RC_ORDERA_OFFLINE_I18N || !document.createTreeWalker)return;
     document.documentElement.lang=language;
+    const labelled = [...(root.querySelectorAll?.('[aria-label]') || [])];
+    if (root.hasAttribute?.('aria-label')) labelled.unshift(root);
+    for (const element of labelled) {
+      const source = originalLabels.get(element) || element.getAttribute('aria-label');
+      originalLabels.set(element, source);
+      const value = window.RC_ORDERA_OFFLINE_I18N.translate(source, language) || source;
+      if (element.getAttribute('aria-label') !== value) element.setAttribute('aria-label', value);
+    }
     const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
     for(let node=walker.nextNode();node;node=walker.nextNode()){
       if(["SCRIPT","STYLE","OPTION"].includes(node.parentElement?.tagName))continue;

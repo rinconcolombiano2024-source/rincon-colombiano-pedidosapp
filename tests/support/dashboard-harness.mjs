@@ -10,6 +10,9 @@ export function dashboardHarness(source=readFileSync('centro-integraciones-statu
  class Element {
   constructor(tag='DIV'){this.tagName=tag;this.children=[];this.style={};this.listeners={};this.disabled=false;this.attributes={};}
   setAttribute(k,v){this.attributes[k]=v;}
+  getAttribute(k){return this.attributes[k] ?? null;}
+  hasAttribute(k){return Object.hasOwn(this.attributes,k);}
+  querySelectorAll(){const result=[];const walk=n=>{for(const c of n.children||[]){if(c.hasAttribute?.('aria-label'))result.push(c);walk(c);}};walk(this);return result;}
   append(...nodes){for(const n of nodes){n.parentElement=this;this.children.push(n);}}
   prepend(...nodes){for(const n of nodes)n.parentElement=this;this.children.unshift(...nodes);}
   replaceChildren(){this.children=[];}
@@ -20,6 +23,7 @@ export function dashboardHarness(source=readFileSync('centro-integraciones-statu
  const document=new Element(),panel=new Element(),delivery=new Element(),selector=new Element('SELECT');
  const heading=new Element('H1');heading.textContent='Centro de Integraciones';
  document.append(heading,selector,panel,delivery);
+ const categories=new Element();categories.setAttribute('aria-label','Categorías');document.append(categories);
  for(let i=0;i<200;i++){const p=new Element('P');p.textContent='Sin conectar';document.append(p);}
  document.documentElement={};document.getElementById=id=>({'panel-fiscal':panel,'panel-delivery':delivery,integrationLanguage:selector}[id]);
  document.createElement=tag=>new Element(tag.toUpperCase());document.createTextNode=v=>new Text(v);
@@ -37,6 +41,6 @@ export function dashboardHarness(source=readFileSync('centro-integraciones-statu
  context.window.RC_ORDERA_OFFLINE_I18N={...context.window.RC_ORDERA_OFFLINE_I18N,translate:(...args)=>{translations++;return translate(...args);}};
  vm.runInContext(source,context);
  const controls=panel.children[0],button=controls.children[2],results=controls.children[3];
- return {document,heading,results,button,stats:()=>({writes,translations,requests}),
+ return {document,heading,results,button,categories,controls,stats:()=>({writes,translations,requests}),
  changeLanguage(lang){selector.value=lang;selector.listeners.change();},load:()=>button.listeners.click()};
 }
