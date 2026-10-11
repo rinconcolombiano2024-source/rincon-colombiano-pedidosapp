@@ -1459,6 +1459,7 @@ Deno.serve(withCors(
           {
             method:
               "POST",
+            redirect: "error",
             headers: {
               Authorization:
                 `Bearer ${stripeKey}`,
