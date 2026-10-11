@@ -239,7 +239,7 @@
     ]
   },
   "service-worker.js": {
-    "sha256": "4cc38b4ccbdf517d97d27bc54c67dabe5d7ad062a7b75c9bd764453b05114e18",
+    "sha256": "3a8b7edfacafde77f91e75ef164a7fc80395f06034bdcf369f010ffd3de56e45",
     "regressionTests": "tests/hardening/frontend.test.mjs",
     "edits": [
       {
@@ -261,6 +261,16 @@
         "before": "",
         "after": "\",\n  \"./install-app.js\",\n  \"./install-app.css\",\n  \"./portal-manifest.webmanifest",
         "afterByteOffset": 118
+      },
+      {
+        "before": "9",
+        "after": "10",
+        "afterByteOffset": 68
+      },
+      {
+        "before": "",
+        "after": ".webmanifest\",\n  \"./portal-manifest.pl.webmanifest\",\n  \"./portal-manifest.en",
+        "afterByteOffset": 187
       }
     ]
   },

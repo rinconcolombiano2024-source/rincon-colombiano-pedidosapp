@@ -15,6 +15,8 @@ const runtimeFiles = [
   "install-app.js",
   "install-app.css",
   "portal-manifest.webmanifest",
+  "portal-manifest.pl.webmanifest",
+  "portal-manifest.en.webmanifest",
   "portal.html",
   "centro-integraciones.html",
   "centro-integraciones-status.js",

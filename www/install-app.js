@@ -15,22 +15,26 @@
   const message = document.createElement('p');
   const close = document.createElement('button');close.type='button';close.className='rc-install-button';
   dialog.append(title,message,close);document.body.append(dialog);
-  let deferred = null, busy = false, messageIndex = 2;
+  let deferred = null, busy = false, installed = false, messageIndex = 2;
+  const installedCopy = {es:'Instalación completada. Abre RC ORDERA desde el icono de tu dispositivo.',pl:'Instalacja zakończona. Otwórz RC ORDERA za pomocą ikony na urządzeniu.',en:'Installation completed. Open RC ORDERA using its icon on your device.'};
   const standalone = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   function render() {
     const texts = copy[document.documentElement.lang] || copy.es;
-    button.textContent = texts[0];title.textContent = texts[1];message.textContent = texts[messageIndex];close.textContent = texts[3];
+    for (const [element, text] of [[button,texts[0]],[title,texts[1]],[message,messageIndex === 6 ? installedCopy[document.documentElement.lang] || installedCopy.es : texts[messageIndex]],[close,texts[3]]]) {
+      if(element.textContent !== text)element.textContent=text;
+    }
   }
   function show(index) {messageIndex=index;render();if(!dialog.open)dialog.showModal();}
   close.addEventListener('click',()=>{dialog.close();button.focus();});
   window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();deferred=event;});
-  window.addEventListener('appinstalled',()=>{deferred=null;if(dialog.open)show(4);});
+  window.addEventListener('appinstalled',()=>{deferred=null;installed=true;if(dialog.open)show(6);});
   button.addEventListener('click',async()=>{
     if(busy)return;
     if(standalone()){show(4);return;}
+    if(installed){show(6);return;}
     if(!deferred){show(2);return;}
     const prompt=deferred;deferred=null;busy=true;button.disabled=true;
-    try {await prompt.prompt();const result=await prompt.userChoice;if(result?.outcome==='accepted')show(5);}
+    try {await prompt.prompt();const result=await prompt.userChoice;if(result?.outcome==='accepted')show(installed ? 6 : 5);}
     catch {show(2);}
     finally {busy=false;button.disabled=false;}
   });
