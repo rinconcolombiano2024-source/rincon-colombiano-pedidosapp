@@ -7,13 +7,13 @@ for(const lang of ['es','pl','en']) {
     await installSupabaseMock(page);
     await page.goto('/cliente.html?lang='+lang);
     await expect(page.locator('html')).toHaveAttribute('lang',lang);
-    const buttons=['#customerHeaderCartButton','[data-install-app]'];
+    const buttons=['#customerHeaderCartButton','.customer-profile-avatar','[data-install-app]'];
     for(const selector of buttons){
       const element=page.locator(selector);
       await expect(element).toBeVisible();
       const size=await element.boundingBox();
-      expect(size?.width,`${selector} width`).toBeGreaterThanOrEqual(40);
-      expect(size?.height,`${selector} height`).toBeGreaterThanOrEqual(40);
+      expect(size?.width,`${selector} width`).toBeGreaterThanOrEqual(44);
+      expect(size?.height,`${selector} height`).toBeGreaterThanOrEqual(44);
       expect(size?.x,`${selector} left`).toBeGreaterThanOrEqual(-2);
       expect(size.x+size.width,`${selector} right`).toBeLessThanOrEqual(322);
     }
