@@ -1,12 +1,12 @@
 # Estado de los diez objetivos — 2026-10-11
 
-Última revisión: QA-SEXTA-MEJORA-20261011.md. 399 pruebas locales; las verificaciones externas pendientes no se cuentan como aprobadas. Los dos CI de la quinta mejora aprobaron; comprobar los de esta revisión. Sin porcentaje global de funcionamiento.
+Última revisión: QA-SEPTIMA-MEJORA-20261011.md. 404 pruebas locales; las verificaciones externas pendientes no se cuentan como aprobadas. Los dos CI de la sexta mejora aprobaron; comprobar los de esta revisión. Sin porcentaje global de funcionamiento.
 
 |Objetivo|Evidencia actual|Pendiente para aprobar producción|
 |---|---|---|
 |1 Pedidos|Idempotencia, cantidades y compatibilidad RPC probadas localmente; controles preservados.|Aplicar únicamente ruta SQL revisada en staging; probar clientes y concurrencia real.|
 |2 POS/cocina/meseros|Módulos conservados y regresiones automatizadas.|Flujo multidispositivo, desconexión y estados con roles reales.|
-|3 Impresora fiscal|UNKNOWN protegido; diario persistente; acuses estrictos; simulación identificada.|Modelo POSNET, protocolo oficial, controlador y hardware. SQL fiscal faltante por verificar/aplicar en staging.|
+|3 Impresora fiscal|UNKNOWN protegido; diario persistente validado y bloqueo ante corrupción; acuses estrictos; simulación identificada.|Modelo POSNET, protocolo oficial, controlador y hardware. SQL fiscal faltante por verificar/aplicar en staging.|
 |4 Reparto externo|Importes externos exactos, adaptadores preparados, outbox SQL atómica; selección evita bloqueo por ready no ejecutable.|Acceso y contratos oficiales, webhooks y workers en staging; concurrencia independiente.|
 |5 Pagos|Motor Stripe conservado; regresiones simuladas; reembolsos trazables.|Stripe test, webhooks reales de prueba, BLIK elegibilidad y liquidaciones.|
 |6 Contabilidad|Dinero exacto, duplicados, reembolsos netos, snapshots y cantidades auditados.|IVA completo de datos reales, cierres integrales y revisión contable.|
