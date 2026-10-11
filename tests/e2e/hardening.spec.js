@@ -52,3 +52,20 @@ test('integration centre accessible names follow language changes',async({page})
  await expect(page.getByRole('tablist',{name:'Categories',exact:true})).toBeVisible();
  await expect(page.getByRole('region',{name:'Integration diagnostics',exact:true})).toBeVisible();
 });
+
+test('integration centre fits 320px and preserves 44px touch targets',async({page})=>{
+ await page.setViewportSize({width:320,height:720});
+ await installSupabaseMock(page);
+ await page.goto('/centro-integraciones.html?lang=pl');
+ await expect(page.locator('h1')).toHaveText('Centrum integracji');
+ const measures=await page.evaluate(()=>{
+  const rect=selector=>document.querySelector(selector).getBoundingClientRect();
+  return {overflow:document.documentElement.scrollWidth-innerWidth,
+   languageHeight:rect('#integrationLanguage').height,
+   backHeight:rect('.back').height,
+   tabHeight:rect('#tab-fiscal').height,
+   actionHeight:rect('#panel-fiscal .action').height};
+ });
+ expect(measures.overflow).toBeLessThanOrEqual(2);
+ for(const key of ['languageHeight','backHeight','tabHeight','actionHeight'])expect(measures[key]).toBeGreaterThanOrEqual(44);
+});
