@@ -67,8 +67,10 @@ test('cancellation rejects claimed oversized, malformed content length and malfo
 });
 test('well-formed invalid order is rejected without contacting orders table',async()=>{
   const h=harness();
-  const response=await h.handler(make(JSON.stringify({orderId:'not-a-uuid',reason:'test'})));
-  assert.equal(response.status,400);
-  assert.equal((await response.json()).error,'Invalid order');
+  for(const reason of ['test', null, undefined]) {
+    const response=await h.handler(make(JSON.stringify({orderId:'not-a-uuid',reason})));
+    assert.equal(response.status,400);
+    assert.equal((await response.json()).error,'Invalid order');
+  }
   assert.equal(h.dbReads(),0);
 });
