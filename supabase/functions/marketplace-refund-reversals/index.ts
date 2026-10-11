@@ -268,6 +268,7 @@ async function stripeRequest(
   try {
     result = await fetch(url, {
       ...options,
+      redirect: "error",
       signal: controller.signal,
     });
     // La fecha limite cubre tambien el cuerpo, no solo las cabeceras.
