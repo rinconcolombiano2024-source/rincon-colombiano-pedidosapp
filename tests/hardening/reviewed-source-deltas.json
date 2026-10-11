@@ -1,6 +1,6 @@
 {
   "cliente.js": {
-    "sha256": "0bb550540cfe499d1561ee507338d475cbfc3ea87e3e1c96c14743dc298dcf6c",
+    "sha256": "4c108331d3bf606f9873bd443e78287c42a233efdf80be9398d79e3751c274d9",
     "regressionTests": "tests/hardening/frontend.test.mjs",
     "edits": [
       {
@@ -102,11 +102,16 @@
         "before": " if (![customerT(\"orderRateLimited\"), customerT(\"restaurantClosedOrder\"), customerT(\"restaurantRegionMismatch\"), customerT(\"deliveryQuoteRequired\"), customerT(\"menuChangedBeforeOrder\")].includes(customerElements.status.textContent)) {\r\n",
         "after": " if (![customerT(\"orderSessionChanged\"), customerT(\"orderRateLimited\"), customerT(\"restaurantClosedOrder\"), customerT(\"restaurantRegionMismatch\"), customerT(\"deliveryQuoteRequired\"), customerT(\"menuChangedBeforeOrder\")].includes(customerElements.status.textContent)) {\r\n",
         "afterByteOffset": 287651
+      },
+      {
+        "before": "Wysylanie zamowienia...",
+        "after": "Wysyłanie zamówienia...",
+        "afterByteOffset": 42123
       }
     ]
   },
   "centro-integraciones.html": {
-    "sha256": "2bfd58961d9f79dc38a35b91450054c3ce20e22c9f895f53586a73e93bf8350d",
+    "sha256": "9233f17d11c820c4ef7719c1dacb6ff834fd81f173881791a6236dab886a1003",
     "regressionTests": "tests/hardening/dashboard-language.test.mjs; tests/e2e/hardening.spec.js",
     "edits": [
       {
@@ -168,11 +173,26 @@
         "before": "",
         "after": "3d35;\n      border: 1px solid #496157",
         "afterByteOffset": 4394
+      },
+      {
+        "before": "    .back {\n      color: #d4e7df;\n      text-decoration: none;\n      font-size: 14px;\n    }",
+        "after": "    .back {\n      color: #d4e7df;\n      text-decoration: none;\n      font-size: 14px;\n      display: inline-flex;\n      align-items: center;\n      min-height: 44px;\n      padding: 8px 10px;\n      border: 1px solid transparent;\n      border-radius: 10px;\n    }\n    .back:hover {\n      color: #f3f8f5;\n      background: #19322b;\n      border-color: #35534a;\n    }",
+        "afterByteOffset": 1263
+      },
+      {
+        "before": "      border-radius: 10px;\n      min-height: 43px;\n    }\n    .action.secondary {",
+        "after": "      border-radius: 10px;\n      min-height: 44px;\n    }\n    .action.secondary {",
+        "afterByteOffset": 4444
+      },
+      {
+        "before": "",
+        "after": "    @media(max-width: 420px) {\n      .shell { padding: 16px 12px 36px; }\n      .top { gap: 10px; margin-bottom: 22px; }\n      .top label { display: inline-flex; align-items: center; gap: 8px; }\n      .back { width: 100%; }\n      .tabs { gap: 6px; }\n      .tab { padding: 10px 12px; }\n      .item { padding: 15px; }\n      .actions > button { flex: 1 1 135px; }\n    }\n",
+        "afterByteOffset": 5221
       }
     ]
   },
   "centro-integraciones-status.js": {
-    "sha256": "e87385f46da122ce5216a690c4b6f27234d60d17b85d30d5fb48154d8ff56241",
+    "sha256": "afd92f05cac85def94b11762de05cbad69f6fc28afb2663333622b8ee48e855a",
     "regressionTests": "tests/hardening/dashboard-language.test.mjs; tests/e2e/hardening.spec.js",
     "edits": [
       {
@@ -299,6 +319,11 @@
         "before": "",
         "after": "    const labelled = [...(root.querySelectorAll?.('[aria-label]') || [])];\n    if (root.hasAttribute?.('aria-label')) labelled.unshift(root);\n    for (const element of labelled) {\n      const source = originalLabels.get(element) || element.getAttribute('aria-label');\n      originalLabels.set(element, source);\n      const value = window.RC_ORDERA_OFFLINE_I18N.translate(source, language) || source;\n      if (element.getAttribute('aria-label') !== value) element.setAttribute('aria-label', value);\n    }\n",
         "afterByteOffset": 938
+      },
+      {
+        "before": "if(!languages.has(selector.value))return;language=selector.value;",
+        "after": "if(!languages.has(selector.value) || selector.value===language)return;language=selector.value;",
+        "afterByteOffset": 2116
       }
     ]
   },
