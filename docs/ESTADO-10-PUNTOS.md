@@ -1,6 +1,6 @@
 # Estado de los diez objetivos — 2026-10-11
 
-Última revisión: QA-OCTAVA-MEJORA-20261011.md. 408 pruebas locales; las verificaciones externas pendientes no se cuentan como aprobadas. Los dos CI de la séptima mejora aprobaron; comprobar los de esta revisión. Sin porcentaje global de funcionamiento.
+Última revisión: QA-NOVENA-MEJORA-20261011.md. 416 pruebas locales; las verificaciones externas pendientes no se cuentan como aprobadas. Los dos CI de la octava mejora aprobaron; comprobar los de esta revisión. Sin porcentaje global de funcionamiento.
 
 |Objetivo|Evidencia actual|Pendiente para aprobar producción|
 |---|---|---|
@@ -11,8 +11,8 @@
 |5 Pagos|Motor Stripe conservado; regresiones simuladas; reembolsos trazables.|Stripe test, webhooks reales de prueba, BLIK elegibilidad y liquidaciones.|
 |6 Contabilidad|Dinero exacto, duplicados, reembolsos netos, snapshots y cantidades auditados.|IVA completo de datos reales, cierres integrales y revisión contable.|
 |7 Repartidores|Módulos GPS/asignación/push conservados.|Móvil real, permisos negativos, recuperación y notificaciones.|
-|8 Seguridad/recursos|CSP, límites, aislamiento SQL local, tokens y CI de dependencias.|RLS negativo en proyecto de pruebas, concurrencia real y medición CPU/memoria.|
-|9 Administración|Centro ES/PL/EN conservado; propietario comprobó diagnóstico autenticado.|Gestión operativa oficial, navegación y pruebas UI con cuentas reales.|
+|8 Seguridad/recursos|CSP, límites, aislamiento SQL local, tokens y CI; trabajo de traducción reducido en benchmark del módulo.|RLS negativo en proyecto de pruebas, concurrencia real y medición CPU/memoria.|
+|9 Administración|Descarga PWA visible en portal/cliente/colaborador; centro ES/PL/EN con espaciado corregido; propietario comprobó diagnóstico autenticado.|Gestión operativa oficial, navegación y pruebas UI con cuentas reales.|
 |10 Producción|Borrador y ZIP alineados, manifiesto, instalación y QA limpio.|Staging, pruebas externas, migraciones controladas, monitoreo/rollback autorizado.|
 
 Main no se modifica; no hay nuevas acciones de producción. Consultar DEPLOYED-COMPAT-20261011.md: migración preparada pero no aplicada. No ejecutar archivos SQL históricos en bloque. Los informes incrementales anteriores son evidencia histórica, no certificación de esta revisión.

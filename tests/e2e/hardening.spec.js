@@ -31,3 +31,15 @@ test('actual enforced CSP blocks dynamic evaluation',async({page})=>{
  expect(await page.evaluate(()=>window.__cspEvalBlocked)).toBe(true);
  expect(await page.evaluate(()=>window.__unauthorizedInlineRan)).toBe(false);
 });
+
+test('diagnostics retain readable spacing across ES/PL/EN and mobile layout',async({page})=>{
+ await installSupabaseMock(page,{user:{id:'11111111-1111-4111-8111-111111111111'}});
+ await page.route('**/functions/v1/integration-status',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({fiscal:{registeredDevices:2,unknownOperations:1},delivery:{pendingReview:3},payment:{}})}));
+ await page.goto('/centro-integraciones.html?lang=es');
+ for(const [lang,label] of [['es','Dispositivos registrados: 2'],['pl','Zarejestrowane urządzenia: 2'],['en','Registered devices: 2']]){
+  await page.locator('#integrationLanguage').selectOption(lang);
+  await page.locator('#panel-fiscal button:not([disabled])').first().click();
+  await expect(page.locator('#panel-fiscal section p').filter({hasText:label})).toHaveText(label);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(2);
+ }
+});

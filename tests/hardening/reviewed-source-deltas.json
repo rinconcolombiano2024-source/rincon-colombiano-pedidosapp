@@ -36,8 +36,8 @@
     ]
   },
   "centro-integraciones.html": {
-    "sha256": "3011b328ec7cb5c5e0c0829c4249b416555102bb15bbe54282c0d0dc290e6883",
-    "regressionTests": "tests/hardening/frontend.test.mjs",
+    "sha256": "2bfd58961d9f79dc38a35b91450054c3ce20e22c9f895f53586a73e93bf8350d",
+    "regressionTests": "tests/hardening/dashboard-language.test.mjs; tests/e2e/hardening.spec.js",
     "edits": [
       {
         "before": "    button, a { font: inherit; }\n",
@@ -63,12 +63,47 @@
         "before": "<script src=\"centro-integraciones-status.js?v=1\"></script>\n",
         "after": "<script src=\"offline-i18n.js?v=91.0.4\"></script>\n<script src=\"centro-integraciones-status.js?v=2\"></script>\n",
         "afterByteOffset": 15698
+      },
+      {
+        "before": "",
+        "after": "flex-wrap: wrap;\n      ",
+        "afterByteOffset": 3414
+      },
+      {
+        "before": "",
+        "after": "max-width: 100%;\n      ",
+        "afterByteOffset": 3707
+      },
+      {
+        "before": "",
+        "after": "rmal;\n      overflow-",
+        "afterByteOffset": 3745
+      },
+      {
+        "before": "",
+        "after": ": anywhere",
+        "afterByteOffset": 3770
+      },
+      {
+        "before": ".",
+        "after": "1;\n      color: #bacbc",
+        "afterByteOffset": 4348
+      },
+      {
+        "before": "",
+        "after": ";\n      background: #2",
+        "afterByteOffset": 4371
+      },
+      {
+        "before": "",
+        "after": "3d35;\n      border: 1px solid #496157",
+        "afterByteOffset": 4394
       }
     ]
   },
   "centro-integraciones-status.js": {
-    "sha256": "d20ae59578575184633913b8035a405ed2025707c3fbdd91ce5b9965bf43c830",
-    "regressionTests": "tests/hardening/frontend.test.mjs",
+    "sha256": "43f173cca6d4a1ad5ac9ec42c2e8559ccfae5344ca9aa38fe0c85be89d097bca",
+    "regressionTests": "tests/hardening/dashboard-language.test.mjs; tests/e2e/hardening.spec.js",
     "edits": [
       {
         "before": "",
@@ -114,6 +149,76 @@
         "before": "persistSession: true,\n            autoRefreshToken: false",
         "after": "persistSession: true,\n            autoRefreshToken: false,\n            detectSessionInUrl: false,\n            storageKey: \"rc-ordera-restaurant-auth\"",
         "afterByteOffset": 4208
+      },
+      {
+        "before": "",
+        "after": "root = document",
+        "afterByteOffset": 759
+      },
+      {
+        "before": "d",
+        "after": "r",
+        "afterByteOffset": 941
+      },
+      {
+        "before": "cumen",
+        "after": "o",
+        "afterByteOffset": 943
+      },
+      {
+        "before": "",
+        "after": "if (!source.trim()) continue;\n      ",
+        "afterByteOffset": 1216
+      },
+      {
+        "before": "",
+        "after": "const value = translated ? source.replace(source.tr",
+        "afterByteOffset": 1340
+      },
+      {
+        "before": "f",
+        "after": "m",
+        "afterByteOffset": 1392
+      },
+      {
+        "before": "",
+        "after": "), ",
+        "afterByteOffset": 1394
+      },
+      {
+        "before": "",
+        "after": " : source;\n      if (node.nodeValue !== value) ",
+        "afterByteOffset": 1408
+      },
+      {
+        "before": "tr",
+        "after": "v",
+        "afterByteOffset": 1470
+      },
+      {
+        "before": "ns",
+        "after": "",
+        "afterByteOffset": 1472
+      },
+      {
+        "before": "at",
+        "after": "u",
+        "afterByteOffset": 1473
+      },
+      {
+        "before": "d",
+        "after": "",
+        "afterByteOffset": 1475
+      },
+      {
+        "before": "",
+        "after": "controls",
+        "afterByteOffset": 3716
+      },
+      {
+        "before": "",
+        "after": "controls",
+        "afterByteOffset": 7285
       }
     ]
   },
@@ -134,7 +239,7 @@
     ]
   },
   "service-worker.js": {
-    "sha256": "941b4f6f18b46cf79221b7067aa4aaafbc12ed1453619665a99abb0bc5ac17c8",
+    "sha256": "4cc38b4ccbdf517d97d27bc54c67dabe5d7ad062a7b75c9bd764453b05114e18",
     "regressionTests": "tests/hardening/frontend.test.mjs",
     "edits": [
       {
@@ -146,6 +251,16 @@
         "before": "",
         "after": "  \"./vendor/qrcode-generator-2.0.4.js\",\r\n  \"./local-qr.js\",\r\n",
         "afterByteOffset": 443
+      },
+      {
+        "before": "",
+        "after": "-install-r9",
+        "afterByteOffset": 58
+      },
+      {
+        "before": "",
+        "after": "\",\n  \"./install-app.js\",\n  \"./install-app.css\",\n  \"./portal-manifest.webmanifest",
+        "afterByteOffset": 118
       }
     ]
   },

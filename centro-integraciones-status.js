@@ -21,15 +21,17 @@
   try { language = new URLSearchParams(window.location.search).get("lang") || localStorage.getItem("rincon_colombiano_app_language") || "es"; } catch {}
   if (!languages.has(language)) language="es";
   const originalText = new WeakMap();
-  function applyLanguage() {
+  function applyLanguage(root = document) {
     if(!window.RC_ORDERA_OFFLINE_I18N || !document.createTreeWalker)return;
     document.documentElement.lang=language;
-    const walker=document.createTreeWalker(document,NodeFilter.SHOW_TEXT);
+    const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
     for(let node=walker.nextNode();node;node=walker.nextNode()){
       if(["SCRIPT","STYLE","OPTION"].includes(node.parentElement?.tagName))continue;
       const source=originalText.get(node) || node.nodeValue;originalText.set(node,source);
+      if (!source.trim()) continue;
       const translated=window.RC_ORDERA_OFFLINE_I18N.translate(source.trim(),language);
-      if(translated)node.nodeValue=translated;
+      const value = translated ? source.replace(source.trim(), translated) : source;
+      if (node.nodeValue !== value) node.nodeValue=value;
     }
   }
   if(selector){selector.value=language;selector.addEventListener("change",()=>{
@@ -122,7 +124,7 @@
 
     message.textContent =
       "Consultando información del servidor...";
-    applyLanguage();
+    applyLanguage(controls);
 
     try {
       if (
@@ -277,7 +279,7 @@
       results.replaceChildren();
     } finally {
       refreshButton.disabled = false;
-      applyLanguage();
+      applyLanguage(controls);
     }
   }
 

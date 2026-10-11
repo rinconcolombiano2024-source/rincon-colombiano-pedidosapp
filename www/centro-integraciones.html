@@ -137,6 +137,7 @@
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
+      flex-wrap: wrap;
       gap: 12px;
       margin-bottom: 14px;
     }
@@ -148,7 +149,9 @@
       padding: 6px 10px;
       background: #473b25;
       color: #ffe29b;
-      white-space: nowrap;
+      max-width: 100%;
+      white-space: normal;
+      overflow-wrap: anywhere;
     }
     .status.neutral {
       background: #30413c;
@@ -176,7 +179,10 @@
       background: #2c4940;
     }
     .action:disabled {
-      opacity: .46;
+      opacity: 1;
+      color: #bacbc4;
+      background: #263d35;
+      border: 1px solid #496157;
       cursor: not-allowed;
     }
     .requirements {

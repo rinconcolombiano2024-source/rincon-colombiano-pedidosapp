@@ -1,7 +1,10 @@
-const CACHE_NAME = "rc-ordera-v91-0-4-v6-verified-20261010";
+const CACHE_NAME = "rc-ordera-v91-0-4-v6-verified-20261010-install-r9";
 const APP_FILES = [
   "./",
   "./index.html",
+  "./install-app.js",
+  "./install-app.css",
+  "./portal-manifest.webmanifest",
   "./restaurante.html",
   "./cliente.html",
   "./colaborador.html",
