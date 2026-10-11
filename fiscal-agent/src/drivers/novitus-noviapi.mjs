@@ -7,13 +7,33 @@
 import { FiscalDriver, FiscalError } from "../../../fiscal-bridge/src/fiscal-contract.mjs";
 
 const DEFAULT_ENDPOINTS = Object.freeze({ login: "/api/token", command: "/api/command", status: "/api/status" });
-const DEFAULT_TAX_MAP = Object.freeze({ "23": "A", "8": "B", "5": "C", "0": "D", ZW: "E" });
+// Las letras PTU (A..G) las define la CONFIGURACIÓN FISCAL de cada dispositivo, no son universales.
+// No existe mapa por defecto: debe pasarse `taxMap` explícito y verificado ({ "23": "A", ... } según la impresora).
+function assertTaxMap(map) {
+  const plain = map && typeof map === "object" && !Array.isArray(map);
+  const entries = plain ? Object.entries(map) : [];
+  if (!entries.length || entries.some(([k, v]) => !/^(23|8|5|0|ZW|NP|NP I|NP II)$/.test(k) || !/^[A-G]$/.test(String(v)))) {
+    throw new FiscalError("NOT_CONFIGURED", "An explicit, verified taxMap (rate -> device PTU letter) is required");
+  }
+  const numericLetters = new Set();
+  for (const [rate, letter] of entries) {
+    if (!/^(23|8|5|0)$/.test(rate)) continue;
+    if (numericLetters.has(letter)) throw new FiscalError("NOT_CONFIGURED", "Distinct numeric VAT rates cannot share a PTU letter");
+    numericLetters.add(letter);
+  }
+  return Object.freeze({ ...map });
+}
 
-export function taxLetter(taxCode, map = DEFAULT_TAX_MAP) {
-  const raw = String(taxCode ?? "").trim().toUpperCase();
-  if (/^[A-G]$/.test(raw)) return raw;
-  const key = raw === "ZW" || raw === "EXEMPT" ? "ZW" : raw.replace(/[^0-9]/g, "");
-  const letter = map[key];
+export function taxLetter(taxCode, map) {
+  assertTaxMap(map);
+  const raw = String(taxCode ?? "").trim().toUpperCase().replace(/\s+/g, " ");
+  // Una letra solo es válida si es una letra CONFIGURADA en este dispositivo.
+  if (/^[A-G]$/.test(raw)) {
+    if (Object.values(map).includes(raw)) return raw;
+    throw new FiscalError("FAILED_BEFORE_SEND", `Tax letter not configured on device: ${raw}`);
+  }
+  const key = raw === "EXEMPT" ? "ZW" : /^(ZW|NP|NP I|NP II)$/.test(raw) ? raw : raw.replace(/^VAT[_\s-]*/, "").replace(/\s*%$/, "");
+  const letter = Object.hasOwn(map, key) ? map[key] : undefined;
   if (!letter) throw new FiscalError("FAILED_BEFORE_SEND", `Unmapped tax code: ${raw}`);
   return letter;
 }
@@ -30,9 +50,11 @@ export class NovitusNoviApiDriver extends FiscalDriver {
     if (options.simulationOnly !== true || typeof options.fetchImpl !== "function" || options.fetchImpl === globalThis.fetch) {
       throw new FiscalError("PROTOCOL_UNVERIFIED", "NoviAPI template is simulation-only until official protocol and hardware review");
     }
+    const taxMap = assertTaxMap(options.taxMap);
     this.#o = {
       fetchImpl: globalThis.fetch, pollIntervalMs: 500, maxPolls: 20, timeoutMs: 8000,
-      taxMap: DEFAULT_TAX_MAP, sleep: (ms) => new Promise((r) => setTimeout(r, ms)), ...options,
+      sleep: (ms) => new Promise((r) => setTimeout(r, ms)), ...options,
+      taxMap,
       endpoints: { ...DEFAULT_ENDPOINTS, ...(options.endpoints ?? {}) },
     };
   }

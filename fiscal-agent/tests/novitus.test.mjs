@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { NovitusNoviApiDriver, taxLetter } from "../src/drivers/novitus-noviapi.mjs";
 import { createAgentRegistry } from "../src/registry.mjs";
 
+const MAP = { "23": "A", "8": "B", "5": "C", "0": "D", ZW: "E" }; // configuración de EJEMPLO de un dispositivo simulado
 const OP = "11111111-1111-4111-8111-111111111111";
 const receipt = (taxCode = "8") => ({ operationId: OP, restaurantId: "r", orderId: "o", currency: "PLN", totalGrosz: 4500,
   items: [{ name: "Bandeja", quantityMilli: 1500, grossTotalGrosz: 4500, taxCode }] });
@@ -22,11 +23,28 @@ function fakeDevice({ finalStatus = "done", confirmOk = true, dropAfterConfirm =
   };
   return { fetchImpl, log };
 }
-const mk = (dev, extra = {}) => new NovitusNoviApiDriver({ simulationOnly: true, baseUrl: "http://printer.local", username: "u", password: "p", fetchImpl: dev.fetchImpl, sleep: async () => {}, maxPolls: 3, ...extra });
+const mk = (dev, extra = {}) => new NovitusNoviApiDriver({ simulationOnly: true, taxMap: MAP, baseUrl: "http://printer.local", username: "u", password: "p", fetchImpl: dev.fetchImpl, sleep: async () => {}, maxPolls: 3, ...extra });
 
-test("taxLetter: 23/8/5/0/ZW -> A/B/C/D/E y rechazo de códigos desconocidos", () => {
-  assert.deepEqual(["23", "VAT_8", "5", "0", "ZW", "b"].map((c) => taxLetter(c)), ["A", "B", "C", "D", "E", "B"]);
-  assert.throws(() => taxLetter("19"), { code: "FAILED_BEFORE_SEND" });
+test("taxLetter: con el mapa EXPLÍCITO del dispositivo; rechazo de códigos desconocidos", () => {
+  assert.deepEqual(["23", "VAT_8", "5", "0", "ZW", "8 %"].map((c) => taxLetter(c, MAP)), ["A", "B", "C", "D", "E", "B"]);
+  assert.throws(() => taxLetter("19", MAP), { code: "FAILED_BEFORE_SEND" });
+});
+
+test("taxLetter NO infiere: otra configuración de dispositivo da otras letras; sin mapa o con mapa inválido falla cerrado", () => {
+  const other = { "23": "C", "8": "A" };                       // otro dispositivo: 23 % no es 'A'
+  assert.equal(taxLetter("23", other), "C"); assert.equal(taxLetter("8", other), "A");
+  for (const bad of [undefined, null, {}, [], "A", { "23": "Z" }, { "19": "A" }]) assert.throws(() => taxLetter("23", bad), { code: "NOT_CONFIGURED" });
+  assert.throws(() => taxLetter("B", { "23": "A" }), { code: "FAILED_BEFORE_SEND" });  // letra no configurada en el dispositivo
+  assert.equal(taxLetter("B", MAP), "B");                       // letra configurada: válida
+  assert.throws(() => taxLetter("NP", MAP), { code: "FAILED_BEFORE_SEND" });              // categoría sin letra asignada: no se inventa
+});
+
+test("el driver exige taxMap explícito al construirse (no hay mapa por defecto)", () => {
+  const dev = fakeDevice();
+  const base = { simulationOnly: true, baseUrl: "http://printer.local", username: "u", password: "p", fetchImpl: dev.fetchImpl };
+  assert.throws(() => new NovitusNoviApiDriver(base), { code: "NOT_CONFIGURED" });
+  assert.throws(() => new NovitusNoviApiDriver({ ...base, taxMap: {} }), { code: "NOT_CONFIGURED" });
+  assert.doesNotThrow(() => new NovitusNoviApiDriver({ ...base, taxMap: MAP }));
 });
 
 test("flujo feliz POST -> PUT -> GET y número de recibo", async () => {
@@ -77,4 +95,8 @@ test('V5: lost POST acknowledgement, invalid creation response and confirmation 
   };
   const d=mk(dev);await d.connect();assert.equal((await d.printReceipt(receipt())).status,'unknown');
  }
+});
+
+ test("rejects conflicting numeric VAT mappings before transmission", () => {
+  assert.throws(() => taxLetter("23", { "23": "A", "8": "A" }), /Distinct numeric VAT/);
 });

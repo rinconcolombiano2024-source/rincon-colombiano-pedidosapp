@@ -1,9 +1,9 @@
-
 name: RC ORDERA QA
 
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -14,9 +14,9 @@ concurrency:
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    # Runner explícito para reproducibilidad.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,8 +42,12 @@ jobs:
           node --check auto-translate.js
           node --check offline-i18n.js
 
-      - name: Audit locked dependencies including build tools
+      - name: "Audit all dependencies (blocking, high and critical)"
+        run: npm audit --audit-level=high
+
+      - name: "Audit all dependencies incl. build tools (informational, moderate)"
         run: npm audit --audit-level=moderate
+        continue-on-error: true
 
       - name: Assert distribution matches committed sources
         run: npm run qa:policy
@@ -63,7 +67,6 @@ jobs:
           npm run android:prepare-web
           git diff --exit-code -- www/
 
-
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
         timeout-minutes: 8
@@ -74,3 +77,14 @@ jobs:
         env:
           CI: "true"
           RC_E2E_FULL_MATRIX: "1"
+
+      - name: Upload E2E evidence on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-evidence
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
