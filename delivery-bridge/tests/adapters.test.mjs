@@ -120,3 +120,20 @@ test('V5: missing order identifiers and malformed signature suffix fail closed',
  assert.equal(verifyWith({type:'hmac-sha256',header:'x-sig'}, {headers:{'x-sig':sign(body)+'zz'},rawBody:body},SECRET),false);
  assert.throws(()=>toGrosz(Number.MAX_SAFE_INTEGER+1),{code:'INVALID_MONEY'});
 });
+
+test("major currency rejects excess precision instead of silently rounding", () => {
+ for (const value of ["1.005", "19.999", 1.005, 19.999])
+  assert.throws(()=>toGrosz(value,{unit:"major"}), {code:"INVALID_MONEY"});
+ assert.equal(toGrosz("1.01",{unit:"major"}),101);
+ assert.equal(toGrosz(0.1+0.2,{unit:"major"}),30);
+});
+test("external money preserves safe boundary and rejects overflow in both units", () => {
+ assert.equal(toGrosz("90071992547409.91",{unit:"major"}),Number.MAX_SAFE_INTEGER);
+ assert.equal(toGrosz("9007199254740991"),Number.MAX_SAFE_INTEGER);
+ for (const [value,unit] of [["90071992547409.92","major"],["9007199254740992","minor"],["9007199254740991.01","minor"],[Number.MAX_SAFE_INTEGER,"major"]])
+  assert.throws(()=>toGrosz(value,{unit}),{code:"INVALID_MONEY"});
+});
+test("money units are explicit and zero values remain valid", () => {
+ assert.throws(()=>toGrosz(10,{unit:"unknown"}),{code:"INVALID_MONEY"});
+ assert.equal(toGrosz("1.00"),1);assert.equal(toGrosz("0.00",{unit:"major"}),0);
+});

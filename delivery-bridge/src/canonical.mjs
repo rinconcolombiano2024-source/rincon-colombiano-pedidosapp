@@ -9,14 +9,23 @@ export const EVENT_TYPES = Object.freeze(["order_created", "order_updated", "ord
 export const FULFILLMENT = Object.freeze(["delivery", "pickup"]);
 
 export function toGrosz(value, { unit = "minor" } = {}) {
-  // unit "minor": ya viene en grosze/centavos (entero). unit "major": viene en zł (decimal).
-  if (typeof value === "string" && /^\d+(\.\d{1,2})?$/.test(value.trim())) value = Number(value);
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
-    throw new DeliveryAdapterError("INVALID_MONEY", "Invalid monetary amount");
+  if (!["minor", "major"].includes(unit)) throw new DeliveryAdapterError("INVALID_MONEY", "Unknown monetary unit");
+  if (typeof value === "string") {
+    const match = /^(\d{1,16})(?:\.(\d{1,2}))?$/.exec(value.trim());
+    if (!match) throw new DeliveryAdapterError("INVALID_MONEY", "Invalid decimal amount");
+    const fraction = (match[2] ?? "").padEnd(2, "0");
+    if (unit === "minor" && fraction !== "00") throw new DeliveryAdapterError("INVALID_MONEY", "Minor units must be integer");
+    const exact = BigInt(match[1]) * (unit === "major" ? 100n : 1n) + (unit === "major" ? BigInt(fraction) : 0n);
+    if (exact > BigInt(Number.MAX_SAFE_INTEGER)) throw new DeliveryAdapterError("INVALID_MONEY", "Amount exceeds safe range");
+    return Number(exact);
   }
-  if (unit === "major") return Math.round(value * 100);
-  if (!Number.isSafeInteger(value)) throw new DeliveryAdapterError("INVALID_MONEY", "Minor units must be integer");
-  return value;
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0)
+    throw new DeliveryAdapterError("INVALID_MONEY", "Invalid monetary amount");
+  const scaled = unit === "major" ? value * 100 : value;
+  const result = Math.round(scaled);
+  if (!Number.isSafeInteger(result) || (unit === "minor" ? result !== scaled : Math.abs(scaled - result) > 0.000001))
+    throw new DeliveryAdapterError("INVALID_MONEY", "Amount requires unsafe rounding or exceeds safe range");
+  return result;
 }
 
 export function pick(obj, path) {
