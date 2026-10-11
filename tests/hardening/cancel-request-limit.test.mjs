@@ -55,6 +55,9 @@ test('cancellation rejects claimed oversized, malformed content length and malfo
     ['{bad',{},400],
     ['null',{},400],
     ['[]',{},400],
+    [JSON.stringify({orderId:{toString:null}}),{},400],
+    [JSON.stringify({orderId:userId,reason:{toString:null}}),{},400],
+    [JSON.stringify({orderId:userId,reason:123}),{},400],
     [new Uint8Array([0xff,0xfe]),{},400],
   ]) {
     const response = await h.handler(make(body,extra));
