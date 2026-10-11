@@ -283,6 +283,7 @@ async function triggerSettlement(
         {
           method:
             "POST",
+          redirect: "error",
           headers,
           body:
             "{}",
