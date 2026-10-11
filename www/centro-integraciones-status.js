@@ -151,7 +151,9 @@
         {
           auth: {
             persistSession: true,
-            autoRefreshToken: false
+            autoRefreshToken: false,
+            detectSessionInUrl: false,
+            storageKey: "rc-ordera-restaurant-auth"
           }
         }
       );
