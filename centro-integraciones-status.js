@@ -44,7 +44,7 @@
     }
   }
   if(selector){selector.value=language;selector.addEventListener("change",()=>{
-    if(!languages.has(selector.value))return;language=selector.value;
+    if(!languages.has(selector.value) || selector.value===language)return;language=selector.value;
     try{localStorage.setItem("rincon_colombiano_app_language",language);}catch{}
     applyLanguage();
   });}
