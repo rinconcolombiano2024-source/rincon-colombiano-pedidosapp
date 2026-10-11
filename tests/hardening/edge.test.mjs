@@ -40,3 +40,44 @@ test('actual Stripe handler rejects absent/invalid signature before any DB or se
  }
  assert.equal(clients,0);
 });
+
+test('fiscal gateway rejects an unbounded streaming body before reaching database',async()=>{
+ let clients=0,reads=0,cancelled=false;
+ const h=edgeHarness('supabase/functions/fiscal-agent-gateway/index.ts',{
+  env:{...env,RC_FISCAL_AGENT_ENABLED:'test'},
+  createClient:()=>{clients++;throw new Error('database must not be reached');}
+ });
+ const oversized=new ReadableStream({
+  pull(controller){
+   reads++;
+   controller.enqueue(new TextEncoder().encode('X'.repeat(20000)));
+   if(reads>5)throw new Error('gateway read past the bound');
+  },
+  cancel(){cancelled=true;}
+ });
+ const req=new Request('https://fixture/fiscal-agent-gateway',{
+  method:'POST',duplex:'half',body:oversized,
+  headers:{'x-device-id':R,authorization:'Bearer '+('x'.repeat(40))}
+ });
+ const response=await h(req);
+ assert.equal(response.status,413);
+ assert.equal((await response.json()).error,'BODY_TOO_LARGE');
+ assert.equal(clients,0);
+ assert.ok(reads<=3,'stream should stop after the second 20KB chunk');
+ assert.equal(req.bodyUsed,true);
+});
+test('fiscal gateway rejects malformed UTF-8 and invalid JSON with bounded decoding',async()=>{
+ let clients=0;
+ const h=edgeHarness('supabase/functions/fiscal-agent-gateway/index.ts',{
+  env:{...env,RC_FISCAL_AGENT_ENABLED:'test'},
+  createClient:()=>{clients++;throw new Error('database must not be reached');}
+ });
+ for(const bytes of [new Uint8Array([0xff,0xfe]),new TextEncoder().encode('{bad')]){
+  const response=await h(new Request('https://fixture/fiscal-agent-gateway',{
+   method:'POST',body:bytes,headers:{'x-device-id':R,authorization:'Bearer '+('x'.repeat(40))}
+  }));
+  assert.equal(response.status,400);
+  assert.equal((await response.json()).error,'INVALID_JSON');
+ }
+ assert.equal(clients,0);
+});
