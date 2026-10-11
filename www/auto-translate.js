@@ -662,7 +662,12 @@
 
   function trimTranslationCache(source) {
     if (!source || typeof source !== "object" || Array.isArray(source)) return {};
-    const entries = Object.entries(source).slice(-TRANSLATION_CACHE_MAX_ENTRIES);
+    // Local storage may contain stale or malformed data. Filter before limiting
+    // so invalid entries cannot displace usable translations.
+    const entries = Object.entries(source).filter(([key, value]) =>
+      /^(pl|en)\|/.test(key) && key.length > 3 && key.length <= 503 &&
+      typeof value === "string" && value.length <= 2000 && value.trim().length > 0
+    ).slice(-TRANSLATION_CACHE_MAX_ENTRIES);
     return Object.fromEntries(entries);
   }
 
