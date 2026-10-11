@@ -537,13 +537,17 @@ Deno.serve(withCors(
       );
     }
 
-    let payload: {orderId?: string; reason?: string} = {};
+    let payload: {orderId?: unknown; reason?: unknown} = {};
     try {
       payload = await readCancellationBody(request);
     } catch (error) {
       if (error instanceof RangeError && error.message === "BODY_TOO_LARGE") {
         return response(413, {error: "Payload too large"});
       }
+      return response(400, {error: "Invalid request"});
+    }
+    if (typeof payload.orderId !== "string" ||
+        (payload.reason !== undefined && typeof payload.reason !== "string")) {
       return response(400, {error: "Invalid request"});
     }
 
