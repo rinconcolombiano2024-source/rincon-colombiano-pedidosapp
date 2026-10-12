@@ -1,7 +1,7 @@
 {
   "cliente.js": {
-    "sha256": "14f07fd0e9b84a33ec3bd2137c4f46a99a2f03d3eb0607ea799bd76afc17cd83",
-    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs",
+    "sha256": "c00ff37e8fc9980c94853d32e88d656bc231e5f1448e0a2c0b16f16fa35108bd",
+    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs",
     "edits": [
       {
         "before": "",
@@ -167,6 +167,21 @@
         "before": "function customerScheduleDirectoryRefresh() {\r\n  if (customerDirectoryRealtimeTimer) {\r\n    window.clearTimeout(customerDirectoryRealtimeTimer);\r\n    customerDirectoryRealtimeTimer = null;\r\n  }\r\n\r\n  if (\r\n    document.visibilityState !== \"visible\" ||\r\n    !window.navigator.onLine\r\n  ) {\r\n    return;\r\n  }\r\n\r\n  customerDirectoryRealtimeTimer = window.setTimeout(() => {\r\n    customerDirectoryRealtimeTimer = null;\r\n\r\n    if (\r\n      document.visibilityState !== \"visible\" ||\r\n      !window.navigator.onLine\r\n    ) {\r\n      return;\r\n    }\r\n\r\n    customerLoadRestaurantDirectory({ silent: true }).catch(() => {});\r\n  }, 300);\r\n}\r\n",
         "after": "function customerScheduleDirectoryRefresh() {\r\n  // Coalesce bursts of profile changes into one directory read per window.\r\n  // Do not restart the timer on each event: sustained Realtime traffic must not starve refreshes.\r\n  if (customerDirectoryRealtimeTimer) return;\r\n\r\n  if (\r\n    document.visibilityState !== \"visible\" ||\r\n    !window.navigator.onLine\r\n  ) {\r\n    return;\r\n  }\r\n\r\n  customerDirectoryRealtimeTimer = window.setTimeout(() => {\r\n    customerDirectoryRealtimeTimer = null;\r\n\r\n    if (\r\n      document.visibilityState !== \"visible\" ||\r\n      !window.navigator.onLine\r\n    ) {\r\n      return;\r\n    }\r\n\r\n    customerLoadRestaurantDirectory({ silent: true }).catch(() => {});\r\n  }, 5000);\r\n}\r\n",
         "afterByteOffset": 147296
+      },
+      {
+        "before": "function customerScheduleMenuRealtimeRefetch() {\r\n  if (!customerStoreId || !customerClient) return;\r\n\r\n  if (customerMenuRealtimeTimer) {\r\n    window.clearTimeout(customerMenuRealtimeTimer);\r\n    customerMenuRealtimeTimer = null;\r\n  }\r\n",
+        "after": "function customerScheduleMenuRealtimeRefetch() {\r\n  if (!customerStoreId || !customerClient) return;\r\n  // First Realtime event owns one refresh: bursts cannot reset the window\r\n  // indefinitely or enqueue repeated Supabase menu reads.\r\n  if (customerMenuRealtimeTimer) return;\r\n",
+        "afterByteOffset": 167573
+      },
+      {
+        "before": "  }, 350);\r\n}\r\nfunction customerStartMenuRealtime()",
+        "after": "  }, 1200);\r\n}\r\nfunction customerStartMenuRealtime()",
+        "afterByteOffset": 168540
+      },
+      {
+        "before": "  customerMenuRealtimeTimer = window.setTimeout(async () => {\r\n    customerMenuRealtimeTimer = null;\r\n\r\n    if (\r\n",
+        "after": "  // A queued refresh belongs to the restaurant that scheduled it.\r\n  const scheduledStoreId = customerStoreId;\r\n  customerMenuRealtimeTimer = window.setTimeout(async () => {\r\n    customerMenuRealtimeTimer = null;\r\n    if (scheduledStoreId !== customerStoreId) return;\r\n\r\n    if (\r\n",
+        "afterByteOffset": 167967
       }
     ]
   },
