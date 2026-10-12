@@ -6072,7 +6072,8 @@ if (
   if (reconciliationError?.name === "AbortError") throw reconciliationError;
   // The server rejected the revision, but the follow-up READ could not verify
   // the current edition. Never replay the same stale WRITE in a hot loop.
-  if (isOrderRevisionConflictError(error) ||
+  if (String(error?.code || error?.cause?.code || "").trim() === "40001" ||
+      isOrderRevisionConflictError(error) ||
       /ORDER_REVISION_REQUIRED/i.test(String(error?.message || ""))) {
     const backedUp = saveRevisionConflictBackup(order, remoteRevision);
     if (!backedUp) console.error("[RC ORDERA] El respaldo del pedido no se confirmó; se conserva la edición local pendiente.");
