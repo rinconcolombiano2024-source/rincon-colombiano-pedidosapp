@@ -8448,6 +8448,8 @@ function buildClientOrderLink() {
 function updateQrPreview() {
   const link = buildClientOrderLink();
   elements.qrLinkInput.value = link;
+  if (link) elements.openClientPageButton.setAttribute("href", link);
+  else elements.openClientPageButton.removeAttribute("href");
   if (!link) {
     elements.qrImage.removeAttribute("src");
     elements.qrHint.textContent = "Inicia sesion para generar el QR del restaurante.";
@@ -8541,11 +8543,6 @@ async function copyQrLink() {
     document.execCommand?.("copy");
     showToast("Link de cliente listo para copiar.");
   }
-}
-
-function openClientPage() {
-  const link = elements.qrLinkInput.value;
-  if (link) window.open(link, "_blank", "noopener");
 }
 
 function openRestaurantKitchenStation() {
@@ -8749,6 +8746,7 @@ async function openWaiterTeamDialog() {
     return;
   }
   elements.waiterLinkInput.value = buildWaiterLink();
+  elements.openWaiterLinkButton.setAttribute("href", elements.waiterLinkInput.value);
   setWaiterTeamMessage("");
   elements.waiterTeamDialog.showModal();
   await Promise.all([loadWaiterMembers(), loadEmployeeHours()]);
@@ -8764,11 +8762,6 @@ async function copyWaiterLink() {
     document.execCommand?.("copy");
   }
   showToast("Enlace del personal copiado.");
-}
-
-function openWaiterLink() {
-  const link = elements.waiterLinkInput.value;
-  if (link) window.open(link, "_blank", "noopener");
 }
 
 async function authorizeWaiter() {
@@ -14602,6 +14595,11 @@ elements.cloudStatus?.addEventListener("click", () => {
   }
 });
 elements.openSignInButton.addEventListener("click", openSignInScreen);
+elements.signOutButton.addEventListener("click", () => {
+  elements.openClientPageButton.removeAttribute("href");
+  elements.openWaiterLinkButton?.removeAttribute("href");
+  document.querySelector("#restaurantKitchenLink")?.removeAttribute("href");
+});
 elements.signOutButton.addEventListener("click", signOut);
 elements.closeRestaurantButton?.addEventListener("click", toggleRestaurantOperationalOpen);
 elements.mainRestaurantToggleButton?.addEventListener("click", toggleRestaurantOperationalOpen);
@@ -14622,7 +14620,20 @@ elements.restaurantHoursGrid?.addEventListener("change", (event) => {
 elements.qrButton.addEventListener("click", openQrDialog);
 elements.waiterTeamButton?.addEventListener("click", openWaiterTeamDialog);
 elements.copyWaiterLinkButton?.addEventListener("click", copyWaiterLink);
-elements.openWaiterLinkButton?.addEventListener("click", openWaiterLink);
+elements.openWaiterLinkButton?.addEventListener("click", (event) => {
+  if (!cloudState.user || !elements.waiterLinkInput.value) event.preventDefault();
+});
+document.querySelector("#restaurantKitchenLink")?.addEventListener("click", (event) => {
+  const link = buildWaiterLink();
+  if (!link) {
+    event.preventDefault();
+    openSignInScreen();
+    return;
+  }
+  const url = new URL(link);
+  url.searchParams.set("station", "kitchen");
+  event.currentTarget.href = url.toString();
+});
 elements.authorizeWaiterButton?.addEventListener("click", authorizeWaiter);
 elements.refreshWaiterMembersButton?.addEventListener("click", () => {
   Promise.all([loadWaiterMembers(), loadEmployeeHours()]).catch(() => {});
@@ -14665,7 +14676,12 @@ elements.waiterMembersList?.addEventListener("click", async (event) => {
 elements.clientAlarmButton.addEventListener("click", toggleClientAlarm);
 elements.qrTableInput.addEventListener("input", updateQrPreview);
 elements.copyQrLinkButton.addEventListener("click", copyQrLink);
-elements.openClientPageButton.addEventListener("click", openClientPage);
+elements.openClientPageButton.addEventListener("click", (event) => {
+  if (!cloudState.user || !elements.qrLinkInput.value) {
+    event.preventDefault();
+    showToast(appUiText("Inicia sesión para abrir el cliente."));
+  }
+});
 elements.clientOrdersButton.addEventListener("click", openClientOrdersDialog);
 elements.refreshClientOrdersButton.addEventListener("click", () => refreshClientOrders());
 elements.clientOrdersList.addEventListener("click", (event) => {
