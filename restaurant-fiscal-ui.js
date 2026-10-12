@@ -1,5 +1,5 @@
 /* RC ORDERA: fiscal USB permission preflight INSIDE the restaurant app.
- * Browser permission is NOT a fiscal connection: no port.open(), commands or printing.
+ * Browser permission is NOT a fiscal connection: no opening a serial port, issuing commands or printing.
  */
 (() => {
   "use strict";
