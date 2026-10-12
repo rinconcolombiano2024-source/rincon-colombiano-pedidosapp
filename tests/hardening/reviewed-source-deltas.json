@@ -1,7 +1,7 @@
 {
   "cliente.js": {
-    "sha256": "b46989d00a3f4c266a90b534c675345c38e7d90e5c280df9c9119bab7f962514",
-    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs",
+    "sha256": "9700bcb4fb6f5ef8f592ccb425ea7772d9013e227b4b0e5671ed6473a57a956e",
+    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs",
     "edits": [
       {
         "before": "",
@@ -222,6 +222,26 @@
         "before": "",
         "after": "let customerTrackingRefreshPending = false;\r\nlet customerTrackingRefreshGeneration = 0;\r\n",
         "afterByteOffset": 92440
+      },
+      {
+        "before": "",
+        "after": "\r\n    paymentVerificationPending: \"Regresaste de la pasarela. Estamos comprobando el pago con el proveedor; todavía no está confirmado.\",",
+        "afterByteOffset": 27403
+      },
+      {
+        "before": "",
+        "after": "\r\n    paymentVerificationPending: \"Wrócono z płatności. Sprawdzamy jej status u operatora; płatność nie jest jeszcze potwierdzona.\",",
+        "afterByteOffset": 46954
+      },
+      {
+        "before": "",
+        "after": "\r\n    paymentVerificationPending: \"Returned from checkout. We are verifying payment with the provider; payment is not yet confirmed.\",",
+        "afterByteOffset": 65977
+      },
+      {
+        "before": "if (result === \"success\") {\r\n      customerSetTrackingStatus(customerT(\"paymentSuccess\"), \"ok\");\r\n      customerPollOrderStatus().catch(() => {});\r\n    } else {",
+        "after": "if (result === \"success\") {\r\n      // The redirect URL is user-controlled; only a verified provider/backend\r\n      // payment record can establish payment. Never show success from a query string.\r\n      customerSetTrackingStatus(customerT(\"paymentVerificationPending\"), \"\");\r\n      customerPollOrderStatus().catch(() => {});\r\n    } else {",
+        "afterByteOffset": 239683
       }
     ]
   },
@@ -464,8 +484,8 @@
     ]
   },
   "service-worker.js": {
-    "sha256": "8d2f7004494c5d6354425f38150eabca68d02e44e19966bf99181e2f01586e16",
-    "regressionTests": "tests/hardening/frontend.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/hardening/frontend.test.mjs; tests/pwa-release-marker.test.cjs",
+    "sha256": "3f1a6abe1734ac0f9f0f446635bd45ed198ba088818873d46ab98e5ae50184b8",
+    "regressionTests": "tests/hardening/frontend.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/hardening/frontend.test.mjs; tests/pwa-release-marker.test.cjs; tests/hardening/payment-return-safety.test.mjs",
     "edits": [
       {
         "before": "const CACHE_NAME = \"rc-ordera-v91-0-4-offline-r4-products-closures\";\n",
@@ -535,6 +555,11 @@
       {
         "before": "const CACHE_NAME = \"rc-ordera-v91-0-4-v6-verified-20261012-pwa-safe-r15\";\n",
         "after": "const CACHE_NAME = \"rc-ordera-v91-0-4-v6-verified-20261012-pwa-safe-r16\";\n",
+        "afterByteOffset": 0
+      },
+      {
+        "before": "const CACHE_NAME = \"rc-ordera-v91-0-4-v6-verified-20261012-pwa-safe-r16\";\n",
+        "after": "const CACHE_NAME = \"rc-ordera-v91-0-4-v6-verified-20261012-pwa-safe-r18\";\n",
         "afterByteOffset": 0
       }
     ]
