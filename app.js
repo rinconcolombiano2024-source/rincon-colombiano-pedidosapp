@@ -3888,6 +3888,8 @@ async function loadCloudData() {
 );
 
 let syncPendingAfterLoad = false;
+// Reuse the successful cold-start settings fetch: never request the same menu twice.
+let startupSettingsResponse = null;
 
 /*
  * POS LOCAL-FIRST:
@@ -3915,7 +3917,7 @@ if (menuProductCount(menuCatalog) === 0) {
     } = await withCloudTimeout(
       cloudState.client
         .from("app_settings")
-        .select("menu, menu_revision")
+        .select("menu, settings, menu_revision, settings_revision, menu_updated_at, settings_updated_at")
         .eq("user_id", cloudState.user.id)
         .maybeSingle(),
       "El menu tardo demasiado en cargar.",
@@ -3925,6 +3927,9 @@ if (menuProductCount(menuCatalog) === 0) {
     if (startupMenuError) {
       throw startupMenuError;
     }
+
+    // Cache only a confirmed response; failed reads still use the normal retry path.
+    startupSettingsResponse = { data: startupSettingsRow, error: null };
 
     const startupMenu =
       normalizeMenuCatalog(
@@ -4015,7 +4020,7 @@ try {
  * Los pedidos y demás datos nunca pueden impedir
  * que la caja muestre los productos.
  */
-const settingsResponse = await withCloudTimeout(
+const settingsResponse = startupSettingsResponse || await withCloudTimeout(
   settingsRequest,
   "El menú tardó demasiado en responder.",
   8000

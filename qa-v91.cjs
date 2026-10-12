@@ -96,7 +96,9 @@ check(/finally\s*\{[\s\S]*?cloudState\.loading\s*=\s*false;[\s\S]*?updateCloudSt
 check(app.includes("withCloudTimeout(cloudState.client.auth.getSession())"), "sesion de nube con tiempo maximo");
 check(app.includes("await withCloudTimeout((signal) => ensureMinimumDatabaseVersion(signal))"), "version de nube con tiempo maximo y signal");
 check(
-  /const settingsResponse\s*=\s*await withCloudTimeout\([\s\S]*?settingsRequest[\s\S]*?8000[\s\S]*?\.catch/s.test(app)
+  /const settingsResponse\s*=\s*startupSettingsResponse\s*\|\|\s*await withCloudTimeout\([\s\S]*?settingsRequest[\s\S]*?8000[\s\S]*?\.catch/s.test(app)
+    && app.includes("let startupSettingsResponse = null;")
+    && app.includes("startupSettingsResponse = { data: startupSettingsRow, error: null };")
     && /Promise\.all\(\[[\s\S]*?withCloudTimeout\([\s\S]*?profileRequest[\s\S]*?withCloudTimeout\([\s\S]*?ordersRequest/s.test(app),
   "carga inicial de nube con tiempo maximo"
 );
