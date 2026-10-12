@@ -39,6 +39,7 @@ test("accept exact HTTPS SumUp hosted checkout URL only", () => {
     "https://checkout.sumup.com@evil.com/pay/" + checkoutId,
     "https://checkout.sumup.com/other/" + checkoutId,
     "https://checkout.sumup.com/pay/" + checkoutId + "?next=https://evil.com",
+    "https://checkout.sumup.com/pay/" + "0".repeat(36),
     "javascript:alert(1)",
   ]) {
     assert.equal(isTrustedSumUpHostedUrl(url), false, url);
@@ -51,6 +52,7 @@ test("provider checkout is rejected if financial or merchant fields drift", () =
     assert.throws(() => verifyHostedCheckout({ ...good, [key]: null }, config, attempt), key);
   }
   assert.throws(() => verifyHostedCheckout({ ...good, amount: 123.46 }, config, attempt));
+  assert.throws(() => verifyHostedCheckout({ ...good, amount: 123.4501 }, config, attempt));
   assert.throws(() => verifyHostedCheckout({ ...good, status: "PAID" }, config, attempt));
   assert.throws(() => verifyHostedCheckout({ ...good, hosted_checkout: { enabled: false } }, config, attempt));
 });
