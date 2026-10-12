@@ -404,8 +404,8 @@
     ]
   },
   "service-worker.js": {
-    "sha256": "5255731da651811f165d13fbf5387b055075206bc3f3b8da827a5dd850dd3def",
-    "regressionTests": "tests/hardening/frontend.test.mjs; tests/shared/service-worker-safety.test.mjs",
+    "sha256": "00ebee7da8e3283406b695d866aa38e1bf69f557b1ab8bd466c798f3612fb932",
+    "regressionTests": "tests/hardening/frontend.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/shared/service-worker-safety.test.mjs",
     "edits": [
       {
         "before": "const CACHE_NAME = \"rc-ordera-v91-0-4-offline-r4-products-closures\";\n",
@@ -451,6 +451,11 @@
         "before": "",
         "after": "  \"./restaurant-fiscal-ui.js\",\n",
         "afterByteOffset": 210
+      },
+      {
+        "before": "rc-ordera-v91-0-4-v6-verified-20261012-pwa-safe-r12",
+        "after": "rc-ordera-v91-0-4-v6-verified-20261012-pwa-safe-r13",
+        "afterByteOffset": 20
       }
     ]
   },
@@ -606,8 +611,8 @@
     ]
   },
   "restaurante.html": {
-    "sha256": "8ad7284cb8dc1b79d69d8792baf56d4b927a6463a832ddadd71984aa0e503503",
-    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs",
+    "sha256": "d5259a606afbeb8b9fcb89c82b683c89b64f4f905102fb949ec97c3996bd9826",
+    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/shared/service-worker-safety.test.mjs",
     "edits": [
       {
         "before": "",
@@ -658,6 +663,11 @@
         "before": "    <script src=\"app.js?v=91.0.4\"></script>\n",
         "after": "    <script src=\"app.js?v=91.0.4-nav1\"></script>\n    <script src=\"restaurant-fiscal-ui.js?v=91.0.4-nav1\"></script>\n",
         "afterByteOffset": 48979
+      },
+      {
+        "before": "app.js?v=91.0.4-nav1",
+        "after": "app.js?v=91.0.4-nav2",
+        "afterByteOffset": 48996
       }
     ]
   }
