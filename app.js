@@ -9006,6 +9006,23 @@ function schedulePendingOrderRecovery(error = null) {
   }
 
   /*
+   * No repetimos escrituras por errores permanentes de autorización
+   * o contrato SQL. Se conserva el pedido pendiente y el operario
+   * podrá sincronizar manualmente después de corregir la causa.
+   * Evita ciclos de RPC inútiles que saturan CPU en Supabase.
+   */
+  const permanentFailureCode = String(
+    error?.code || error?.cause?.code || ""
+  ).trim().toUpperCase();
+  if (error && [
+    "42501", "42P01", "42703", "42883", "PGRST202", "PGRST204",
+    "RC_ORDERA_SCHEMA_OUTDATED", "RC_ORDERA_SCHEMA_INCOMPLETE"
+  ].includes(permanentFailureCode)) {
+    console.warn("[RC ORDERA] Error SQL/permisos permanente: pendiente conservado sin reintentos automáticos.");
+    return;
+  }
+
+  /*
    * Los fallos reales de infraestructura sí
    * pueden recuperarse automáticamente.
    */
