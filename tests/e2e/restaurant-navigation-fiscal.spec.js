@@ -4,6 +4,16 @@ const { installSupabaseMock } = require("./support/supabase-mock.cjs");
 const user = { id: "00000000-0000-4000-8000-000000000012",
   email: "restaurant@example.test", user_metadata: {}, app_metadata: {} };
 
+async function chooseLanguage(page, language) {
+  // The auth-screen language select is hidden after sign-in. Dispatch its
+  // genuine change handler rather than waiting for an invisible control.
+  await page.locator("#autoLanguageSelect").evaluate((select, value) => {
+    select.value = value;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  }, language);
+  await expect(page.locator("html")).toHaveAttribute("lang", language);
+}
+
 test("restaurant QR and stations use a separate tab without navigating away from the POS", async ({ page, context }) => {
   await installSupabaseMock(page, { user });
   await page.goto("/restaurante.html?app=v91.0.4-nav1", { waitUntil: "domcontentloaded" });
@@ -45,15 +55,15 @@ test("fiscal button is in the restaurant app; permission does not enable fiscal 
   await page.waitForFunction(() => typeof cloudState !== "undefined" && !!cloudState.user);
   // Browser/project defaults may choose English. Select a deterministic locale
   // before making assertions and exercise ES → PL → EN explicitly.
-  await page.locator("#autoLanguageSelect").selectOption("es");
+  await chooseLanguage(page, "es");
   await page.locator("#openFiscalPrinterTopButton").click();
   await expect(page.locator("#fiscalPrinterDialog")).toBeVisible();
   await expect(page.locator("#fiscalRequestPortButton")).toHaveText("Autorizar puerto USB/serie");
   await page.locator("#fiscalRequestPortButton").click();
   await expect(page.locator("#fiscalDeviceStatus")).toContainText("NO está verificada");
   await expect(page.locator("#fiscalPrinterSummary")).toHaveText("Sin conexión fiscal verificada");
-  await page.locator("#autoLanguageSelect").selectOption("pl");
+  await chooseLanguage(page, "pl");
   await expect(page.locator("#fiscalRequestPortButton")).toHaveText("Zezwól na port USB/szeregowy");
-  await page.locator("#autoLanguageSelect").selectOption("en");
+  await chooseLanguage(page, "en");
   await expect(page.locator("#fiscalRequestPortButton")).toHaveText("Authorize USB/serial port");
 });
