@@ -46,7 +46,7 @@ Deno.serve(withCors(async(request:Request)=>{
      !merchantCode || !UUID.test(restaurantId) || !appOrigin)return disabled();
   let backendUrl:URL;
   try {backendUrl=new URL(url);} catch {return disabled();}
-  if(backendUrl.protocol!=="https:" || !/^[a-z0-9]{20}\\.supabase\\.co$/.test(backendUrl.hostname) ||
+  if(backendUrl.protocol!=="https:" || !/^[a-z0-9]{20}\.supabase\.co$/.test(backendUrl.hostname) ||
      backendUrl.pathname!=="/" || backendUrl.username || backendUrl.password)return disabled();
   let body:Record<string,unknown>;
   try{body=await smallJson(request);}catch{return response(400,{error:"INVALID_REQUEST"});}
@@ -60,7 +60,7 @@ Deno.serve(withCors(async(request:Request)=>{
   if(result.error)return response(503,{error:"ORDER_LOOKUP_FAILED"});
   const order=result.data;
   if(!order || order.user_id!==restaurantId)return response(404,{error:"ORDER_NOT_FOUND"});
-  const bearer=(request.headers.get("authorization")||"").replace(/^Bearer\\s+/i,"");
+  const bearer=(request.headers.get("authorization")||"").replace(/^Bearer\s+/i,"");
   let authenticated=false;
   if(bearer.length>0 && bearer.length<8192){
     const session=await admin.auth.getUser(bearer);
