@@ -455,8 +455,8 @@
     ]
   },
   "app.js": {
-    "sha256": "d7d1435cc8f2fcc7b04450f2f08f59e130282cb0b00ecebe92cc3d4597c5b239",
-    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs",
+    "sha256": "511cb3c5d7a5e54dbb63d88dadf642a1761c59ced50b7c28a387504d711bb4d9",
+    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs",
     "edits": [
       {
         "before": "",
@@ -567,6 +567,11 @@
         "before": "elements.openClientPageButton.addEventListener(\"click\", openClientPage);\r\n",
         "after": "elements.openClientPageButton.addEventListener(\"click\", (event) => {\n  if (!cloudState.user || !elements.qrLinkInput.value) {\n    event.preventDefault();\n    showToast(appUiText(\"Inicia sesión para abrir el cliente.\"));\n  }\n});\r\n",
         "afterByteOffset": 480881
+      },
+      {
+        "before": "const link = buildWaiterLink();\r\n  if (!link) {\r\n    alert(\"Inicia sesion para abrir una estacion de cocina.\");\r\n    return;\r\n  }\r\n  const url = new URL(link);\r\n  url.searchParams.set(\"station\", \"kitchen\");\r\n  window.open(url.toString(), \"_blank\", \"noopener\"",
+        "after": "// Reuse the secure native link and its same-click auth/URL checks.\r\n  // A legacy dashboard action must never reopen an imperative window.open path.\r\n  document.querySelector(\"#restaurantKitchenLink\")?.click(",
+        "afterByteOffset": 270124
       }
     ]
   },
