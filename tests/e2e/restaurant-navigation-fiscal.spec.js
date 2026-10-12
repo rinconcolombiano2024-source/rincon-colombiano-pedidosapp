@@ -43,8 +43,12 @@ test("fiscal button is in the restaurant app; permission does not enable fiscal 
   await installSupabaseMock(page, { user });
   await page.goto("/restaurante.html?app=v91.0.4-nav1", { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => typeof cloudState !== "undefined" && !!cloudState.user);
+  // Browser/project defaults may choose English. Select a deterministic locale
+  // before making assertions and exercise ES → PL → EN explicitly.
+  await page.evaluate(() => { document.documentElement.lang = "es"; });
   await page.locator("#openFiscalPrinterTopButton").click();
   await expect(page.locator("#fiscalPrinterDialog")).toBeVisible();
+  await expect(page.locator("#fiscalRequestPortButton")).toHaveText("Autorizar puerto USB/serie");
   await page.locator("#fiscalRequestPortButton").click();
   await expect(page.locator("#fiscalDeviceStatus")).toContainText("NO está verificada");
   await expect(page.locator("#fiscalPrinterSummary")).toHaveText("Sin conexión fiscal verificada");
