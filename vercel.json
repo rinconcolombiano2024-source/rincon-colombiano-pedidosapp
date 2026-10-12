@@ -1,4 +1,8 @@
 {
+  "framework": null,
+  "buildCommand": "",
+  "installCommand": "",
+  "outputDirectory": "www",
   "headers": [
     {
       "source": "/service-worker.js",
