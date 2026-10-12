@@ -45,15 +45,15 @@ test("fiscal button is in the restaurant app; permission does not enable fiscal 
   await page.waitForFunction(() => typeof cloudState !== "undefined" && !!cloudState.user);
   // Browser/project defaults may choose English. Select a deterministic locale
   // before making assertions and exercise ES → PL → EN explicitly.
-  await page.evaluate(() => { document.documentElement.lang = "es"; });
+  await page.locator("#autoLanguageSelect").selectOption("es");
   await page.locator("#openFiscalPrinterTopButton").click();
   await expect(page.locator("#fiscalPrinterDialog")).toBeVisible();
   await expect(page.locator("#fiscalRequestPortButton")).toHaveText("Autorizar puerto USB/serie");
   await page.locator("#fiscalRequestPortButton").click();
   await expect(page.locator("#fiscalDeviceStatus")).toContainText("NO está verificada");
   await expect(page.locator("#fiscalPrinterSummary")).toHaveText("Sin conexión fiscal verificada");
-  await page.evaluate(() => { document.documentElement.lang="pl"; });
+  await page.locator("#autoLanguageSelect").selectOption("pl");
   await expect(page.locator("#fiscalRequestPortButton")).toHaveText("Zezwól na port USB/szeregowy");
-  await page.evaluate(() => { document.documentElement.lang="en"; });
+  await page.locator("#autoLanguageSelect").selectOption("en");
   await expect(page.locator("#fiscalRequestPortButton")).toHaveText("Authorize USB/serial port");
 });
