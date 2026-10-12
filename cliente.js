@@ -3606,11 +3606,9 @@ function customerStopMenuRealtime() {
 }
 function customerScheduleMenuRealtimeRefetch() {
   if (!customerStoreId || !customerClient) return;
-
-  if (customerMenuRealtimeTimer) {
-    window.clearTimeout(customerMenuRealtimeTimer);
-    customerMenuRealtimeTimer = null;
-  }
+  // First Realtime event owns one refresh: bursts cannot reset the window
+  // indefinitely or enqueue repeated Supabase menu reads.
+  if (customerMenuRealtimeTimer) return;
 
   if (
     document.visibilityState !== "visible" ||
@@ -3639,7 +3637,7 @@ function customerScheduleMenuRealtimeRefetch() {
       console.error(error);
       customerSetStatus(customerT("menuRealtimeError"), "error");
     }
-  }, 350);
+  }, 1200);
 }
 function customerStartMenuRealtime() {
   if (!customerClient?.channel || !customerStoreId) return;
