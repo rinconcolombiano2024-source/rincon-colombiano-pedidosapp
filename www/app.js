@@ -8546,14 +8546,9 @@ async function copyQrLink() {
 }
 
 function openRestaurantKitchenStation() {
-  const link = buildWaiterLink();
-  if (!link) {
-    alert("Inicia sesion para abrir una estacion de cocina.");
-    return;
-  }
-  const url = new URL(link);
-  url.searchParams.set("station", "kitchen");
-  window.open(url.toString(), "_blank", "noopener");
+  // Reuse the secure native link and its same-click auth/URL checks.
+  // A legacy dashboard action must never reopen an imperative window.open path.
+  document.querySelector("#restaurantKitchenLink")?.click();
 }
 
 function handleRestaurantDashboardAction(action) {
