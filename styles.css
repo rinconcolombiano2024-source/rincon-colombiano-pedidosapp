@@ -9952,3 +9952,40 @@ body.customer-page .customer-cart-close {
     height: 44px;
   }
 }
+
+
+/* RC ORDERA navigation + fiscal controls: keyboard, mobile, responsive */
+.rc-module-link, .restaurant-module-nav a.rc-module-link {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 44px; padding: 10px 16px; border: 1px solid #216849;
+  border-radius: 10px; background: #176443; color: #fff;
+  font: inherit; font-weight: 800; text-align: center;
+  text-decoration: none; white-space: normal;
+}
+.rc-module-link:hover, .rc-module-link:focus-visible,
+.restaurant-module-nav a.rc-module-link:hover,
+.restaurant-module-nav a.rc-module-link:focus-visible {
+  background: #0d4930; color: #fff; outline-offset: 3px;
+}
+.rc-module-link:not([href]) { opacity: .55; cursor: not-allowed; }
+.fiscal-printer-control {
+  display: grid; gap: 10px; grid-column: 1 / -1; padding: 16px;
+  background: #f0f7f3; border: 1px solid #b6d9c4; border-radius: 12px;
+}
+.fiscal-printer-control button { min-height: 44px; }
+.fiscal-printer-control [role="status"] { color: #254c38; font-weight: 700; }
+.fiscal-device-dialog { max-width: min(540px, calc(100vw - 24px)); }
+.fiscal-device-content { display: grid; gap: 16px; padding: 20px; }
+.fiscal-device-content h2, .fiscal-device-content p { margin: 0; }
+.fiscal-device-warning {
+  border-inline-start: 4px solid #b56e08; background: #fff8e7;
+  color: #583b07; padding: 12px; border-radius: 8px;
+}
+.fiscal-device-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.fiscal-device-actions button { min-height: 44px; flex: 1 1 140px; }
+.fiscal-device-status { font-weight: 700; overflow-wrap: anywhere; }
+@media (max-width: 390px) {
+  .waiter-link-row { grid-template-columns: minmax(0, 1fr); }
+  .rc-module-link { width: 100%; }
+  .fiscal-device-content { padding: 14px; }
+}

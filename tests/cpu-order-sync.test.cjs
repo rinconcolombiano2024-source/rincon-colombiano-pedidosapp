@@ -110,8 +110,8 @@ function realOrder(rpc, from) {
     orderBusinessDate: () => '2026-09-19', orderTotal: () => 20,
     saveOrders() {}, saveCurrentOrderDraft() {}, saveRevisionConflictBackup: () => true,
     readRevisionConflictBackups: () => ({ ok: true, backups: [] }),
-    blockOrderRevisionSync: o => { o._syncBlockedReason = 'revision_conflict'; },
-    isOrderRevisionSyncBlocked: o => o._syncBlockedReason === 'revision_conflict',
+    blockOrderRevisionSync: (o, _remote, reason = 'revision_conflict') => { o._syncBlockedReason = reason; },
+    isOrderRevisionSyncBlocked: o => ['revision_conflict', 'revision_unverified'].includes(o._syncBlockedReason),
   });
   vm.runInContext(section('function isCancelledOrderOverwriteError(', 'function needsCloudSync('), h.c);
   vm.runInContext(section('async function saveCloudOrderInternal(', 'async function voidCloudOrder('), h.c);
@@ -136,6 +136,31 @@ test('a confirmed conflict blocks further writes, retaining local contents and r
   await assert.rejects(h.c.saveCloudOrder(o), e => e.code === 'ORDER_REVISION_CONFLICT');
   for (let i = 0; i < 20; i++) await assert.rejects(h.c.saveCloudOrder(o), e => e.code === 'ORDER_REVISION_CONFLICT');
   assert.equal(calls, 1); assert.equal(o._syncRevision, 1); assert.equal(o.syncStatus, 'pending'); assert.equal(o.items[0].name, 'local');
+});
+
+test('failed verification after a known 40001 quarantines the draft and stops 100 further RPC writes', async () => {
+  let calls = 0; const o = order();
+  const h = realOrder(
+    () => { calls++; return query({ error: { code: '40001', message: 'ORDER_REVISION_CONFLICT: expected 1, current 2' } }); },
+    () => query({ data: null, error: { code: 'PGRST002', message: 'Read unavailable' } })
+  );
+  h.c.savedOrders = [o];
+  await assert.rejects(h.c.saveCloudOrder(o), e => e.code === 'RC_ORDERA_REVISION_UNVERIFIED');
+  for (let i = 0; i < 100; i++)
+    await assert.rejects(h.c.saveCloudOrder(o), e => e.code === 'RC_ORDERA_REVISION_UNVERIFIED');
+  assert.equal(calls, 1);
+  assert.equal(o._syncBlockedReason, 'revision_unverified');
+  assert.equal(o._syncRevision, 1);
+  assert.equal(o.syncStatus, 'pending');
+  assert.equal(o.items[0].name, 'local');
+});
+
+test('unverified revisions are excluded from automatic uploads without hiding the pending draft', () => {
+  const h = runtime({ isCancelledSavedOrder: () => false });
+  vm.runInContext(section('function needsCloudSync(', 'const REVISION_CONFLICT_BACKUP_LIMIT'), h.c);
+  const o = { ...order(), _syncBlockedReason: 'revision_unverified' };
+  assert.equal(h.c.needsCloudSync(o), true);
+  assert.equal(h.c.needsAutomaticCloudSync(o), false);
 });
 
 test('lost confirmation recovers the same edition without another write', async () => {
@@ -211,6 +236,30 @@ test('joining pending synchronization does not request another round', async () 
   const work = Array.from({ length: 100 }, () => h.c.syncPendingData());
   assert.equal(calls, 1); assert.equal(h.c.pendingDataSyncRequested, false);
   d.resolve(true); await Promise.all(work);
+});
+
+test('permanent SQL and authorization failures never trigger automatic retry storms', () => {
+  const scheduled = [];
+  const h = runtime({
+    cloudState: { client: {}, user: { id: 'owner' } },
+    SYNC_INFRASTRUCTURE_BACKOFF_MS: 300000,
+    pendingDataSyncRetryNotBefore: 0,
+    isOrderRevisionConflictError: e => e?.code === 'ORDER_REVISION_CONFLICT',
+    isTemporarySyncInfrastructureError: e => e?.status === 503,
+    schedulePendingDataSyncRetry: delay => scheduled.push(delay),
+  });
+  vm.runInContext(section('function schedulePendingOrderRecovery(', 'async function runPendingDataSync('), h.c);
+  for (const code of ['42501','42P01','42703','42883','PGRST202','PGRST204','RC_ORDERA_SCHEMA_OUTDATED','RC_ORDERA_SCHEMA_INCOMPLETE']) {
+    h.c.schedulePendingOrderRecovery({ code, message: 'permanent schema or RLS issue' });
+  }
+  h.c.schedulePendingOrderRecovery({ code: 'ORDER_REVISION_CONFLICT' });
+  assert.deepEqual(scheduled, [], 'no RPC retry timer may be registered');
+  assert.equal(h.c.pendingDataSyncRetryNotBefore, 0);
+  h.c.schedulePendingOrderRecovery({ status: 503, code: 'PGRST002' });
+  assert.equal(scheduled.length, 1);
+  assert.equal(scheduled[0], 300000, 'temporary outage backs off instead of spinning');
+  h.c.schedulePendingOrderRecovery();
+  assert.equal(scheduled.length, 2, 'an explicit new save may still schedule a recovery');
 });
 
 test('root and www app.js are byte-identical, central Realtime remains disabled', () => {

@@ -1728,7 +1728,8 @@ function needsCloudSync(order) {
 }
 function isOrderRevisionSyncBlocked(order) {
   return Boolean(
-    order?._syncBlockedReason === "revision_conflict"
+    order?._syncBlockedReason === "revision_conflict" ||
+    order?._syncBlockedReason === "revision_unverified"
   );
 }
 
@@ -2001,7 +2002,8 @@ let orderSnapshot;
 }
 function blockOrderRevisionSync(
   order,
-  remoteRevision = null
+  remoteRevision = null,
+  reason = "revision_conflict"
 ) {
   if (!order?.id) return;
 
@@ -2011,7 +2013,7 @@ function blockOrderRevisionSync(
   const patch = {
     syncStatus: "pending",
     _syncBlockedReason:
-      "revision_conflict",
+      reason === "revision_unverified" ? "revision_unverified" : "revision_conflict",
     _syncBlockedAt:
       new Date().toISOString(),
   };
@@ -5575,14 +5577,13 @@ async function saveCloudOrderInternal(
    * - Cola automática
    */
   if (isOrderRevisionSyncBlocked(order)) {
-    const blockedError = new Error(
-      appUiText(
-        "Este pedido cambió en otro dispositivo y requiere reconciliación antes de volver a sincronizarse."
-      )
-    );
-
-    blockedError.code =
-      "ORDER_REVISION_CONFLICT";
+    const verificationPending = order._syncBlockedReason === "revision_unverified";
+    const blockedError = new Error(appUiText(verificationPending
+      ? "No se pudo verificar la revisión de este pedido. Se detuvo la sincronización automática para proteger los cambios locales."
+      : "Este pedido cambió en otro dispositivo y requiere reconciliación antes de volver a sincronizarse."));
+    blockedError.code = verificationPending
+      ? "RC_ORDERA_REVISION_UNVERIFIED"
+      : "ORDER_REVISION_CONFLICT";
 
     const remoteRevision =
       Number.parseInt(
@@ -6066,19 +6067,21 @@ if (
   return;
 }
   } catch (reconciliationError) {
-  console.warn(
-    "[RC ORDERA] No fue posible reconciliar automáticamente el conflicto.",
-    reconciliationError
-  );
-
-  /*
-   * Si no pudimos consultar Supabase con certeza,
-   * NO podemos afirmar que exista un conflicto real.
-   *
-   * Propagamos el error original para que
-   * runPendingDataSync() lo clasifique correctamente
-   * como red, timeout, infraestructura, etc.
-   */
+  console.warn("[RC ORDERA] No fue posible reconciliar automáticamente el conflicto.", reconciliationError);
+  // An explicit abort remains cancellable; the local order stays intact.
+  if (reconciliationError?.name === "AbortError") throw reconciliationError;
+  // The server rejected the revision, but the follow-up READ could not verify
+  // the current edition. Never replay the same stale WRITE in a hot loop.
+  if (isOrderRevisionConflictError(error) ||
+      /ORDER_REVISION_REQUIRED/i.test(String(error?.message || ""))) {
+    const backedUp = saveRevisionConflictBackup(order, remoteRevision);
+    if (!backedUp) console.error("[RC ORDERA] El respaldo del pedido no se confirmó; se conserva la edición local pendiente.");
+    blockOrderRevisionSync(order, remoteRevision, "revision_unverified");
+    const blocked = new Error(appUiText("La nube rechazó una revisión anterior. No se reenviará este pedido hasta verificar la revisión remota."));
+    blocked.code = "RC_ORDERA_REVISION_UNVERIFIED";
+    blocked.cause = reconciliationError;
+    throw blocked;
+  }
   throw reconciliationError;
 }
 
@@ -8448,6 +8451,8 @@ function buildClientOrderLink() {
 function updateQrPreview() {
   const link = buildClientOrderLink();
   elements.qrLinkInput.value = link;
+  if (link) elements.openClientPageButton.setAttribute("href", link);
+  else elements.openClientPageButton.removeAttribute("href");
   if (!link) {
     elements.qrImage.removeAttribute("src");
     elements.qrHint.textContent = "Inicia sesion para generar el QR del restaurante.";
@@ -8543,20 +8548,10 @@ async function copyQrLink() {
   }
 }
 
-function openClientPage() {
-  const link = elements.qrLinkInput.value;
-  if (link) window.open(link, "_blank", "noopener");
-}
-
 function openRestaurantKitchenStation() {
-  const link = buildWaiterLink();
-  if (!link) {
-    alert("Inicia sesion para abrir una estacion de cocina.");
-    return;
-  }
-  const url = new URL(link);
-  url.searchParams.set("station", "kitchen");
-  window.open(url.toString(), "_blank", "noopener");
+  // Reuse the secure native link and its same-click auth/URL checks.
+  // A legacy dashboard action must never reopen an imperative window.open path.
+  document.querySelector("#restaurantKitchenLink")?.click();
 }
 
 function handleRestaurantDashboardAction(action) {
@@ -8749,6 +8744,7 @@ async function openWaiterTeamDialog() {
     return;
   }
   elements.waiterLinkInput.value = buildWaiterLink();
+  elements.openWaiterLinkButton.setAttribute("href", elements.waiterLinkInput.value);
   setWaiterTeamMessage("");
   elements.waiterTeamDialog.showModal();
   await Promise.all([loadWaiterMembers(), loadEmployeeHours()]);
@@ -8764,11 +8760,6 @@ async function copyWaiterLink() {
     document.execCommand?.("copy");
   }
   showToast("Enlace del personal copiado.");
-}
-
-function openWaiterLink() {
-  const link = elements.waiterLinkInput.value;
-  if (link) window.open(link, "_blank", "noopener");
 }
 
 async function authorizeWaiter() {
@@ -9005,12 +8996,29 @@ function schedulePendingOrderRecovery(error = null) {
    */
   if (
     error &&
-    isOrderRevisionConflictError(error)
+    (isOrderRevisionConflictError(error) || error?.code === "RC_ORDERA_REVISION_UNVERIFIED")
   ) {
     console.warn(
-      "[RC ORDERA] Conflicto de revisión: no se programa reintento automático."
+      "[RC ORDERA] Revisión sin resolver: no se programa reintento automático."
     );
 
+    return;
+  }
+
+  /*
+   * No repetimos escrituras por errores permanentes de autorización
+   * o contrato SQL. Se conserva el pedido pendiente y el operario
+   * podrá sincronizar manualmente después de corregir la causa.
+   * Evita ciclos de RPC inútiles que saturan CPU en Supabase.
+   */
+  const permanentFailureCode = String(
+    error?.code || error?.cause?.code || ""
+  ).trim().toUpperCase();
+  if (error && [
+    "42501", "42P01", "42703", "42883", "PGRST202", "PGRST204",
+    "RC_ORDERA_SCHEMA_OUTDATED", "RC_ORDERA_SCHEMA_INCOMPLETE"
+  ].includes(permanentFailureCode)) {
+    console.warn("[RC ORDERA] Error SQL/permisos permanente: pendiente conservado sin reintentos automáticos.");
     return;
   }
 
@@ -12790,9 +12798,11 @@ function renderOrder() {
     : "Ticket sin guardar";
 
   elements.orderStatus.textContent = currentOrder.saved
-    ? needsCloudSync(currentOrder)
-      ? "Pendiente nube"
-      : "Guardado"
+    ? isOrderRevisionSyncBlocked(currentOrder)
+      ? appUiText("Revisión manual necesaria")
+      : needsCloudSync(currentOrder)
+        ? "Pendiente nube"
+        : "Guardado"
     : "Nuevo";
   elements.orderStatus.classList.toggle("saved", currentOrder.saved);
   elements.orderStatus.classList.toggle("pending", needsCloudSync(currentOrder));
@@ -14602,6 +14612,11 @@ elements.cloudStatus?.addEventListener("click", () => {
   }
 });
 elements.openSignInButton.addEventListener("click", openSignInScreen);
+elements.signOutButton.addEventListener("click", () => {
+  elements.openClientPageButton.removeAttribute("href");
+  elements.openWaiterLinkButton?.removeAttribute("href");
+  document.querySelector("#restaurantKitchenLink")?.removeAttribute("href");
+});
 elements.signOutButton.addEventListener("click", signOut);
 elements.closeRestaurantButton?.addEventListener("click", toggleRestaurantOperationalOpen);
 elements.mainRestaurantToggleButton?.addEventListener("click", toggleRestaurantOperationalOpen);
@@ -14622,7 +14637,20 @@ elements.restaurantHoursGrid?.addEventListener("change", (event) => {
 elements.qrButton.addEventListener("click", openQrDialog);
 elements.waiterTeamButton?.addEventListener("click", openWaiterTeamDialog);
 elements.copyWaiterLinkButton?.addEventListener("click", copyWaiterLink);
-elements.openWaiterLinkButton?.addEventListener("click", openWaiterLink);
+elements.openWaiterLinkButton?.addEventListener("click", (event) => {
+  if (!cloudState.user || !elements.waiterLinkInput.value) event.preventDefault();
+});
+document.querySelector("#restaurantKitchenLink")?.addEventListener("click", (event) => {
+  const link = buildWaiterLink();
+  if (!link) {
+    event.preventDefault();
+    openSignInScreen();
+    return;
+  }
+  const url = new URL(link);
+  url.searchParams.set("station", "kitchen");
+  event.currentTarget.href = url.toString();
+});
 elements.authorizeWaiterButton?.addEventListener("click", authorizeWaiter);
 elements.refreshWaiterMembersButton?.addEventListener("click", () => {
   Promise.all([loadWaiterMembers(), loadEmployeeHours()]).catch(() => {});
@@ -14665,7 +14693,12 @@ elements.waiterMembersList?.addEventListener("click", async (event) => {
 elements.clientAlarmButton.addEventListener("click", toggleClientAlarm);
 elements.qrTableInput.addEventListener("input", updateQrPreview);
 elements.copyQrLinkButton.addEventListener("click", copyQrLink);
-elements.openClientPageButton.addEventListener("click", openClientPage);
+elements.openClientPageButton.addEventListener("click", (event) => {
+  if (!cloudState.user || !elements.qrLinkInput.value) {
+    event.preventDefault();
+    showToast(appUiText("Inicia sesión para abrir el cliente."));
+  }
+});
 elements.clientOrdersButton.addEventListener("click", openClientOrdersDialog);
 elements.refreshClientOrdersButton.addEventListener("click", () => refreshClientOrders());
 elements.clientOrdersList.addEventListener("click", (event) => {

@@ -20,6 +20,7 @@ const runtimeFiles = [
   "portal.html",
   "centro-integraciones.html",
   "centro-integraciones-status.js",
+  "restaurant-fiscal-ui.js",
   "restaurante.html",
   "cliente.html",
   "colaborador.html",

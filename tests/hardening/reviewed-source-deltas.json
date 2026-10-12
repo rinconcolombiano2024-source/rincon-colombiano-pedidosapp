@@ -404,8 +404,8 @@
     ]
   },
   "service-worker.js": {
-    "sha256": "a2d96e676f130255d7ecadba1f454062d563cb6c28d565256bba681bad0a491a",
-    "regressionTests": "tests/hardening/frontend.test.mjs; tests/shared/service-worker-safety.test.mjs",
+    "sha256": "851d752007132a3dc0ea4c3034be1fce3b50780fc8f163445245737c002a18cc",
+    "regressionTests": "tests/hardening/frontend.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/hardening/frontend.test.mjs",
     "edits": [
       {
         "before": "const CACHE_NAME = \"rc-ordera-v91-0-4-offline-r4-products-closures\";\n",
@@ -441,12 +441,32 @@
         "before": "const CACHE_NAME = \"rc-ordera-v91-0-4-v6-verified-20261010-install-r10\";\r\nconst APP_FILES = [\r\n  \"./\",\r\n  \"./index.html\",\n  \"./install-app.js\",\n  \"./install-app.css\",\n  \"./portal-manifest.webmanifest\",\n  \"./portal-manifest.pl.webmanifest\",\n  \"./portal-manifest.en.webmanifest\",\r\n  \"./restaurante.html\",\r\n  \"./cliente.html\",\r\n  \"./colaborador.html\",\r\n  \"./mesero.html\",\r\n  \"./admin.html\",\r\n  \"./styles.css\",\r\n  \"./app.js\",\r\n  \"./cliente.js\",\r\n  \"./colaborador.js\",\r\n  \"./mesero.js\",\r\n  \"./admin.js\",\r\n  \"./offline-i18n.js\",\r\n  \"./auto-translate.js\",\r\n  \"./supabase-config.js\",\r\n  \"./vendor/supabase-2.57.4.js\",\r\n  \"./vendor/qrcode-generator-2.0.4.js\",\r\n  \"./local-qr.js\",\r\n  \"./manifest.webmanifest\",\r\n  \"./restaurante-manifest.webmanifest\",\r\n  \"./restaurante-manifest.pl.webmanifest\",\r\n  \"./restaurante-manifest.en.webmanifest\",\r\n  \"./cliente-manifest.webmanifest\",\r\n  \"./colaborador-manifest.webmanifest\",\r\n  \"./admin-manifest.webmanifest\",\r\n  \"./manifest.pl.webmanifest\",\r\n  \"./manifest.en.webmanifest\",\r\n  \"./cliente-manifest.pl.webmanifest\",\r\n  \"./cliente-manifest.en.webmanifest\",\r\n  \"./colaborador-manifest.pl.webmanifest\",\r\n  \"./colaborador-manifest.en.webmanifest\",\r\n  \"./admin-manifest.pl.webmanifest\",\r\n  \"./admin-manifest.en.webmanifest\",\r\n  \"./mesero-manifest.webmanifest\",\r\n  \"./mesero-manifest.pl.webmanifest\",\r\n  \"./mesero-manifest.en.webmanifest\",\r\n  \"./app-icon.svg\",\r\n  \"./app-icon-192.png\",\r\n  \"./app-icon-512.png\",\r\n];\r\n\r\nself.addEventListener(\"install\", (event) => {\r\n  event.waitUntil(\r\n    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_FILES))\r\n  );\r\n  self.skipWaiting();\r\n});\r\n\r\nself.addEventListener(\"activate\", (event) => {\r\n  event.waitUntil(\r\n    caches\r\n      .keys()\r\n      .then((keys) => Promise.all(keys.filter((key) => key.startsWith(\"rc-ordera-\") && key !== CACHE_NAME).map((key) => caches.delete(key))))\r\n  );\r\n  self.clients.claim();\r\n});\r\n\r\nasync function cachedRuntimeResource(request) {\r\n  const cache = await caches.open(CACHE_NAME);\r\n  const exact = await cache.match(request);\r\n  if (exact) return exact;\r\n  // Precache stores unversioned files; HTML requests scripts with ?v=.\r\n  // Ignore the query only for known static runtime assets, never for API data.\r\n  const pathname = new URL(request.url).pathname;\r\n  const known = APP_FILES.some((file) => new URL(file, self.location.href).pathname === pathname);\r\n  return known ? cache.match(request, { ignoreSearch: true }) : undefined;\r\n}\r\n\r\nself.addEventListener(\"fetch\", (event) => {\r\n  if (event.request.method !== \"GET\") return;\r\n\r\n  const requestUrl = new URL(event.request.url);\r\n  if (requestUrl.origin !== self.location.origin) return;\r\n\r\n  const isDocument = event.request.mode === \"navigate\" || event.request.destination === \"document\";\r\n  const isCriticalCode = [\"script\", \"style\", \"worker\", \"manifest\"].includes(event.request.destination);\r\n  if (!isDocument && !isCriticalCode) return;\r\n\r\n if (isCriticalCode) {\r\n  event.respondWith(\r\n    fetch(event.request)\r\n      .then((response) => {\r\n        if (!response || !response.ok) {\r\n          throw new Error(`HTTP ${response ? response.status : \"unknown\"}`);\r\n        }\r\n\r\n        const responseClone = response.clone();\r\n\r\n        event.waitUntil(\r\n          caches.open(CACHE_NAME).then((cache) => {\r\n            return cache.put(event.request, responseClone).catch(() => {});\r\n          })\r\n        );\r\n\r\n        return response;\r\n      })\r\n      .catch(async () => {\r\n        const cachedResponse = await cachedRuntimeResource(event.request);\r\n\r\n        if (cachedResponse) {\r\n          return cachedResponse;\r\n        }\r\n\r\n        return new Response(\"Recurso no disponible sin conexión.\", {\r\n          status: 503,\r\n          statusText: \"Service Unavailable\",\r\n        });\r\n      })\r\n  );\r\n\r\n  return;\r\n}\r\nconst updateCache = fetch(event.request).then(async (response) => {\r\n  if (!response || !response.ok) throw new Error(\"Document fetch failed\");\r\n  if (response && response.ok) {\r\n    const cache = await caches.open(CACHE_NAME);\r\n    await cache.put(event.request, response.clone()).catch(() => {});\r\n  }\r\n  return response;\r\n});\r\n  event.respondWith(\r\n    updateCache.catch(async () => {\r\n      const cachedRequest = await cachedRuntimeResource(event.request);\r\n      if (cachedRequest) return cachedRequest;\r\n      const pageName = requestUrl.pathname.split(\"/\").pop() || \"index.html\";\r\n      const pageFallbacks = new Set([\"index.html\", \"restaurante.html\", \"cliente.html\", \"colaborador.html\", \"mesero.html\", \"admin.html\"]);\r\n      const cache = await caches.open(CACHE_NAME);\r\n      return (await cache.match(pageFallbacks.has(pageName) ? `./${pageName}` : \"./index.html\"))\r\n        || new Response(\"Página no disponible sin conexión.\", { status: 503 });\r\n    })\r\n  );\r\n});\r\nself.addEventListener(\"push\", (event) => {\r\n  let data = {};\r\n\r\n  try {\r\n    data = event.data ? event.data.json() : {};\r\n  } catch (error) {\r\n    data = {\r\n      title: \"RC ORDERA\",\r\n      body: event.data ? event.data.text() : \"Nuevo pedido disponible.\",\r\n    };\r\n  }\r\n\r\n  const language = [\"es\", \"pl\", \"en\"].includes(String(data.language || \"\").toLowerCase())\r\n    ? String(data.language).toLowerCase()\r\n    : \"es\";\r\n  const fallback = {\r\n    es: {\r\n      title: \"Nuevo domicilio - RC ORDERA\",\r\n      body: \"Hay un nuevo pedido disponible. Abre RC ORDERA para aceptarlo.\",\r\n    },\r\n    pl: {\r\n      title: \"Nowa dostawa - RC ORDERA\",\r\n      body: \"Dostępne jest nowe zamówienie. Otwórz RC ORDERA, aby je przyjąć.\",\r\n    },\r\n    en: {\r\n      title: \"New delivery - RC ORDERA\",\r\n      body: \"A new order is available. Open RC ORDERA to accept it.\",\r\n    },\r\n  }[language];\r\n  const title = data.title || fallback.title;\r\n\r\n  const options = {\r\n    body:\r\n      data.body ||\r\n      fallback.body,\r\n\r\n    icon: \"./app-icon-192.png\",\r\n    badge: \"./app-icon-192.png\",\r\n\r\n    tag: data.tag || \"rc-ordera-delivery\",\r\n\r\n    renotify: true,\r\n    requireInteraction: true,\r\n\r\n    vibrate: [500, 200, 500, 200, 800],\r\n\r\n    data: {\r\n      url: data.url || (data.assignment_id\r\n        ? `./colaborador.html?view=offers&assignment=${encodeURIComponent(data.assignment_id)}&app=v91.0.4&lang=${language}`\r\n        : `./colaborador.html?view=offers&app=v91.0.4&lang=${language}`),\r\n      assignment_id: data.assignment_id || \"\",\r\n    },\r\n  };\r\n\r\n  event.waitUntil(\r\n    self.registration.showNotification(title, options)\r\n  );\r\n});\r\n\r\nself.addEventListener(\"notificationclick\", (event) => {\r\n  event.notification.close();\r\n\r\n  const targetUrl =\r\n    event.notification.data?.url ||\r\n    \"./colaborador.html?view=offers&app=v91.0.4\";\r\n\r\n  event.waitUntil(\r\n    clients.matchAll({\r\n      type: \"window\",\r\n      includeUncontrolled: true,\r\n    }).then((windowClients) => {\r\n      for (const client of windowClients) {\r\n        if (\"focus\" in client) {\r\n          client.navigate(targetUrl);\r\n          return client.focus();\r\n        }\r\n      }\r\n\r\n      return clients.openWindow(targetUrl);\r\n    })\r\n  );\r\n});\r\n\r\n",
         "after": "const CACHE_NAME = \"rc-ordera-v91-0-4-v6-verified-20261011-pwa-safe-r11\";\nconst APP_FILES = [\n  \"./\",\n  \"./index.html\",\n  \"./portal.html\",\n  \"./centro-integraciones.html\",\n  \"./centro-integraciones-status.js\",\n  \"./local-qr.js\",\n  \"./install-app.js\",\n  \"./install-app.css\",\n  \"./portal-manifest.webmanifest\",\n  \"./portal-manifest.pl.webmanifest\",\n  \"./portal-manifest.en.webmanifest\",\n  \"./restaurante.html\",\n  \"./cliente.html\",\n  \"./colaborador.html\",\n  \"./mesero.html\",\n  \"./admin.html\",\n  \"./styles.css\",\n  \"./app.js\",\n  \"./cliente.js\",\n  \"./colaborador.js\",\n  \"./mesero.js\",\n  \"./admin.js\",\n  \"./offline-i18n.js\",\n  \"./auto-translate.js\",\n  \"./supabase-config.js\",\n  \"./vendor/supabase-2.57.4.js\",\n  \"./vendor/qrcode-generator-2.0.4.js\",\n  \"./local-qr.js\",\n  \"./manifest.webmanifest\",\n  \"./restaurante-manifest.webmanifest\",\n  \"./restaurante-manifest.pl.webmanifest\",\n  \"./restaurante-manifest.en.webmanifest\",\n  \"./cliente-manifest.webmanifest\",\n  \"./colaborador-manifest.webmanifest\",\n  \"./admin-manifest.webmanifest\",\n  \"./manifest.pl.webmanifest\",\n  \"./manifest.en.webmanifest\",\n  \"./cliente-manifest.pl.webmanifest\",\n  \"./cliente-manifest.en.webmanifest\",\n  \"./colaborador-manifest.pl.webmanifest\",\n  \"./colaborador-manifest.en.webmanifest\",\n  \"./admin-manifest.pl.webmanifest\",\n  \"./admin-manifest.en.webmanifest\",\n  \"./mesero-manifest.webmanifest\",\n  \"./mesero-manifest.pl.webmanifest\",\n  \"./mesero-manifest.en.webmanifest\",\n  \"./app-icon.svg\",\n  \"./app-icon-192.png\",\n  \"./app-icon-512.png\",\n];\n\n// Cache one canonical entry per known asset: never cache unbounded query variants.\nconst STATIC_CACHE_PATHS = new Set(APP_FILES.map((file) => new URL(file, self.location.href).pathname));\nfunction staticCacheKey(request) {\n  const url = new URL(request.url);\n  return url.origin === self.location.origin && STATIC_CACHE_PATHS.has(url.pathname)\n    ? url.origin + url.pathname : null;\n}\n\nself.addEventListener(\"install\", (event) => {\n  event.waitUntil(\n    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_FILES))\n  );\n  self.skipWaiting();\n});\n\nself.addEventListener(\"activate\", (event) => {\n  event.waitUntil(\n    caches\n      .keys()\n      .then((keys) => Promise.all(keys.filter((key) => key.startsWith(\"rc-ordera-\") && key !== CACHE_NAME).map((key) => caches.delete(key))))\n  );\n  self.clients.claim();\n});\n\nasync function cachedRuntimeResource(request) {\n  const key = staticCacheKey(request);\n  return key ? (await caches.open(CACHE_NAME)).match(key) : undefined;\n}\n\nself.addEventListener(\"fetch\", (event) => {\n  if (event.request.method !== \"GET\") return;\n\n  const requestUrl = new URL(event.request.url);\n  if (requestUrl.origin !== self.location.origin) return;\n\n  const isDocument = event.request.mode === \"navigate\" || event.request.destination === \"document\";\n  const isCriticalCode = [\"script\", \"style\", \"worker\", \"manifest\"].includes(event.request.destination);\n  if (!isDocument && !isCriticalCode) return;\n\n if (isCriticalCode) {\n  event.respondWith(\n    fetch(event.request)\n      .then((response) => {\n        if (!response || !response.ok) {\n          throw new Error(`HTTP ${response ? response.status : \"unknown\"}`);\n        }\n\n        const key = staticCacheKey(event.request);\n        if (key) {\n          const responseClone = response.clone();\n          event.waitUntil(\n            caches.open(CACHE_NAME).then((cache) => cache.put(key, responseClone).catch(() => {}))\n          );\n        }\n        return response;\n      })\n      .catch(async () => {\n        const cachedResponse = await cachedRuntimeResource(event.request);\n\n        if (cachedResponse) {\n          return cachedResponse;\n        }\n\n        return new Response(\"Recurso no disponible sin conexión.\", {\n          status: 503,\n          statusText: \"Service Unavailable\",\n        });\n      })\n  );\n\n  return;\n}\nconst updateCache = fetch(event.request).then(async (response) => {\n  if (!response || !response.ok) throw new Error(\"Document fetch failed\");\n  if (response && response.ok) {\n    const key = staticCacheKey(event.request);\n    if (key) {\n      const cache = await caches.open(CACHE_NAME);\n      await cache.put(key, response.clone()).catch(() => {});\n    }\n  }\n  return response;\n});\n  event.respondWith(\n    updateCache.catch(async () => {\n      const cachedRequest = await cachedRuntimeResource(event.request);\n      if (cachedRequest) return cachedRequest;\n      const pageName = requestUrl.pathname.split(\"/\").pop() || \"index.html\";\n      const pageFallbacks = new Set([\"index.html\", \"restaurante.html\", \"cliente.html\", \"colaborador.html\", \"mesero.html\", \"admin.html\"]);\n      const cache = await caches.open(CACHE_NAME);\n      return (await cache.match(pageFallbacks.has(pageName) ? `./${pageName}` : \"./index.html\"))\n        || new Response(\"Página no disponible sin conexión.\", { status: 503 });\n    })\n  );\n});\nself.addEventListener(\"push\", (event) => {\n  let data = {};\n\n  try {\n    data = event.data ? event.data.json() : {};\n  } catch (error) {\n    data = {\n      title: \"RC ORDERA\",\n      body: event.data ? event.data.text() : \"Nuevo pedido disponible.\",\n    };\n  }\n\n  // Null/array JSON payloads must not crash push delivery.\n  if (!data || typeof data !== \"object\" || Array.isArray(data)) data = {};\n  const language = [\"es\", \"pl\", \"en\"].includes(String(data.language || \"\").toLowerCase())\n    ? String(data.language).toLowerCase()\n    : \"es\";\n  const fallback = {\n    es: {\n      title: \"Nuevo domicilio - RC ORDERA\",\n      body: \"Hay un nuevo pedido disponible. Abre RC ORDERA para aceptarlo.\",\n    },\n    pl: {\n      title: \"Nowa dostawa - RC ORDERA\",\n      body: \"Dostępne jest nowe zamówienie. Otwórz RC ORDERA, aby je przyjąć.\",\n    },\n    en: {\n      title: \"New delivery - RC ORDERA\",\n      body: \"A new order is available. Open RC ORDERA to accept it.\",\n    },\n  }[language];\n  const title = data.title || fallback.title;\n\n  const options = {\n    body:\n      data.body ||\n      fallback.body,\n\n    icon: \"./app-icon-192.png\",\n    badge: \"./app-icon-192.png\",\n\n    tag: data.tag || \"rc-ordera-delivery\",\n\n    renotify: true,\n    requireInteraction: true,\n\n    vibrate: [500, 200, 500, 200, 800],\n\n    data: {\n      url: data.url || (data.assignment_id\n        ? `./colaborador.html?view=offers&assignment=${encodeURIComponent(data.assignment_id)}&app=v91.0.4&lang=${language}`\n        : `./colaborador.html?view=offers&app=v91.0.4&lang=${language}`),\n      assignment_id: data.assignment_id || \"\",\n    },\n  };\n\n  event.waitUntil(\n    self.registration.showNotification(title, options)\n  );\n});\n\nfunction safeNotificationUrl(value) {\n  const fallback = new URL(\"./colaborador.html?view=offers&app=v91.0.4\", self.location.href);\n  const allowed = new URL(\"./colaborador.html\", self.location.href);\n  if (typeof value !== \"string\" || value.length > 2048) return fallback.href;\n  try {\n    const target = new URL(value, self.location.href);\n    return target.origin === self.location.origin && target.pathname === allowed.pathname &&\n      !target.username && !target.password ? target.href : fallback.href;\n  } catch { return fallback.href; }\n}\n\nself.addEventListener(\"notificationclick\", (event) => {\n  event.notification.close();\n  const targetUrl = safeNotificationUrl(event.notification.data?.url);\n  event.waitUntil(\n    clients.matchAll({ type: \"window\", includeUncontrolled: true }).then((windowClients) => {\n      // Never replace an active restaurant POS, checkout or administration tab.\n      const existingCourier = windowClients.find((client) => {\n        try {\n          const current = new URL(client.url);\n          return current.origin === self.location.origin &&\n            current.pathname === new URL(\"./colaborador.html\", self.location.href).pathname &&\n            typeof client.navigate === \"function\";\n        } catch { return false; }\n      });\n      if (!existingCourier) return clients.openWindow(targetUrl);\n      return existingCourier.navigate(targetUrl)\n        .then((navigated) => (navigated || existingCourier).focus())\n        .catch(() => clients.openWindow(targetUrl));\n    })\n  );\n});\n",
         "afterByteOffset": 0
+      },
+      {
+        "before": "const CACHE_NAME = \"rc-ordera-v91-0-4-v6-verified-20261011-pwa-safe-r11\";\n",
+        "after": "const CACHE_NAME = \"rc-ordera-v91-0-4-v6-verified-20261012-pwa-safe-r12\";\n",
+        "afterByteOffset": 0
+      },
+      {
+        "before": "",
+        "after": "  \"./restaurant-fiscal-ui.js\",\n",
+        "afterByteOffset": 210
+      },
+      {
+        "before": "rc-ordera-v91-0-4-v6-verified-20261012-pwa-safe-r12",
+        "after": "rc-ordera-v91-0-4-v6-verified-20261012-pwa-safe-r13",
+        "afterByteOffset": 20
+      },
+      {
+        "before": "pwa-safe-r13",
+        "after": "pwa-safe-r14",
+        "afterByteOffset": 59
       }
     ]
   },
   "app.js": {
-    "sha256": "5307d9a1400eaace611e2aa21e477a2d4aac8d170113cc1c256da67f479c1fd5",
-    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs",
+    "sha256": "660baca31b000e735ab2d9a96ba0372e438ae1f0a759ddb00a3c2178bf7fe177",
+    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs",
     "edits": [
       {
         "before": "",
@@ -522,12 +542,87 @@
         "before": "",
         "after": "elements.restaurantDefaultVatSelect?.addEventListener(\"change\", async () => {\r\n  defaultVatRate = normalizeVatRate(elements.restaurantDefaultVatSelect.value);\r\n  localStoreCurrentSettings();\r\n  await saveSettingsWhenPossible();\r\n});\r\n",
         "afterByteOffset": 493227
+      },
+      {
+        "before": "  elements.qrLinkInput.value = link;\r\n",
+        "after": "  elements.qrLinkInput.value = link;\n  if (link) elements.openClientPageButton.setAttribute(\"href\", link);\n  else elements.openClientPageButton.removeAttribute(\"href\");\r\n",
+        "afterByteOffset": 267326
+      },
+      {
+        "before": "function openClientPage() {\r\n  const link = elements.qrLinkInput.value;\r\n  if (link) window.open(link, \"_blank\", \"noopener\");\r\n}\r\n\r\n",
+        "after": "",
+        "afterByteOffset": 270079
+      },
+      {
+        "before": "  elements.waiterLinkInput.value = buildWaiterLink();\r\n",
+        "after": "  elements.waiterLinkInput.value = buildWaiterLink();\n  elements.openWaiterLinkButton.setAttribute(\"href\", elements.waiterLinkInput.value);\r\n",
+        "afterByteOffset": 278443
+      },
+      {
+        "before": "function openWaiterLink() {\r\n  const link = elements.waiterLinkInput.value;\r\n  if (link) window.open(link, \"_blank\", \"noopener\");\r\n}\r\n\r\n",
+        "after": "",
+        "afterByteOffset": 279034
+      },
+      {
+        "before": "",
+        "after": "elements.signOutButton.addEventListener(\"click\", () => {\n  elements.openClientPageButton.removeAttribute(\"href\");\n  elements.openWaiterLinkButton?.removeAttribute(\"href\");\n  document.querySelector(\"#restaurantKitchenLink\")?.removeAttribute(\"href\");\n});\n",
+        "afterByteOffset": 477182
+      },
+      {
+        "before": "elements.openWaiterLinkButton?.addEventListener(\"click\", openWaiterLink);\r\n",
+        "after": "elements.openWaiterLinkButton?.addEventListener(\"click\", (event) => {\n  if (!cloudState.user || !elements.waiterLinkInput.value) event.preventDefault();\n});\ndocument.querySelector(\"#restaurantKitchenLink\")?.addEventListener(\"click\", (event) => {\n  const link = buildWaiterLink();\n  if (!link) {\n    event.preventDefault();\n    openSignInScreen();\n    return;\n  }\n  const url = new URL(link);\n  url.searchParams.set(\"station\", \"kitchen\");\n  event.currentTarget.href = url.toString();\n});\r\n",
+        "afterByteOffset": 478780
+      },
+      {
+        "before": "elements.openClientPageButton.addEventListener(\"click\", openClientPage);\r\n",
+        "after": "elements.openClientPageButton.addEventListener(\"click\", (event) => {\n  if (!cloudState.user || !elements.qrLinkInput.value) {\n    event.preventDefault();\n    showToast(appUiText(\"Inicia sesión para abrir el cliente.\"));\n  }\n});\r\n",
+        "afterByteOffset": 480881
+      },
+      {
+        "before": "const link = buildWaiterLink();\r\n  if (!link) {\r\n    alert(\"Inicia sesion para abrir una estacion de cocina.\");\r\n    return;\r\n  }\r\n  const url = new URL(link);\r\n  url.searchParams.set(\"station\", \"kitchen\");\r\n  window.open(url.toString(), \"_blank\", \"noopener\"",
+        "after": "// Reuse the secure native link and its same-click auth/URL checks.\r\n  // A legacy dashboard action must never reopen an imperative window.open path.\r\n  document.querySelector(\"#restaurantKitchenLink\")?.click(",
+        "afterByteOffset": 270124
+      },
+      {
+        "before": "function isOrderRevisionSyncBlocked(order) {\r\n  return Boolean(\r\n    order?._syncBlockedReason === \"revision_conflict\"\r\n  );\r\n}\r\n\r\n",
+        "after": "function isOrderRevisionSyncBlocked(order) {\r\n  return Boolean(\r\n    order?._syncBlockedReason === \"revision_conflict\" ||\r\n    order?._syncBlockedReason === \"revision_unverified\"\r\n  );\r\n}\r\n\r\n",
+        "afterByteOffset": 64664
+      },
+      {
+        "before": "function blockOrderRevisionSync(\r\n  order,\r\n  remoteRevision = null\r\n) {\r\n  if (!order?.id) return;\r\n\r\n  const parsedRemoteRevision =\r\n    Number.parseInt(remoteRevision, 10);\r\n\r\n  const patch = {\r\n    syncStatus: \"pending\",\r\n    _syncBlockedReason:\r\n      \"revision_conflict\",\r\n    _syncBlockedAt:\r\n      new Date().toISOString(),\r\n  };\r\n\r\n  if (\r\n    Number.isFinite(parsedRemoteRevision) &&\r\n    parsedRemoteRevision > 0\r\n  ) {\r\n    patch._syncRemoteRevision =\r\n      parsedRemoteRevision;\r\n  }\r\n\r\n  Object.assign(order, patch);\r\n\r\n  savedOrders = savedOrders.map(\r\n    (savedOrder) =>\r\n      savedOrder.id === order.id\r\n        ? {\r\n            ...savedOrder,\r\n            ...patch,\r\n          }\r\n        : savedOrder\r\n  );\r\n\r\n  if (currentOrder.id === order.id) {\r\n    Object.assign(\r\n      currentOrder,\r\n      patch\r\n    );\r\n  }\r\n\r\n  saveOrders({\r\n    immediate: true,\r\n  });\r\n\r\n  saveCurrentOrderDraft();\r\n\r\n  console.warn(\r\n    \"[RC ORDERA] Sincronización automática bloqueada por conflicto de revisión.\",\r\n    {\r\n      orderId: order.id,\r\n      localRevision:\r\n        order._syncRevision || null,\r\n      remoteRevision:\r\n        parsedRemoteRevision || null,\r\n    }\r\n  );\r\n}\r\n",
+        "after": "function blockOrderRevisionSync(\r\n  order,\r\n  remoteRevision = null,\r\n  reason = \"revision_conflict\"\r\n) {\r\n  if (!order?.id) return;\r\n\r\n  const parsedRemoteRevision =\r\n    Number.parseInt(remoteRevision, 10);\r\n\r\n  const patch = {\r\n    syncStatus: \"pending\",\r\n    _syncBlockedReason:\r\n      reason === \"revision_unverified\" ? \"revision_unverified\" : \"revision_conflict\",\r\n    _syncBlockedAt:\r\n      new Date().toISOString(),\r\n  };\r\n\r\n  if (\r\n    Number.isFinite(parsedRemoteRevision) &&\r\n    parsedRemoteRevision > 0\r\n  ) {\r\n    patch._syncRemoteRevision =\r\n      parsedRemoteRevision;\r\n  }\r\n\r\n  Object.assign(order, patch);\r\n\r\n  savedOrders = savedOrders.map(\r\n    (savedOrder) =>\r\n      savedOrder.id === order.id\r\n        ? {\r\n            ...savedOrder,\r\n            ...patch,\r\n          }\r\n        : savedOrder\r\n  );\r\n\r\n  if (currentOrder.id === order.id) {\r\n    Object.assign(\r\n      currentOrder,\r\n      patch\r\n    );\r\n  }\r\n\r\n  saveOrders({\r\n    immediate: true,\r\n  });\r\n\r\n  saveCurrentOrderDraft();\r\n\r\n  console.warn(\r\n    \"[RC ORDERA] Sincronización automática bloqueada por conflicto de revisión.\",\r\n    {\r\n      orderId: order.id,\r\n      localRevision:\r\n        order._syncRevision || null,\r\n      remoteRevision:\r\n        parsedRemoteRevision || null,\r\n    }\r\n  );\r\n}\r\n",
+        "afterByteOffset": 70395
+      },
+      {
+        "before": "    const blockedError = new Error(\r\n      appUiText(\r\n        \"Este pedido cambió en otro dispositivo y requiere reconciliación antes de volver a sincronizarse.\"\r\n      )\r\n    );\r\n\r\n    blockedError.code =\r\n      \"ORDER_REVISION_CONFLICT\";\r\n\r\n",
+        "after": "    const verificationPending = order._syncBlockedReason === \"revision_unverified\";\r\n    const blockedError = new Error(appUiText(verificationPending\r\n      ? \"No se pudo verificar la revisión de este pedido. Se detuvo la sincronización automática para proteger los cambios locales.\"\r\n      : \"Este pedido cambió en otro dispositivo y requiere reconciliación antes de volver a sincronizarse.\"));\r\n    blockedError.code = verificationPending\r\n      ? \"RC_ORDERA_REVISION_UNVERIFIED\"\r\n      : \"ORDER_REVISION_CONFLICT\";\r\n\r\n",
+        "afterByteOffset": 181455
+      },
+      {
+        "before": "  } catch (reconciliationError) {\r\n  console.warn(\r\n    \"[RC ORDERA] No fue posible reconciliar automáticamente el conflicto.\",\r\n    reconciliationError\r\n  );\r\n\r\n  /*\r\n   * Si no pudimos consultar Supabase con certeza,\r\n   * NO podemos afirmar que exista un conflicto real.\r\n   *\r\n   * Propagamos el error original para que\r\n   * runPendingDataSync() lo clasifique correctamente\r\n   * como red, timeout, infraestructura, etc.\r\n   */\r\n  throw reconciliationError;\r\n}\r\n",
+        "after": "  } catch (reconciliationError) {\r\n  console.warn(\"[RC ORDERA] No fue posible reconciliar automáticamente el conflicto.\", reconciliationError);\r\n  // An explicit abort remains cancellable; the local order stays intact.\r\n  if (reconciliationError?.name === \"AbortError\") throw reconciliationError;\r\n  // The server rejected the revision, but the follow-up READ could not verify\r\n  // the current edition. Never replay the same stale WRITE in a hot loop.\r\n  if (isOrderRevisionConflictError(error) ||\r\n      /ORDER_REVISION_REQUIRED/i.test(String(error?.message || \"\"))) {\r\n    const backedUp = saveRevisionConflictBackup(order, remoteRevision);\r\n    if (!backedUp) console.error(\"[RC ORDERA] El respaldo del pedido no se confirmó; se conserva la edición local pendiente.\");\r\n    blockOrderRevisionSync(order, remoteRevision, \"revision_unverified\");\r\n    const blocked = new Error(appUiText(\"La nube rechazó una revisión anterior. No se reenviará este pedido hasta verificar la revisión remota.\"));\r\n    blocked.code = \"RC_ORDERA_REVISION_UNVERIFIED\";\r\n    blocked.cause = reconciliationError;\r\n    throw blocked;\r\n  }\r\n  throw reconciliationError;\r\n}\r\n",
+        "afterByteOffset": 193375
+      },
+      {
+        "before": "function schedulePendingOrderRecovery(error = null) {\r\n  if (\r\n    !cloudState.client ||\r\n    !cloudState.user ||\r\n    !navigator.onLine\r\n  ) {\r\n    return;\r\n  }\r\n\r\n  /*\r\n   * Un conflicto de revisión NO es un error\r\n   * temporal.\r\n   *\r\n   * Reintentarlo automáticamente solamente\r\n   * volvería a ejecutar el mismo RPC con una\r\n   * revisión obsoleta.\r\n   */\r\n  if (\r\n    error &&\r\n    isOrderRevisionConflictError(error)\r\n  ) {\r\n    console.warn(\r\n      \"[RC ORDERA] Conflicto de revisión: no se programa reintento automático.\"\r\n    );\r\n\r\n    return;\r\n  }\r\n\r\n  /*\r\n   * Los fallos reales de infraestructura sí\r\n   * pueden recuperarse automáticamente.\r\n   */\r\n  if (\r\n    error &&\r\n    isTemporarySyncInfrastructureError(error)\r\n  ) {\r\n    pendingDataSyncRetryNotBefore =\r\n      Math.max(\r\n        pendingDataSyncRetryNotBefore,\r\n        Date.now() +\r\n          SYNC_INFRASTRUCTURE_BACKOFF_MS\r\n      );\r\n  }\r\n\r\n",
+        "after": "function schedulePendingOrderRecovery(error = null) {\r\n  if (\r\n    !cloudState.client ||\r\n    !cloudState.user ||\r\n    !navigator.onLine\r\n  ) {\r\n    return;\r\n  }\r\n\r\n  /*\r\n   * Un conflicto de revisión NO es un error\r\n   * temporal.\r\n   *\r\n   * Reintentarlo automáticamente solamente\r\n   * volvería a ejecutar el mismo RPC con una\r\n   * revisión obsoleta.\r\n   */\r\n  if (\r\n    error &&\r\n    (isOrderRevisionConflictError(error) || error?.code === \"RC_ORDERA_REVISION_UNVERIFIED\")\r\n  ) {\r\n    console.warn(\r\n      \"[RC ORDERA] Revisión sin resolver: no se programa reintento automático.\"\r\n    );\r\n\r\n    return;\r\n  }\r\n\r\n  /*\r\n   * Los fallos reales de infraestructura sí\r\n   * pueden recuperarse automáticamente.\r\n   */\r\n  if (\r\n    error &&\r\n    isTemporarySyncInfrastructureError(error)\r\n  ) {\r\n    pendingDataSyncRetryNotBefore =\r\n      Math.max(\r\n        pendingDataSyncRetryNotBefore,\r\n        Date.now() +\r\n          SYNC_INFRASTRUCTURE_BACKOFF_MS\r\n      );\r\n  }\r\n\r\n",
+        "afterByteOffset": 287214
+      },
+      {
+        "before": "  elements.orderStatus.textContent = currentOrder.saved\r\n    ? needsCloudSync(currentOrder)\r\n      ? \"Pendiente nube\"\r\n      : \"Guardado\"\r\n    : \"Nuevo\";\r\n",
+        "after": "  elements.orderStatus.textContent = currentOrder.saved\r\n    ? isOrderRevisionSyncBlocked(currentOrder)\r\n      ? appUiText(\"Revisión manual necesaria\")\r\n      : needsCloudSync(currentOrder)\r\n        ? \"Pendiente nube\"\r\n        : \"Guardado\"\r\n    : \"Nuevo\";\r\n",
+        "afterByteOffset": 410747
+      },
+      {
+        "before": "",
+        "after": "No repetimos escrituras por errores permanentes de autorización\r\n   * o contrato SQL. Se conserva el pedido pendiente y el operario\r\n   * podrá sincronizar manualmente después de corregir la causa.\r\n   * Evita ciclos de RPC inútiles que saturan CPU en Supabase.\r\n   */\r\n  const permanentFailureCode = String(\r\n    error?.code || error?.cause?.code || \"\"\r\n  ).trim().toUpperCase();\r\n  if (error && [\r\n    \"42501\", \"42P01\", \"42703\", \"42883\", \"PGRST202\", \"PGRST204\",\r\n    \"RC_ORDERA_SCHEMA_OUTDATED\", \"RC_ORDERA_SCHEMA_INCOMPLETE\"\r\n  ].includes(permanentFailureCode)) {\r\n    console.warn(\"[RC ORDERA] Error SQL/permisos permanente: pendiente conservado sin reintentos automáticos.\");\r\n    return;\r\n  }\r\n\r\n  /*\r\n   * ",
+        "afterByteOffset": 287847
       }
     ]
   },
   "restaurante.html": {
-    "sha256": "4f4295584e7c7dabf8f574c432a5c392825e704d2d2ae2daa969d8717158ab1d",
-    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs",
+    "sha256": "667f8476f91c6818c58f96e3b208bd56dbd040f6be828783263a6522a4d66758",
+    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/hardening/frontend.test.mjs",
     "edits": [
       {
         "before": "",
@@ -538,6 +633,56 @@
         "before": "",
         "after": "    <script src=\"vendor/qrcode-generator-2.0.4.js\"></script>\n    <script src=\"local-qr.js\"></script>\n",
         "afterByteOffset": 47225
+      },
+      {
+        "before": "    <link rel=\"stylesheet\" href=\"styles.css?v=91.0.4\" />\n",
+        "after": "    <link rel=\"stylesheet\" href=\"styles.css?v=91.0.4-nav1\" />\n",
+        "afterByteOffset": 787
+      },
+      {
+        "before": "",
+        "after": "          <button class=\"sign-in-top-button\" id=\"openFiscalPrinterTopButton\" type=\"button\" aria-haspopup=\"dialog\" aria-controls=\"fiscalPrinterDialog\">🧾 Impresora fiscal</button>\n",
+        "afterByteOffset": 7721
+      },
+      {
+        "before": "          <button type=\"button\" data-restaurant-dashboard-action=\"kitchen\">Cocina</button>\n",
+        "after": "          <a id=\"restaurantKitchenLink\" class=\"rc-module-link\" href=\"./mesero.html\" target=\"_blank\" rel=\"noopener noreferrer\">Cocina</a>\n",
+        "afterByteOffset": 11127
+      },
+      {
+        "before": "",
+        "after": "          <div class=\"fiscal-printer-control settings-wide-field\">\n            <button id=\"connectFiscalPrinterButton\" type=\"button\" aria-haspopup=\"dialog\" aria-controls=\"fiscalPrinterDialog\">Conectar impresora fiscal</button>\n            <span id=\"fiscalPrinterSummary\" role=\"status\">Sin conexión fiscal verificada</span>\n          </div>\n",
+        "afterByteOffset": 23756
+      },
+      {
+        "before": "          <button id=\"openClientPageButton\" value=\"default\" type=\"button\">Abrir cliente</button>\n",
+        "after": "          <a id=\"openClientPageButton\" class=\"rc-module-link\" target=\"_blank\" rel=\"noopener noreferrer\">Abrir cliente ↗</a>\n",
+        "afterByteOffset": 38817
+      },
+      {
+        "before": "            <button id=\"openWaiterLinkButton\" type=\"button\">Abrir</button>\n",
+        "after": "            <a id=\"openWaiterLinkButton\" class=\"rc-module-link\" target=\"_blank\" rel=\"noopener noreferrer\">Abrir estación ↗</a>\n",
+        "afterByteOffset": 40775
+      },
+      {
+        "before": "",
+        "after": "    <dialog id=\"fiscalPrinterDialog\" class=\"monthly-dialog fiscal-device-dialog\" aria-labelledby=\"fiscalDialogTitle\">\n      <div class=\"fiscal-device-content\">\n        <h2 id=\"fiscalDialogTitle\">Dispositivo fiscal · RC ORDERA</h2>\n        <p id=\"fiscalDialogDescription\">Autoriza un puerto desde la app. El permiso USB NO supone conexión fiscal.</p>\n        <p id=\"fiscalDialogWarning\" class=\"fiscal-device-warning\">POSNET requiere modelo y protocolo oficial, agente local, mapa PTU validado y pruebas físicas; la emisión fiscal sigue bloqueada.</p>\n        <p id=\"fiscalDeviceStatus\" class=\"fiscal-device-status\" role=\"status\" aria-live=\"polite\"></p>\n        <div class=\"fiscal-device-actions\">\n          <button type=\"button\" id=\"fiscalRequestPortButton\">Autorizar puerto USB/serie</button>\n          <button type=\"button\" id=\"fiscalCheckPortButton\">Revisar permisos</button>\n          <button type=\"button\" id=\"fiscalCloseButton\">Cerrar</button>\n        </div>\n      </div>\n    </dialog>\n\n",
+        "afterByteOffset": 47514
+      },
+      {
+        "before": "    <script src=\"app.js?v=91.0.4\"></script>\n",
+        "after": "    <script src=\"app.js?v=91.0.4-nav1\"></script>\n    <script src=\"restaurant-fiscal-ui.js?v=91.0.4-nav1\"></script>\n",
+        "afterByteOffset": 48979
+      },
+      {
+        "before": "app.js?v=91.0.4-nav1",
+        "after": "app.js?v=91.0.4-nav2",
+        "afterByteOffset": 48996
+      },
+      {
+        "before": "91.0.4-nav2",
+        "after": "91.0.4-nav3",
+        "afterByteOffset": 49005
       }
     ]
   }

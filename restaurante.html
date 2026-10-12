@@ -13,7 +13,7 @@
     <link rel="manifest" href="restaurante-manifest.webmanifest" />
     <link rel="icon" href="app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="app-icon-192.png" />
-    <link rel="stylesheet" href="styles.css?v=91.0.4" />
+    <link rel="stylesheet" href="styles.css?v=91.0.4-nav1" />
   </head>
   <body class="auth-checking">
     <section class="auth-screen" id="authScreen" hidden>
@@ -164,6 +164,7 @@
           <button class="sign-out-button" id="signOutButton" type="button" hidden>Cerrar sesion</button>
           <button class="sign-in-top-button" id="qrButton" type="button">QR cliente</button>
           <button class="sign-in-top-button" id="waiterTeamButton" type="button">Estaciones</button>
+          <button class="sign-in-top-button" id="openFiscalPrinterTopButton" type="button" aria-haspopup="dialog" aria-controls="fiscalPrinterDialog">🧾 Impresora fiscal</button>
           <button class="sign-in-top-button" id="clientAlarmButton" type="button">Activar alarma</button>
           <button class="sign-in-top-button client-orders-button" id="clientOrdersButton" type="button">
             Pedidos recibidos <span id="clientOrdersBadge" hidden>0</span>
@@ -225,7 +226,7 @@
         <nav class="restaurant-module-nav" aria-label="Modulos del restaurante">
           <button type="button" data-restaurant-dashboard-action="orders" aria-current="page">Pedidos</button>
           <button type="button" data-restaurant-dashboard-action="menu">Menu</button>
-          <button type="button" data-restaurant-dashboard-action="kitchen">Cocina</button>
+          <a id="restaurantKitchenLink" class="rc-module-link" href="./mesero.html" target="_blank" rel="noopener noreferrer">Cocina</a>
           <button type="button" data-restaurant-dashboard-action="statistics">Estadisticas</button>
           <button type="button" data-restaurant-dashboard-action="staff">Personal</button>
         </nav>
@@ -524,6 +525,10 @@
           <div class="thermal-printer-control settings-wide-field">
             <button id="connectThermalPrinterButton" type="button">Conectar impresora termica</button>
             <span id="thermalPrinterStatus" role="status">Impresion del sistema; configura el corte en el controlador.</span>
+          </div>
+          <div class="fiscal-printer-control settings-wide-field">
+            <button id="connectFiscalPrinterButton" type="button" aria-haspopup="dialog" aria-controls="fiscalPrinterDialog">Conectar impresora fiscal</button>
+            <span id="fiscalPrinterSummary" role="status">Sin conexión fiscal verificada</span>
           </div>
           <button id="saveCurrencyButton" type="button">Guardar ajustes</button>
         </section>
@@ -899,7 +904,7 @@
         <p id="qrHint" class="auth-message"></p>
         <div class="dialog-actions">
           <button id="copyQrLinkButton" value="default" type="button">Copiar link</button>
-          <button id="openClientPageButton" value="default" type="button">Abrir cliente</button>
+          <a id="openClientPageButton" class="rc-module-link" target="_blank" rel="noopener noreferrer">Abrir cliente ↗</a>
           <button value="cancel" type="submit">Cerrar</button>
         </div>
       </form>
@@ -941,7 +946,7 @@
           <div class="waiter-link-row">
             <input id="waiterLinkInput" type="text" readonly />
             <button id="copyWaiterLinkButton" type="button">Copiar</button>
-            <button id="openWaiterLinkButton" type="button">Abrir</button>
+            <a id="openWaiterLinkButton" class="rc-module-link" target="_blank" rel="noopener noreferrer">Abrir estación ↗</a>
           </div>
         </label>
         <div class="waiter-member-fields">
@@ -1133,6 +1138,20 @@
       </form>
     </dialog>
 
+    <dialog id="fiscalPrinterDialog" class="monthly-dialog fiscal-device-dialog" aria-labelledby="fiscalDialogTitle">
+      <div class="fiscal-device-content">
+        <h2 id="fiscalDialogTitle">Dispositivo fiscal · RC ORDERA</h2>
+        <p id="fiscalDialogDescription">Autoriza un puerto desde la app. El permiso USB NO supone conexión fiscal.</p>
+        <p id="fiscalDialogWarning" class="fiscal-device-warning">POSNET requiere modelo y protocolo oficial, agente local, mapa PTU validado y pruebas físicas; la emisión fiscal sigue bloqueada.</p>
+        <p id="fiscalDeviceStatus" class="fiscal-device-status" role="status" aria-live="polite"></p>
+        <div class="fiscal-device-actions">
+          <button type="button" id="fiscalRequestPortButton">Autorizar puerto USB/serie</button>
+          <button type="button" id="fiscalCheckPortButton">Revisar permisos</button>
+          <button type="button" id="fiscalCloseButton">Cerrar</button>
+        </div>
+      </div>
+    </dialog>
+
     <div class="toast-notice" id="toastNotice" role="status" aria-live="polite" hidden></div>
     <datalist id="restaurantRegionOptions"></datalist>
 
@@ -1142,6 +1161,7 @@
     <script src="auto-translate.js?v=91.0.4"></script>
     <script src="vendor/qrcode-generator-2.0.4.js"></script>
     <script src="local-qr.js"></script>
-    <script src="app.js?v=91.0.4"></script>
+    <script src="app.js?v=91.0.4-nav3"></script>
+    <script src="restaurant-fiscal-ui.js?v=91.0.4-nav1"></script>
   </body>
 </html>
