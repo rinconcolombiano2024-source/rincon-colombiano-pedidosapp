@@ -4,7 +4,7 @@
   "id": "./customer-app-pl",
   "description": "Twoje ulubione jedzenie blisko Ciebie.",
   "start_url": "./cliente.html?app=v91.0.4&lang=pl",
-  "scope": "./",
+  "scope": "./cliente.html",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],
   "background_color": "#f4f6f9",

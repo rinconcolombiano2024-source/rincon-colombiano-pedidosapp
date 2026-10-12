@@ -4,7 +4,7 @@
   "id": "./waiter-app-en",
   "description": "Restaurant station orders and operations.",
   "start_url": "./mesero.html?app=v91.0.4&lang=en",
-  "scope": "./",
+  "scope": "./mesero.html",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],
   "background_color": "#f4f6f9",
