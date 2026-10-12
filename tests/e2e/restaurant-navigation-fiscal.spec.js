@@ -41,6 +41,17 @@ test("restaurant QR and stations use a separate tab without navigating away from
   await expect.poll(() => stationsPage.url()).toContain("/mesero.html");
   expect(page.url()).toContain("/restaurante.html");
   await stationsPage.close();
+
+  // Direct Cocina navigation is a second entry point and must never take over POS.
+  const kitchenLink = page.locator("#restaurantKitchenLink");
+  await expect(kitchenLink).toHaveAttribute("target", "_blank");
+  await expect(kitchenLink).toHaveAttribute("rel", /noopener/);
+  const kitchenPopup = context.waitForEvent("page");
+  await kitchenLink.click();
+  const kitchenPage = await kitchenPopup;
+  await expect.poll(() => kitchenPage.url()).toMatch(/\/mesero\.html.*station=kitchen/);
+  expect(page.url()).toContain("/restaurante.html");
+  await kitchenPage.close();
 });
 
 test("fiscal button is in the restaurant app; permission does not enable fiscal printing", async ({ page }) => {
