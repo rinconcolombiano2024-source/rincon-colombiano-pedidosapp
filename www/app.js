@@ -7573,20 +7573,8 @@ async function performClientOrdersRefresh(options = {}) {
       cursor = { id: last.id, created_at: last.created_at };
     }
   })();
-  const trackingRequest = loadCurrentRestaurantDeliveryTracking(options.signal).catch((trackingError) => {
-    console.warn(
-      "No fue posible confirmar el seguimiento de domicilios. Se conservara el ultimo estado valido.",
-      trackingError
-    );
-
-    return clientDeliveryTrackingByOrderId instanceof Map
-      ? clientDeliveryTrackingByOrderId
-      : new Map();
-  });
-  const [ordersResponse, tracking] = await Promise.all([
-    ordersRequest,
-    trackingRequest,
-  ]);
+  // First read active orders: do not request courier tracking for empty/pickup-only restaurants.
+  const ordersResponse = await ordersRequest;
   const { data, error } = ordersResponse;
   if (requestClient !== cloudState.client || requestUserId !== cloudState.user?.id) return false;
 
@@ -7598,6 +7586,21 @@ async function performClientOrdersRefresh(options = {}) {
   }
 
   const orders = data || [];
+  // Only deliveries use tracking. Each pickup-only refresh previously called
+  // get_current_restaurant_delivery_tracking unnecessarily, even with zero orders.
+  const tracking = orders.some(clientOrderNeedsCourier)
+    ? await loadCurrentRestaurantDeliveryTracking(options.signal).catch((trackingError) => {
+        console.warn(
+          "No se pudo confirmar el seguimiento de domicilios. Se conservara el ultimo estado valido.",
+          trackingError
+        );
+        return clientDeliveryTrackingByOrderId instanceof Map
+          ? clientDeliveryTrackingByOrderId
+          : new Map();
+      })
+    : new Map();
+  // The operator may have signed out while awaiting a slower tracking RPC.
+  if (requestClient !== cloudState.client || requestUserId !== cloudState.user?.id) return false;
   clientDeliveryTrackingByOrderId = tracking;
   pendingClientOrders = orders.map((order) => {
     const previous = previousById.get(String(order.id));
