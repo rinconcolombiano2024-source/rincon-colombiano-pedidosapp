@@ -3373,7 +3373,7 @@ async function activateCurrentUserRole(role) {
   }
 }
 
-async function ensureRestaurantOwnerIdentity(profile = restaurantProfileFromUserMetadata()) {
+async function ensureRestaurantOwnerIdentity(profile = restaurantProfileFromUserMetadata(), options = {}) {
   if (!cloudState.client || !cloudState.user) return;
   try {
     const { error } = await cloudState.client.from("user_profiles").upsert(restaurantOwnerUserProfilePayload(profile));
@@ -3381,7 +3381,9 @@ async function ensureRestaurantOwnerIdentity(profile = restaurantProfileFromUser
   } catch (error) {
     console.warn("No se pudo actualizar el perfil general del propietario.", error);
   }
-  await activateCurrentUserRole("restaurant_owner");
+  // An active platform owner role was already checked in the same server load.
+  // Do not re-run an UPDATE-producing RPC just to refresh its updated_at.
+  if (!options.roleAlreadyActive) await activateCurrentUserRole("restaurant_owner");
 }
 
 function applyRestaurantProfile(profile = {}, options = {}) {
@@ -3996,6 +3998,8 @@ try {
       .select("status")
       .eq("user_id", cloudState.user.id)
       .eq("role", "restaurant_owner")
+      .eq("scope_type", "platform")
+      .eq("scope_id", PLATFORM_SCOPE_ID)
       .eq("status", "active")
       .limit(1)
       .maybeSingle();
@@ -4197,7 +4201,8 @@ if (
   )
 ) {
   await ensureRestaurantOwnerIdentity(
-    restaurantProfile
+    restaurantProfile,
+    { roleAlreadyActive: !ownerRoleError && ownerRole?.status === "active" }
   );
 }
 

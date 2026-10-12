@@ -475,8 +475,8 @@
     ]
   },
   "app.js": {
-    "sha256": "729744f29614b298c68cb54a85a5f982865c021ae11792fd42dae8d293f5445a",
-    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs",
+    "sha256": "9111a65b20810ed7f4374224587ef5e00c02d95417bd1faf1c1a1a8bf3c1ce1d",
+    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs",
     "edits": [
       {
         "before": "",
@@ -647,6 +647,21 @@
         "before": "  const orders = data || [];\r\n  clientDeliveryTrackingByOrderId = tracking;\r\n",
         "after": "  const orders = data || [];\r\n  // Only deliveries use tracking. Each pickup-only refresh previously called\r\n  // get_current_restaurant_delivery_tracking unnecessarily, even with zero orders.\r\n  const tracking = orders.some(clientOrderNeedsCourier)\r\n    ? await loadCurrentRestaurantDeliveryTracking(options.signal).catch((trackingError) => {\r\n        console.warn(\r\n          \"No se pudo confirmar el seguimiento de domicilios. Se conservara el ultimo estado valido.\",\r\n          trackingError\r\n        );\r\n        return clientDeliveryTrackingByOrderId instanceof Map\r\n          ? clientDeliveryTrackingByOrderId\r\n          : new Map();\r\n      })\r\n    : new Map();\r\n  // The operator may have signed out while awaiting a slower tracking RPC.\r\n  if (requestClient !== cloudState.client || requestUserId !== cloudState.user?.id) return false;\r\n  clientDeliveryTrackingByOrderId = tracking;\r\n",
         "afterByteOffset": 236246
+      },
+      {
+        "before": "async function ensureRestaurantOwnerIdentity(profile = restaurantProfileFromUserMetadata()) {\r\n  if (!cloudState.client || !cloudState.user) return;\r\n  try {\r\n    const { error } = await cloudState.client.from(\"user_profiles\").upsert(restaurantOwnerUserProfilePayload(profile));\r\n    if (error) throw error;\r\n  } catch (error) {\r\n    console.warn(\"No se pudo actualizar el perfil general del propietario.\", error);\r\n  }\r\n  await activateCurrentUserRole(\"restaurant_owner\");\r\n}\r\n",
+        "after": "async function ensureRestaurantOwnerIdentity(profile = restaurantProfileFromUserMetadata(), options = {}) {\r\n  if (!cloudState.client || !cloudState.user) return;\r\n  try {\r\n    const { error } = await cloudState.client.from(\"user_profiles\").upsert(restaurantOwnerUserProfilePayload(profile));\r\n    if (error) throw error;\r\n  } catch (error) {\r\n    console.warn(\"No se pudo actualizar el perfil general del propietario.\", error);\r\n  }\r\n  // An active platform owner role was already checked in the same server load.\r\n  // Do not re-run an UPDATE-producing RPC just to refresh its updated_at.\r\n  if (!options.roleAlreadyActive) await activateCurrentUserRole(\"restaurant_owner\");\r\n}\r\n",
+        "afterByteOffset": 107243
+      },
+      {
+        "before": "      .eq(\"role\", \"restaurant_owner\")\r\n      .eq(\"status\", \"active\")\r\n      .limit(1)\r\n      .maybeSingle();",
+        "after": "      .eq(\"role\", \"restaurant_owner\")\r\n      .eq(\"scope_type\", \"platform\")\r\n      .eq(\"scope_id\", PLATFORM_SCOPE_ID)\r\n      .eq(\"status\", \"active\")\r\n      .limit(1)\r\n      .maybeSingle();",
+        "afterByteOffset": 133649
+      },
+      {
+        "before": "await ensureRestaurantOwnerIdentity(\r\n    restaurantProfile\r\n  );",
+        "after": "await ensureRestaurantOwnerIdentity(\r\n    restaurantProfile,\r\n    { roleAlreadyActive: !ownerRoleError && ownerRole?.status === \"active\" }\r\n  );",
+        "afterByteOffset": 138075
       }
     ]
   },
