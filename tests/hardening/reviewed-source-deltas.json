@@ -470,7 +470,7 @@
     ]
   },
   "app.js": {
-    "sha256": "84e4ec0cc327bbd175dcf7f7e05bbe04d329c41b0cc483be398d5769f9cfaeae",
+    "sha256": "7014ccb36c1df0462305b8a31d53d2986d4cd1120e16ef70e8037a9d3bfab45f",
     "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs",
     "edits": [
       {
@@ -627,6 +627,11 @@
         "before": "  if (isOrderRevisionConflictError(error) ||\r\n      /ORDER_REVISION_REQUIRED/i.test(String(error?.message || \"\"))) {",
         "after": "  if (String(error?.code || error?.cause?.code || \"\").trim() === \"40001\" ||\r\n      isOrderRevisionConflictError(error) ||\r\n      /ORDER_REVISION_REQUIRED/i.test(String(error?.message || \"\"))) {",
         "afterByteOffset": 193830
+      },
+      {
+        "before": "  operation.finally(() => {\r\n    if (pendingDataSyncInFlight === operation) pendingDataSyncInFlight = null;\r\n  });",
+        "after": "  // Attach both outcomes to the original promise; .finally() would create an\r\n  // unobserved rejected child promise whenever runPendingDataSync rejects.\r\n  const clearPendingSync = () => {\r\n    if (pendingDataSyncInFlight === operation) pendingDataSyncInFlight = null;\r\n  };\r\n  operation.then(clearPendingSync, clearPendingSync);",
+        "afterByteOffset": 285832
       }
     ]
   },
