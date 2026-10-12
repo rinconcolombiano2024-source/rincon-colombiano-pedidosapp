@@ -110,8 +110,8 @@ function realOrder(rpc, from) {
     orderBusinessDate: () => '2026-09-19', orderTotal: () => 20,
     saveOrders() {}, saveCurrentOrderDraft() {}, saveRevisionConflictBackup: () => true,
     readRevisionConflictBackups: () => ({ ok: true, backups: [] }),
-    blockOrderRevisionSync: o => { o._syncBlockedReason = 'revision_conflict'; },
-    isOrderRevisionSyncBlocked: o => o._syncBlockedReason === 'revision_conflict',
+    blockOrderRevisionSync: (o, _remote, reason = 'revision_conflict') => { o._syncBlockedReason = reason; },
+    isOrderRevisionSyncBlocked: o => ['revision_conflict', 'revision_unverified'].includes(o._syncBlockedReason),
   });
   vm.runInContext(section('function isCancelledOrderOverwriteError(', 'function needsCloudSync('), h.c);
   vm.runInContext(section('async function saveCloudOrderInternal(', 'async function voidCloudOrder('), h.c);
@@ -136,6 +136,31 @@ test('a confirmed conflict blocks further writes, retaining local contents and r
   await assert.rejects(h.c.saveCloudOrder(o), e => e.code === 'ORDER_REVISION_CONFLICT');
   for (let i = 0; i < 20; i++) await assert.rejects(h.c.saveCloudOrder(o), e => e.code === 'ORDER_REVISION_CONFLICT');
   assert.equal(calls, 1); assert.equal(o._syncRevision, 1); assert.equal(o.syncStatus, 'pending'); assert.equal(o.items[0].name, 'local');
+});
+
+test('failed verification after a known 40001 quarantines the draft and stops 100 further RPC writes', async () => {
+  let calls = 0; const o = order();
+  const h = realOrder(
+    () => { calls++; return query({ error: { code: '40001', message: 'ORDER_REVISION_CONFLICT: expected 1, current 2' } }); },
+    () => query({ data: null, error: { code: 'PGRST002', message: 'Read unavailable' } })
+  );
+  h.c.savedOrders = [o];
+  await assert.rejects(h.c.saveCloudOrder(o), e => e.code === 'RC_ORDERA_REVISION_UNVERIFIED');
+  for (let i = 0; i < 100; i++)
+    await assert.rejects(h.c.saveCloudOrder(o), e => e.code === 'RC_ORDERA_REVISION_UNVERIFIED');
+  assert.equal(calls, 1);
+  assert.equal(o._syncBlockedReason, 'revision_unverified');
+  assert.equal(o._syncRevision, 1);
+  assert.equal(o.syncStatus, 'pending');
+  assert.equal(o.items[0].name, 'local');
+});
+
+test('unverified revisions are excluded from automatic uploads without hiding the pending draft', () => {
+  const h = runtime({ isCancelledSavedOrder: () => false });
+  vm.runInContext(section('function needsCloudSync(', 'const REVISION_CONFLICT_BACKUP_LIMIT'), h.c);
+  const o = { ...order(), _syncBlockedReason: 'revision_unverified' };
+  assert.equal(h.c.needsCloudSync(o), true);
+  assert.equal(h.c.needsAutomaticCloudSync(o), false);
 });
 
 test('lost confirmation recovers the same edition without another write', async () => {
