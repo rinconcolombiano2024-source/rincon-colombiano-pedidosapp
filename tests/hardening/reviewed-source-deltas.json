@@ -460,7 +460,7 @@
     ]
   },
   "app.js": {
-    "sha256": "16a9320f5fc7d96e702d87f5b428993d98aa5bdcf790dbbd1caf4f1e12c8ecc7",
+    "sha256": "660baca31b000e735ab2d9a96ba0372e438ae1f0a759ddb00a3c2178bf7fe177",
     "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs",
     "edits": [
       {
@@ -607,6 +607,11 @@
         "before": "  elements.orderStatus.textContent = currentOrder.saved\r\n    ? needsCloudSync(currentOrder)\r\n      ? \"Pendiente nube\"\r\n      : \"Guardado\"\r\n    : \"Nuevo\";\r\n",
         "after": "  elements.orderStatus.textContent = currentOrder.saved\r\n    ? isOrderRevisionSyncBlocked(currentOrder)\r\n      ? appUiText(\"Revisión manual necesaria\")\r\n      : needsCloudSync(currentOrder)\r\n        ? \"Pendiente nube\"\r\n        : \"Guardado\"\r\n    : \"Nuevo\";\r\n",
         "afterByteOffset": 410747
+      },
+      {
+        "before": "",
+        "after": "No repetimos escrituras por errores permanentes de autorización\r\n   * o contrato SQL. Se conserva el pedido pendiente y el operario\r\n   * podrá sincronizar manualmente después de corregir la causa.\r\n   * Evita ciclos de RPC inútiles que saturan CPU en Supabase.\r\n   */\r\n  const permanentFailureCode = String(\r\n    error?.code || error?.cause?.code || \"\"\r\n  ).trim().toUpperCase();\r\n  if (error && [\r\n    \"42501\", \"42P01\", \"42703\", \"42883\", \"PGRST202\", \"PGRST204\",\r\n    \"RC_ORDERA_SCHEMA_OUTDATED\", \"RC_ORDERA_SCHEMA_INCOMPLETE\"\r\n  ].includes(permanentFailureCode)) {\r\n    console.warn(\"[RC ORDERA] Error SQL/permisos permanente: pendiente conservado sin reintentos automáticos.\");\r\n    return;\r\n  }\r\n\r\n  /*\r\n   * ",
+        "afterByteOffset": 287847
       }
     ]
   },
