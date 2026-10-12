@@ -300,11 +300,11 @@ const CUSTOMER_I18N = {
     timelineDelivered: "Pedido entregado",
     timelineCancelled: "Pedido cancelado",
     courierTrackingTitle: "Seguimiento del colaborador",
-    courierTrackingWaiting: "La ubicacion aparecera cuando un colaborador acepte el domicilio.",
+    courierTrackingWaiting: "Esperando la ubicación del colaborador.",
     courierTrackingName: "Colaborador: {name}",
-    courierTrackingLocation: "Ubicacion actualizada {time}",
+    courierTrackingLocation: "Ubicación actualizada {time}",
     courierTrackingEta: "Llegada estimada: {time}",
-    courierTrackingMap: "Abrir ubicacion en el mapa",
+    courierTrackingMap: "Abrir ubicación en el mapa",
     courierTrackingNow: "ahora",
     historyTicket: "Ticket",
     historyNoTicket: "Sin ticket",
@@ -636,11 +636,11 @@ calculateMaps: "Calcular con Google Maps",
     timelineDelivered: "Zamowienie dostarczone",
     timelineCancelled: "Zamowienie anulowane",
     courierTrackingTitle: "Sledzenie kuriera",
-    courierTrackingWaiting: "Lokalizacja pojawi sie, gdy kurier zaakceptuje dostawe.",
+    courierTrackingWaiting: "Oczekiwanie na lokalizację kuriera.",
     courierTrackingName: "Kurier: {name}",
     courierTrackingLocation: "Lokalizacja zaktualizowana {time}",
     courierTrackingEta: "Szacowany czas przyjazdu: {time}",
-    courierTrackingMap: "Otworz lokalizacje na mapie",
+    courierTrackingMap: "Otwórz lokalizację na mapie",
     courierTrackingNow: "teraz",
     historyTicket: "Bilet",
     historyNoTicket: "Bez biletu",
@@ -972,7 +972,7 @@ kitchenNotesLabel: "Uwagi do kuchni",
     timelineDelivered: "Order delivered",
     timelineCancelled: "Order cancelled",
     courierTrackingTitle: "Courier tracking",
-    courierTrackingWaiting: "The location will appear after a courier accepts the delivery.",
+    courierTrackingWaiting: "Waiting for the courier’s location.",
     courierTrackingName: "Courier: {name}",
     courierTrackingLocation: "Location updated {time}",
     courierTrackingEta: "Estimated arrival: {time}",
@@ -5715,7 +5715,13 @@ function customerScheduleChatPoll(delayMs) {
       return;
     }
 
-    const loaded = await customerLoadChatMessages({ silent: true });
+    // A rejected transport read must follow the same bounded backoff as an RPC error.
+    let loaded = false;
+    try {
+      loaded = await customerLoadChatMessages({ silent: true });
+    } catch {
+      loaded = false;
+    }
 
     if (
       generation !== customerChatGeneration ||
@@ -6377,7 +6383,8 @@ async function customerLoadOrderTimeline() {
   }
 }
 function customerTrackingRelativeTime(value) {
-  const date = new Date(value || 0);
+  if (typeof value !== "string" || !value.trim()) return "";
+  const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
   const elapsedSeconds = Math.max(0, Math.round((Date.now() - date.getTime()) / 1000));
   if (elapsedSeconds < 30) return customerT("courierTrackingNow");
@@ -6400,11 +6407,17 @@ function customerRenderCourierTracking(row = null) {
     return;
   }
   const name = String(row?.courier_name || "").trim();
-  const lat = Number(row?.courier_lat);
-  const lng = Number(row?.courier_lng);
+  const coordinate = (value) => {
+    if (typeof value !== "number" && typeof value !== "string") return NaN;
+    if (typeof value === "string" && !value.trim()) return NaN;
+    return Number(value);
+  };
+  const lat = coordinate(row?.courier_lat);
+  const lng = coordinate(row?.courier_lng);
   const hasLocation = Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
   const lastLocation = customerTrackingRelativeTime(row?.courier_location_updated_at);
-  const etaDate = new Date(row?.estimated_delivery_at || row?.estimated_pickup_at || 0);
+  const etaValue = row?.estimated_delivery_at || row?.estimated_pickup_at;
+  const etaDate = new Date(typeof etaValue === "string" && etaValue.trim() ? etaValue : NaN);
   const eta = Number.isNaN(etaDate.getTime())
     ? ""
     : etaDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -6751,7 +6764,13 @@ function customerScheduleStatusPoll(delayMs) {
       return;
     }
 
-    const loaded = await customerPollOrderStatus();
+    // A rejected transport read must follow the same bounded backoff as an RPC error.
+    let loaded = false;
+    try {
+      loaded = await customerPollOrderStatus();
+    } catch {
+      loaded = false;
+    }
 
     if (
       signature !== customerStatusPollSignature ||

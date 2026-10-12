@@ -1,7 +1,7 @@
 {
   "cliente.js": {
-    "sha256": "4c108331d3bf606f9873bd443e78287c42a233efdf80be9398d79e3751c274d9",
-    "regressionTests": "tests/hardening/frontend.test.mjs",
+    "sha256": "5726faba5cd496b8d19d40cb28b946118ae80893e045b9ea3027fc1deee33a9b",
+    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs",
     "edits": [
       {
         "before": "",
@@ -107,6 +107,61 @@
         "before": "Wysylanie zamowienia...",
         "after": "Wysyłanie zamówienia...",
         "afterByteOffset": 42123
+      },
+      {
+        "before": "    courierTrackingWaiting: \"La ubicacion aparecera cuando un colaborador acepte el domicilio.\",\r\n",
+        "after": "    courierTrackingWaiting: \"Esperando la ubicación del colaborador.\",\r\n",
+        "afterByteOffset": 18172
+      },
+      {
+        "before": "    courierTrackingLocation: \"Ubicacion actualizada {time}\",\r\n",
+        "after": "    courierTrackingLocation: \"Ubicación actualizada {time}\",\r\n",
+        "afterByteOffset": 18294
+      },
+      {
+        "before": "    courierTrackingMap: \"Abrir ubicacion en el mapa\",\r\n",
+        "after": "    courierTrackingMap: \"Abrir ubicación en el mapa\",\r\n",
+        "afterByteOffset": 18410
+      },
+      {
+        "before": "    courierTrackingWaiting: \"Lokalizacja pojawi sie, gdy kurier zaakceptuje dostawe.\",\r\n",
+        "after": "    courierTrackingWaiting: \"Oczekiwanie na lokalizację kuriera.\",\r\n",
+        "afterByteOffset": 37774
+      },
+      {
+        "before": "    courierTrackingMap: \"Otworz lokalizacje na mapie\",\r\n",
+        "after": "    courierTrackingMap: \"Otwórz lokalizację na mapie\",\r\n",
+        "afterByteOffset": 38015
+      },
+      {
+        "before": "    courierTrackingWaiting: \"The location will appear after a courier accepts the delivery.\",\r\n",
+        "after": "    courierTrackingWaiting: \"Waiting for the courier’s location.\",\r\n",
+        "afterByteOffset": 56956
+      },
+      {
+        "before": "    const loaded = await customerLoadChatMessages({ silent: true });\r\n",
+        "after": "    // A rejected transport read must follow the same bounded backoff as an RPC error.\r\n    let loaded = false;\r\n    try {\r\n      loaded = await customerLoadChatMessages({ silent: true });\r\n    } catch {\r\n      loaded = false;\r\n    }\r\n",
+        "afterByteOffset": 229798
+      },
+      {
+        "before": "  const date = new Date(value || 0);\r\n",
+        "after": "  if (typeof value !== \"string\" || !value.trim()) return \"\";\r\n  const date = new Date(value);\r\n",
+        "afterByteOffset": 251013
+      },
+      {
+        "before": "  const lat = Number(row?.courier_lat);\r\n  const lng = Number(row?.courier_lng);\r\n",
+        "after": "  const coordinate = (value) => {\r\n    if (typeof value !== \"number\" && typeof value !== \"string\") return NaN;\r\n    if (typeof value === \"string\" && !value.trim()) return NaN;\r\n    return Number(value);\r\n  };\r\n  const lat = coordinate(row?.courier_lat);\r\n  const lng = coordinate(row?.courier_lng);\r\n",
+        "afterByteOffset": 252379
+      },
+      {
+        "before": "  const etaDate = new Date(row?.estimated_delivery_at || row?.estimated_pickup_at || 0);\r\n",
+        "after": "  const etaValue = row?.estimated_delivery_at || row?.estimated_pickup_at;\r\n  const etaDate = new Date(typeof etaValue === \"string\" && etaValue.trim() ? etaValue : NaN);\r\n",
+        "afterByteOffset": 252892
+      },
+      {
+        "before": "    const loaded = await customerPollOrderStatus();\r\n",
+        "after": "    // A rejected transport read must follow the same bounded backoff as an RPC error.\r\n    let loaded = false;\r\n    try {\r\n      loaded = await customerPollOrderStatus();\r\n    } catch {\r\n      loaded = false;\r\n    }\r\n",
+        "afterByteOffset": 265885
       }
     ]
   },

@@ -5414,7 +5414,23 @@ body.auth-checking > :not(script) {
 }
 
 .customer-courier-tracking .customer-map-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   justify-self: start;
+  min-height: 44px;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 10px 14px;
+  line-height: 1.35;
+  text-align: center;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.customer-courier-tracking .customer-map-button:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 3px;
 }
 
 .client-order-tracking {
