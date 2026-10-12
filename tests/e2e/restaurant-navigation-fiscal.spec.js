@@ -16,7 +16,7 @@ async function chooseLanguage(page, language) {
 
 test("restaurant QR and stations use a separate tab without navigating away from the POS", async ({ page, context }) => {
   await installSupabaseMock(page, { user });
-  await page.goto("/restaurante.html?app=v91.0.4-nav1", { waitUntil: "domcontentloaded" });
+  await page.goto("/restaurante.html?app=v91.0.4-nav3", { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => typeof cloudState !== "undefined" && !!cloudState.user);
 
   await page.evaluate(() => {
@@ -70,7 +70,7 @@ test("fiscal button is in the restaurant app; permission does not enable fiscal 
     } });
   });
   await installSupabaseMock(page, { user });
-  await page.goto("/restaurante.html?app=v91.0.4-nav1", { waitUntil: "domcontentloaded" });
+  await page.goto("/restaurante.html?app=v91.0.4-nav3", { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => typeof cloudState !== "undefined" && !!cloudState.user);
   // Browser/project defaults may choose English. Select a deterministic locale
   // before making assertions and exercise ES → PL → EN explicitly.
