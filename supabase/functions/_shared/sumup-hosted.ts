@@ -72,7 +72,7 @@ function checkConfig(config: SumUpConfig): string {
     try { callback = new URL(config.webhookUrl); }
     catch { return fail(); }
     if (callback.protocol !== "https:" ||
-        !/^[a-z0-9]{20}\\.supabase\\.co$/.test(callback.hostname) ||
+        !/^[a-z0-9]{20}\.supabase\.co$/.test(callback.hostname) ||
         callback.pathname !== "/functions/v1/sumup-webhook" ||
         callback.username || callback.password || callback.search || callback.hash || callback.port) {
       fail();
