@@ -24,7 +24,7 @@ export async function authorizeRoute(supabase, route, options = {}) {
     const { data, error } = await supabase.rpc("rc_ordera_is_platform_admin", { p_user_id: user.id });
     return { allowed: !error && data === true, reason: error ? "permissions_unavailable" : data === true ? "ok" : "forbidden", user };
   }
-  if (route === "courier") return { allowed: hasRole("courier","collaborator","delivery_partner"), reason: hasRole("courier","collaborator","delivery_partner") ? "ok" : "forbidden", user };
+  if (route === "courier") return { allowed: hasRole("platform_courier"), reason: hasRole("platform_courier") ? "ok" : "forbidden", user };
   const restaurantId = options.restaurantId;
   if (!restaurantId) return { allowed: false, reason: "restaurant_required", user };
 
