@@ -92,11 +92,12 @@ export function isTrustedSumUpHostedUrl(value: unknown): value is string {
   }
   try {
     const url = new URL(value);
+    const match = /^\/pay\/([^/]+)\/?$/.exec(url.pathname);
     return url.protocol === "https:" &&
       url.hostname === "checkout.sumup.com" &&
       !url.username && !url.password &&
       !url.port && !url.search && !url.hash &&
-      /^\/pay\/[0-9a-f-]{36}\/?$/i.test(url.pathname);
+      Boolean(match) && UUID.test(match?.[1] ?? "");
   } catch {
     return false;
   }
@@ -125,7 +126,7 @@ function verifyCore(
     body["currency"] !== "PLN" ||
     typeof body["amount"] !== "number" ||
     !Number.isFinite(body["amount"]) ||
-    Math.round(body["amount"] * 100) !== attempt.amountMinor ||
+    Math.abs(body["amount"] * 100 - attempt.amountMinor) > 0.000001 ||
     !["PENDING", "PAID", "FAILED", "EXPIRED"].includes(String(status))
   ) {
     fail();
