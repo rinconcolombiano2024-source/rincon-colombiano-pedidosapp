@@ -475,8 +475,8 @@
     ]
   },
   "app.js": {
-    "sha256": "9111a65b20810ed7f4374224587ef5e00c02d95417bd1faf1c1a1a8bf3c1ce1d",
-    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs",
+    "sha256": "1ea50dba699ae6f61ca90fc5e7220647493294600fe1e22d54ddb330655d9768",
+    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs",
     "edits": [
       {
         "before": "",
@@ -662,6 +662,26 @@
         "before": "await ensureRestaurantOwnerIdentity(\r\n    restaurantProfile\r\n  );",
         "after": "await ensureRestaurantOwnerIdentity(\r\n    restaurantProfile,\r\n    { roleAlreadyActive: !ownerRoleError && ownerRole?.status === \"active\" }\r\n  );",
         "afterByteOffset": 138075
+      },
+      {
+        "before": "let syncPendingAfterLoad = false;\r\n",
+        "after": "let syncPendingAfterLoad = false;\r\n// Reuse the successful cold-start settings fetch: never request the same menu twice.\r\nlet startupSettingsResponse = null;\r\n",
+        "afterByteOffset": 130730
+      },
+      {
+        "before": ".select(\"menu, menu_revision\")\r\n        .eq(\"user_id\", cloudState.user.id)",
+        "after": ".select(\"menu, settings, menu_revision, settings_revision, menu_updated_at, settings_updated_at\")\r\n        .eq(\"user_id\", cloudState.user.id)",
+        "afterByteOffset": 131536
+      },
+      {
+        "before": "    if (startupMenuError) {\r\n      throw startupMenuError;\r\n    }\r\n\r\n    const startupMenu =",
+        "after": "    if (startupMenuError) {\r\n      throw startupMenuError;\r\n    }\r\n\r\n    // Cache only a confirmed response; failed reads still use the normal retry path.\r\n    startupSettingsResponse = { data: startupSettingsRow, error: null };\r\n\r\n    const startupMenu =",
+        "afterByteOffset": 131771
+      },
+      {
+        "before": "const settingsResponse = await withCloudTimeout(\r\n  settingsRequest,\r\n  \"El menú tardó demasiado en responder.\",\r\n  8000\r\n).catch((error) => ({\r\n  data: null,\r\n  error,\r\n}));",
+        "after": "const settingsResponse = startupSettingsResponse || await withCloudTimeout(\r\n  settingsRequest,\r\n  \"El menú tardó demasiado en responder.\",\r\n  8000\r\n).catch((error) => ({\r\n  data: null,\r\n  error,\r\n}));",
+        "afterByteOffset": 134586
       }
     ]
   },
