@@ -1,0 +1,13 @@
+{
+  "app": "RC ORDERA",
+  "version": "91.0.4",
+  "release": "2026-10-12-r15",
+  "pwaCache": "rc-ordera-v91-0-4-v6-verified-20261012-pwa-safe-r15",
+  "changes": [
+    "restaurant QR/client/stations separate windows",
+    "ES/PL/EN per-module PWA scopes",
+    "fiscal setup button inside POS",
+    "Supabase sync protections and query reductions"
+  ],
+  "issuedAt": "2026-10-12"
+}

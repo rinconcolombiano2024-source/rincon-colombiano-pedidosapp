@@ -13,7 +13,7 @@ test('Vercel serves only the reviewed frontend distribution, never the repositor
   for(const file of walk(config.outputDirectory)) {
     assert.match(file,/\.(?:html|js|css|webmanifest|svg|png|txt|json)$/);
     if(file.endsWith('.txt'))assert.match(file,/vendor\/(?:QRCODE|SUPABASE)-LICENSE\.txt$/);
-    if(file.endsWith('.json'))assert.equal(file,'www/BUILD-METADATA.json');
+    if(file.endsWith('.json'))assert.ok(['www/BUILD-METADATA.json','www/rc-ordera-release.json'].includes(file), 'deny unknown JSON assets: '+file);
     assert.doesNotMatch(file,/(?:^|\/)(?:supabase|tests|scripts|docs|accounting|fiscal-agent|delivery-bridge|\.env)(?:\/|$)/);
   }
   for(const file of ['index.html','cliente.html','restaurante.html','colaborador.html','mesero.html','admin.html','service-worker.js','supabase-config.js','vendor/supabase-2.57.4.js','vendor/qrcode-generator-2.0.4.js']) {
