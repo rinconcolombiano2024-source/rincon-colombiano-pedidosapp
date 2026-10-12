@@ -14,6 +14,7 @@ export interface SumUpConfig {
   readonly apiKey: string;
   readonly merchantCode: string;
   readonly appOrigin: string;
+  readonly webhookUrl?: string;
 }
 
 export interface SumUpAttempt {
@@ -65,6 +66,17 @@ function checkConfig(config: SumUpConfig): string {
     (url.pathname !== "/" && url.pathname !== "")
   ) {
     fail();
+  }
+  if (config.webhookUrl !== undefined) {
+    let callback: URL;
+    try { callback = new URL(config.webhookUrl); }
+    catch { return fail(); }
+    if (callback.protocol !== "https:" ||
+        !/^[a-z0-9]{20}\\.supabase\\.co$/.test(callback.hostname) ||
+        callback.pathname !== "/functions/v1/sumup-webhook" ||
+        callback.username || callback.password || callback.search || callback.hash || callback.port) {
+      fail();
+    }
   }
   return url.origin;
 }
@@ -213,6 +225,7 @@ export async function createSumUpHostedCheckout(
       currency: "PLN",
       description: `RC ORDERA ${attempt.orderId.slice(0, 8)}`,
       redirect_url: `${appOrigin}/cliente.html`,
+      ...(config.webhookUrl ? { return_url: config.webhookUrl } : {}),
       hosted_checkout: { enabled: true },
     }),
   });
