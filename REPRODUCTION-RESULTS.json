@@ -1,0 +1,14 @@
+{
+  "v4": {
+    "concurrentEnqueueNew": 2,
+    "concurrentOutboundSends": 2,
+    "duplicatePaymentsIncorrectlyAccepted": true,
+    "fiscalLostCreationAcknowledgement": "FAILED_BEFORE_SEND"
+  },
+  "v5": {
+    "concurrentEnqueueNew": 1,
+    "concurrentOutboundSends": 1,
+    "duplicatePaymentsIncorrectlyAccepted": false,
+    "fiscalLostCreationAcknowledgement": "unknown"
+  }
+}

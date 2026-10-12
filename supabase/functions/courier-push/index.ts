@@ -1,3 +1,4 @@
+import { safeEqual } from "../_shared/safe-equal.ts";
 import { createClient } from "@supabase/supabase-js";
 import webpush from "web-push";
 
@@ -30,7 +31,7 @@ Deno.serve(async (request) => {
   const authorization = request.headers.get("authorization") || "";
   const suppliedWebhookSecret = request.headers.get("x-rc-ordera-webhook-secret") || "";
   const authorized = authorization === `Bearer ${serviceRoleKey}`
-    || (webhookSecret.length >= 24 && suppliedWebhookSecret === webhookSecret);
+    || (webhookSecret.length >= 24 && safeEqual(suppliedWebhookSecret, webhookSecret));
 
   if (!supabaseUrl || !serviceRoleKey || !authorized) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: jsonHeaders });

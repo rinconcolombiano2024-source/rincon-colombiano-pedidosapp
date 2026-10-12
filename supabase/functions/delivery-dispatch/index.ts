@@ -1,3 +1,4 @@
+import { safeEqual } from "../_shared/safe-equal.ts";
 import { createClient } from "@supabase/supabase-js";
 
 const jsonHeaders = { "content-type": "application/json; charset=utf-8" };
@@ -17,7 +18,7 @@ Deno.serve(async (request) => {
   const suppliedSecret = request.headers.get("x-rc-ordera-dispatch-secret") || "";
   const authorized =
     (Boolean(serviceRoleKey) && authorization === `Bearer ${serviceRoleKey}`) ||
-    (dispatchSecret.length >= 24 && suppliedSecret === dispatchSecret);
+    (dispatchSecret.length >= 24 && safeEqual(suppliedSecret, dispatchSecret));
 
   if (!supabaseUrl || !serviceRoleKey || !authorized) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {

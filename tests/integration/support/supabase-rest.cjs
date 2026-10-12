@@ -4,7 +4,14 @@ const path = require("node:path");
 const PROJECT_ROOT = path.resolve(__dirname, "../../..");
 
 function normalizeUrl(value) {
-  return String(value || "").trim().replace(/\/+$/, "");
+  try {
+    const u = new URL(String(value || '').trim());
+    if(u.username||u.password||u.search||u.hash||!/^\/*$/.test(u.pathname))return '';
+    u.hostname=u.hostname.replace(/\.$/,'');
+    const local=['localhost','127.0.0.1','[::1]'].includes(u.hostname);
+    if(u.protocol!=='https:'&&!(u.protocol==='http:'&&local))return '';
+    return u.origin;
+  }catch{return '';}
 }
 
 function configuredProductionUrl() {
@@ -60,6 +67,8 @@ async function authenticateActor(actor, config = integrationConfig()) {
   if (suppliedToken) {
     const userId = jwtSubject(suppliedToken);
     if (!userId) throw new Error(`${prefix}_TOKEN no contiene un subject valido.`);
+    const result=await apiRequest({config,token:suppliedToken,path:'/auth/v1/user'});
+    if(result.status!==200||result.data?.id!==userId||result.data?.role!=='authenticated')throw new Error(`Token ${actor} no validado como usuario autenticado de Supabase TEST.`);
     return { token: suppliedToken, userId };
   }
 
@@ -70,25 +79,29 @@ async function authenticateActor(actor, config = integrationConfig()) {
       email: process.env[`${prefix}_EMAIL`],
       password: process.env[`${prefix}_PASSWORD`],
     }),
+    signal: AbortSignal.timeout(15000),
   });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok || !payload.access_token || !payload.user?.id) {
+  if (!response.ok || !payload.access_token || !payload.user?.id || payload.user.role!=='authenticated') {
     throw new Error(`No se pudo autenticar ${actor} en Supabase TEST (${response.status}).`);
   }
   return { token: payload.access_token, userId: String(payload.user.id) };
 }
 
 async function apiRequest({ config = integrationConfig(), token = "", method = "GET", path: requestPath, body }) {
+  if(!/^\/(?:rest|auth)\/v1\//.test(requestPath)||requestPath.split('?')[0].includes('..'))throw new Error('INVALID_TEST_API_PATH');
   const headers = {
     apikey: config.anonKey,
     Accept: "application/json",
   };
   if (token) headers.Authorization = `Bearer ${token}`;
   if (body !== undefined) headers["content-type"] = "application/json";
+  if(['PATCH','POST','DELETE'].includes(method))headers.Prefer='return=representation';
   const response = await fetch(`${config.url}${requestPath}`, {
     method,
     headers,
     body: body === undefined ? undefined : JSON.stringify(body),
+    signal: AbortSignal.timeout(15000),
   });
   const text = await response.text();
   let data = null;
@@ -113,6 +126,7 @@ function rpcPath(name) {
 }
 
 module.exports = {
+  normalizeUrl,
   apiRequest,
   authenticateActor,
   integrationConfig,

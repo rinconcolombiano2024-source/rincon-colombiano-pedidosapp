@@ -1,3 +1,4 @@
+import { withCors } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
 const corsHeaders = {
@@ -50,7 +51,7 @@ function addressComponent(result: Record<string, unknown>, type: string) {
   return match || null;
 }
 
-Deno.serve(async (request) => {
+Deno.serve(withCors(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (request.method !== "POST") return response(405, { error: "Method not allowed" });
 
@@ -320,4 +321,4 @@ return response(200, {
   verifiedPostalCode,
   verifiedNeighborhood,
 });
-});
+}));

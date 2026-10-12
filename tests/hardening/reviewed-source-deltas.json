@@ -1,0 +1,544 @@
+{
+  "cliente.js": {
+    "sha256": "5726faba5cd496b8d19d40cb28b946118ae80893e045b9ea3027fc1deee33a9b",
+    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs",
+    "edits": [
+      {
+        "before": "",
+        "after": "let customerOrderFlight = null;\r\nlet customerPendingOrderMemory = null;\r\n",
+        "afterByteOffset": 238818
+      },
+      {
+        "before": "async function customerCreateCustomerOrder(\r\n",
+        "after": "function customerCreateCustomerOrder(orderPayload, total, tableLabel, customerName, orderType) {\r\n  const context = JSON.stringify([customerStoreId,customerUser?.id || null]);\r\n  const key = JSON.stringify([context,customerOrderFingerprint(orderPayload),tableLabel,customerName,orderType]);\r\n  if (customerOrderFlight) {\r\n    if (customerOrderFlight.key === key) return customerOrderFlight.promise;\r\n    return Promise.reject(new Error(\"ORDER_ALREADY_SENDING\"));\r\n  }\r\n  const promise = customerCreateCustomerOrderRequest(orderPayload,total,tableLabel,customerName,orderType)\r\n    .then(result=>{\r\n      if(context!==JSON.stringify([customerStoreId,customerUser?.id || null]))throw new Error(\"ORDER_SESSION_CHANGED\");\r\n      return result;\r\n    }).finally(()=>{customerOrderFlight=null;});\r\n  customerOrderFlight={key,promise};return promise;\r\n}\r\nasync function customerCreateCustomerOrderRequest(\r\n",
+        "afterByteOffset": 239965
+      },
+      {
+        "before": "  const pendingOrder = customerReadPendingOrder(fingerprint);\r\n",
+        "after": "  const context = JSON.stringify([customerStoreId,customerUser?.id || null]);\r\n  const memoryOrder = customerPendingOrderMemory;\r\n  const pendingOrder = memoryOrder?.context === context && memoryOrder.fingerprint === fingerprint\r\n    && Date.now() - memoryOrder.createdAt < 30 * 60 * 1000 ? memoryOrder : customerReadPendingOrder(fingerprint);\r\n",
+        "afterByteOffset": 241086
+      },
+      {
+        "before": "",
+        "after": "  customerPendingOrderMemory = {context,fingerprint,orderId,publicToken,createdAt:pendingOrder?.createdAt || Date.now()};\r\n",
+        "afterByteOffset": 242143
+      },
+      {
+        "before": "    !returnedId ||\r\n    !returnedPublicToken\r\n",
+        "after": "    returnedId !== orderId ||\r\n    returnedPublicToken !== publicToken\r\n",
+        "afterByteOffset": 246000
+      },
+      {
+        "before": "",
+        "after": "  customerPendingOrderMemory = null;\r\n",
+        "afterByteOffset": 246267
+      },
+      {
+        "before": "",
+        "after": "  if (customerCheckoutBusy) { customerSetStatus(customerT(\"sendingOrder\"), \"\"); return; }\r\n",
+        "afterByteOffset": 162800
+      },
+      {
+        "before": "customerElements.sendButton.disabled =\r\n  customerCart.length === 0;\r\n",
+        "after": "customerRenderCheckoutState();\r\n",
+        "afterByteOffset": 272924
+      },
+      {
+        "before": "",
+        "after": "  if (customerCheckoutBusy) { customerSetStatus(customerT(\"sendingOrder\"), \"\"); return; }\r\n",
+        "afterByteOffset": 273066
+      },
+      {
+        "before": "",
+        "after": "let customerCheckoutBusy = false;\r\nconst customerCheckoutControls = new Map();\r\nfunction customerRenderCheckoutState() {\r\n  const controls = [...customerElements.cartItems.querySelectorAll(\"button,input,textarea\"),\r\n    ...[\"tableInput\", \"nameInput\", \"orderType\", \"paymentMethod\", \"notesInput\", \"distanceInput\"].map(key => customerElements[key]).filter(Boolean)];\r\n  if (customerCheckoutBusy) {\r\n    for (const control of controls) {\r\n      if (!customerCheckoutControls.has(control)) customerCheckoutControls.set(control, control.disabled);\r\n      control.disabled = true;\r\n    }\r\n  } else {\r\n    for (const [control, disabled] of customerCheckoutControls) control.disabled = disabled;\r\n    customerCheckoutControls.clear();\r\n  }\r\n  customerElements.sendButton.disabled = customerCheckoutBusy || customerCart.length === 0;\r\n  customerElements.sendButton.textContent = customerT(customerCheckoutBusy ? \"sendingOrder\" : \"sendOrder\");\r\n  customerElements.sendButton.setAttribute(\"aria-busy\", String(customerCheckoutBusy));\r\n}\r\n",
+        "afterByteOffset": 280716
+      },
+      {
+        "before": "",
+        "after": "  if (customerCheckoutBusy) return;\r\n  customerCheckoutBusy = true;\r\n  customerRenderCheckoutState();\r\n  try { return await customerSendOrderRequest(); }\r\n  finally { customerCheckoutBusy = false; customerRenderCheckoutState(); }\r\n}\r\nasync function customerSendOrderRequest() {\r\n  const checkoutContext = JSON.stringify([customerStoreId, customerUser?.id || null]);\r\n",
+        "afterByteOffset": 281779
+      },
+      {
+        "before": "",
+        "after": "  if (checkoutContext !== JSON.stringify([customerStoreId, customerUser?.id || null])) {\r\n    throw new Error(\"ORDER_SESSION_CHANGED\");\r\n  }\r\n",
+        "afterByteOffset": 285390
+      },
+      {
+        "before": "",
+        "after": "  if (customerCheckoutBusy) return;\r\n",
+        "afterByteOffset": 290049
+      },
+      {
+        "before": "",
+        "after": "  if (customerCheckoutBusy) return;\r\n",
+        "afterByteOffset": 290622
+      },
+      {
+        "before": "",
+        "after": "    orderSessionChanged: \"La sesión o el restaurante cambió. Revisa el pedido antes de volver a enviarlo.\",\r\n",
+        "afterByteOffset": 22613
+      },
+      {
+        "before": "",
+        "after": "    orderSessionChanged: \"Sesja lub restauracja uległa zmianie. Sprawdź zamówienie przed ponownym wysłaniem.\",\r\n",
+        "afterByteOffset": 42150
+      },
+      {
+        "before": "",
+        "after": "    orderSessionChanged: \"Your session or restaurant changed. Review the order before sending it again.\",\r\n",
+        "afterByteOffset": 61196
+      },
+      {
+        "before": "    ...[\"tableInput\", \"nameInput\", \"orderType\", \"paymentMethod\", \"notesInput\", \"distanceInput\"].map(key => customerElements[key]).filter(Boolean)];\r\n",
+        "after": "    ...[\"tableInput\", \"nameInput\", \"orderType\", \"paymentMethod\", \"notesInput\", \"distanceInput\", \"phoneInput\", \"cityInput\", \"postalCodeInput\", \"addressInput\", \"buildingNumberInput\", \"apartmentInput\", \"neighborhoodInput\", \"referenceInput\", \"useLocationButton\", \"chooseMapLocationButton\", \"calculateDistanceButton\"].map(key => customerElements[key]).filter(Boolean)];\r\n",
+        "afterByteOffset": 281266
+      },
+      {
+        "before": "if (/ORDER_RATE_LIMITED/i.test(String(error?.message || \"\"))) {\r\n",
+        "after": "if (/ORDER_SESSION_CHANGED/i.test(String(error?.message || \"\"))) {\r\n  customerSetStatus(customerT(\"orderSessionChanged\"), \"error\");\r\n} else if (/ORDER_RATE_LIMITED/i.test(String(error?.message || \"\"))) {\r\n",
+        "afterByteOffset": 286306
+      },
+      {
+        "before": " if (![customerT(\"orderRateLimited\"), customerT(\"restaurantClosedOrder\"), customerT(\"restaurantRegionMismatch\"), customerT(\"deliveryQuoteRequired\"), customerT(\"menuChangedBeforeOrder\")].includes(customerElements.status.textContent)) {\r\n",
+        "after": " if (![customerT(\"orderSessionChanged\"), customerT(\"orderRateLimited\"), customerT(\"restaurantClosedOrder\"), customerT(\"restaurantRegionMismatch\"), customerT(\"deliveryQuoteRequired\"), customerT(\"menuChangedBeforeOrder\")].includes(customerElements.status.textContent)) {\r\n",
+        "afterByteOffset": 287651
+      },
+      {
+        "before": "Wysylanie zamowienia...",
+        "after": "Wysyłanie zamówienia...",
+        "afterByteOffset": 42123
+      },
+      {
+        "before": "    courierTrackingWaiting: \"La ubicacion aparecera cuando un colaborador acepte el domicilio.\",\r\n",
+        "after": "    courierTrackingWaiting: \"Esperando la ubicación del colaborador.\",\r\n",
+        "afterByteOffset": 18172
+      },
+      {
+        "before": "    courierTrackingLocation: \"Ubicacion actualizada {time}\",\r\n",
+        "after": "    courierTrackingLocation: \"Ubicación actualizada {time}\",\r\n",
+        "afterByteOffset": 18294
+      },
+      {
+        "before": "    courierTrackingMap: \"Abrir ubicacion en el mapa\",\r\n",
+        "after": "    courierTrackingMap: \"Abrir ubicación en el mapa\",\r\n",
+        "afterByteOffset": 18410
+      },
+      {
+        "before": "    courierTrackingWaiting: \"Lokalizacja pojawi sie, gdy kurier zaakceptuje dostawe.\",\r\n",
+        "after": "    courierTrackingWaiting: \"Oczekiwanie na lokalizację kuriera.\",\r\n",
+        "afterByteOffset": 37774
+      },
+      {
+        "before": "    courierTrackingMap: \"Otworz lokalizacje na mapie\",\r\n",
+        "after": "    courierTrackingMap: \"Otwórz lokalizację na mapie\",\r\n",
+        "afterByteOffset": 38015
+      },
+      {
+        "before": "    courierTrackingWaiting: \"The location will appear after a courier accepts the delivery.\",\r\n",
+        "after": "    courierTrackingWaiting: \"Waiting for the courier’s location.\",\r\n",
+        "afterByteOffset": 56956
+      },
+      {
+        "before": "    const loaded = await customerLoadChatMessages({ silent: true });\r\n",
+        "after": "    // A rejected transport read must follow the same bounded backoff as an RPC error.\r\n    let loaded = false;\r\n    try {\r\n      loaded = await customerLoadChatMessages({ silent: true });\r\n    } catch {\r\n      loaded = false;\r\n    }\r\n",
+        "afterByteOffset": 229798
+      },
+      {
+        "before": "  const date = new Date(value || 0);\r\n",
+        "after": "  if (typeof value !== \"string\" || !value.trim()) return \"\";\r\n  const date = new Date(value);\r\n",
+        "afterByteOffset": 251013
+      },
+      {
+        "before": "  const lat = Number(row?.courier_lat);\r\n  const lng = Number(row?.courier_lng);\r\n",
+        "after": "  const coordinate = (value) => {\r\n    if (typeof value !== \"number\" && typeof value !== \"string\") return NaN;\r\n    if (typeof value === \"string\" && !value.trim()) return NaN;\r\n    return Number(value);\r\n  };\r\n  const lat = coordinate(row?.courier_lat);\r\n  const lng = coordinate(row?.courier_lng);\r\n",
+        "afterByteOffset": 252379
+      },
+      {
+        "before": "  const etaDate = new Date(row?.estimated_delivery_at || row?.estimated_pickup_at || 0);\r\n",
+        "after": "  const etaValue = row?.estimated_delivery_at || row?.estimated_pickup_at;\r\n  const etaDate = new Date(typeof etaValue === \"string\" && etaValue.trim() ? etaValue : NaN);\r\n",
+        "afterByteOffset": 252892
+      },
+      {
+        "before": "    const loaded = await customerPollOrderStatus();\r\n",
+        "after": "    // A rejected transport read must follow the same bounded backoff as an RPC error.\r\n    let loaded = false;\r\n    try {\r\n      loaded = await customerPollOrderStatus();\r\n    } catch {\r\n      loaded = false;\r\n    }\r\n",
+        "afterByteOffset": 265885
+      }
+    ]
+  },
+  "centro-integraciones.html": {
+    "sha256": "9233f17d11c820c4ef7719c1dacb6ff834fd81f173881791a6236dab886a1003",
+    "regressionTests": "tests/hardening/dashboard-language.test.mjs; tests/e2e/hardening.spec.js",
+    "edits": [
+      {
+        "before": "    button, a { font: inherit; }\n",
+        "after": "    button, a, select { font: inherit; }\n    #integrationLanguage {min-height:44px; padding:8px; background:#152b26; color:#f3f8f5; border:1px solid #35534a; border-radius:8px;}\n",
+        "afterByteOffset": 552
+      },
+      {
+        "before": "    a:focus-visible {\n",
+        "after": "    a:focus-visible, select:focus-visible {\n",
+        "afterByteOffset": 756
+      },
+      {
+        "before": "",
+        "after": "      <label>Idioma <select id=\"integrationLanguage\" aria-label=\"Language / Język / Idioma\"><option value=\"es\">Español</option><option value=\"pl\">Polski</option><option value=\"en\">English</option></select></label>\n",
+        "afterByteOffset": 4922
+      },
+      {
+        "before": "        <small>Caja fiscal</small>\n",
+        "after": "        <small>Impresora fiscal</small>\n",
+        "afterByteOffset": 5962
+      },
+      {
+        "before": "<script src=\"centro-integraciones-status.js?v=1\"></script>\n",
+        "after": "<script src=\"offline-i18n.js?v=91.0.4\"></script>\n<script src=\"centro-integraciones-status.js?v=2\"></script>\n",
+        "afterByteOffset": 15698
+      },
+      {
+        "before": "",
+        "after": "flex-wrap: wrap;\n      ",
+        "afterByteOffset": 3414
+      },
+      {
+        "before": "",
+        "after": "max-width: 100%;\n      ",
+        "afterByteOffset": 3707
+      },
+      {
+        "before": "",
+        "after": "rmal;\n      overflow-",
+        "afterByteOffset": 3745
+      },
+      {
+        "before": "",
+        "after": ": anywhere",
+        "afterByteOffset": 3770
+      },
+      {
+        "before": ".",
+        "after": "1;\n      color: #bacbc",
+        "afterByteOffset": 4348
+      },
+      {
+        "before": "",
+        "after": ";\n      background: #2",
+        "afterByteOffset": 4371
+      },
+      {
+        "before": "",
+        "after": "3d35;\n      border: 1px solid #496157",
+        "afterByteOffset": 4394
+      },
+      {
+        "before": "    .back {\n      color: #d4e7df;\n      text-decoration: none;\n      font-size: 14px;\n    }",
+        "after": "    .back {\n      color: #d4e7df;\n      text-decoration: none;\n      font-size: 14px;\n      display: inline-flex;\n      align-items: center;\n      min-height: 44px;\n      padding: 8px 10px;\n      border: 1px solid transparent;\n      border-radius: 10px;\n    }\n    .back:hover {\n      color: #f3f8f5;\n      background: #19322b;\n      border-color: #35534a;\n    }",
+        "afterByteOffset": 1263
+      },
+      {
+        "before": "      border-radius: 10px;\n      min-height: 43px;\n    }\n    .action.secondary {",
+        "after": "      border-radius: 10px;\n      min-height: 44px;\n    }\n    .action.secondary {",
+        "afterByteOffset": 4444
+      },
+      {
+        "before": "",
+        "after": "    @media(max-width: 420px) {\n      .shell { padding: 16px 12px 36px; }\n      .top { gap: 10px; margin-bottom: 22px; }\n      .top label { display: inline-flex; align-items: center; gap: 8px; }\n      .back { width: 100%; }\n      .tabs { gap: 6px; }\n      .tab { padding: 10px 12px; }\n      .item { padding: 15px; }\n      .actions > button { flex: 1 1 135px; }\n    }\n",
+        "afterByteOffset": 5221
+      }
+    ]
+  },
+  "centro-integraciones-status.js": {
+    "sha256": "afd92f05cac85def94b11762de05cbad69f6fc28afb2663333622b8ee48e855a",
+    "regressionTests": "tests/hardening/dashboard-language.test.mjs; tests/e2e/hardening.spec.js",
+    "edits": [
+      {
+        "before": "",
+        "after": "  let statusClient = null;\n  const languages = new Set([\"es\",\"pl\",\"en\"]);\n  const selector = document.getElementById(\"integrationLanguage\");\n  let language = \"es\";\n  try { language = new URLSearchParams(window.location.search).get(\"lang\") || localStorage.getItem(\"rincon_colombiano_app_language\") || \"es\"; } catch {}\n  if (!languages.has(language)) language=\"es\";\n  const originalText = new WeakMap();\n  function applyLanguage() {\n    if(!window.RC_ORDERA_OFFLINE_I18N || !document.createTreeWalker)return;\n    document.documentElement.lang=language;\n    const walker=document.createTreeWalker(document,NodeFilter.SHOW_TEXT);\n    for(let node=walker.nextNode();node;node=walker.nextNode()){\n      if([\"SCRIPT\",\"STYLE\",\"OPTION\"].includes(node.parentElement?.tagName))continue;\n      const source=originalText.get(node) || node.nodeValue;originalText.set(node,source);\n      const translated=window.RC_ORDERA_OFFLINE_I18N.translate(source.trim(),language);\n      if(translated)node.nodeValue=translated;\n    }\n  }\n  if(selector){selector.value=language;selector.addEventListener(\"change\",()=>{\n    if(!languages.has(selector.value))return;language=selector.value;\n    try{localStorage.setItem(\"rincon_colombiano_app_language\",language);}catch{}\n    applyLanguage();\n  });}\n",
+        "afterByteOffset": 332
+      },
+      {
+        "before": "",
+        "after": "  applyLanguage();\n",
+        "afterByteOffset": 2858
+      },
+      {
+        "before": "",
+        "after": "    applyLanguage();\n",
+        "afterByteOffset": 3555
+      },
+      {
+        "before": "      const client = window.supabase.createClient(\n",
+        "after": "      const client = statusClient ||= window.supabase.createClient(\n",
+        "afterByteOffset": 4056
+      },
+      {
+        "before": "            autoRefreshToken: true\n",
+        "after": "            autoRefreshToken: false\n",
+        "afterByteOffset": 4230
+      },
+      {
+        "before": "",
+        "after": "          signal: AbortSignal.timeout(10000),\n",
+        "afterByteOffset": 4859
+      },
+      {
+        "before": "",
+        "after": "      const current = await client.auth.getSession();\n      if (current.error || current.data?.session?.access_token !== token) throw new Error(\"LOGIN_REQUIRED\");\n",
+        "afterByteOffset": 5163
+      },
+      {
+        "before": "",
+        "after": "      applyLanguage();\n",
+        "afterByteOffset": 7022
+      },
+      {
+        "before": "persistSession: true,\n            autoRefreshToken: false",
+        "after": "persistSession: true,\n            autoRefreshToken: false,\n            detectSessionInUrl: false,\n            storageKey: \"rc-ordera-restaurant-auth\"",
+        "afterByteOffset": 4208
+      },
+      {
+        "before": "",
+        "after": "root = document",
+        "afterByteOffset": 759
+      },
+      {
+        "before": "d",
+        "after": "r",
+        "afterByteOffset": 941
+      },
+      {
+        "before": "cumen",
+        "after": "o",
+        "afterByteOffset": 943
+      },
+      {
+        "before": "",
+        "after": "if (!source.trim()) continue;\n      ",
+        "afterByteOffset": 1216
+      },
+      {
+        "before": "",
+        "after": "const value = translated ? source.replace(source.tr",
+        "afterByteOffset": 1340
+      },
+      {
+        "before": "f",
+        "after": "m",
+        "afterByteOffset": 1392
+      },
+      {
+        "before": "",
+        "after": "), ",
+        "afterByteOffset": 1394
+      },
+      {
+        "before": "",
+        "after": " : source;\n      if (node.nodeValue !== value) ",
+        "afterByteOffset": 1408
+      },
+      {
+        "before": "tr",
+        "after": "v",
+        "afterByteOffset": 1470
+      },
+      {
+        "before": "ns",
+        "after": "",
+        "afterByteOffset": 1472
+      },
+      {
+        "before": "at",
+        "after": "u",
+        "afterByteOffset": 1473
+      },
+      {
+        "before": "d",
+        "after": "",
+        "afterByteOffset": 1475
+      },
+      {
+        "before": "",
+        "after": "controls",
+        "afterByteOffset": 3716
+      },
+      {
+        "before": "",
+        "after": "controls",
+        "afterByteOffset": 7285
+      },
+      {
+        "before": "",
+        "after": "  const originalLabels = new WeakMap();\n",
+        "afterByteOffset": 734
+      },
+      {
+        "before": "",
+        "after": "    const labelled = [...(root.querySelectorAll?.('[aria-label]') || [])];\n    if (root.hasAttribute?.('aria-label')) labelled.unshift(root);\n    for (const element of labelled) {\n      const source = originalLabels.get(element) || element.getAttribute('aria-label');\n      originalLabels.set(element, source);\n      const value = window.RC_ORDERA_OFFLINE_I18N.translate(source, language) || source;\n      if (element.getAttribute('aria-label') !== value) element.setAttribute('aria-label', value);\n    }\n",
+        "afterByteOffset": 938
+      },
+      {
+        "before": "if(!languages.has(selector.value))return;language=selector.value;",
+        "after": "if(!languages.has(selector.value) || selector.value===language)return;language=selector.value;",
+        "afterByteOffset": 2116
+      }
+    ]
+  },
+  "offline-i18n.js": {
+    "sha256": "802c97c7f7fee447c97dcb085f44cf932fee6e21e91f112b724cd704959cc18d",
+    "regressionTests": "tests/hardening/frontend.test.mjs",
+    "edits": [
+      {
+        "before": "",
+        "after": "    [\"integration.centre.00\", \"RC ORDERA | Centro de Integraciones\", \"RC ORDERA | Centrum integracji\", \"RC ORDERA | Integration centre\"],\n    [\"integration.centre.01\", \"← Volver al restaurante\", \"← Powrót do restauracji\", \"← Back to restaurant\"],\n    [\"integration.centre.02\", \"Idioma\", \"Język\", \"Language\"],\n    [\"integration.centre.03\", \"Centro de Integraciones\", \"Centrum integracji\", \"Integration centre\"],\n    [\"integration.centre.04\", \"Gestiona desde un solo lugar la preparación de dispositivos fiscales, plataformas de reparto y sistemas de pago.\", \"Przygotuj w jednym miejscu urządzenia fiskalne, platformy dostaw i systemy płatności.\", \"Prepare fiscal devices, delivery platforms and payment systems in one place.\"],\n    [\"integration.centre.05\", \"VERSIÓN DE PREPARACIÓN: Esta pantalla no muestra conexiones en tiempo real ni concede acceso administrativo. Las operaciones sensibles permanecerán bloqueadas hasta integrar autenticación, autorización y servicios verificados. No introduzcas claves ni credenciales aquí.\", \"WERSJA PRZYGOTOWAWCZA: Ten ekran nie pokazuje połączeń w czasie rzeczywistym ani nie nadaje uprawnień administracyjnych. Operacje wrażliwe pozostają zablokowane do czasu zweryfikowania usług i uprawnień. Nie wpisuj tutaj kluczy ani danych uwierzytelniających.\", \"PREPARATION VERSION: This screen does not show live connections or grant administrative access. Sensitive operations remain blocked until services and permissions are verified. Do not enter keys or credentials here.\"],\n    [\"integration.centre.06\", \"Impresora fiscal\", \"Drukarka fiskalna\", \"Fiscal printer\"],\n    [\"integration.centre.07\", \"Por conectar\", \"Do podłączenia\", \"Awaiting connection\"],\n    [\"integration.centre.08\", \"Apps de reparto\", \"Platformy dostaw\", \"Delivery platforms\"],\n    [\"integration.centre.09\", \"5 previstas\", \"5 planowanych\", \"5 planned\"],\n    [\"integration.centre.10\", \"Pagos\", \"Płatności\", \"Payments\"],\n    [\"integration.centre.11\", \"Por verificar\", \"Do weryfikacji\", \"Awaiting verification\"],\n    [\"integration.centre.12\", \"🧾 Fiscal\", \"🧾 Fiskalne\", \"🧾 Fiscal\"],\n    [\"integration.centre.13\", \"🛵 Reparto\", \"🛵 Dostawy\", \"🛵 Delivery\"],\n    [\"integration.centre.14\", \"💳 Pagos\", \"💳 Płatności\", \"💳 Payments\"],\n    [\"integration.centre.15\", \"Dispositivos fiscales\", \"Urządzenia fiskalne\", \"Fiscal devices\"],\n    [\"integration.centre.16\", \"Preparación para POSNET y otros fabricantes.\", \"Przygotowanie do POSNET i innych producentów.\", \"Preparation for POSNET and other manufacturers.\"],\n    [\"integration.centre.17\", \"Sin conexión verificada\", \"Brak zweryfikowanego połączenia\", \"No verified connection\"],\n    [\"integration.centre.18\", \"Impresora principal\", \"Główna drukarka\", \"Primary printer\"],\n    [\"integration.centre.19\", \"No configurada\", \"Nie skonfigurowano\", \"Not configured\"],\n    [\"integration.centre.20\", \"POSNET · Modelo, firmware y protocolo pendientes de identificación.\", \"POSNET · Model, oprogramowanie i protokół wymagają identyfikacji.\", \"POSNET · Model, firmware and protocol await identification.\"],\n    [\"integration.centre.21\", \"Configurar\", \"Konfiguruj\", \"Configure\"],\n    [\"integration.centre.22\", \"Probar conexión\", \"Testuj połączenie\", \"Test connection\"],\n    [\"integration.centre.23\", \"Consultar estado\", \"Sprawdź status\", \"Check status\"],\n    [\"integration.centre.24\", \"Operaciones fiscales\", \"Operacje fiskalne\", \"Fiscal operations\"],\n    [\"integration.centre.25\", \"Bloqueadas\", \"Zablokowane\", \"Blocked\"],\n    [\"integration.centre.26\", \"Emisión, seguimiento, conciliación y protección frente a duplicados.\", \"Wydruk, śledzenie, uzgadnianie i ochrona przed duplikatami.\", \"Issuing, tracking, reconciliation and duplicate prevention.\"],\n    [\"integration.centre.27\", \"Imprimir recibo\", \"Drukuj paragon\", \"Print receipt\"],\n    [\"integration.centre.28\", \"Conciliar\", \"Uzgodnij\", \"Reconcile\"],\n    [\"integration.centre.29\", \"Ver historial\", \"Zobacz historię\", \"View history\"],\n    [\"integration.centre.30\", \"Identidad autenticada de cada dispositivo\", \"Uwierzytelniona tożsamość każdego urządzenia\", \"Authenticated identity for each device\"],\n    [\"integration.centre.31\", \"Controlador compatible con el fabricante\", \"Sterownik zgodny z producentem\", \"Manufacturer-compatible driver\"],\n    [\"integration.centre.32\", \"Configuración VAT verificada\", \"Zweryfikowana konfiguracja VAT\", \"Verified VAT configuration\"],\n    [\"integration.centre.33\", \"Operaciones persistentes e idempotentes\", \"Trwałe i idempotentne operacje\", \"Persistent and idempotent operations\"],\n    [\"integration.centre.34\", \"Conciliación segura de estados desconocidos\", \"Bezpieczne uzgadnianie nieznanych stanów\", \"Safe reconciliation of unknown states\"],\n    [\"integration.centre.35\", \"Plataformas de reparto\", \"Platformy dostaw\", \"Delivery platforms\"],\n    [\"integration.centre.36\", \"Cinco proveedores, una única operación.\", \"Pięciu dostawców, jeden system operacyjny.\", \"Five providers, one operational system.\"],\n    [\"integration.centre.37\", \"Conexiones pendientes\", \"Połączenia oczekujące\", \"Connections pending\"],\n    [\"integration.centre.38\", \"Autenticación oficial de cada proveedor\", \"Oficjalne uwierzytelnianie każdego dostawcy\", \"Official authentication for each provider\"],\n    [\"integration.centre.39\", \"Mapeo de productos e impuestos\", \"Mapowanie produktów i podatków\", \"Product and tax mapping\"],\n    [\"integration.centre.40\", \"Prevención de pedidos duplicados\", \"Zapobieganie duplikatom zamówień\", \"Duplicate order prevention\"],\n    [\"integration.centre.41\", \"Sincronización de estados de cocina y entrega\", \"Synchronizacja statusów kuchni i dostawy\", \"Kitchen and delivery status synchronization\"],\n    [\"integration.centre.42\", \"Conciliación de pagos y comisiones\", \"Uzgadnianie płatności i prowizji\", \"Payment and commission reconciliation\"],\n    [\"integration.centre.43\", \"Pagos y liquidaciones\", \"Płatności i rozliczenia\", \"Payments and settlements\"],\n    [\"integration.centre.44\", \"Control de cobros, devoluciones y saldos.\", \"Kontrola płatności, zwrotów i sald.\", \"Track charges, refunds and balances.\"],\n    [\"integration.centre.45\", \"Verificación pendiente\", \"Oczekuje na weryfikację\", \"Verification pending\"],\n    [\"integration.centre.46\", \"Checkout, webhooks, confirmaciones y liquidaciones.\", \"Checkout, webhooki, potwierdzenia i rozliczenia.\", \"Checkout, webhooks, confirmations and settlements.\"],\n    [\"integration.centre.47\", \"Ver transacciones\", \"Zobacz transakcje\", \"View transactions\"],\n    [\"integration.centre.48\", \"Método de pago sujeto a disponibilidad y configuración del proveedor.\", \"Metoda płatności zależy od dostępności i konfiguracji dostawcy.\", \"Payment method subject to provider availability and configuration.\"],\n    [\"integration.centre.49\", \"Verificar disponibilidad\", \"Sprawdź dostępność\", \"Check availability\"],\n    [\"integration.centre.50\", \"Reembolsos\", \"Zwroty\", \"Refunds\"],\n    [\"integration.centre.51\", \"Reversión, seguimiento y conciliación de operaciones.\", \"Odwracanie, śledzenie i uzgadnianie operacji.\", \"Reversal, tracking and reconciliation of operations.\"],\n    [\"integration.centre.52\", \"Consultar reembolsos\", \"Sprawdź zwroty\", \"Check refunds\"],\n    [\"integration.centre.53\", \"Contabilidad\", \"Księgowość\", \"Accounting\"],\n    [\"integration.centre.54\", \"Ventas, importes, comisiones e impuestos consistentes entre los sistemas.\", \"Spójne dane sprzedaży, kwot, prowizji i podatków między systemami.\", \"Consistent sales, amounts, commissions and taxes across systems.\"],\n    [\"integration.centre.55\", \"Ver informes\", \"Zobacz raporty\", \"View reports\"],\n    [\"integration.centre.56\", \"RC ORDERA · Arquitectura multi-restaurante · Preparación de integraciones\", \"RC ORDERA · Architektura wielu restauracji · Przygotowanie integracji\", \"RC ORDERA · Multi-restaurant architecture · Integration preparation\"],\n    [\"integration.centre.57\", \"No verificado\", \"Niezweryfikowane\", \"Unverified\"],\n    [\"integration.centre.58\", \"Conexión oficial, pedidos, estados y conciliación pendientes de verificar.\", \"Oficjalne połączenie, zamówienia, statusy i uzgadnianie wymagają weryfikacji.\", \"Official connection, orders, statuses and reconciliation await verification.\"],\n    [\"integration.centre.59\", \"Sincronizar pedidos\", \"Synchronizuj zamówienia\", \"Synchronize orders\"],\n    [\"integration.centre.60\", \"Diagnóstico del sistema\", \"Diagnostyka systemu\", \"System diagnostics\"],\n    [\"integration.centre.61\", \"Consulta manual. No se realizan conexiones automáticas.\", \"Sprawdzanie ręczne. Brak automatycznych połączeń.\", \"Manual check. No automatic connections are made.\"],\n    [\"integration.centre.62\", \"Consultando información del servidor...\", \"Pobieranie informacji z serwera...\", \"Loading server information...\"],\n    [\"integration.centre.63\", \"Dispositivos registrados:\", \"Zarejestrowane urządzenia:\", \"Registered devices:\"],\n    [\"integration.centre.64\", \"Operaciones fiscales por conciliar:\", \"Operacje fiskalne do uzgodnienia:\", \"Fiscal operations to reconcile:\"],\n    [\"integration.centre.65\", \"Pedidos externos por revisar:\", \"Zamówienia zewnętrzne do sprawdzenia:\", \"External orders awaiting review:\"],\n    [\"integration.centre.66\", \"Impresión fiscal:\", \"Wydruk fiskalny:\", \"Fiscal printing:\"],\n    [\"integration.centre.67\", \"No autorizada\", \"Brak autoryzacji\", \"Not authorized\"],\n    [\"integration.centre.68\", \"Conectores de reparto:\", \"Integracje dostaw:\", \"Delivery connectors:\"],\n    [\"integration.centre.69\", \"No verificados\", \"Niezweryfikowane\", \"Unverified\"],\n    [\"integration.centre.70\", \"Stripe y BLIK:\", \"Stripe i BLIK:\", \"Stripe and BLIK:\"],\n    [\"integration.centre.71\", \"Diagnóstico consultado correctamente. Los controles operativos permanecen bloqueados.\", \"Diagnostyka pobrana poprawnie. Funkcje operacyjne pozostają zablokowane.\", \"Diagnostics loaded successfully. Operational controls remain blocked.\"],\n    [\"integration.centre.72\", \"Inicia sesión en RC ORDERA para consultar el estado.\", \"Zaloguj się do RC ORDERA, aby sprawdzić status.\", \"Sign in to RC ORDERA to check status.\"],\n    [\"integration.centre.73\", \"No fue posible verificar el estado. Comprueba la sesión y el despliegue del servicio.\", \"Nie udało się sprawdzić statusu. Sprawdź sesję i wdrożenie usługi.\", \"Could not verify status. Check your session and service deployment.\"],\n",
+        "afterByteOffset": 32
+      },
+      {
+        "before": "",
+        "after": "    [\"menu.vat\", \"IVA del producto\", \"Stawka VAT produktu\", \"Product VAT rate\"],\n    [\"menu.vatInherit\", \"Heredar del restaurante\", \"Dziedzicz z restauracji\", \"Inherit from restaurant\"],\n    [\"qr.localError\", \"No se pudo generar el QR. Copia el enlace o vuelve a intentarlo.\", \"Nie udało się wygenerować kodu QR. Skopiuj link lub spróbuj ponownie.\", \"Could not generate the QR code. Copy the link or try again.\"],\n    [\"menu.vatNP\", \"No sujeto (NP)\", \"Nie podlega (NP)\", \"Not taxable (NP)\"],\n    [\"menu.vatNPI\", \"No sujeto (NP I)\", \"Nie podlega (NP I)\", \"Not taxable (NP I)\"],\n    [\"menu.vatNPII\", \"No sujeto (NP II)\", \"Nie podlega (NP II)\", \"Not taxable (NP II)\"],\n    [\"menu.vatUnknown\", \"IVA sin verificar: revisar\", \"VAT niezweryfikowany: sprawdź\", \"Unverified VAT: review\"],\n    [\"menu.vatReview\", \"Revisa la categoría de IVA antes de guardar.\", \"Sprawdź kategorię VAT przed zapisaniem.\", \"Review the VAT category before saving.\"],\n    [\"menu.vatExempt\", \"Exento (ZW)\", \"Zwolniony (ZW)\", \"Exempt (ZW)\"],\n    [\"menu.vatDefault\", \"IVA por defecto del restaurante\", \"Domyślna stawka VAT restauracji\", \"Restaurant default VAT rate\"],\n    [\"menu.vatDefaultNone\", \"Sin definir\", \"Nie określono\", \"Not set\"],\n",
+        "afterByteOffset": 33123
+      },
+      {
+        "before": "",
+        "after": "    [\"integration.a11y.summary\", \"Resumen de preparación\", \"Podsumowanie gotowości\", \"Readiness summary\"],\n    [\"integration.a11y.categories\", \"Categorías\", \"Kategorie\", \"Categories\"],\n    [\"integration.a11y.diagnostics\", \"Diagnóstico de integraciones\", \"Diagnostyka integracji\", \"Integration diagnostics\"],\n",
+        "afterByteOffset": 32
+      }
+    ]
+  },
+  "service-worker.js": {
+    "sha256": "a2d96e676f130255d7ecadba1f454062d563cb6c28d565256bba681bad0a491a",
+    "regressionTests": "tests/hardening/frontend.test.mjs; tests/shared/service-worker-safety.test.mjs",
+    "edits": [
+      {
+        "before": "const CACHE_NAME = \"rc-ordera-v91-0-4-offline-r4-products-closures\";\n",
+        "after": "const CACHE_NAME = \"rc-ordera-v91-0-4-v6-verified-20261010\";\r\n",
+        "afterByteOffset": 0
+      },
+      {
+        "before": "",
+        "after": "  \"./vendor/qrcode-generator-2.0.4.js\",\r\n  \"./local-qr.js\",\r\n",
+        "afterByteOffset": 443
+      },
+      {
+        "before": "",
+        "after": "-install-r9",
+        "afterByteOffset": 58
+      },
+      {
+        "before": "",
+        "after": "\",\n  \"./install-app.js\",\n  \"./install-app.css\",\n  \"./portal-manifest.webmanifest",
+        "afterByteOffset": 118
+      },
+      {
+        "before": "9",
+        "after": "10",
+        "afterByteOffset": 68
+      },
+      {
+        "before": "",
+        "after": ".webmanifest\",\n  \"./portal-manifest.pl.webmanifest\",\n  \"./portal-manifest.en",
+        "afterByteOffset": 187
+      },
+      {
+        "before": "const CACHE_NAME = \"rc-ordera-v91-0-4-v6-verified-20261010-install-r10\";\r\nconst APP_FILES = [\r\n  \"./\",\r\n  \"./index.html\",\n  \"./install-app.js\",\n  \"./install-app.css\",\n  \"./portal-manifest.webmanifest\",\n  \"./portal-manifest.pl.webmanifest\",\n  \"./portal-manifest.en.webmanifest\",\r\n  \"./restaurante.html\",\r\n  \"./cliente.html\",\r\n  \"./colaborador.html\",\r\n  \"./mesero.html\",\r\n  \"./admin.html\",\r\n  \"./styles.css\",\r\n  \"./app.js\",\r\n  \"./cliente.js\",\r\n  \"./colaborador.js\",\r\n  \"./mesero.js\",\r\n  \"./admin.js\",\r\n  \"./offline-i18n.js\",\r\n  \"./auto-translate.js\",\r\n  \"./supabase-config.js\",\r\n  \"./vendor/supabase-2.57.4.js\",\r\n  \"./vendor/qrcode-generator-2.0.4.js\",\r\n  \"./local-qr.js\",\r\n  \"./manifest.webmanifest\",\r\n  \"./restaurante-manifest.webmanifest\",\r\n  \"./restaurante-manifest.pl.webmanifest\",\r\n  \"./restaurante-manifest.en.webmanifest\",\r\n  \"./cliente-manifest.webmanifest\",\r\n  \"./colaborador-manifest.webmanifest\",\r\n  \"./admin-manifest.webmanifest\",\r\n  \"./manifest.pl.webmanifest\",\r\n  \"./manifest.en.webmanifest\",\r\n  \"./cliente-manifest.pl.webmanifest\",\r\n  \"./cliente-manifest.en.webmanifest\",\r\n  \"./colaborador-manifest.pl.webmanifest\",\r\n  \"./colaborador-manifest.en.webmanifest\",\r\n  \"./admin-manifest.pl.webmanifest\",\r\n  \"./admin-manifest.en.webmanifest\",\r\n  \"./mesero-manifest.webmanifest\",\r\n  \"./mesero-manifest.pl.webmanifest\",\r\n  \"./mesero-manifest.en.webmanifest\",\r\n  \"./app-icon.svg\",\r\n  \"./app-icon-192.png\",\r\n  \"./app-icon-512.png\",\r\n];\r\n\r\nself.addEventListener(\"install\", (event) => {\r\n  event.waitUntil(\r\n    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_FILES))\r\n  );\r\n  self.skipWaiting();\r\n});\r\n\r\nself.addEventListener(\"activate\", (event) => {\r\n  event.waitUntil(\r\n    caches\r\n      .keys()\r\n      .then((keys) => Promise.all(keys.filter((key) => key.startsWith(\"rc-ordera-\") && key !== CACHE_NAME).map((key) => caches.delete(key))))\r\n  );\r\n  self.clients.claim();\r\n});\r\n\r\nasync function cachedRuntimeResource(request) {\r\n  const cache = await caches.open(CACHE_NAME);\r\n  const exact = await cache.match(request);\r\n  if (exact) return exact;\r\n  // Precache stores unversioned files; HTML requests scripts with ?v=.\r\n  // Ignore the query only for known static runtime assets, never for API data.\r\n  const pathname = new URL(request.url).pathname;\r\n  const known = APP_FILES.some((file) => new URL(file, self.location.href).pathname === pathname);\r\n  return known ? cache.match(request, { ignoreSearch: true }) : undefined;\r\n}\r\n\r\nself.addEventListener(\"fetch\", (event) => {\r\n  if (event.request.method !== \"GET\") return;\r\n\r\n  const requestUrl = new URL(event.request.url);\r\n  if (requestUrl.origin !== self.location.origin) return;\r\n\r\n  const isDocument = event.request.mode === \"navigate\" || event.request.destination === \"document\";\r\n  const isCriticalCode = [\"script\", \"style\", \"worker\", \"manifest\"].includes(event.request.destination);\r\n  if (!isDocument && !isCriticalCode) return;\r\n\r\n if (isCriticalCode) {\r\n  event.respondWith(\r\n    fetch(event.request)\r\n      .then((response) => {\r\n        if (!response || !response.ok) {\r\n          throw new Error(`HTTP ${response ? response.status : \"unknown\"}`);\r\n        }\r\n\r\n        const responseClone = response.clone();\r\n\r\n        event.waitUntil(\r\n          caches.open(CACHE_NAME).then((cache) => {\r\n            return cache.put(event.request, responseClone).catch(() => {});\r\n          })\r\n        );\r\n\r\n        return response;\r\n      })\r\n      .catch(async () => {\r\n        const cachedResponse = await cachedRuntimeResource(event.request);\r\n\r\n        if (cachedResponse) {\r\n          return cachedResponse;\r\n        }\r\n\r\n        return new Response(\"Recurso no disponible sin conexión.\", {\r\n          status: 503,\r\n          statusText: \"Service Unavailable\",\r\n        });\r\n      })\r\n  );\r\n\r\n  return;\r\n}\r\nconst updateCache = fetch(event.request).then(async (response) => {\r\n  if (!response || !response.ok) throw new Error(\"Document fetch failed\");\r\n  if (response && response.ok) {\r\n    const cache = await caches.open(CACHE_NAME);\r\n    await cache.put(event.request, response.clone()).catch(() => {});\r\n  }\r\n  return response;\r\n});\r\n  event.respondWith(\r\n    updateCache.catch(async () => {\r\n      const cachedRequest = await cachedRuntimeResource(event.request);\r\n      if (cachedRequest) return cachedRequest;\r\n      const pageName = requestUrl.pathname.split(\"/\").pop() || \"index.html\";\r\n      const pageFallbacks = new Set([\"index.html\", \"restaurante.html\", \"cliente.html\", \"colaborador.html\", \"mesero.html\", \"admin.html\"]);\r\n      const cache = await caches.open(CACHE_NAME);\r\n      return (await cache.match(pageFallbacks.has(pageName) ? `./${pageName}` : \"./index.html\"))\r\n        || new Response(\"Página no disponible sin conexión.\", { status: 503 });\r\n    })\r\n  );\r\n});\r\nself.addEventListener(\"push\", (event) => {\r\n  let data = {};\r\n\r\n  try {\r\n    data = event.data ? event.data.json() : {};\r\n  } catch (error) {\r\n    data = {\r\n      title: \"RC ORDERA\",\r\n      body: event.data ? event.data.text() : \"Nuevo pedido disponible.\",\r\n    };\r\n  }\r\n\r\n  const language = [\"es\", \"pl\", \"en\"].includes(String(data.language || \"\").toLowerCase())\r\n    ? String(data.language).toLowerCase()\r\n    : \"es\";\r\n  const fallback = {\r\n    es: {\r\n      title: \"Nuevo domicilio - RC ORDERA\",\r\n      body: \"Hay un nuevo pedido disponible. Abre RC ORDERA para aceptarlo.\",\r\n    },\r\n    pl: {\r\n      title: \"Nowa dostawa - RC ORDERA\",\r\n      body: \"Dostępne jest nowe zamówienie. Otwórz RC ORDERA, aby je przyjąć.\",\r\n    },\r\n    en: {\r\n      title: \"New delivery - RC ORDERA\",\r\n      body: \"A new order is available. Open RC ORDERA to accept it.\",\r\n    },\r\n  }[language];\r\n  const title = data.title || fallback.title;\r\n\r\n  const options = {\r\n    body:\r\n      data.body ||\r\n      fallback.body,\r\n\r\n    icon: \"./app-icon-192.png\",\r\n    badge: \"./app-icon-192.png\",\r\n\r\n    tag: data.tag || \"rc-ordera-delivery\",\r\n\r\n    renotify: true,\r\n    requireInteraction: true,\r\n\r\n    vibrate: [500, 200, 500, 200, 800],\r\n\r\n    data: {\r\n      url: data.url || (data.assignment_id\r\n        ? `./colaborador.html?view=offers&assignment=${encodeURIComponent(data.assignment_id)}&app=v91.0.4&lang=${language}`\r\n        : `./colaborador.html?view=offers&app=v91.0.4&lang=${language}`),\r\n      assignment_id: data.assignment_id || \"\",\r\n    },\r\n  };\r\n\r\n  event.waitUntil(\r\n    self.registration.showNotification(title, options)\r\n  );\r\n});\r\n\r\nself.addEventListener(\"notificationclick\", (event) => {\r\n  event.notification.close();\r\n\r\n  const targetUrl =\r\n    event.notification.data?.url ||\r\n    \"./colaborador.html?view=offers&app=v91.0.4\";\r\n\r\n  event.waitUntil(\r\n    clients.matchAll({\r\n      type: \"window\",\r\n      includeUncontrolled: true,\r\n    }).then((windowClients) => {\r\n      for (const client of windowClients) {\r\n        if (\"focus\" in client) {\r\n          client.navigate(targetUrl);\r\n          return client.focus();\r\n        }\r\n      }\r\n\r\n      return clients.openWindow(targetUrl);\r\n    })\r\n  );\r\n});\r\n\r\n",
+        "after": "const CACHE_NAME = \"rc-ordera-v91-0-4-v6-verified-20261011-pwa-safe-r11\";\nconst APP_FILES = [\n  \"./\",\n  \"./index.html\",\n  \"./portal.html\",\n  \"./centro-integraciones.html\",\n  \"./centro-integraciones-status.js\",\n  \"./local-qr.js\",\n  \"./install-app.js\",\n  \"./install-app.css\",\n  \"./portal-manifest.webmanifest\",\n  \"./portal-manifest.pl.webmanifest\",\n  \"./portal-manifest.en.webmanifest\",\n  \"./restaurante.html\",\n  \"./cliente.html\",\n  \"./colaborador.html\",\n  \"./mesero.html\",\n  \"./admin.html\",\n  \"./styles.css\",\n  \"./app.js\",\n  \"./cliente.js\",\n  \"./colaborador.js\",\n  \"./mesero.js\",\n  \"./admin.js\",\n  \"./offline-i18n.js\",\n  \"./auto-translate.js\",\n  \"./supabase-config.js\",\n  \"./vendor/supabase-2.57.4.js\",\n  \"./vendor/qrcode-generator-2.0.4.js\",\n  \"./local-qr.js\",\n  \"./manifest.webmanifest\",\n  \"./restaurante-manifest.webmanifest\",\n  \"./restaurante-manifest.pl.webmanifest\",\n  \"./restaurante-manifest.en.webmanifest\",\n  \"./cliente-manifest.webmanifest\",\n  \"./colaborador-manifest.webmanifest\",\n  \"./admin-manifest.webmanifest\",\n  \"./manifest.pl.webmanifest\",\n  \"./manifest.en.webmanifest\",\n  \"./cliente-manifest.pl.webmanifest\",\n  \"./cliente-manifest.en.webmanifest\",\n  \"./colaborador-manifest.pl.webmanifest\",\n  \"./colaborador-manifest.en.webmanifest\",\n  \"./admin-manifest.pl.webmanifest\",\n  \"./admin-manifest.en.webmanifest\",\n  \"./mesero-manifest.webmanifest\",\n  \"./mesero-manifest.pl.webmanifest\",\n  \"./mesero-manifest.en.webmanifest\",\n  \"./app-icon.svg\",\n  \"./app-icon-192.png\",\n  \"./app-icon-512.png\",\n];\n\n// Cache one canonical entry per known asset: never cache unbounded query variants.\nconst STATIC_CACHE_PATHS = new Set(APP_FILES.map((file) => new URL(file, self.location.href).pathname));\nfunction staticCacheKey(request) {\n  const url = new URL(request.url);\n  return url.origin === self.location.origin && STATIC_CACHE_PATHS.has(url.pathname)\n    ? url.origin + url.pathname : null;\n}\n\nself.addEventListener(\"install\", (event) => {\n  event.waitUntil(\n    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_FILES))\n  );\n  self.skipWaiting();\n});\n\nself.addEventListener(\"activate\", (event) => {\n  event.waitUntil(\n    caches\n      .keys()\n      .then((keys) => Promise.all(keys.filter((key) => key.startsWith(\"rc-ordera-\") && key !== CACHE_NAME).map((key) => caches.delete(key))))\n  );\n  self.clients.claim();\n});\n\nasync function cachedRuntimeResource(request) {\n  const key = staticCacheKey(request);\n  return key ? (await caches.open(CACHE_NAME)).match(key) : undefined;\n}\n\nself.addEventListener(\"fetch\", (event) => {\n  if (event.request.method !== \"GET\") return;\n\n  const requestUrl = new URL(event.request.url);\n  if (requestUrl.origin !== self.location.origin) return;\n\n  const isDocument = event.request.mode === \"navigate\" || event.request.destination === \"document\";\n  const isCriticalCode = [\"script\", \"style\", \"worker\", \"manifest\"].includes(event.request.destination);\n  if (!isDocument && !isCriticalCode) return;\n\n if (isCriticalCode) {\n  event.respondWith(\n    fetch(event.request)\n      .then((response) => {\n        if (!response || !response.ok) {\n          throw new Error(`HTTP ${response ? response.status : \"unknown\"}`);\n        }\n\n        const key = staticCacheKey(event.request);\n        if (key) {\n          const responseClone = response.clone();\n          event.waitUntil(\n            caches.open(CACHE_NAME).then((cache) => cache.put(key, responseClone).catch(() => {}))\n          );\n        }\n        return response;\n      })\n      .catch(async () => {\n        const cachedResponse = await cachedRuntimeResource(event.request);\n\n        if (cachedResponse) {\n          return cachedResponse;\n        }\n\n        return new Response(\"Recurso no disponible sin conexión.\", {\n          status: 503,\n          statusText: \"Service Unavailable\",\n        });\n      })\n  );\n\n  return;\n}\nconst updateCache = fetch(event.request).then(async (response) => {\n  if (!response || !response.ok) throw new Error(\"Document fetch failed\");\n  if (response && response.ok) {\n    const key = staticCacheKey(event.request);\n    if (key) {\n      const cache = await caches.open(CACHE_NAME);\n      await cache.put(key, response.clone()).catch(() => {});\n    }\n  }\n  return response;\n});\n  event.respondWith(\n    updateCache.catch(async () => {\n      const cachedRequest = await cachedRuntimeResource(event.request);\n      if (cachedRequest) return cachedRequest;\n      const pageName = requestUrl.pathname.split(\"/\").pop() || \"index.html\";\n      const pageFallbacks = new Set([\"index.html\", \"restaurante.html\", \"cliente.html\", \"colaborador.html\", \"mesero.html\", \"admin.html\"]);\n      const cache = await caches.open(CACHE_NAME);\n      return (await cache.match(pageFallbacks.has(pageName) ? `./${pageName}` : \"./index.html\"))\n        || new Response(\"Página no disponible sin conexión.\", { status: 503 });\n    })\n  );\n});\nself.addEventListener(\"push\", (event) => {\n  let data = {};\n\n  try {\n    data = event.data ? event.data.json() : {};\n  } catch (error) {\n    data = {\n      title: \"RC ORDERA\",\n      body: event.data ? event.data.text() : \"Nuevo pedido disponible.\",\n    };\n  }\n\n  // Null/array JSON payloads must not crash push delivery.\n  if (!data || typeof data !== \"object\" || Array.isArray(data)) data = {};\n  const language = [\"es\", \"pl\", \"en\"].includes(String(data.language || \"\").toLowerCase())\n    ? String(data.language).toLowerCase()\n    : \"es\";\n  const fallback = {\n    es: {\n      title: \"Nuevo domicilio - RC ORDERA\",\n      body: \"Hay un nuevo pedido disponible. Abre RC ORDERA para aceptarlo.\",\n    },\n    pl: {\n      title: \"Nowa dostawa - RC ORDERA\",\n      body: \"Dostępne jest nowe zamówienie. Otwórz RC ORDERA, aby je przyjąć.\",\n    },\n    en: {\n      title: \"New delivery - RC ORDERA\",\n      body: \"A new order is available. Open RC ORDERA to accept it.\",\n    },\n  }[language];\n  const title = data.title || fallback.title;\n\n  const options = {\n    body:\n      data.body ||\n      fallback.body,\n\n    icon: \"./app-icon-192.png\",\n    badge: \"./app-icon-192.png\",\n\n    tag: data.tag || \"rc-ordera-delivery\",\n\n    renotify: true,\n    requireInteraction: true,\n\n    vibrate: [500, 200, 500, 200, 800],\n\n    data: {\n      url: data.url || (data.assignment_id\n        ? `./colaborador.html?view=offers&assignment=${encodeURIComponent(data.assignment_id)}&app=v91.0.4&lang=${language}`\n        : `./colaborador.html?view=offers&app=v91.0.4&lang=${language}`),\n      assignment_id: data.assignment_id || \"\",\n    },\n  };\n\n  event.waitUntil(\n    self.registration.showNotification(title, options)\n  );\n});\n\nfunction safeNotificationUrl(value) {\n  const fallback = new URL(\"./colaborador.html?view=offers&app=v91.0.4\", self.location.href);\n  const allowed = new URL(\"./colaborador.html\", self.location.href);\n  if (typeof value !== \"string\" || value.length > 2048) return fallback.href;\n  try {\n    const target = new URL(value, self.location.href);\n    return target.origin === self.location.origin && target.pathname === allowed.pathname &&\n      !target.username && !target.password ? target.href : fallback.href;\n  } catch { return fallback.href; }\n}\n\nself.addEventListener(\"notificationclick\", (event) => {\n  event.notification.close();\n  const targetUrl = safeNotificationUrl(event.notification.data?.url);\n  event.waitUntil(\n    clients.matchAll({ type: \"window\", includeUncontrolled: true }).then((windowClients) => {\n      // Never replace an active restaurant POS, checkout or administration tab.\n      const existingCourier = windowClients.find((client) => {\n        try {\n          const current = new URL(client.url);\n          return current.origin === self.location.origin &&\n            current.pathname === new URL(\"./colaborador.html\", self.location.href).pathname &&\n            typeof client.navigate === \"function\";\n        } catch { return false; }\n      });\n      if (!existingCourier) return clients.openWindow(targetUrl);\n      return existingCourier.navigate(targetUrl)\n        .then((navigated) => (navigated || existingCourier).focus())\n        .catch(() => clients.openWindow(targetUrl));\n    })\n  );\n});\n",
+        "afterByteOffset": 0
+      }
+    ]
+  },
+  "app.js": {
+    "sha256": "5307d9a1400eaace611e2aa21e477a2d4aac8d170113cc1c256da67f479c1fd5",
+    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs",
+    "edits": [
+      {
+        "before": "",
+        "after": "  defaultVatRate: \"rc_ordera_default_vat_rate\",\r\n",
+        "afterByteOffset": 1640
+      },
+      {
+        "before": "",
+        "after": "  productVatSelect: document.querySelector(\"#productVatSelect\"),\r\n  restaurantDefaultVatSelect: document.querySelector(\"#restaurantDefaultVatSelect\"),\r\n",
+        "afterByteOffset": 23774
+      },
+      {
+        "before": "",
+        "after": "let defaultVatRate = normalizeVatRate(localStorage.getItem(STORAGE_KEYS.defaultVatRate));\r\n",
+        "afterByteOffset": 29437
+      },
+      {
+        "before": "",
+        "after": "    defaultVatRate,\r\n",
+        "afterByteOffset": 99305
+      },
+      {
+        "before": "",
+        "after": "  localStorage.setItem(STORAGE_KEYS.defaultVatRate, defaultVatRate);\r\n",
+        "afterByteOffset": 115573
+      },
+      {
+        "before": "",
+        "after": "  defaultVatRate = Object.hasOwn(settings, \"defaultVatRate\") ? normalizeVatRate(settings.defaultVatRate) : \"\";\r\n",
+        "afterByteOffset": 118807
+      },
+      {
+        "before": "  elements.qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(link)}`;\r\n",
+        "after": "  try {\r\n    elements.qrImage.src = window.RC_ORDERA_QR.image(link);\r\n  } catch (error) {\r\n    elements.qrImage.removeAttribute(\"src\");\r\n    elements.qrHint.textContent = (window.RC_ORDERA_OFFLINE_I18N?.translate(\"No se pudo generar el QR. Copia el enlace o vuelve a intentarlo.\", currentAppLanguage()) || \"No se pudo generar el QR. Copia el enlace o vuelve a intentarlo.\");\r\n    return;\r\n  }\r\n",
+        "afterByteOffset": 267534
+      },
+      {
+        "before": "",
+        "after": "}\r\n\r\n// Tasas de IVA admitidas (Polonia): \"23\", \"8\", \"5\", \"0\" y \"ZW\" (exento). Devuelve \"\" si no es válida.\r\n// Una tasa vacía significa \"heredar del restaurante\": la clave vatRate NO se guarda en el plato.\r\nfunction normalizeVatRate(value) {\r\n  // Fiscal device letters require its verified PTU configuration; never infer a tax category.\r\n  const raw = String(value ?? \"\").trim().toUpperCase().replace(/^VAT[_\\s-]*/, \"\").replace(/\\s*%$/, \"\").replace(/\\s+/g, \" \");\r\n  return [\"23\", \"8\", \"5\", \"0\", \"ZW\", \"NP\", \"NP I\", \"NP II\"].includes(raw) ? raw : \"\";\r\n}\r\nfunction menuVatSnapshot(dish) {\r\n  const field = Object.hasOwn(dish || {}, \"vatRate\") ? \"vatRate\"\r\n    : Object.hasOwn(dish || {}, \"vat_rate\") ? \"vat_rate\" : null;\r\n  if (!field) return {};\r\n  const value = dish[field];\r\n  // Preserve an explicitly unknown category: it must not inherit a different restaurant default.\r\n  return { vatRate: normalizeVatRate(value) || value };\r\n",
+        "afterByteOffset": 272740
+      },
+      {
+        "before": "",
+        "after": "          ...menuVatSnapshot(dish),\r\n",
+        "afterByteOffset": 339955
+      },
+      {
+        "before": "",
+        "after": "  if (elements.restaurantDefaultVatSelect) elements.restaurantDefaultVatSelect.value = defaultVatRate;\r\n",
+        "afterByteOffset": 390915
+      },
+      {
+        "before": "",
+        "after": "  if (elements.productVatSelect) elements.productVatSelect.value = \"\";\r\n",
+        "afterByteOffset": 392167
+      },
+      {
+        "before": "",
+        "after": "  const vatSelection = elements.productVatSelect?.value || \"\";\r\n  const vatRate = normalizeVatRate(vatSelection);\r\n  if (vatSelection && !vatRate) {\r\n    alert((window.RC_ORDERA_OFFLINE_I18N?.translate(\"Revisa la categoría de IVA antes de guardar.\", currentAppLanguage()) || \"Revisa la categoría de IVA antes de guardar.\"));\r\n    return;\r\n  }\r\n",
+        "afterByteOffset": 399047
+      },
+      {
+        "before": "",
+        "after": "      ...(vatRate ? { vatRate } : {}),\r\n",
+        "afterByteOffset": 400666
+      },
+      {
+        "before": "",
+        "after": "  }\r\n  if (elements.productVatSelect) {\r\n    const explicit = Object.hasOwn(product, \"vatRate\") || Object.hasOwn(product, \"vat_rate\");\r\n    const category = normalizeVatRate(product.vatRate ?? product.vat_rate);\r\n    elements.productVatSelect.value = explicit && !category ? \"__unverified__\" : category;\r\n",
+        "afterByteOffset": 403006
+      },
+      {
+        "before": "",
+        "after": "elements.restaurantDefaultVatSelect?.addEventListener(\"change\", async () => {\r\n  defaultVatRate = normalizeVatRate(elements.restaurantDefaultVatSelect.value);\r\n  localStoreCurrentSettings();\r\n  await saveSettingsWhenPossible();\r\n});\r\n",
+        "afterByteOffset": 493227
+      }
+    ]
+  },
+  "restaurante.html": {
+    "sha256": "4f4295584e7c7dabf8f574c432a5c392825e704d2d2ae2daa969d8717158ab1d",
+    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs",
+    "edits": [
+      {
+        "before": "",
+        "after": "              <label>\n                IVA del producto\n                <select id=\"productVatSelect\">\n                  <option value=\"__unverified__\" disabled>IVA sin verificar: revisar</option>\n                  <option value=\"\">Heredar del restaurante</option>\n                  <option value=\"23\">23 %</option>\n                  <option value=\"8\">8 %</option>\n                  <option value=\"5\">5 %</option>\n                  <option value=\"0\">0 %</option>\n                  <option value=\"ZW\">Exento (ZW)</option>\n                  <option value=\"NP\">No sujeto (NP)</option>\n                  <option value=\"NP I\">No sujeto (NP I)</option>\n                  <option value=\"NP II\">No sujeto (NP II)</option>\n                </select>\n              </label>\n              <label>\n                IVA por defecto del restaurante\n                <select id=\"restaurantDefaultVatSelect\">\n                  <option value=\"\">Sin definir</option>\n                  <option value=\"23\">23 %</option>\n                  <option value=\"8\">8 %</option>\n                  <option value=\"5\">5 %</option>\n                  <option value=\"0\">0 %</option>\n                  <option value=\"ZW\">Exento (ZW)</option>\n                  <option value=\"NP\">No sujeto (NP)</option>\n                  <option value=\"NP I\">No sujeto (NP I)</option>\n                  <option value=\"NP II\">No sujeto (NP II)</option>\n                </select>\n              </label>\n",
+        "afterByteOffset": 30174
+      },
+      {
+        "before": "",
+        "after": "    <script src=\"vendor/qrcode-generator-2.0.4.js\"></script>\n    <script src=\"local-qr.js\"></script>\n",
+        "afterByteOffset": 47225
+      }
+    ]
+  }
+}

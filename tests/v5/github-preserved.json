@@ -1,0 +1,16 @@
+{
+  "app.js": "d7715a3d0f7ed44a42fd690cc4144b1f9e57fce8424086ccdd89923511b846a5",
+  "cliente.js": "012d8a70418d0440f2181cafce6af11abd3aea4ddcc9434053de2b796504b7b2",
+  "mesero.js": "007f4eb7eb9564bd89a9fc5dd4cb43aa91b4c217f148c238ef0c70a810639259",
+  "colaborador.js": "b9204b6df34995994ba88da52917b7e7c4f4ab81aec048c454c79ff68fe94884",
+  "admin.js": "d155e4721b17495c333d7bc128b78b3162029ff6fb66b878223f391bdcb09bc0",
+  "offline-i18n.js": "1c3c946eb4d83dd537993e1c434ee5324095845dcb765099e2e80d88fd5e2a04",
+  "service-worker.js": "c0c3c948f80e5f19aadda7e360f8b1ba7512ae012b792e5e102c28e1c7c19de3",
+  "centro-integraciones.html": "9b8ab98e04c000bda7a4f93ebf311dfc5e871e996dca65de6f132e10ab6cf931",
+  "centro-integraciones-status.js": "63e8cde5916c9cfbafda8eb1fa95354e78e6ee8ce839fce8945e30b4f99e785d",
+  "integrations/src/integration-guards.mjs": "aa3ef3b8bf708983317cdc4b84ee4d751707cfef4954d9476e6e1d0d202c6929",
+  "integrations/src/integration-readiness.mjs": "c7349a0b401ef88b9d95d7c810fb3a43e66748b698de8870d2a7e14bfd67450b",
+  "supabase/functions/integration-status/index.ts": "0f2c74121617139a94dff660803c19f946fefdfa514f5d31e9115e2d3d678a7d",
+  "fiscal-bridge/src/fiscal-service.mjs": "337e7034ab1ee9ef8a8ac348a922c0cf040874af5c7c73fa1c16b79ea8666f83",
+  "fiscal-bridge/src/driver-registry.mjs": "d669f4130ed69b8c138446d2c3f3a30ae885723ed98bb4c6eb984750aa91a687"
+}

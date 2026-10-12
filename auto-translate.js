@@ -662,7 +662,12 @@
 
   function trimTranslationCache(source) {
     if (!source || typeof source !== "object" || Array.isArray(source)) return {};
-    const entries = Object.entries(source).slice(-TRANSLATION_CACHE_MAX_ENTRIES);
+    // Local storage may contain stale or malformed data. Filter before limiting
+    // so invalid entries cannot displace usable translations.
+    const entries = Object.entries(source).filter(([key, value]) =>
+      /^(pl|en)\|/.test(key) && key.length > 3 && key.length <= 503 &&
+      typeof value === "string" && value.length <= 2000 && value.trim().length > 0
+    ).slice(-TRANSLATION_CACHE_MAX_ENTRIES);
     return Object.fromEntries(entries);
   }
 
@@ -986,7 +991,16 @@ if (
     }
 
     const data = await response.json();
-    const translated = normalize(data?.translatedText || "");
+    // A successful HTTP status does not guarantee a valid translation.
+    // Never coerce objects/numbers into visible text or persist them as translations.
+    const rawTranslation = data?.translatedText;
+    const translated = typeof rawTranslation === "string" && rawTranslation.length <= 2000
+      ? normalize(rawTranslation)
+      : "";
+    if (!translated) {
+      translationServicePausedUntil = Date.now() + 20_000;
+      return clean;
+    }
 
     if (translated) {
       cache[key] = translated;

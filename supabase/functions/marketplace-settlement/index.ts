@@ -212,6 +212,7 @@ async function createTransfer(
         "https://api.stripe.com/v1/transfers",
         {
           method: "POST",
+          redirect: "error",
           headers: {
             Authorization:
               `Bearer ${stripeKey}`,

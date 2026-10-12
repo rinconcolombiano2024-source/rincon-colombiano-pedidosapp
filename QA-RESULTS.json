@@ -1,0 +1,64 @@
+{
+  "date": "2026-10-10",
+  "node": {
+    "passed": 370,
+    "failed": 0,
+    "skipped": 0,
+    "suitePassCounts": [
+      118,
+      74,
+      43,
+      6,
+      18,
+      15,
+      19,
+      15,
+      62
+    ]
+  },
+  "browser": {
+    "passedExecutions": 63,
+    "logicalScenarios": 21,
+    "deviceProjects": [
+      "mobile",
+      "tablet",
+      "desktop"
+    ],
+    "failed": 0,
+    "mockSupabase": true
+  },
+  "liveIntegration": {
+    "passed": 0,
+    "failed": 0,
+    "skipped": 9,
+    "todo": 0,
+    "reason": "No disposable staging fixtures or credentials"
+  },
+  "inputV6Baseline": {
+    "nodePassed": 344,
+    "nodeFailed": 0
+  },
+  "policy": {
+    "syntaxFiles": 159,
+    "wwwAssets": 45,
+    "migrationIds": 10
+  },
+  "i18nChecks": 2324,
+  "pythonBrowser": {
+    "pageLanguageLoads": 24,
+    "menuAssertions": 18,
+    "sensitivePathsBlocked": 10,
+    "cspProbes": 2,
+    "failed": 0
+  },
+  "npmAudit": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "productionActions": false,
+  "implementationCommit": "2d8b8d1576828e7cc071fc3a1d5ff56fff7d8485"
+}

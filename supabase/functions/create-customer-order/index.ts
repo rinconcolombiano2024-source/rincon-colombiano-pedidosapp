@@ -1,3 +1,4 @@
+import { withCors } from "../_shared/cors.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.117.1";
 
 /*
@@ -404,7 +405,7 @@ async function authenticatedUserId(
   return String(data.user.id);
 }
 
-Deno.serve(async (request) => {
+Deno.serve(withCors(async (request) => {
   const requestId = crypto.randomUUID();
 
   if (request.method === "OPTIONS") {
@@ -989,4 +990,4 @@ Deno.serve(async (request) => {
     },
     requestId,
   );
-});
+}));

@@ -18,9 +18,10 @@
     }
     * { box-sizing: border-box; }
     body { margin: 0; }
-    button, a { font: inherit; }
+    button, a, select { font: inherit; }
+    #integrationLanguage {min-height:44px; padding:8px; background:#152b26; color:#f3f8f5; border:1px solid #35534a; border-radius:8px;}
     button:focus-visible,
-    a:focus-visible {
+    a:focus-visible, select:focus-visible {
       outline: 3px solid #f8cb4d;
       outline-offset: 3px;
     }
@@ -47,6 +48,17 @@
       color: #d4e7df;
       text-decoration: none;
       font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      padding: 8px 10px;
+      border: 1px solid transparent;
+      border-radius: 10px;
+    }
+    .back:hover {
+      color: #f3f8f5;
+      background: #19322b;
+      border-color: #35534a;
     }
     h1 {
       font-size: clamp(29px, 5vw, 46px);
@@ -136,6 +148,7 @@
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
+      flex-wrap: wrap;
       gap: 12px;
       margin-bottom: 14px;
     }
@@ -147,7 +160,9 @@
       padding: 6px 10px;
       background: #473b25;
       color: #ffe29b;
-      white-space: nowrap;
+      max-width: 100%;
+      white-space: normal;
+      overflow-wrap: anywhere;
     }
     .status.neutral {
       background: #30413c;
@@ -168,14 +183,17 @@
       font-size: 13px;
       font-weight: 750;
       border-radius: 10px;
-      min-height: 43px;
+      min-height: 44px;
     }
     .action.secondary {
       color: #e6f3ec;
       background: #2c4940;
     }
     .action:disabled {
-      opacity: .46;
+      opacity: 1;
+      color: #bacbc4;
+      background: #263d35;
+      border: 1px solid #496157;
       cursor: not-allowed;
     }
     .requirements {
@@ -198,12 +216,23 @@
       .metric strong { font-size: 21px; }
       .tab { flex: 1; }
     }
+    @media(max-width: 420px) {
+      .shell { padding: 16px 12px 36px; }
+      .top { gap: 10px; margin-bottom: 22px; }
+      .top label { display: inline-flex; align-items: center; gap: 8px; }
+      .back { width: 100%; }
+      .tabs { gap: 6px; }
+      .tab { padding: 10px 12px; }
+      .item { padding: 15px; }
+      .actions > button { flex: 1 1 135px; }
+    }
   </style>
 </head>
 <body>
   <main class="shell">
     <header class="top">
       <div class="brand">RC <span>ORDERA</span></div>
+      <label>Idioma <select id="integrationLanguage" aria-label="Language / Język / Idioma"><option value="es">Español</option><option value="pl">Polski</option><option value="en">English</option></select></label>
       <a class="back" href="restaurante.html">
         ← Volver al restaurante
       </a>
@@ -231,7 +260,7 @@
     <section class="summary"
              aria-label="Resumen de preparación">
       <div class="metric">
-        <small>Caja fiscal</small>
+        <small>Impresora fiscal</small>
         <strong>Por conectar</strong>
       </div>
       <div class="metric">
@@ -579,7 +608,8 @@
   
 <script src="vendor/supabase-2.57.4.js"></script>
 <script src="supabase-config.js?v=91.0.4"></script>
-<script src="centro-integraciones-status.js?v=1"></script>
+<script src="offline-i18n.js?v=91.0.4"></script>
+<script src="centro-integraciones-status.js?v=2"></script>
 
 </body>
 </html>

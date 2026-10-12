@@ -1,3 +1,4 @@
+import { withCors } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
 const MAX_REQUEST_BODY_BYTES = 16_384;
@@ -307,7 +308,7 @@ function accountStateFromStripe(account: any) {
   };
 }
 
-Deno.serve(async (request) => {
+Deno.serve(withCors(async (request) => {
   if (request.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -709,4 +710,4 @@ Deno.serve(async (request) => {
     transfersEnabled: state.transfersEnabled,
     expiresAt,
   });
-});
+}));

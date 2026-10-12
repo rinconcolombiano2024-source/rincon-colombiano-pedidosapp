@@ -1,7 +1,16 @@
-const CACHE_NAME = "rc-ordera-v91-0-4-offline-r4-products-closures";
+const CACHE_NAME = "rc-ordera-v91-0-4-v6-verified-20261011-pwa-safe-r11";
 const APP_FILES = [
   "./",
   "./index.html",
+  "./portal.html",
+  "./centro-integraciones.html",
+  "./centro-integraciones-status.js",
+  "./local-qr.js",
+  "./install-app.js",
+  "./install-app.css",
+  "./portal-manifest.webmanifest",
+  "./portal-manifest.pl.webmanifest",
+  "./portal-manifest.en.webmanifest",
   "./restaurante.html",
   "./cliente.html",
   "./colaborador.html",
@@ -17,6 +26,8 @@ const APP_FILES = [
   "./auto-translate.js",
   "./supabase-config.js",
   "./vendor/supabase-2.57.4.js",
+  "./vendor/qrcode-generator-2.0.4.js",
+  "./local-qr.js",
   "./manifest.webmanifest",
   "./restaurante-manifest.webmanifest",
   "./restaurante-manifest.pl.webmanifest",
@@ -40,6 +51,14 @@ const APP_FILES = [
   "./app-icon-512.png",
 ];
 
+// Cache one canonical entry per known asset: never cache unbounded query variants.
+const STATIC_CACHE_PATHS = new Set(APP_FILES.map((file) => new URL(file, self.location.href).pathname));
+function staticCacheKey(request) {
+  const url = new URL(request.url);
+  return url.origin === self.location.origin && STATIC_CACHE_PATHS.has(url.pathname)
+    ? url.origin + url.pathname : null;
+}
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_FILES))
@@ -57,14 +76,8 @@ self.addEventListener("activate", (event) => {
 });
 
 async function cachedRuntimeResource(request) {
-  const cache = await caches.open(CACHE_NAME);
-  const exact = await cache.match(request);
-  if (exact) return exact;
-  // Precache stores unversioned files; HTML requests scripts with ?v=.
-  // Ignore the query only for known static runtime assets, never for API data.
-  const pathname = new URL(request.url).pathname;
-  const known = APP_FILES.some((file) => new URL(file, self.location.href).pathname === pathname);
-  return known ? cache.match(request, { ignoreSearch: true }) : undefined;
+  const key = staticCacheKey(request);
+  return key ? (await caches.open(CACHE_NAME)).match(key) : undefined;
 }
 
 self.addEventListener("fetch", (event) => {
@@ -85,14 +98,13 @@ self.addEventListener("fetch", (event) => {
           throw new Error(`HTTP ${response ? response.status : "unknown"}`);
         }
 
-        const responseClone = response.clone();
-
-        event.waitUntil(
-          caches.open(CACHE_NAME).then((cache) => {
-            return cache.put(event.request, responseClone).catch(() => {});
-          })
-        );
-
+        const key = staticCacheKey(event.request);
+        if (key) {
+          const responseClone = response.clone();
+          event.waitUntil(
+            caches.open(CACHE_NAME).then((cache) => cache.put(key, responseClone).catch(() => {}))
+          );
+        }
         return response;
       })
       .catch(async () => {
@@ -114,8 +126,11 @@ self.addEventListener("fetch", (event) => {
 const updateCache = fetch(event.request).then(async (response) => {
   if (!response || !response.ok) throw new Error("Document fetch failed");
   if (response && response.ok) {
-    const cache = await caches.open(CACHE_NAME);
-    await cache.put(event.request, response.clone()).catch(() => {});
+    const key = staticCacheKey(event.request);
+    if (key) {
+      const cache = await caches.open(CACHE_NAME);
+      await cache.put(key, response.clone()).catch(() => {});
+    }
   }
   return response;
 });
@@ -143,6 +158,8 @@ self.addEventListener("push", (event) => {
     };
   }
 
+  // Null/array JSON payloads must not crash push delivery.
+  if (!data || typeof data !== "object" || Array.isArray(data)) data = {};
   const language = ["es", "pl", "en"].includes(String(data.language || "").toLowerCase())
     ? String(data.language).toLowerCase()
     : "es";
@@ -190,27 +207,35 @@ self.addEventListener("push", (event) => {
   );
 });
 
+function safeNotificationUrl(value) {
+  const fallback = new URL("./colaborador.html?view=offers&app=v91.0.4", self.location.href);
+  const allowed = new URL("./colaborador.html", self.location.href);
+  if (typeof value !== "string" || value.length > 2048) return fallback.href;
+  try {
+    const target = new URL(value, self.location.href);
+    return target.origin === self.location.origin && target.pathname === allowed.pathname &&
+      !target.username && !target.password ? target.href : fallback.href;
+  } catch { return fallback.href; }
+}
+
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-
-  const targetUrl =
-    event.notification.data?.url ||
-    "./colaborador.html?view=offers&app=v91.0.4";
-
+  const targetUrl = safeNotificationUrl(event.notification.data?.url);
   event.waitUntil(
-    clients.matchAll({
-      type: "window",
-      includeUncontrolled: true,
-    }).then((windowClients) => {
-      for (const client of windowClients) {
-        if ("focus" in client) {
-          client.navigate(targetUrl);
-          return client.focus();
-        }
-      }
-
-      return clients.openWindow(targetUrl);
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
+      // Never replace an active restaurant POS, checkout or administration tab.
+      const existingCourier = windowClients.find((client) => {
+        try {
+          const current = new URL(client.url);
+          return current.origin === self.location.origin &&
+            current.pathname === new URL("./colaborador.html", self.location.href).pathname &&
+            typeof client.navigate === "function";
+        } catch { return false; }
+      });
+      if (!existingCourier) return clients.openWindow(targetUrl);
+      return existingCourier.navigate(targetUrl)
+        .then((navigated) => (navigated || existingCourier).focus())
+        .catch(() => clients.openWindow(targetUrl));
     })
   );
 });
-

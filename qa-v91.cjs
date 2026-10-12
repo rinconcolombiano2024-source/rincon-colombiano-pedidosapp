@@ -86,8 +86,8 @@ const criticalCodeBlock = criticalCodeStart >= 0 && criticalCodeEnd > criticalCo
   ? sw.slice(criticalCodeStart, criticalCodeEnd)
   : "";
 check(criticalCodeBlock.includes("fetch(event.request)"), "PWA intenta primero la red para codigo critico");
-check(criticalCodeBlock.includes("cache.put(event.request, responseClone)"), "PWA actualiza cache con respuesta valida");
-check(criticalCodeBlock.includes("await cachedRuntimeResource(event.request)") && sw.includes("cache.match(request, { ignoreSearch: true })"), "PWA usa cache cuando falla la red");
+check(criticalCodeBlock.includes("staticCacheKey(event.request)") && criticalCodeBlock.includes("cache.put(key, responseClone)") && sw.includes("STATIC_CACHE_PATHS"), "PWA actualiza solo cache estatica canonica con respuesta valida");
+check(criticalCodeBlock.includes("await cachedRuntimeResource(event.request)") && sw.includes("(await caches.open(CACHE_NAME)).match(key)") && sw.includes("STATIC_CACHE_PATHS"), "PWA usa cache canonica offline sin variantes de consultas");
 check(criticalCodeBlock.includes('status: 503'), "PWA responde 503 sin red ni cache");
 check(app.includes("requestIdleCallback(persistMenuCatalogCache"), "cache del menu fuera del hilo principal");
 check(app.includes("menuSearchTimer = window.setTimeout"), "busqueda del restaurante con debounce");

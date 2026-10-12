@@ -1,0 +1,23 @@
+{
+  "githubMain": "2730150506122ae59ba142ca1ba84ec820acb301",
+  "localImplementationAndReportsCommit": "5cdc847c56955ad0e73a45d327433dd71dc9248e",
+  "transferCommit": "965bf6292f02ee0233db2bbcf2c1c3c4544f3861",
+  "transferTree": "5419cbdbc4e20fa9e62073cb53a64dd0a5bdab2d",
+  "patchSha256": "c4e92feed3798aa0f5311730a971d7acb3ce65c22d7b927d114c971e982a4120",
+  "patchBytes": 1597999,
+  "appliedWith": "git am --keep-cr in clean main clone",
+  "filesCompared": 503,
+  "byteMismatches": 0,
+  "metadataExcluded": [
+    "GITHUB-BRANCH.patch",
+    "AUDIT-INVENTORY.json",
+    "GITHUB-TRANSFER-RESULTS.json",
+    "PACKAGE-VERIFICATION.json",
+    "MANIFEST-SHA256.txt",
+    "QA-RESULTS.json",
+    "DELIVERY-METADATA.json"
+  ],
+  "remoteBranchCreated": false,
+  "pullRequestCreated": false,
+  "writeError": "create_branch HTTP403 Resource not accessible by integration"
+}

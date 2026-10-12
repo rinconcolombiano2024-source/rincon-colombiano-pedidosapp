@@ -1,0 +1,3530 @@
+{
+  ".gitattributes": {
+    "sourceComparison": "only-v4",
+    "category": "E",
+    "reason": "Snippet de configuración redundante, sin referencia runtime. No incorporar atributos que reescriben los finales de línea históricos.",
+    "finalPath": ".gitattributes",
+    "finalDisposition": "excluded",
+    "finalSha256": null
+  },
+  ".github/workflows/qa.yml": {
+    "sourceComparison": "different",
+    "category": "C",
+    "reason": "Conservar controles GitHub e incorporar mejoras compatibles V4.",
+    "finalPath": ".github/workflows/qa.yml",
+    "finalSha256": "4bd8b452965fb6fa730e38284f628107d291b7fb7eea737d740c0939f572a1f3",
+    "finalDisposition": "integrated"
+  },
+  ".gitignore": {
+    "sourceComparison": "only-v4",
+    "category": "B",
+    "reason": "Módulo adicional; revisar contratos, secretos y pruebas antes de entrega.",
+    "finalPath": ".gitignore",
+    "finalSha256": "3041bb0722c76cfd44ca6d4902b954690ebda4af8e10461afa3b1a74be5a877c",
+    "finalDisposition": "integrated"
+  },
+  ".vercelignore": {
+    "sourceComparison": "only-v4",
+    "category": "B",
+    "reason": "Módulo adicional; revisar contratos, secretos y pruebas antes de entrega.",
+    "finalPath": ".vercelignore",
+    "finalSha256": "e6cd60626ea3058cfd543e38724839ee76111b5487a2b295c5ef0f9398834422",
+    "finalDisposition": "integrated"
+  },
+  "ANDROID-V85.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "ANDROID-V85.md",
+    "finalSha256": "24294861dafb5c3a287d8e86bdefecda82de95419981376fb7e8b458b7b01e3a",
+    "finalDisposition": "kept-github"
+  },
+  "AUDITORIA-V85-PREPRODUCCION.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "AUDITORIA-V85-PREPRODUCCION.md",
+    "finalSha256": "272c62133c80dc5b9451251fdc88db30e20f17a246ac02880020fdf80cd9628a",
+    "finalDisposition": "kept-github"
+  },
+  "BUILD-METADATA.json": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "BUILD-METADATA.json",
+    "finalSha256": "68b11ec28428e62459a6240b0a2d62d9d5f69c3fae056946d9d4988184808902",
+    "finalDisposition": "kept-github"
+  },
+  "CAMBIOS-CONTINUACION-SYNC-CPU.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "CAMBIOS-CONTINUACION-SYNC-CPU.md",
+    "finalSha256": "48e0df4dca97ab7a12eb02021b458d721a7f9e24910c3f2be046db24e3f7cf1e",
+    "finalDisposition": "kept-github"
+  },
+  "CAMBIOS-FASE1-2-3.md": {
+    "sourceComparison": "only-v4",
+    "category": "B",
+    "reason": "Módulo adicional; revisar contratos, secretos y pruebas antes de entrega.",
+    "finalPath": "CAMBIOS-FASE1-2-3.md",
+    "finalSha256": "852258e0da95756e80b77a387f4cb1a1c8b39cae8c87385d9983dd09b9572c18",
+    "finalDisposition": "integrated"
+  },
+  "CAMBIOS-ZIP25.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "CAMBIOS-ZIP25.md",
+    "finalSha256": "e0be57d95c183e89154fc1dce3a183f5d861629fd276563a3132c32bdf67f69d",
+    "finalDisposition": "kept-github"
+  },
+  "CIERRE-CPU-20260925.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "CIERRE-CPU-20260925.md",
+    "finalSha256": "9b54d5c35a176740f2bf5e1a40d0fb68de779ec3d88b7928d32402fd781e3455",
+    "finalDisposition": "kept-github"
+  },
+  "CIERRE-ZIP42-20260927.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "CIERRE-ZIP42-20260927.md",
+    "finalSha256": "7646cda8d85f429113faab162d797b811acf8697c906d55e170bb4a9b3a99c04",
+    "finalDisposition": "kept-github"
+  },
+  "CIERRE-ZIP43-P1-250-PEDIDOS.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "CIERRE-ZIP43-P1-250-PEDIDOS.md",
+    "finalSha256": "f5f62b91edb31656b4aa1dff425d07236a28b534be0281b17a553f611d987a8a",
+    "finalDisposition": "kept-github"
+  },
+  "DESPLIEGUE-V86.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "DESPLIEGUE-V86.md",
+    "finalSha256": "2e577e58bd24dfb76dad8d52c8bfc4051542f6464c8cb92004e9793833fd760b",
+    "finalDisposition": "kept-github"
+  },
+  "DIAGNOSTICO-CPU-DISPATCH.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "DIAGNOSTICO-CPU-DISPATCH.sql",
+    "finalSha256": "312b5443ab599149bf7686ccf83739c4d4ec146b5c9d45f41553b71c46dbee45",
+    "finalDisposition": "kept-github"
+  },
+  "ENTREGA-BLOQUE-PRODUCTOS-CIERRES-20260928.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "ENTREGA-BLOQUE-PRODUCTOS-CIERRES-20260928.md",
+    "finalSha256": "791fb3b316beb9be15dd4df9e2d00a17925cc97563d8b131d5ede951cd466b83",
+    "finalDisposition": "kept-github"
+  },
+  "ENTREGA-CONTINUACION-SYNC-CPU.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "ENTREGA-CONTINUACION-SYNC-CPU.md",
+    "finalSha256": "070b96151d54d8cb87e04a8c38e9a94daede4b5b7b86add82430ae198bd4ce00",
+    "finalDisposition": "kept-github"
+  },
+  "ENTREGA-CORRECCIONES-QUIRURGICAS.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "ENTREGA-CORRECCIONES-QUIRURGICAS.md",
+    "finalSha256": "d66cfa2a53f0098dcb43a31661e4ea23b4fb5aedce56b768c5a1af278f5db87c",
+    "finalDisposition": "kept-github"
+  },
+  "ENTREGA-CPU-REFRESCO.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "ENTREGA-CPU-REFRESCO.md",
+    "finalSha256": "1c124ea366368aa4f16b447e02da0b16464ee37ac5399b1e1ad6247d6f42d865",
+    "finalDisposition": "kept-github"
+  },
+  "ENTREGA-CPU-SQL.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "ENTREGA-CPU-SQL.md",
+    "finalSha256": "b6bc29e5e28e700d3de86f43e26570087b3c1f654a42eb95eed6b7e086eded7b",
+    "finalDisposition": "kept-github"
+  },
+  "ENTREGA-CPU-SYNC-ZIP20.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "ENTREGA-CPU-SYNC-ZIP20.md",
+    "finalSha256": "931b2d7243196da34e99c9c4f2360ce0eac86a5c12e640f1a39ed2f4d7ba27f6",
+    "finalDisposition": "kept-github"
+  },
+  "ENTREGA-CPU-SYNC-ZIP39.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "ENTREGA-CPU-SYNC-ZIP39.md",
+    "finalSha256": "073b9b88c173ad56a8a088c5ae3960f20953aff27c21a59f00d36b1be0e8b13c",
+    "finalDisposition": "kept-github"
+  },
+  "ENTREGA-CPU-ZIP27.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "ENTREGA-CPU-ZIP27.md",
+    "finalSha256": "4fe3875b51be6fda6107c2e83bfa15411a3214e40e547dfa84f3c695adeaebd3",
+    "finalDisposition": "kept-github"
+  },
+  "ENTREGA-P0-ZIP19.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "ENTREGA-P0-ZIP19.md",
+    "finalSha256": "574077bf47f2274c18153cd3d32705ed4019fa77b53a9b26bef79deaeae07bba",
+    "finalDisposition": "kept-github"
+  },
+  "ENTREGA-PARCIAL-RC-ORDERA-V89.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "ENTREGA-PARCIAL-RC-ORDERA-V89.md",
+    "finalSha256": "a81b6689f9603d848b45220954740aa83e59bc03db20058db1d48867697e0349",
+    "finalDisposition": "kept-github"
+  },
+  "ENTREGA-PARCIAL-RC-ORDERA-V91.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "ENTREGA-PARCIAL-RC-ORDERA-V91.md",
+    "finalSha256": "39f568330cf6e2a6e824b7eff69d3e3c375edf020cad288d64c3b336d2793f6e",
+    "finalDisposition": "kept-github"
+  },
+  "ENTREGA-RC-ORDERA-V84.1.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "ENTREGA-RC-ORDERA-V84.1.md",
+    "finalSha256": "fb0e696ab25dda8ade09ac0e2ee0da48974e97cba4b2f337be638df1708f5f47",
+    "finalDisposition": "kept-github"
+  },
+  "ENTREGA-RC-ORDERA-V84.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "ENTREGA-RC-ORDERA-V84.md",
+    "finalSha256": "fd7b6a09caa223fe923c42a0f1d5ca20c45c154c1065956d8402d971cf67e1d2",
+    "finalDisposition": "kept-github"
+  },
+  "ENTREGA-RC-ORDERA-V85.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "ENTREGA-RC-ORDERA-V85.md",
+    "finalSha256": "cf92e48d4c4f43a4d68288d29b071f3f0ae46994d750266b0fb32940d4eddd7c",
+    "finalDisposition": "kept-github"
+  },
+  "ENTREGA-RC-ORDERA-V91.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "ENTREGA-RC-ORDERA-V91.md",
+    "finalSha256": "a849e1a019c310769d00ba06f522a888d59581a01e3ee40cfa9be6183dcf3c71",
+    "finalDisposition": "kept-github"
+  },
+  "ENTREGA-ZIP21-CIERRE.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "ENTREGA-ZIP21-CIERRE.md",
+    "finalSha256": "181b12d22adb2c8d17a5181130a06391be0b348fef086cf94aef56433788f1af",
+    "finalDisposition": "kept-github"
+  },
+  "GUIA-ACCESO-ADMIN-V70.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "GUIA-ACCESO-ADMIN-V70.txt",
+    "finalSha256": "a152a4a6876973f1fc444e30b209fea49e1d9d1ed4bf8ca78916a245c5fd5a11",
+    "finalDisposition": "kept-github"
+  },
+  "GUIA-ACTUALIZACION-V73.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "GUIA-ACTUALIZACION-V73.md",
+    "finalSha256": "c7b27fa0c3e8077a101e5e76a1e022d4fb9e155e53bd4a943ace8675d7fcd7ed",
+    "finalDisposition": "kept-github"
+  },
+  "GUIA-ACTUALIZACION-V74.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "GUIA-ACTUALIZACION-V74.md",
+    "finalSha256": "d518bdf9f68ee30dd3968c15ce05a6d4aedb398b0c8ec56fe170d2dda82653b2",
+    "finalDisposition": "kept-github"
+  },
+  "GUIA-ACTUALIZACION-V75.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "GUIA-ACTUALIZACION-V75.md",
+    "finalSha256": "1c10c6bebfb9c7320ee6fd22b167033e1997ec029a436c9c578be81bcea920a6",
+    "finalDisposition": "kept-github"
+  },
+  "GUIA-ACTUALIZACION-V76.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "GUIA-ACTUALIZACION-V76.md",
+    "finalSha256": "d6393abf858d11443f6f2e3f72562195a7542614ba922b1dcc82fbd4ab4ac8a3",
+    "finalDisposition": "kept-github"
+  },
+  "GUIA-ACTUALIZACION-V79.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "GUIA-ACTUALIZACION-V79.md",
+    "finalSha256": "7da0a97725e25a85a8e57fd8513c2632466ce1f2f0bcf1d0c475485b1b3e7cc6",
+    "finalDisposition": "kept-github"
+  },
+  "GUIA-ACTUALIZACION-V80.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "GUIA-ACTUALIZACION-V80.md",
+    "finalSha256": "52fa728e540d3757dd48405ed186f59abd43aa53ba015f4b9c467b2bb5cf120a",
+    "finalDisposition": "kept-github"
+  },
+  "GUIA-CONFIGURACION-SUPABASE-V66.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "GUIA-CONFIGURACION-SUPABASE-V66.txt",
+    "finalSha256": "a250b9c857e7aca6bace7590e16a177a75e59347702ce0cb3c42ff4d3782ee6a",
+    "finalDisposition": "kept-github"
+  },
+  "GUIA-DESPLIEGUE-V85.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "GUIA-DESPLIEGUE-V85.md",
+    "finalSha256": "e4924b90fa2d058ce1f989cee1361bf01e061ca6b7360f234e5d7103e63a7263",
+    "finalDisposition": "kept-github"
+  },
+  "GUIA-PUESTA-EN-MARCHA-V72.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "GUIA-PUESTA-EN-MARCHA-V72.md",
+    "finalSha256": "f5e49e8799610a050938e3ac0de0639d8589132e9870f98027ac72de7bea7a52",
+    "finalDisposition": "kept-github"
+  },
+  "GUIA-RECUPERACION-ADMIN-V67.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "GUIA-RECUPERACION-ADMIN-V67.txt",
+    "finalSha256": "6a0fd873e0ecb3ff0249d1a5dce1e572098459dca9ded9b97722bc924883e833",
+    "finalDisposition": "kept-github"
+  },
+  "HISTORIAL-PAGINADO-20260928.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "HISTORIAL-PAGINADO-20260928.md",
+    "finalSha256": "fe9b1cc3b73467b6ee5bc5d0d643a16e6058058397a9ea57ed42b28c9bb68e3a",
+    "finalDisposition": "kept-github"
+  },
+  "INFORME-AUDITORIA-ESTABILIZACION-2026-09-04.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "INFORME-AUDITORIA-ESTABILIZACION-2026-09-04.md",
+    "finalSha256": "b32ace316f63b9723b7864d4c460f8b08eb88d583304bba15ccba0ff36a51e47",
+    "finalDisposition": "kept-github"
+  },
+  "INFORME-REPARACIONES-SUPERVISOR.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "INFORME-REPARACIONES-SUPERVISOR.md",
+    "finalSha256": "9b19726dd584d7d3f87ec31902abecb696e0e7a009c01e8b18fdf30027c9416f",
+    "finalDisposition": "kept-github"
+  },
+  "INFORME-REPARACIONES-V91.0.3.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "INFORME-REPARACIONES-V91.0.3.md",
+    "finalSha256": "72266b7f9977206de48a832396aa035d801747623fa2edccd8c5d273559a1a6c",
+    "finalDisposition": "kept-github"
+  },
+  "INFORME-ZIP41-BLOQUE1-20260924.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "INFORME-ZIP41-BLOQUE1-20260924.md",
+    "finalSha256": "23d1865a52f69e6257558323492c86b943baed0d7f52fbb6df06af29d2b0217b",
+    "finalDisposition": "kept-github"
+  },
+  "INSTRUCCIONES-FASE3-ROLES-ACCESOS.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "INSTRUCCIONES-FASE3-ROLES-ACCESOS.txt",
+    "finalSha256": "291e7b1a23ac64a38a509315aa8a0aed700794e4582833827c727022973adf64",
+    "finalDisposition": "kept-github"
+  },
+  "INSTRUCCIONES-FASE4-V55.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "INSTRUCCIONES-FASE4-V55.txt",
+    "finalSha256": "a53f7f30b2c16fabcd936cb34167bc2eb97faa44458a029e4ca5ebf3d31f5e96",
+    "finalDisposition": "kept-github"
+  },
+  "INSTRUCCIONES-FASE5-V56.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "INSTRUCCIONES-FASE5-V56.txt",
+    "finalSha256": "aae3f35f23caa69257c274e0f459cdc5ec89e7f8dc7b181e7a25cd6b84c9c859",
+    "finalDisposition": "kept-github"
+  },
+  "INSTRUCCIONES-FASE6-V57-CORREO-DISENO-RECUPERACION.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "INSTRUCCIONES-FASE6-V57-CORREO-DISENO-RECUPERACION.txt",
+    "finalSha256": "f1616ac1010ab06537715aec65c0c2723b11142df2eb9b9be9693bbc4fbe1822",
+    "finalDisposition": "kept-github"
+  },
+  "INSTRUCCIONES-FASE7-V58-COLABORADORES-ARCHIVOS-APROBACION.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "INSTRUCCIONES-FASE7-V58-COLABORADORES-ARCHIVOS-APROBACION.txt",
+    "finalSha256": "751b40376f6cd3737ecbc6c2de8ba1a42e41f2e4a9d0b608644b97b4a1df7928",
+    "finalDisposition": "kept-github"
+  },
+  "INSTRUCCIONES-QR-CLIENTE.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "INSTRUCCIONES-QR-CLIENTE.txt",
+    "finalSha256": "9d058d8c100a399bfbd724b303f296bfad43383e4247cba5e91aafbf3b1f7e8b",
+    "finalDisposition": "kept-github"
+  },
+  "INSTRUCCIONES-TABLET.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "INSTRUCCIONES-TABLET.txt",
+    "finalSha256": "8da8610d30a8558693227dab40e214bc562fc4853c9ce7329ea8eba14217df3a",
+    "finalDisposition": "kept-github"
+  },
+  "INSTRUCCIONES-V59-TRADUCCION-DESCRIPCIONES.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "INSTRUCCIONES-V59-TRADUCCION-DESCRIPCIONES.txt",
+    "finalSha256": "f39ce94a4016ac04b476cb54460094b3b9962b977791e8af0e6ab7fea5a64034",
+    "finalDisposition": "kept-github"
+  },
+  "INSTRUCCIONES-V60-ADMIN-PLATAFORMA-COLABORADORES.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "INSTRUCCIONES-V60-ADMIN-PLATAFORMA-COLABORADORES.txt",
+    "finalSha256": "c976faeca540fe309d7e3d37a4fab89cf05030b36d381ce65ebcb66d9ec414c5",
+    "finalDisposition": "kept-github"
+  },
+  "INSTRUCCIONES-V61-VALIDACION-SINCRONIZACION.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "INSTRUCCIONES-V61-VALIDACION-SINCRONIZACION.txt",
+    "finalSha256": "2fdf898df20c3b54318ea4111b86d442c75ecbea3a08f5a6a80f59bc09f6812c",
+    "finalDisposition": "kept-github"
+  },
+  "INSTRUCCIONES-V62-ADMIN-UNICO-ARCHIVOS-TRADUCCION.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "INSTRUCCIONES-V62-ADMIN-UNICO-ARCHIVOS-TRADUCCION.txt",
+    "finalSha256": "d10299f9ad9b1776b8934246f6577485f659d3fab102f27c3ff1fb99e05692ee",
+    "finalDisposition": "kept-github"
+  },
+  "INSTRUCCIONES-V63-COLABORADOR-CERCANO-IDIOMAS.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "INSTRUCCIONES-V63-COLABORADOR-CERCANO-IDIOMAS.txt",
+    "finalSha256": "2a0b5a118624b6fe1004cc61568ba1fbf3a6ab2289f32858045bc42f9eeb3f6e",
+    "finalDisposition": "kept-github"
+  },
+  "INSTRUCCIONES-V64-RC-ORDERA-FASE1.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "INSTRUCCIONES-V64-RC-ORDERA-FASE1.txt",
+    "finalSha256": "e13026cd747e5cf9111cb6aac6c28af962ac05fa3a9e8b28671235fc0e8062ef",
+    "finalDisposition": "kept-github"
+  },
+  "INSTRUCCIONES-V65-ACCESOS-PERFILES.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "INSTRUCCIONES-V65-ACCESOS-PERFILES.txt",
+    "finalSha256": "69d46ec351e751d72f4bc75f1a6e5d6d6eaef8a3536c076b34e5b083de0d1dce",
+    "finalDisposition": "kept-github"
+  },
+  "INSTRUCCIONES-V71-MESEROS-ESTACIONES.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "INSTRUCCIONES-V71-MESEROS-ESTACIONES.txt",
+    "finalSha256": "7b3d5eb3f54b46bee6bcfc41307ab35987f648a136d109053a945632038a85e6",
+    "finalDisposition": "kept-github"
+  },
+  "LEEME-ENTREGA-ZIP25.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "LEEME-ENTREGA-ZIP25.md",
+    "finalSha256": "f34676a4dd169d0e238af0494b8e55b79c8d08ff3b7373c38b135e75f7f8749a",
+    "finalDisposition": "kept-github"
+  },
+  "MEMORIA_APP_RINCON_COLOMBIANO.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MEMORIA_APP_RINCON_COLOMBIANO.txt",
+    "finalSha256": "09b79bb591b1640ca348aa0478b1174135734e614916e142706085e118edd776",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-FASE1-V65-SEGURIDAD-ACCESOS.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-FASE1-V65-SEGURIDAD-ACCESOS.sql",
+    "finalSha256": "3f75907f84b56f367434656b69e37ce9f679b29a0f25a36a3b761395bb8c691b",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-FASE1-V66-REPARAR-NUBE.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-FASE1-V66-REPARAR-NUBE.sql",
+    "finalSha256": "333176b2cf5c2ccf83090f5b80ca167efd0779827caac1f656fd4e2882979c78",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-FASE1-V67-VERIFICAR-ADMIN.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-FASE1-V67-VERIFICAR-ADMIN.sql",
+    "finalSha256": "f7e7c026713aa4233f097d140222b1371313d56177cd9e150987a55a83bd0a91",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-FASE1-V69-ELIMINAR-RESTAURANTE.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-FASE1-V69-ELIMINAR-RESTAURANTE.sql",
+    "finalSha256": "76aa89c3cc06224a2539196a8b4c010d98589eb397dfbc6f3859485931a69d20",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-FASE1-V70-ACCESO-ADMIN-SEGURO.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-FASE1-V70-ACCESO-ADMIN-SEGURO.sql",
+    "finalSha256": "29d3f58afeefb9e76e635a111a2dd12f983c6b21044c52485175f6ce8fac91ae",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-FASE1-V71-MESEROS-ESTACIONES.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-FASE1-V71-MESEROS-ESTACIONES.sql",
+    "finalSha256": "6ba70ec78b959bcd4356eca2e50dbdff616554136f0e98a6cc2903acc48357ce",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-FASE1-V72-NUBE-HORARIOS-REALTIME.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-FASE1-V72-NUBE-HORARIOS-REALTIME.sql",
+    "finalSha256": "22701416d5dbf2700152a55307177f348a22b8536f5201cc56e422c1594f0d1e",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-FASE1-V72-RECUPERAR-ADMIN-UNICO.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-FASE1-V72-RECUPERAR-ADMIN-UNICO.sql",
+    "finalSha256": "c466a61ddb60fcccf9bea24d2cf639b57741913e320a9a6c7e6bdb229a5a1ee0",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-FASE1-V73-AUTORIZACION-PERSONAL.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-FASE1-V73-AUTORIZACION-PERSONAL.sql",
+    "finalSha256": "29515a79cd16114c11007f12197550ce4b9ae3eb6b164031c7e1311a6a20a50a",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-FASE1-V74-ESTABILIZACION-APROBACIONES-UBICACION-ELIMINACION.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-FASE1-V74-ESTABILIZACION-APROBACIONES-UBICACION-ELIMINACION.sql",
+    "finalSha256": "7a1b868a577df4b623649fbc4c79d6263ad620603161d51e5dd55f5fe3ab63ef",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-FASE1-V75-ESTADO-HORARIO-AUTORIZACIONES.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-FASE1-V75-ESTADO-HORARIO-AUTORIZACIONES.sql",
+    "finalSha256": "cd84fee848beab458c5965d7279bb5d76f2ac8d1b7b1109aa3df1e224ce1ff7e",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-FASE1-V76-REGION-AUTORIZACIONES-IMPRESION.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-FASE1-V76-REGION-AUTORIZACIONES-IMPRESION.sql",
+    "finalSha256": "c5d9fc8fb0525562e84aafbce73ecbbcc6083f30abd0653b386bdb9d7df4cb0f",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-FASE1-V80-CORRECCION-FINAL-V79.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-FASE1-V80-CORRECCION-FINAL-V79.sql",
+    "finalSha256": "97e5ac31133ad9c85924b17c73a419f5cad0e6ef25964f09014f92516a1720a5",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-FASE1-V81-ENTREGAS-DOMICILIARIOS.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-FASE1-V81-ENTREGAS-DOMICILIARIOS.sql",
+    "finalSha256": "203d5cd4a8e685579b1bebd92cf1c14bec4414e3762db4baa355569784bba323",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-FASE1-V82-ESTABILIDAD-CORE.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-FASE1-V82-ESTABILIDAD-CORE.sql",
+    "finalSha256": "0d2638ba74084bc4a4beb41ceb5f06a2f923d49cce37818c91826bd9873e2d15",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-FASE10-V63-COLABORADOR-CERCANO.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-FASE10-V63-COLABORADOR-CERCANO.sql",
+    "finalSha256": "d507947524436f0611d4af79f93f96a18b74d666d12bb3282d87c6eb640a9a77",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-FASE2-REALTIME-MENU.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-FASE2-REALTIME-MENU.sql",
+    "finalSha256": "28c974ffbe107b293dbfe3cc2888bd2714495b7764b587242c7c157370d122e2",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-FASE2-V83-DESPACHO-PERSISTENTE.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-FASE2-V83-DESPACHO-PERSISTENTE.sql",
+    "finalSha256": "c5c76410a0d6fca9c4e2f211f4f52913d8b1313e6f5192bc380a3376a9dc4698",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-FASE3-ROLES-ACCESOS.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-FASE3-ROLES-ACCESOS.sql",
+    "finalSha256": "ac51208a23820ccd951f95448ea9253ddd8bf6ea9aee46ab2746139f689f4658",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-FASE4-V55-ACCESO-LIMPIO-CIERRE-RESTAURANTE.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-FASE4-V55-ACCESO-LIMPIO-CIERRE-RESTAURANTE.sql",
+    "finalSha256": "1127a7978d64d7e5e25e3ade58ffc0b2f762b5f9b45958daa63af870663e69c0",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-FASE5-V56-PEDIDOS-INVITADO-MEJORAS.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-FASE5-V56-PEDIDOS-INVITADO-MEJORAS.sql",
+    "finalSha256": "dc27bdcd80f8dfde21539479e536623b33d58462c59c4892328a2f909dff43e8",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-FASE7-V58-COLABORADORES-ARCHIVOS-APROBACION.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-FASE7-V58-COLABORADORES-ARCHIVOS-APROBACION.sql",
+    "finalSha256": "41486ab3d79cd88a2f20971178d7180e3e98e0fed54ffbcff03f8d13622cca61",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-FASE8-V60-ADMIN-PLATAFORMA-COLABORADORES.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-FASE8-V60-ADMIN-PLATAFORMA-COLABORADORES.sql",
+    "finalSha256": "6d58114168ea6250dbd3fcbc06f6afa582c75fac9a5474ce09a5d9eda3c77487",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-FASE9-V62-ADMIN-UNICO.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-FASE9-V62-ADMIN-UNICO.sql",
+    "finalSha256": "ec534ed81f5b40d72d0a1ed39ea0ee74649e35afb0aabfadf104677ba8d83597",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-FASES3-5-V84-EXPERIENCIA-CRECIMIENTO-FINANZAS.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-FASES3-5-V84-EXPERIENCIA-CRECIMIENTO-FINANZAS.sql",
+    "finalSha256": "57254bc61b0d5fee29881e0d95e99253ec2701fa4a62c19e5e632d1fc78318cd",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V73-REPARAR-COLA-REVISION-COLABORADORES.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V73-REPARAR-COLA-REVISION-COLABORADORES.sql",
+    "finalSha256": "1c5607bc1b46d07bab0cf06a72252b38efd48657affb6ec13e2396a81335b990",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V84.1-ESTABILIZACION-PRODUCCION.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V84.1-ESTABILIZACION-PRODUCCION.sql",
+    "finalSha256": "ac31471dd01dc4b352dafdf59f0063bd80be09f16c91f9b6c0ea39f3cfdb3c34",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V85-01-PROTEGER-MENU-Y-AJUSTES.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V85-01-PROTEGER-MENU-Y-AJUSTES.sql",
+    "finalSha256": "4a6dc90b237ac5fbab0a322a976af8b551a2b40be15c822631334ffe5f127e3a",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V85-02-ESTACIONES-TURNOS-CIERRES.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V85-02-ESTACIONES-TURNOS-CIERRES.sql",
+    "finalSha256": "156035849c66f29c8bdd76a0de5a4c318355a7306fe0890fce6906400ce0e260",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V85-03-PAGOS-MARKETPLACE.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V85-03-PAGOS-MARKETPLACE.sql",
+    "finalSha256": "074dad7c02fa9df55fe059cd407027999a56fed3e166d16c031decf08ff74768",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V86-01-INTEGRIDAD-PEDIDOS.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V86-01-INTEGRIDAD-PEDIDOS.sql",
+    "finalSha256": "3a9684d6022d355b34b284c9fef281470e17786d7f881abfdd544b7673020ff5",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V86-02-PAGOS-SEGUROS-Y-LIQUIDACION.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V86-02-PAGOS-SEGUROS-Y-LIQUIDACION.sql",
+    "finalSha256": "1a7f0bf29c7175359feff453f423b7e2e56ec24934de73aac311d45c67194038",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V86-03-CATALOGO-PUBLICO-SEGURO.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V86-03-CATALOGO-PUBLICO-SEGURO.sql",
+    "finalSha256": "16ee07315b5d8883f8b1e009d9b51312836de7f06be7db0664fd03f07ee0fac1",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V86-04-TRADUCCIONES-SEGURAS.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V86-04-TRADUCCIONES-SEGURAS.sql",
+    "finalSha256": "d810a8d8864be03090a6a0368d4c94a1b9d41981315f2020f300cf41b8763947",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V86-05-COTIZACION-Y-VALIDACION-PEDIDOS.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V86-05-COTIZACION-Y-VALIDACION-PEDIDOS.sql",
+    "finalSha256": "1ecd5b455a0d3676b80a7cde6cbb0eacbdcf8c14091260913f8a5b92b318d14e",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V86-06-ELIMINACION-ATOMICA-RESTAURANTE.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V86-06-ELIMINACION-ATOMICA-RESTAURANTE.sql",
+    "finalSha256": "7391de45a70ea8e51cfa480a08890921040952f0495ae717bbee426573c32d94",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V86-07-ARCHIVOS-COLABORADORES-SEGUROS.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V86-07-ARCHIVOS-COLABORADORES-SEGUROS.sql",
+    "finalSha256": "ae8c3bf2ce82b6af4a0b25b6cef01b18701611e627ba1d6a0cdb2e6b0559a9cf",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V86-08-AUTORIZACION-ESTACIONES-ESTABLE.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V86-08-AUTORIZACION-ESTACIONES-ESTABLE.sql",
+    "finalSha256": "c09d85ed881138829bd9c1227c5b73c145fd6f7b22cf6f69e9bc17249a44d845",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V88-01-SINCRONIZACION-MENU-PUBLICO.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V88-01-SINCRONIZACION-MENU-PUBLICO.sql",
+    "finalSha256": "e1fbe6deb390c0235fffb4608089f371b1fe59f933d8d2161b0317b3efe3a209",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V89-01-FOTOS-MENU-RAPIDAS-Y-PERSISTENTES.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V89-01-FOTOS-MENU-RAPIDAS-Y-PERSISTENTES.sql",
+    "finalSha256": "66e6d338031e9b0d2cf09187bc25446b05fb59c781f5b504000974666de82308",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-01-RENDIMIENTO-INTEGRIDAD-Y-CIERRES.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-01-RENDIMIENTO-INTEGRIDAD-Y-CIERRES.sql",
+    "finalSha256": "4bfdb383cad79c3decbb360b0fd12f4f7b2cb34a894eee08de239c72cb2255fc",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-02-SINCRONIZACION-CANCELACION-PEDIDOS.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-02-SINCRONIZACION-CANCELACION-PEDIDOS.sql",
+    "finalSha256": "7fa9d3848f9ebc2fb26103f26ceb1c54a683b7fef99352a36b8e8761a570d34d",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-03-CONTRATO-MULTIESTACION-Y-REALTIME.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-03-CONTRATO-MULTIESTACION-Y-REALTIME.sql",
+    "finalSha256": "94b2b5cb5031b570aac3e4e8a2adfe6c775edf334d83603a919b51ed5158e20b",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-04-CONTROL-CARGA-SINCRONIZACION.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-04-CONTROL-CARGA-SINCRONIZACION.sql",
+    "finalSha256": "3c4de23e5ebd79135a7bc38e8dcd253d00b4fe497663d563e3be00af598576b0",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-04-GUARDADO-ATOMICO-PEDIDOS.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-04-GUARDADO-ATOMICO-PEDIDOS.sql",
+    "finalSha256": "8dd523a0df1f0d874c0d844507c81378c6fbaef30049c7eefc1c3b5148d55663",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-05-POS-SINCRONIZA-CERRADO.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-05-POS-SINCRONIZA-CERRADO.sql",
+    "finalSha256": "8a915ed847b8490e19d9b04fb707b3ff884ae08d14045b2f13065e60842a20c9",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-06-CORREGIR-SYNC-ESTACIONES.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-06-CORREGIR-SYNC-ESTACIONES.sql",
+    "finalSha256": "0f06ad0e0335f77e72a07f871fb0bb5c019083b2af46a69124bc9a5137e110df",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-07-CONTRATO-COMPATIBILIDAD-SINCRONIZACION.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-07-CONTRATO-COMPATIBILIDAD-SINCRONIZACION.sql",
+    "finalSha256": "a56adecfd32dc6b3964ecacad9e6c4d90323b37bffc9be4db55ef76dc8402aa1",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-08-CONCILIACION-DISPUTAS.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-08-CONCILIACION-DISPUTAS.sql",
+    "finalSha256": "c03aa9a0cb0da815175865b529722df371093462ef297e07fa3100905a9b2e05",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-09-CONCILIACION-REEMBOLSOS.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-09-CONCILIACION-REEMBOLSOS.sql",
+    "finalSha256": "45f8b613768a20497636dd84ab1dcb482644872c8360cda03a37bb206d5ed909",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-10-CERRAR-ESCRITURA-DIRECTA-CUSTOMER-ORDERS.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-10-CERRAR-ESCRITURA-DIRECTA-CUSTOMER-ORDERS.sql",
+    "finalSha256": "3aeef35c88d6e95acafb52d571f0e48511261bd309b5a005ac33f80a8a8d3e72",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-11-INMUTABILIDAD-FINANCIERA-MARKETPLACE.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-11-INMUTABILIDAD-FINANCIERA-MARKETPLACE.sql",
+    "finalSha256": "d5dd0e0d9e97fefc7ec33f64322362d2d1280e9fe8a3454188e3108e38d91aa5",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-12A-PREPARAR-BOVEDA-TOKENS.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-12A-PREPARAR-BOVEDA-TOKENS.sql",
+    "finalSha256": "f34ec7597d77eb9cfb71383a97f75448858abd5f37e1358d3d1cf380cd7f0070",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-12B-HASH-Y-CERRAR-TOKENS-REVISION-SENIOR-LOCKED.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-12B-HASH-Y-CERRAR-TOKENS-REVISION-SENIOR-LOCKED.sql",
+    "finalSha256": "3925f7c87bf6d7883147a7daaddfe9f43799b228ed452c6e42fd29f9286eb044",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-12C-CERRAR-DML-DIRECTO-DELIVERY-ASSIGNMENTS.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-12C-CERRAR-DML-DIRECTO-DELIVERY-ASSIGNMENTS.sql",
+    "finalSha256": "ebf29790d91a973f291dafbdf4d437b776091a00bc367fc12a2609e92e68101d",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-13-P0-01-ENTREGA-Y-LIBERACION.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-13-P0-01-ENTREGA-Y-LIBERACION.sql",
+    "finalSha256": "1c0c28372bc4a6c97e10f8edc40854b5c21052ea7e78b0bd1601413ac0d6c707",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-14-STATION-STATUS-ALIAS.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-14-STATION-STATUS-ALIAS.sql",
+    "finalSha256": "742bcb65f0476f66fcb233e5437d9ce2cf348995cf0673037d104af878ad14ab",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-15-TAREAS-ESTACIONES-IDEMPOTENTES.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-15-TAREAS-ESTACIONES-IDEMPOTENTES.sql",
+    "finalSha256": "00849012da7661a094272b7d2a69669fafebd689f40d19bcf79f96d8dbfdb92d",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-16-CHAT-LECTURA-CONDICIONAL.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-16-CHAT-LECTURA-CONDICIONAL.sql",
+    "finalSha256": "d69d1103d0bf2b687cbda9ac2da2afd4796bad6511a16cc4a739c03e081f6025",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-17-LIMITE-MENSAJES-INVITADO.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-17-LIMITE-MENSAJES-INVITADO.sql",
+    "finalSha256": "f1a50aa0ba617df9c3409030ae7d0f312eb759549af6c79cde9ad42dfa63a57d",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-18-AUTORIZACION-POS.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-18-AUTORIZACION-POS.sql",
+    "finalSha256": "cc5336f093d5b2e34afbf462f6f9b0d2b6af00ebdc7e87f4f6b1d6de445c53d5",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-19-ESTACIONES-Y-LIMITE-SERIALIZADO.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-19-ESTACIONES-Y-LIMITE-SERIALIZADO.sql",
+    "finalSha256": "a76a5c98c8efebf6dbe8abf04ed5bdab7864fc292da9a725795609cfb8f4647c",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-20-CHAT-MARCA-PRIVADA.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-20-CHAT-MARCA-PRIVADA.sql",
+    "finalSha256": "3f7ed7f6577802c9bdb515840affe76d00aa2371a3ff8ff2710d0588902ef9fa",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-21-ESTACIONES-LECTURA-POR-ID.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-21-ESTACIONES-LECTURA-POR-ID.sql",
+    "finalSha256": "861cf841b7f023444a37e2db056f7963178bbe0adf3a5e3f88a4e42c30bd44f4",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-22-MENU-VALIDACION-UNA-PASADA.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-22-MENU-VALIDACION-UNA-PASADA.sql",
+    "finalSha256": "751b7c046bf4b9dd336df66f3dbf7876f4e6138bcdb4b894df1577900e99c475",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-23-P1-SEGURIDAD-PEDIDOS.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-23-P1-SEGURIDAD-PEDIDOS.sql",
+    "finalSha256": "d7614b1862232e56e67e81aa9402f95ab2d59d56ab8c4d7c08ad99ed8f7fc1e4",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-24-CIERRE-COMPLETO.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-24-CIERRE-COMPLETO.sql",
+    "finalSha256": "4854def736e0c64be6cc41f4a0eefd57852e8f75d4a1b060cb05b78f6c429bc9",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-25-PRODUCTOS-Y-CIERRE-UNICO.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-25-PRODUCTOS-Y-CIERRE-UNICO.sql",
+    "finalSha256": "a821f9803a37ce3f719415948f2f56d7538216dd3ce3200d535aa7dce05e9da6",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-26-CONTRATO-RELEASE-V91-25.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-26-CONTRATO-RELEASE-V91-25.sql",
+    "finalSha256": "3329b6a8ceeba612908912ec18e0725825682a5a72e3dc580ab8f771393a4aef",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-27-OCULTAR-TAREAS-TERMINADAS.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-27-OCULTAR-TAREAS-TERMINADAS.sql",
+    "finalSha256": "0e781190f9c0621d37e58dae2b50f350dabdfc3acd88608c7311f8fa7b62002b",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-27-P0-RATE-LIMIT-EDGE-PEDIDOS.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-27-P0-RATE-LIMIT-EDGE-PEDIDOS.sql",
+    "finalSha256": "820f09d8416fb2f5de5f89b7a5c9b9b839a1fa7f82e3825602a106508ef9ef9b",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-28-FLUJO-ESTACIONES-SIN-RETROCESOS.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-28-FLUJO-ESTACIONES-SIN-RETROCESOS.sql",
+    "finalSha256": "2592bf07272a9c3f9e41272f2bc61f769aac8274101b407d1c59e90883ec1a11",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-29A-RPC-INTERNO-PEDIDOS.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-29A-RPC-INTERNO-PEDIDOS.sql",
+    "finalSha256": "6a8d27afa7afec1f1d694b260dcd421b2b017f5ad49333efad28f7d8d6ad5d86",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-30-P0-CANCELACION-PAGO-ONLINE.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-30-P0-CANCELACION-PAGO-ONLINE.sql",
+    "finalSha256": "579f0cc18335319c5d1fcdcdfde2e178f344c4bc43655fca7774b3ebafe5e428",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-31-DIRECCION-CANONICA-DOMICILIO.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-31-DIRECCION-CANONICA-DOMICILIO.sql",
+    "finalSha256": "096eb3da8d2e1050a0c5f2b8f8760dcc5d5a6c46f6473b7e855b9507e3889a99",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-32-PGCRYPTO-DELIVERY-QUOTE.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-32-PGCRYPTO-DELIVERY-QUOTE.sql",
+    "finalSha256": "1b21dc048010b4aa3f4c92ccbb81f28f0ad3fc0100df3053a67008b03728c484",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-33-REVISION-CONFLICT-SQLSTATE.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-33-REVISION-CONFLICT-SQLSTATE.sql",
+    "finalSha256": "e5b724e973a8a7a45250e529641aa61a814e3f98d3020419bd2f7f77c38438c2",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-34-FISCAL-BASE.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-34-FISCAL-BASE.sql",
+    "finalSha256": "d722181f5730876eb8161fffc2a8e52b078e4778441a2206cad983d6d7f3bc20",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-35-FISCAL-CLAIM.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-35-FISCAL-CLAIM.sql",
+    "finalSha256": "dddb5ccd27aea0c512a6675d4e64817a6162af0ddeee095acdff9bdc4fc91399",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-36-DELIVERY-INBOX.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-36-DELIVERY-INBOX.sql",
+    "finalSha256": "2b3dc52739722594101189f5ccb33d83064d023dcec19505492cc500981cf28c",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-37-EXTERNAL-ORDER-INGEST.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-37-EXTERNAL-ORDER-INGEST.sql",
+    "finalSha256": "fb841d0e20cc9e86888af923374e256e393021d4b68b5d3c8cf36af8378a19db",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-38-EXTERNAL-EVENT-JOURNAL.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-38-EXTERNAL-EVENT-JOURNAL.sql",
+    "finalSha256": "64c563bb6e8f4793cbbc4b0b5788e1d7dfb494b8100daac43e8eee1719018724",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-39-EXTERNAL-EVENT-SECURITY.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-39-EXTERNAL-EVENT-SECURITY.sql",
+    "finalSha256": "51d027291a1900a49dc134b949b418dc555d00db713932fcbcefab001f5acfc4",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-40-EXTERNAL-TENANT-INTEGRITY.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-40-EXTERNAL-TENANT-INTEGRITY.sql",
+    "finalSha256": "5fdacf2c449a5d4a8c05c192d3636a7f37c42888a97739142f56d410603b5721",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-41-EXTERNAL-ATOMIC-RECEIVE.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-41-EXTERNAL-ATOMIC-RECEIVE.sql",
+    "finalSha256": "636a89a2c0da9813a56cbd9e531ea0f162e7913eb7128de04ab52e672b706f3e",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-46-EXTERNAL-PRODUCT-MAPPING.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-46-EXTERNAL-PRODUCT-MAPPING.sql",
+    "finalSha256": "2a2585c130126d50fb8a53ed2f13d87b68ecb3078703a2030d23f2d7c78d5532",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-47-EXTERNAL-MAPPING-VALIDATION.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-47-EXTERNAL-MAPPING-VALIDATION.sql",
+    "finalSha256": "af834e6d906d864c770f511f12f6ada0eae720148918462d2adf80c15b0bbf15",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-48-EXTERNAL-MAPPING-CONTROL.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-48-EXTERNAL-MAPPING-CONTROL.sql",
+    "finalSha256": "8eb4694c8fb58147953d7c5cd24e0dc373d73fa6992f1bb1b2939c948ea6eaff",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-49-EXTERNAL-ORDER-ITEM-CHECK.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-49-EXTERNAL-ORDER-ITEM-CHECK.sql",
+    "finalSha256": "99040289fb91057a10cc2d08049c029ed4c75c8d83e8f772752eba7baa6e0d80",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-50-EXTERNAL-ORDER-READINESS.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-50-EXTERNAL-ORDER-READINESS.sql",
+    "finalSha256": "2296645316a962bbafbe89ff5a423a0de55825618f9fa2dfe71e396199461ea8",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-51-EXTERNAL-MONEY-VALIDATION.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-51-EXTERNAL-MONEY-VALIDATION.sql",
+    "finalSha256": "5ace09950d354dd37b1ff108f40f4f2d3b59d5869ca59d95aeca179d8203f2cb",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-52-EXTERNAL-CONSOLIDATED-AUDIT.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-52-EXTERNAL-CONSOLIDATED-AUDIT.sql",
+    "finalSha256": "ad7d364f5cf7de65de10a7e16adff924059a77520d9d957e5e70f3ab01880814",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-55-EXTERNAL-BATCH-AUDIT.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-55-EXTERNAL-BATCH-AUDIT.sql",
+    "finalSha256": "388bd387c0d184914d5eed09d26395b4880207f66d8879d751095e72262a9436",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-56-EXTERNAL-BATCH-ERROR-ISOLATION.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-56-EXTERNAL-BATCH-ERROR-ISOLATION.sql",
+    "finalSha256": "f4ea7c382084441aacab76ae47f9ddd219f0b699faafaf5797c4750c92e14c8f",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-65-EXTERNAL-MAPPING-RESTAURANT-GUARD.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-65-EXTERNAL-MAPPING-RESTAURANT-GUARD.sql",
+    "finalSha256": "d4de10187c5a94b9d0719fca1e0cf2a79686351d2bce560aa5fbf48aadee7198",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-66-EXTERNAL-RESTAURANT-ELIGIBILITY.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-66-EXTERNAL-RESTAURANT-ELIGIBILITY.sql",
+    "finalSha256": "587d28a4fb7b138659e40b1fa218e8c805a4882f1049fb8a7faa339632b74845",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-67-EXTERNAL-BATCH-ELIGIBILITY.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-67-EXTERNAL-BATCH-ELIGIBILITY.sql",
+    "finalSha256": "beeaee41b8934020e1c9e14756d6d26cefa2bb22457b8e29a2012fa63d1d494a",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-68-EARLY-RESTAURANT-GUARD.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACION-V91-68-EARLY-RESTAURANT-GUARD.sql",
+    "finalSha256": "2dec8652c5809926cfacdc9a5fd64e5df336ea17e562a342a19d6d90688f6eaf",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-69-EXTERNAL-REVIEW-GATE.sql": {
+    "sourceComparison": "only-github",
+    "category": "A",
+    "reason": "Conservar GitHub y todas sus capacidades.",
+    "finalPath": "MIGRACION-V91-69-EXTERNAL-REVIEW-GATE.sql",
+    "finalSha256": "ce44b806a2dd8f3ced77f5e79981d1d4439a7ccb9a580dbd6a7c65c0a3d4109d",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-69-FISCAL-AGENT-RESULT.sql": {
+    "sourceComparison": "only-v4",
+    "category": "D",
+    "reason": "Corregir incertidumbre, concurrencia, conciliación o identificación antes de habilitar.",
+    "finalPath": "MIGRACION-V5-20261010-01-FISCAL-AGENT-RESULT.sql",
+    "finalSha256": "833858d87bef9606a1fc29f1be2c02dd9da573ef9c5a0cf997dc3187a720e2ee",
+    "finalDisposition": "integrated"
+  },
+  "MIGRACION-V91-70-EXTERNAL-BATCH-REVIEW-COMPAT.sql": {
+    "sourceComparison": "only-github",
+    "category": "A",
+    "reason": "Conservar GitHub y todas sus capacidades.",
+    "finalPath": "MIGRACION-V91-70-EXTERNAL-BATCH-REVIEW-COMPAT.sql",
+    "finalSha256": "c0cff78523d1037e0098168d53197dce6247e41afc92fc67235ec01e768dc5a2",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACION-V91-70-ORDEN-IDEMPOTENTE-IVA.sql": {
+    "sourceComparison": "only-v4",
+    "category": "D",
+    "reason": "Corregir incertidumbre, concurrencia, conciliación o identificación antes de habilitar.",
+    "finalPath": "MIGRACION-V5-20261010-02-ORDEN-IDEMPOTENTE-IVA.sql",
+    "finalSha256": "2d61f7afe2958ded28d4da7dc0fb27d3d197547f139599045ce58d647c66cbc3",
+    "finalDisposition": "integrated"
+  },
+  "MIGRACIONES-V85.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACIONES-V85.md",
+    "finalSha256": "d5c6f76439cbddb10043f85fd0b810fe9b69efd109ef3c7da858e7a68252b5e7",
+    "finalDisposition": "kept-github"
+  },
+  "MIGRACIONES-V86.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "MIGRACIONES-V86.md",
+    "finalSha256": "91603a7e99bccc3f45bda5664dd1ef75f4a7f697b2ae588a6f4d9babf885341a",
+    "finalDisposition": "kept-github"
+  },
+  "PAGOS-MARKETPLACE-V85.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "PAGOS-MARKETPLACE-V85.md",
+    "finalSha256": "e99c16eec771b4fe534f495a8f986e3e7d4fbe771d6ffb291165804a772fa49c",
+    "finalDisposition": "kept-github"
+  },
+  "PATCH-CPU-DISPATCH-SINGLEFLIGHT.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "PATCH-CPU-DISPATCH-SINGLEFLIGHT.sql",
+    "finalSha256": "b881c6f8118812dfb8355542acf8cd61ea68f480435d4748d92c519f7c99bc29",
+    "finalDisposition": "kept-github"
+  },
+  "PREFLIGHT-V84.1.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "PREFLIGHT-V84.1.sql",
+    "finalSha256": "a1803070e87539e5066fe007d55aa3e9e9c61e395b624ceecbc9044cfa9a6aa4",
+    "finalDisposition": "kept-github"
+  },
+  "PRUEBAS-V86.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "PRUEBAS-V86.md",
+    "finalSha256": "95c764bd5d97b8f12426bac546cbd18ca36e8ba473e6af5edc04a51687312592",
+    "finalDisposition": "kept-github"
+  },
+  "README.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "README.md",
+    "finalSha256": "7616a190f943daf8fd9509a6f34775e71e57058b9664d471b9e10b6ebdce58b0",
+    "finalDisposition": "kept-github"
+  },
+  "REPORTE-AUDITORIA-Y-REPARACION-V86.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "REPORTE-AUDITORIA-Y-REPARACION-V86.md",
+    "finalSha256": "97e35c1c809a1333e4197acc7d404ef7f733dc5e9019f480fa1ad741abe16d3c",
+    "finalDisposition": "kept-github"
+  },
+  "REPORTE-AUDITORIA-Y-VALIDACION-V84.1.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "REPORTE-AUDITORIA-Y-VALIDACION-V84.1.md",
+    "finalSha256": "69d59405a2172912fa11430c08c7984d94aeb94155b1ef22650673ccadc89ea1",
+    "finalDisposition": "kept-github"
+  },
+  "REPORTE-TRADUCCION-V87.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "REPORTE-TRADUCCION-V87.md",
+    "finalSha256": "32b304479e7a43f12a353dd98499fbe57a6e9b444b4428cb5e1a6d5de88d4503",
+    "finalDisposition": "kept-github"
+  },
+  "REPORTE-VALIDACION-V61.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "REPORTE-VALIDACION-V61.txt",
+    "finalSha256": "c3e2f7c1b160db475610d55f33012dd7b44155fa0f8950c9c16a19d3d7de7514",
+    "finalDisposition": "kept-github"
+  },
+  "REPORTE-VALIDACION-V62.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "REPORTE-VALIDACION-V62.txt",
+    "finalSha256": "32005cd7f79e853d385acb1702dc20a22a4bca667b5983ca5c93d1a59a6c31dd",
+    "finalDisposition": "kept-github"
+  },
+  "REPORTE-VALIDACION-V63.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "REPORTE-VALIDACION-V63.txt",
+    "finalSha256": "e9d01eaa0a2c113d1b90eca941c0c529d7797d7bb9de0312e8a404ddb64741d0",
+    "finalDisposition": "kept-github"
+  },
+  "REPORTE-VALIDACION-V64-FASE1-RC-ORDERA.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "REPORTE-VALIDACION-V64-FASE1-RC-ORDERA.txt",
+    "finalSha256": "74e74fcc4bde6665cfd5431d378c091122c017935088629c2968e16c542206df",
+    "finalDisposition": "kept-github"
+  },
+  "REPORTE-VALIDACION-V65-ACCESOS-PERFILES.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "REPORTE-VALIDACION-V65-ACCESOS-PERFILES.txt",
+    "finalSha256": "4c6ffb529c09ad4ef84b37b77548bec93e171333cbcf2d9e3cdefb555dc761ea",
+    "finalDisposition": "kept-github"
+  },
+  "REPORTE-VALIDACION-V66-NUBE-SUPABASE.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "REPORTE-VALIDACION-V66-NUBE-SUPABASE.txt",
+    "finalSha256": "3532ee3078865e60c444bef9933b0bb3717d304bd3534f6ef5f2347753c1eff8",
+    "finalDisposition": "kept-github"
+  },
+  "REPORTE-VALIDACION-V67-ADMIN-RECUPERACION.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "REPORTE-VALIDACION-V67-ADMIN-RECUPERACION.txt",
+    "finalSha256": "b08e055d41c1d665698a5ca60c75c68dba00baf2cf6ac0a8c687a39ad46f0b79",
+    "finalDisposition": "kept-github"
+  },
+  "REPORTE-VALIDACION-V68-EXPERIENCIA-USUARIO.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "REPORTE-VALIDACION-V68-EXPERIENCIA-USUARIO.txt",
+    "finalSha256": "4376e7a29eb479db2a40fde8a494905cec30e17784f55876ade412317d972f36",
+    "finalDisposition": "kept-github"
+  },
+  "REPORTE-VALIDACION-V69-ELIMINAR-RESTAURANTE.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "REPORTE-VALIDACION-V69-ELIMINAR-RESTAURANTE.txt",
+    "finalSha256": "6c80e1ba04cf4c544d438a893e3b997a2377c065d7af5f085f0e8f471e462125",
+    "finalDisposition": "kept-github"
+  },
+  "REPORTE-VALIDACION-V70-ACCESO-ADMIN.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "REPORTE-VALIDACION-V70-ACCESO-ADMIN.txt",
+    "finalSha256": "8b28e8fedacf7816c8915f1072dcdf310b4fe607b90bbd20c49753a07eace736",
+    "finalDisposition": "kept-github"
+  },
+  "REPORTE-VALIDACION-V71-MESEROS-ESTACIONES.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "REPORTE-VALIDACION-V71-MESEROS-ESTACIONES.txt",
+    "finalSha256": "afe5818e0173f6263af5f3a64ebdfda9101b06a624dcc7792d41d1de8c6c7bbe",
+    "finalDisposition": "kept-github"
+  },
+  "REPORTE-VALIDACION-V72-NUBE-REALTIME.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "REPORTE-VALIDACION-V72-NUBE-REALTIME.md",
+    "finalSha256": "5f34763c4499c5c0499fe293e41b56d4e2e9b8cb6ef3535046aa02672d0a68cf",
+    "finalDisposition": "kept-github"
+  },
+  "REPORTE-VALIDACION-V73-COLA-ADMIN-COLABORADORES.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "REPORTE-VALIDACION-V73-COLA-ADMIN-COLABORADORES.md",
+    "finalSha256": "f2c28757a951925ee4dc75177f312b0e219ad640f787e2052e796ab10a0fa5df",
+    "finalDisposition": "kept-github"
+  },
+  "REPORTE-VALIDACION-V73-SESIONES-PERSONAL.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "REPORTE-VALIDACION-V73-SESIONES-PERSONAL.md",
+    "finalSha256": "9f2987e4bde6e2a3f198086d48b565d15272f0e0e8c9e6176de67088be7ddd72",
+    "finalDisposition": "kept-github"
+  },
+  "REPORTE-VALIDACION-V74-ESTABILIZACION.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "REPORTE-VALIDACION-V74-ESTABILIZACION.md",
+    "finalSha256": "6e0511d478e463b3ce8e8cd216609bc7b7a9e8a8cdca7ad956450d6e3671cbf4",
+    "finalDisposition": "kept-github"
+  },
+  "REPORTE-VALIDACION-V75-ESTADO-AUTORIZACIONES.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "REPORTE-VALIDACION-V75-ESTADO-AUTORIZACIONES.md",
+    "finalSha256": "699086426e97463e7633b8f4e051fb855ee0a4f7d07143e1986b5d3d2ee1d885",
+    "finalDisposition": "kept-github"
+  },
+  "REPORTE-VALIDACION-V76-ESTABILIZACION.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "REPORTE-VALIDACION-V76-ESTABILIZACION.md",
+    "finalSha256": "41ba0c09043fa6cecdcb4d3f099565f23a651dca6a134e065dd559edf1915bf5",
+    "finalDisposition": "kept-github"
+  },
+  "REPORTE-VALIDACION-V79-UBICACION-IDIOMAS.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "REPORTE-VALIDACION-V79-UBICACION-IDIOMAS.md",
+    "finalSha256": "d73a4814e8d50b46405b781861f28a7640016c361b89560c38dec765dc127f76",
+    "finalDisposition": "kept-github"
+  },
+  "REPORTE-VALIDACION-V80-CORRECCION-FINAL-V79.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "REPORTE-VALIDACION-V80-CORRECCION-FINAL-V79.md",
+    "finalSha256": "8fdae4a09060dbdb64a35ed0a719cc33b9b206be27f559101a6a03a4bef74a37",
+    "finalDisposition": "kept-github"
+  },
+  "REPORTE-VALIDACION-V85.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "REPORTE-VALIDACION-V85.md",
+    "finalSha256": "7db231ee07ac7dea3a3e38949f7fa177ccad662512d01509d151e1866b2eecd4",
+    "finalDisposition": "kept-github"
+  },
+  "ROLLBACK-V85.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "ROLLBACK-V85.md",
+    "finalSha256": "cbbcf18161e57d3f9a24aaed2b83feee42ae20ea391fc145287d7d1ef81d3ea0",
+    "finalDisposition": "kept-github"
+  },
+  "SECURITY.md": {
+    "sourceComparison": "only-v4",
+    "category": "B",
+    "reason": "Módulo adicional; revisar contratos, secretos y pruebas antes de entrega.",
+    "finalPath": "SECURITY.md",
+    "finalSha256": "923f1fd6bfe3453a034aa99701fbd8acef1ecfec6c326cfffd0503d32c0f17a8",
+    "finalDisposition": "integrated"
+  },
+  "SINCRONIZACION-NUBE.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "SINCRONIZACION-NUBE.txt",
+    "finalSha256": "1ab18037dd11eb05b646c2d52dcf0a36c32766c603713e6f34d5cd678e00f297",
+    "finalDisposition": "kept-github"
+  },
+  "TEST-V91-54-EXTERNAL-MONEY-REGRESSION.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "TEST-V91-54-EXTERNAL-MONEY-REGRESSION.sql",
+    "finalSha256": "572089ec6492c7611f0644ef404b1564e9c0b818b006d684c88dceaa5cfb6fa3",
+    "finalDisposition": "kept-github"
+  },
+  "TEST-V91-57-EXTERNAL-BATCH-ISOLATION.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "TEST-V91-57-EXTERNAL-BATCH-ISOLATION.sql",
+    "finalSha256": "a9893e54406a29330ea7f21159a37971c9555173d9211b395cd5ff705c52630b",
+    "finalDisposition": "kept-github"
+  },
+  "TEST-V91-58-EXTERNAL-BATCH-MIXED-REGRESSION.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "TEST-V91-58-EXTERNAL-BATCH-MIXED-REGRESSION.sql",
+    "finalSha256": "a97bcce872bb9c4d686f5614abe86558e8c25966d8cff613873d71aaf86095de",
+    "finalDisposition": "kept-github"
+  },
+  "TEST-V91-71-EXTERNAL-REVIEW-GATE.sql": {
+    "sourceComparison": "only-github",
+    "category": "A",
+    "reason": "Conservar GitHub y todas sus capacidades.",
+    "finalPath": "TEST-V91-71-EXTERNAL-REVIEW-GATE.sql",
+    "finalSha256": "71635a5c562b42c66dc6673bb1bb3e36c7ef4c5f46b8e114414b79bc7bb1dbb8",
+    "finalDisposition": "kept-github"
+  },
+  "VALIDACION-POST-DESPLIEGUE-V84.1.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "VALIDACION-POST-DESPLIEGUE-V84.1.sql",
+    "finalSha256": "5fbc5b5c55863ffa99dc51eb81c1c0b2632a1eb2cab455453a491ddd113c1725",
+    "finalDisposition": "kept-github"
+  },
+  "VALIDACION-V74.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "VALIDACION-V74.sql",
+    "finalSha256": "61eb6a6639b14a01a51a0a7e4d80ad041d0d48dee7581dc2421e67eecc4e6081",
+    "finalDisposition": "kept-github"
+  },
+  "VALIDACION-V75.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "VALIDACION-V75.sql",
+    "finalSha256": "f26453e5916e8d0dec90573ef8f95ac55186f14edf91f0c2f2883eee8dbeb65e",
+    "finalDisposition": "kept-github"
+  },
+  "VALIDACION-V76.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "VALIDACION-V76.sql",
+    "finalSha256": "910a8a5cc859f0ddd282a6ae679e6b028920ba5fad100718d68a7f7fb947839f",
+    "finalDisposition": "kept-github"
+  },
+  "VALIDACION-V80.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "VALIDACION-V80.sql",
+    "finalSha256": "6f8c4525cc2f5c266a5201cad17cef900fd5e2f037a1bf3d4805152bf9a09fad",
+    "finalDisposition": "kept-github"
+  },
+  "VALIDACION-V84.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "VALIDACION-V84.sql",
+    "finalSha256": "9f61eba7578bd4f6652edfe6db49b33d85e009d51b2b09fb34e9ef4aecb0883b",
+    "finalDisposition": "kept-github"
+  },
+  "VALIDACION-V85.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "VALIDACION-V85.sql",
+    "finalSha256": "6039c17c8fb9be98363ebaeece8a09da5062e3f23fcef233630ce8e2c77149ab",
+    "finalDisposition": "kept-github"
+  },
+  "VALIDACION-V86.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "VALIDACION-V86.sql",
+    "finalSha256": "f5dde511a593f059955d57f39bb5da8a58b8410f48cac7672b438e2062c4460f",
+    "finalDisposition": "kept-github"
+  },
+  "VALIDACION-V88-MENU-REALTIME.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "VALIDACION-V88-MENU-REALTIME.sql",
+    "finalSha256": "0cb7d8abdb57507f0b1c5483eac0343d68f8b3de077e4bce24ecb77f92bb5cb7",
+    "finalDisposition": "kept-github"
+  },
+  "VALIDACION-V89-FOTOS-Y-RENDIMIENTO.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "VALIDACION-V89-FOTOS-Y-RENDIMIENTO.sql",
+    "finalSha256": "e56c22e3e7007a2a6313da41c497ee1bd69b49b0cb39d7116e6b3a496aa631a2",
+    "finalDisposition": "kept-github"
+  },
+  "VALIDACION-V91-RENDIMIENTO-INTEGRIDAD-Y-CIERRES.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "VALIDACION-V91-RENDIMIENTO-INTEGRIDAD-Y-CIERRES.sql",
+    "finalSha256": "b8aae207cb954ead3108cd9f5e3d1b56dc05067ea80efbeceb5dca0446fc0dec",
+    "finalDisposition": "kept-github"
+  },
+  "accounting/bin/close.mjs": {
+    "sourceComparison": "only-v4",
+    "category": "D",
+    "reason": "Corregir incertidumbre, concurrencia, conciliación o identificación antes de habilitar.",
+    "finalPath": "accounting/bin/close.mjs",
+    "finalSha256": "47a857609981def59aee8300b9ca0f8d32809f23cc7ac9f78e9059c80b4338cd",
+    "finalDisposition": "integrated"
+  },
+  "accounting/src/adapters.mjs": {
+    "sourceComparison": "only-v4",
+    "category": "D",
+    "reason": "Corregir incertidumbre, concurrencia, conciliación o identificación antes de habilitar.",
+    "finalPath": "accounting/src/adapters.mjs",
+    "finalSha256": "3b2063a9d4a3a4686e114ddb2bd5cde9b2a00f7c0caf18f049b9911f45064ed2",
+    "finalDisposition": "integrated"
+  },
+  "accounting/src/daily-close.mjs": {
+    "sourceComparison": "only-v4",
+    "category": "D",
+    "reason": "Corregir incertidumbre, concurrencia, conciliación o identificación antes de habilitar.",
+    "finalPath": "accounting/src/daily-close.mjs",
+    "finalSha256": "d075f2ab32508c7e080f025cf5562ec5de24bc7aaf002fd1f0560939906f926d",
+    "finalDisposition": "integrated"
+  },
+  "accounting/src/money.mjs": {
+    "sourceComparison": "only-v4",
+    "category": "D",
+    "reason": "Corregir incertidumbre, concurrencia, conciliación o identificación antes de habilitar.",
+    "finalPath": "accounting/src/money.mjs",
+    "finalSha256": "6293159b1baf215f854155ee0f411ac23d3379b875a92eef69979aad4b1aebcf",
+    "finalDisposition": "integrated"
+  },
+  "accounting/src/monthly-close.mjs": {
+    "sourceComparison": "only-v4",
+    "category": "D",
+    "reason": "Corregir incertidumbre, concurrencia, conciliación o identificación antes de habilitar.",
+    "finalPath": "accounting/src/monthly-close.mjs",
+    "finalSha256": "0bc33e0ad4b218fdd4d00c4aa8be9c67c06ec0b153d5e5db78721015c080e448",
+    "finalDisposition": "integrated"
+  },
+  "accounting/src/reconcile.mjs": {
+    "sourceComparison": "only-v4",
+    "category": "D",
+    "reason": "Corregir incertidumbre, concurrencia, conciliación o identificación antes de habilitar.",
+    "finalPath": "accounting/src/reconcile.mjs",
+    "finalSha256": "0b6b087460d39b38c982b782266e2f467b206f3ba6796ef31924ea94e9a5a184",
+    "finalDisposition": "integrated"
+  },
+  "accounting/src/vat.mjs": {
+    "sourceComparison": "only-v4",
+    "category": "D",
+    "reason": "Corregir incertidumbre, concurrencia, conciliación o identificación antes de habilitar.",
+    "finalPath": "accounting/src/vat.mjs",
+    "finalSha256": "391859223b552aa5199f0a1c78122c8e30fe097627d9d01de0f2ca105c39a833",
+    "finalDisposition": "integrated"
+  },
+  "accounting/tests/accounting.test.mjs": {
+    "sourceComparison": "only-v4",
+    "category": "D",
+    "reason": "Corregir incertidumbre, concurrencia, conciliación o identificación antes de habilitar.",
+    "finalPath": "accounting/tests/accounting.test.mjs",
+    "finalSha256": "5b712028ded84f9badd73ce755df3d90984eef95ad1cef18b2d3b1ac8c7ef98d",
+    "finalDisposition": "integrated"
+  },
+  "admin-manifest.en.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "admin-manifest.en.webmanifest",
+    "finalSha256": "7e68b885b36021cab9d48d8c7442d06912ccc00fb30266fe0165873d0fad2281",
+    "finalDisposition": "kept-github"
+  },
+  "admin-manifest.pl.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "admin-manifest.pl.webmanifest",
+    "finalSha256": "dda581cb9dbd45d672ef0e5e6a41823413e2108ebe6d9726810f1296ebb50c62",
+    "finalDisposition": "kept-github"
+  },
+  "admin-manifest.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "admin-manifest.webmanifest",
+    "finalSha256": "9508fceaeaf16852c2dab234bb3465706deb2d92c0268781ac076d2fa9c6677e",
+    "finalDisposition": "kept-github"
+  },
+  "admin.html": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "admin.html",
+    "finalSha256": "e84c0ca8ea8476d3d1381451f95d6c1f114763921a3605f9e6208fcb1cf2a5e0",
+    "finalDisposition": "kept-github"
+  },
+  "admin.js": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "admin.js",
+    "finalSha256": "d155e4721b17495c333d7bc128b78b3162029ff6fb66b878223f391bdcb09bc0",
+    "finalDisposition": "kept-github"
+  },
+  "app-icon-192.png": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "app-icon-192.png",
+    "finalSha256": "aefe276e9a10c64a211ebd2782b724cb1fc6ccdec714ef5c46f624a8de001f9d",
+    "finalDisposition": "kept-github"
+  },
+  "app-icon-512.png": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "app-icon-512.png",
+    "finalSha256": "44f5955cc5bfe7d8028c5579067ceaea13d44de6c1296d92f8ffb464ca60aab0",
+    "finalDisposition": "kept-github"
+  },
+  "app-icon.svg": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "app-icon.svg",
+    "finalSha256": "389a7104de1dd8b0bafff28b7f9e77b772531c4933287a5e2f4144db55394cb4",
+    "finalDisposition": "kept-github"
+  },
+  "app.js": {
+    "sourceComparison": "different",
+    "category": "A",
+    "reason": "Conservar GitHub y todas sus capacidades.",
+    "finalPath": "app.js",
+    "finalSha256": "d7715a3d0f7ed44a42fd690cc4144b1f9e57fce8424086ccdd89923511b846a5",
+    "finalDisposition": "kept-github"
+  },
+  "auto-translate.js": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "auto-translate.js",
+    "finalSha256": "b14d57d3766a95d2bb7517312546435095ec5fd7b80f07a48750d98cfcdf7791",
+    "finalDisposition": "kept-github"
+  },
+  "capacitor.config.json": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "capacitor.config.json",
+    "finalSha256": "a62fd96f0176ed1173029ba63f2c7ee1b6bf2c80b415fa5145fe87c3d5a99579",
+    "finalDisposition": "kept-github"
+  },
+  "centro-integraciones-status.js": {
+    "sourceComparison": "only-github",
+    "category": "A",
+    "reason": "Conservar GitHub y todas sus capacidades.",
+    "finalPath": "centro-integraciones-status.js",
+    "finalSha256": "63e8cde5916c9cfbafda8eb1fa95354e78e6ee8ce839fce8945e30b4f99e785d",
+    "finalDisposition": "kept-github"
+  },
+  "centro-integraciones.html": {
+    "sourceComparison": "only-github",
+    "category": "A",
+    "reason": "Conservar GitHub y todas sus capacidades.",
+    "finalPath": "centro-integraciones.html",
+    "finalSha256": "9b8ab98e04c000bda7a4f93ebf311dfc5e871e996dca65de6f132e10ab6cf931",
+    "finalDisposition": "kept-github"
+  },
+  "cliente-manifest.en.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "cliente-manifest.en.webmanifest",
+    "finalSha256": "7bb630eb3ed406b1fc1fe63989e36d206e335e36aa79f8d98eae494302e3c9d4",
+    "finalDisposition": "kept-github"
+  },
+  "cliente-manifest.pl.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "cliente-manifest.pl.webmanifest",
+    "finalSha256": "a446e5d903cabe86ba82f50cebdc8c44774798a35155562cf3b3c4a491becf9c",
+    "finalDisposition": "kept-github"
+  },
+  "cliente-manifest.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "cliente-manifest.webmanifest",
+    "finalSha256": "559484ead17a156a865d4610a2988cb82661096eea7212ca8cd783ed6f596e8e",
+    "finalDisposition": "kept-github"
+  },
+  "cliente.html": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "cliente.html",
+    "finalSha256": "47ca8809900a97bb44da5b75eb4e65c92e095d7352a8e0654465406528642f56",
+    "finalDisposition": "kept-github"
+  },
+  "cliente.js": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "cliente.js",
+    "finalSha256": "012d8a70418d0440f2181cafce6af11abd3aea4ddcc9434053de2b796504b7b2",
+    "finalDisposition": "kept-github"
+  },
+  "colaborador-manifest.en.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "colaborador-manifest.en.webmanifest",
+    "finalSha256": "66b236c9124c64947171cc5a74cb42b671ad2a74d5bb1e737a896cdc6bdd0905",
+    "finalDisposition": "kept-github"
+  },
+  "colaborador-manifest.pl.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "colaborador-manifest.pl.webmanifest",
+    "finalSha256": "ee38d05f610f12e8b8e283d5fdb7e24a9eecfc4c1babb9fc61d4369377258a79",
+    "finalDisposition": "kept-github"
+  },
+  "colaborador-manifest.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "colaborador-manifest.webmanifest",
+    "finalSha256": "892d58e521159a4dc8c35e97545fcbd58d5e5bf0cb3aec9824c557e471c2791d",
+    "finalDisposition": "kept-github"
+  },
+  "colaborador.html": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "colaborador.html",
+    "finalSha256": "30418c75b5efb858def631a2cfe7127fafa2c0ca4aedef7697e9690ede75d52b",
+    "finalDisposition": "kept-github"
+  },
+  "colaborador.js": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "colaborador.js",
+    "finalSha256": "b9204b6df34995994ba88da52917b7e7c4f4ab81aec048c454c79ff68fe94884",
+    "finalDisposition": "kept-github"
+  },
+  "delivery-bridge/src/adapter-registry.mjs": {
+    "sourceComparison": "different",
+    "category": "C",
+    "reason": "Conservar controles GitHub e incorporar mejoras compatibles V4.",
+    "finalPath": "delivery-bridge/src/adapter-registry.mjs",
+    "finalSha256": "99a59315e2ef1edf46afc8fd3cef98dc7b36cf1a0c2b5b88c6d930d37aa257b7",
+    "finalDisposition": "integrated"
+  },
+  "delivery-bridge/src/adapters/configurable.mjs": {
+    "sourceComparison": "only-v4",
+    "category": "B",
+    "reason": "Módulo adicional; revisar contratos, secretos y pruebas antes de entrega.",
+    "finalPath": "delivery-bridge/src/adapters/configurable.mjs",
+    "finalSha256": "ef74462a0f925125365a6a39a562e286453755c656b9f3bf9627d347ce1ef2fb",
+    "finalDisposition": "integrated"
+  },
+  "delivery-bridge/src/adapters/glovo.mjs": {
+    "sourceComparison": "only-v4",
+    "category": "B",
+    "reason": "Módulo adicional; revisar contratos, secretos y pruebas antes de entrega.",
+    "finalPath": "delivery-bridge/src/adapters/glovo.mjs",
+    "finalSha256": "ffc17f5b0ccc8b90346e7a40b005be7fd5de8bf890a30cfebab117096fdec048",
+    "finalDisposition": "integrated"
+  },
+  "delivery-bridge/src/adapters/ubereats.mjs": {
+    "sourceComparison": "only-v4",
+    "category": "B",
+    "reason": "Módulo adicional; revisar contratos, secretos y pruebas antes de entrega.",
+    "finalPath": "delivery-bridge/src/adapters/ubereats.mjs",
+    "finalSha256": "fa72f4f2bdd4e7e3c07a5e5e0139e82eb5b77e521884421d28125c4e5d3ffc09",
+    "finalDisposition": "integrated"
+  },
+  "delivery-bridge/src/adapters/wolt.mjs": {
+    "sourceComparison": "only-v4",
+    "category": "B",
+    "reason": "Módulo adicional; revisar contratos, secretos y pruebas antes de entrega.",
+    "finalPath": "delivery-bridge/src/adapters/wolt.mjs",
+    "finalSha256": "c22a233eca3b27b437637a68beeba61d6d1ff95dfa55aaac92a9a81ec97cdf18",
+    "finalDisposition": "integrated"
+  },
+  "delivery-bridge/src/canonical.mjs": {
+    "sourceComparison": "only-v4",
+    "category": "B",
+    "reason": "Módulo adicional; revisar contratos, secretos y pruebas antes de entrega.",
+    "finalPath": "delivery-bridge/src/canonical.mjs",
+    "finalSha256": "5ba42b7206ae892affe5ee248e564ebc119305788203a820daad0f6f317352aa",
+    "finalDisposition": "integrated"
+  },
+  "delivery-bridge/src/outbox.mjs": {
+    "sourceComparison": "only-v4",
+    "category": "D",
+    "reason": "Corregir incertidumbre, concurrencia, conciliación o identificación antes de habilitar.",
+    "finalPath": "delivery-bridge/src/outbox.mjs",
+    "finalSha256": "06fab4758b6fe7da85db29e597d7e8ba7afe587407fa3120ba22d899b331d7d2",
+    "finalDisposition": "integrated"
+  },
+  "delivery-bridge/src/verified-intake.mjs": {
+    "sourceComparison": "only-github",
+    "category": "A",
+    "reason": "Conservar GitHub y todas sus capacidades.",
+    "finalPath": "delivery-bridge/src/verified-intake.mjs",
+    "finalSha256": "9697239262a5c5b30e769d632374d4e36bc7ed367593666975a5138b7770472e",
+    "finalDisposition": "kept-github"
+  },
+  "delivery-bridge/tests/adapter-registry.test.mjs": {
+    "sourceComparison": "different",
+    "category": "A",
+    "reason": "Conservar GitHub y todas sus capacidades.",
+    "finalPath": "delivery-bridge/tests/adapter-registry.test.mjs",
+    "finalSha256": "2a01cc22502937c0a164f3aa3cdb3756fc14e2ecf627f1810da3d323980723cf",
+    "finalDisposition": "kept-github"
+  },
+  "delivery-bridge/tests/adapters.test.mjs": {
+    "sourceComparison": "only-v4",
+    "category": "B",
+    "reason": "Módulo adicional; revisar contratos, secretos y pruebas antes de entrega.",
+    "finalPath": "delivery-bridge/tests/adapters.test.mjs",
+    "finalSha256": "ee965009702c0da925c605170f5b21031b82f54a8410683469f87618d606b19d",
+    "finalDisposition": "integrated"
+  },
+  "delivery-bridge/tests/outbox.test.mjs": {
+    "sourceComparison": "only-v4",
+    "category": "B",
+    "reason": "Módulo adicional; revisar contratos, secretos y pruebas antes de entrega.",
+    "finalPath": "delivery-bridge/tests/outbox.test.mjs",
+    "finalSha256": "ca403c90f884677a8b4239ec0b2c0f56100e5e4d53c1ce2921712839e481e841",
+    "finalDisposition": "integrated"
+  },
+  "delivery-bridge/tests/provider-isolation-regression.test.mjs": {
+    "sourceComparison": "only-github",
+    "category": "A",
+    "reason": "Conservar GitHub y todas sus capacidades.",
+    "finalPath": "delivery-bridge/tests/provider-isolation-regression.test.mjs",
+    "finalSha256": "4d9aa6fe35559ac2efa242abb1559c6ebb1e4bed3a26f90f7f91fe483339ba49",
+    "finalDisposition": "kept-github"
+  },
+  "delivery-bridge/tests/verified-intake.test.mjs": {
+    "sourceComparison": "only-github",
+    "category": "A",
+    "reason": "Conservar GitHub y todas sus capacidades.",
+    "finalPath": "delivery-bridge/tests/verified-intake.test.mjs",
+    "finalSha256": "aa8895c91b2b0cb4068151cefab13b23eb20da34947b35f150d60d809ffc7719",
+    "finalDisposition": "kept-github"
+  },
+  "docs/DESPLIEGUE.md": {
+    "sourceComparison": "only-v4",
+    "category": "B",
+    "reason": "Módulo adicional; revisar contratos, secretos y pruebas antes de entrega.",
+    "finalPath": "docs/DESPLIEGUE.md",
+    "finalSha256": "015e6b08ab20407521614e0e87d5605af7b77b1bd4bb07e9363ca703ad345e9f",
+    "finalDisposition": "integrated"
+  },
+  "docs/ESTADO-10-PUNTOS.md": {
+    "sourceComparison": "only-v4",
+    "category": "B",
+    "reason": "Módulo adicional; revisar contratos, secretos y pruebas antes de entrega.",
+    "finalPath": "docs/ESTADO-10-PUNTOS.md",
+    "finalSha256": "8059aae023d04cc02e187aff65e57a5e91987418b6f814c979cd07ab9b492908",
+    "finalDisposition": "integrated"
+  },
+  "docs/INTEGRACIONES-ESTADO.md": {
+    "sourceComparison": "only-v4",
+    "category": "B",
+    "reason": "Módulo adicional; revisar contratos, secretos y pruebas antes de entrega.",
+    "finalPath": "docs/INTEGRACIONES-ESTADO.md",
+    "finalSha256": "587135305cf94e436acb5b662398ac810ba9ca7a2a1e6ae8d144c696e4be0ef3",
+    "finalDisposition": "integrated"
+  },
+  "download": {
+    "sourceComparison": "only-github",
+    "category": "E",
+    "reason": "Snippet de configuración redundante, sin referencia runtime. No incorporar atributos que reescriben los finales de línea históricos.",
+    "finalPath": "download",
+    "finalDisposition": "excluded",
+    "finalSha256": null
+  },
+  "download (1)": {
+    "sourceComparison": "only-github",
+    "category": "E",
+    "reason": "Snippet de configuración redundante, sin referencia runtime. No incorporar atributos que reescriben los finales de línea históricos.",
+    "finalPath": "download (1)",
+    "finalDisposition": "excluded",
+    "finalSha256": null
+  },
+  "download (1) (2)": {
+    "sourceComparison": "only-github",
+    "category": "E",
+    "reason": "Snippet de configuración redundante, sin referencia runtime. No incorporar atributos que reescriben los finales de línea históricos.",
+    "finalPath": "download (1) (2)",
+    "finalDisposition": "excluded",
+    "finalSha256": null
+  },
+  "download (1) (2) (3)": {
+    "sourceComparison": "only-github",
+    "category": "E",
+    "reason": "Snippet de configuración redundante, sin referencia runtime. No incorporar atributos que reescriben los finales de línea históricos.",
+    "finalPath": "download (1) (2) (3)",
+    "finalDisposition": "excluded",
+    "finalSha256": null
+  },
+  "download (1) (3)": {
+    "sourceComparison": "only-github",
+    "category": "E",
+    "reason": "Snippet de configuración redundante, sin referencia runtime. No incorporar atributos que reescriben los finales de línea históricos.",
+    "finalPath": "download (1) (3)",
+    "finalDisposition": "excluded",
+    "finalSha256": null
+  },
+  "download (2)": {
+    "sourceComparison": "only-github",
+    "category": "E",
+    "reason": "Snippet de configuración redundante, sin referencia runtime. No incorporar atributos que reescriben los finales de línea históricos.",
+    "finalPath": "download (2)",
+    "finalDisposition": "excluded",
+    "finalSha256": null
+  },
+  "download (2) (4)": {
+    "sourceComparison": "only-github",
+    "category": "E",
+    "reason": "Snippet de configuración redundante, sin referencia runtime. No incorporar atributos que reescriben los finales de línea históricos.",
+    "finalPath": "download (2) (4)",
+    "finalDisposition": "excluded",
+    "finalSha256": null
+  },
+  "fiscal-agent/bin/rc-fiscal-agent.mjs": {
+    "sourceComparison": "only-v4",
+    "category": "D",
+    "reason": "Corregir incertidumbre, concurrencia, conciliación o identificación antes de habilitar.",
+    "finalPath": "fiscal-agent/bin/rc-fiscal-agent.mjs",
+    "finalSha256": "5bde34d43dca1176b7a53860bdcdfb3d22b303444a7cbbb4cd46290b019f5b81",
+    "finalDisposition": "integrated"
+  },
+  "fiscal-agent/src/agent.mjs": {
+    "sourceComparison": "only-v4",
+    "category": "D",
+    "reason": "Corregir incertidumbre, concurrencia, conciliación o identificación antes de habilitar.",
+    "finalPath": "fiscal-agent/src/agent.mjs",
+    "finalSha256": "ba110a85bad9628005f9c6a6e2b6d09dca97cc96cfd6254a80d4987d61cf1eeb",
+    "finalDisposition": "integrated"
+  },
+  "fiscal-agent/src/drivers/not-implemented.mjs": {
+    "sourceComparison": "only-v4",
+    "category": "D",
+    "reason": "Corregir incertidumbre, concurrencia, conciliación o identificación antes de habilitar.",
+    "finalPath": "fiscal-agent/src/drivers/not-implemented.mjs",
+    "finalSha256": "936d24b595fbcb291e471ce8b2edcbc4654e75671adf9ee56c3d24f39a936d5f",
+    "finalDisposition": "integrated"
+  },
+  "fiscal-agent/src/drivers/novitus-noviapi.mjs": {
+    "sourceComparison": "only-v4",
+    "category": "D",
+    "reason": "Corregir incertidumbre, concurrencia, conciliación o identificación antes de habilitar.",
+    "finalPath": "fiscal-agent/src/drivers/novitus-noviapi.mjs",
+    "finalSha256": "c4f9ec6c9641876500a791936dc1aa2985ecd6501caccde00f840e618f283769",
+    "finalDisposition": "integrated"
+  },
+  "fiscal-agent/src/gateway-client.mjs": {
+    "sourceComparison": "only-v4",
+    "category": "D",
+    "reason": "Corregir incertidumbre, concurrencia, conciliación o identificación antes de habilitar.",
+    "finalPath": "fiscal-agent/src/gateway-client.mjs",
+    "finalSha256": "75f89108d4b40dc14d8b9618a3bd4faad1b54e56943d49aa388d240c69f38dad",
+    "finalDisposition": "integrated"
+  },
+  "fiscal-agent/src/registry.mjs": {
+    "sourceComparison": "only-v4",
+    "category": "D",
+    "reason": "Corregir incertidumbre, concurrencia, conciliación o identificación antes de habilitar.",
+    "finalPath": "fiscal-agent/src/registry.mjs",
+    "finalSha256": "42c6e0505746d2c8de8df7900c27423ceb80222f08c395f0d72eedefe41ecfdb",
+    "finalDisposition": "integrated"
+  },
+  "fiscal-agent/tests/agent.test.mjs": {
+    "sourceComparison": "only-v4",
+    "category": "D",
+    "reason": "Corregir incertidumbre, concurrencia, conciliación o identificación antes de habilitar.",
+    "finalPath": "fiscal-agent/tests/agent.test.mjs",
+    "finalSha256": "f31adf611ca41d23594d0fd01e16e058e12b4a9e9b8d0c8c3be111f9d60fbd53",
+    "finalDisposition": "integrated"
+  },
+  "fiscal-agent/tests/novitus.test.mjs": {
+    "sourceComparison": "only-v4",
+    "category": "D",
+    "reason": "Corregir incertidumbre, concurrencia, conciliación o identificación antes de habilitar.",
+    "finalPath": "fiscal-agent/tests/novitus.test.mjs",
+    "finalSha256": "312ed65670bb5df424f4f8ee870e7c10bdb4a6693daf9e671b61e37aef103048",
+    "finalDisposition": "integrated"
+  },
+  "fiscal-bridge/src/device-profile.mjs": {
+    "sourceComparison": "only-github",
+    "category": "A",
+    "reason": "Conservar GitHub y todas sus capacidades.",
+    "finalPath": "fiscal-bridge/src/device-profile.mjs",
+    "finalSha256": "73efabd6420f8474bd9931786839ac6583661259df3a7a501e7dac83bc0eba3e",
+    "finalDisposition": "kept-github"
+  },
+  "fiscal-bridge/src/device-resolver.mjs": {
+    "sourceComparison": "only-github",
+    "category": "A",
+    "reason": "Conservar GitHub y todas sus capacidades.",
+    "finalPath": "fiscal-bridge/src/device-resolver.mjs",
+    "finalSha256": "78bc338a604f91a3067e653e0f064e134d6bd3ef8635bd69050ffc1a05c3a5c2",
+    "finalDisposition": "kept-github"
+  },
+  "fiscal-bridge/src/driver-registry.mjs": {
+    "sourceComparison": "different",
+    "category": "A",
+    "reason": "Conservar GitHub y todas sus capacidades.",
+    "finalPath": "fiscal-bridge/src/driver-registry.mjs",
+    "finalSha256": "d669f4130ed69b8c138446d2c3f3a30ae885723ed98bb4c6eb984750aa91a687",
+    "finalDisposition": "kept-github"
+  },
+  "fiscal-bridge/src/fiscal-contract.mjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "fiscal-bridge/src/fiscal-contract.mjs",
+    "finalSha256": "beb696552164c51b957685edd31e89661a05426094afd174d3028424ce5e5c58",
+    "finalDisposition": "kept-github"
+  },
+  "fiscal-bridge/src/fiscal-service.mjs": {
+    "sourceComparison": "different",
+    "category": "A",
+    "reason": "Conservar GitHub y todas sus capacidades.",
+    "finalPath": "fiscal-bridge/src/fiscal-service.mjs",
+    "finalSha256": "337e7034ab1ee9ef8a8ac348a922c0cf040874af5c7c73fa1c16b79ea8666f83",
+    "finalDisposition": "kept-github"
+  },
+  "fiscal-bridge/src/mock-driver.mjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "fiscal-bridge/src/mock-driver.mjs",
+    "finalSha256": "bf2cbea861f0963d23d3bf6773c39702c02748e9e56205fda91c136b3229469c",
+    "finalDisposition": "kept-github"
+  },
+  "fiscal-bridge/tests/device-profile.test.mjs": {
+    "sourceComparison": "only-github",
+    "category": "A",
+    "reason": "Conservar GitHub y todas sus capacidades.",
+    "finalPath": "fiscal-bridge/tests/device-profile.test.mjs",
+    "finalSha256": "e4885ecd0a0f89974a46017f2696de646de0ae95c1c32685db4727f4ee814841",
+    "finalDisposition": "kept-github"
+  },
+  "fiscal-bridge/tests/device-resolver.test.mjs": {
+    "sourceComparison": "only-github",
+    "category": "A",
+    "reason": "Conservar GitHub y todas sus capacidades.",
+    "finalPath": "fiscal-bridge/tests/device-resolver.test.mjs",
+    "finalSha256": "3b0bb67467fc870878ae3d841416d24a9353e162051e42f30f4719c457cbada6",
+    "finalDisposition": "kept-github"
+  },
+  "fiscal-bridge/tests/driver-registry.test.mjs": {
+    "sourceComparison": "different",
+    "category": "A",
+    "reason": "Conservar GitHub y todas sus capacidades.",
+    "finalPath": "fiscal-bridge/tests/driver-registry.test.mjs",
+    "finalSha256": "524fd03cf25dd4166084b79fa04986573d374da3cd993221052508c1d2c8c3d4",
+    "finalDisposition": "kept-github"
+  },
+  "fiscal-bridge/tests/fiscal-contract.test.mjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "fiscal-bridge/tests/fiscal-contract.test.mjs",
+    "finalSha256": "b3623751cbbe2453df3749af40d701c3f62aae8996e90afa48223acc47fd72b3",
+    "finalDisposition": "kept-github"
+  },
+  "fiscal-bridge/tests/fiscal-reconciliation-uuid.test.mjs": {
+    "sourceComparison": "only-github",
+    "category": "A",
+    "reason": "Conservar GitHub y todas sus capacidades.",
+    "finalPath": "fiscal-bridge/tests/fiscal-reconciliation-uuid.test.mjs",
+    "finalSha256": "af9d1f43e38c688b12abab54497275ef28fda6e6acade8d2afeb6814c6beb1a2",
+    "finalDisposition": "kept-github"
+  },
+  "fiscal-bridge/tests/fiscal-service.test.mjs": {
+    "sourceComparison": "different",
+    "category": "A",
+    "reason": "Conservar GitHub y todas sus capacidades.",
+    "finalPath": "fiscal-bridge/tests/fiscal-service.test.mjs",
+    "finalSha256": "df5d8b75395c8d8350d493a2c97be85b10ae315858489b5598bbfff76f39cd44",
+    "finalDisposition": "kept-github"
+  },
+  "fiscal-bridge/tests/fiscal-status-race.test.mjs": {
+    "sourceComparison": "only-github",
+    "category": "A",
+    "reason": "Conservar GitHub y todas sus capacidades.",
+    "finalPath": "fiscal-bridge/tests/fiscal-status-race.test.mjs",
+    "finalSha256": "fbb48d6fc12f1ee5cbfa2b65d7658b01edd0bb5018a3db40944beffec56b6df5",
+    "finalDisposition": "kept-github"
+  },
+  "fiscal-bridge/tests/mock-driver.test.mjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "fiscal-bridge/tests/mock-driver.test.mjs",
+    "finalSha256": "710d18a32aa770ad9051213dd4b6c6e7c808beab0a819a4724126f4c4f511763",
+    "finalDisposition": "kept-github"
+  },
+  "index-restaurante-backup.html": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "index-restaurante-backup.html",
+    "finalSha256": "0d83656fe20c3fbbd019fd4a98b4cd0c53623ebe44e7b807c037a61e4eae0750",
+    "finalDisposition": "kept-github"
+  },
+  "index.html": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "index.html",
+    "finalSha256": "fcb15fec19fb33e37bf61a3a779593da61c0f383d6805fb98b8dfd201ffa06ad",
+    "finalDisposition": "kept-github"
+  },
+  "integrations/docs/01_MAPA_MAESTRO_Y_FLUJOS.md": {
+    "sourceComparison": "only-github",
+    "category": "A",
+    "reason": "Conservar GitHub y todas sus capacidades.",
+    "finalPath": "integrations/docs/01_MAPA_MAESTRO_Y_FLUJOS.md",
+    "finalSha256": "1a1b99f92a7367278198262d5ca58eaddaa1e36617109d0a5d142f98747dd174",
+    "finalDisposition": "kept-github"
+  },
+  "integrations/src/integration-guards.mjs": {
+    "sourceComparison": "only-github",
+    "category": "A",
+    "reason": "Conservar GitHub y todas sus capacidades.",
+    "finalPath": "integrations/src/integration-guards.mjs",
+    "finalSha256": "aa3ef3b8bf708983317cdc4b84ee4d751707cfef4954d9476e6e1d0d202c6929",
+    "finalDisposition": "kept-github"
+  },
+  "integrations/src/integration-readiness.mjs": {
+    "sourceComparison": "only-github",
+    "category": "A",
+    "reason": "Conservar GitHub y todas sus capacidades.",
+    "finalPath": "integrations/src/integration-readiness.mjs",
+    "finalSha256": "c7349a0b401ef88b9d95d7c810fb3a43e66748b698de8870d2a7e14bfd67450b",
+    "finalDisposition": "kept-github"
+  },
+  "integrations/tests/integration-readiness.test.mjs": {
+    "sourceComparison": "only-github",
+    "category": "A",
+    "reason": "Conservar GitHub y todas sus capacidades.",
+    "finalPath": "integrations/tests/integration-readiness.test.mjs",
+    "finalSha256": "00879ef35d157b5ec82e18737b5e92466a1cdc66cf85714801f4f379813079f5",
+    "finalDisposition": "kept-github"
+  },
+  "manifest.en.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "manifest.en.webmanifest",
+    "finalSha256": "f47c004e4c49e4990d51b1fb3dd8fd39c2b4ecfba5c3a382aef7e96cdf4c4f0e",
+    "finalDisposition": "kept-github"
+  },
+  "manifest.pl.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "manifest.pl.webmanifest",
+    "finalSha256": "ab3c89b5ad2b69e40648edc79fe577b544ae9e61bf570cb3271d61f7f7d9b801",
+    "finalDisposition": "kept-github"
+  },
+  "manifest.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "manifest.webmanifest",
+    "finalSha256": "8d0381aa80ada71d5a6778ca887794e79f13278c7608870fa83f6e1d9e3b7388",
+    "finalDisposition": "kept-github"
+  },
+  "mesero-manifest.en.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "mesero-manifest.en.webmanifest",
+    "finalSha256": "8665ffaef4c7b0824561effef691e6208d69c9343272c1e7c9b9e8716bf3a64b",
+    "finalDisposition": "kept-github"
+  },
+  "mesero-manifest.pl.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "mesero-manifest.pl.webmanifest",
+    "finalSha256": "6cd723d24c0773d1ac67d631ea273f91418179a07648b5a39449c6b1a4e4e047",
+    "finalDisposition": "kept-github"
+  },
+  "mesero-manifest.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "mesero-manifest.webmanifest",
+    "finalSha256": "4011961d46726bb3c308db0c378aa0f0294368a547ee907da860cdc9bb76e585",
+    "finalDisposition": "kept-github"
+  },
+  "mesero.html": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "mesero.html",
+    "finalSha256": "d969173f53e58dcc1905a59b8184b4c24c014158c8cfe57d19ca9b121a00e5f1",
+    "finalDisposition": "kept-github"
+  },
+  "mesero.js": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "mesero.js",
+    "finalSha256": "007f4eb7eb9564bd89a9fc5dd4cb43aa91b4c217f148c238ef0c70a810639259",
+    "finalDisposition": "kept-github"
+  },
+  "offline-i18n.js": {
+    "sourceComparison": "different",
+    "category": "A",
+    "reason": "Conservar GitHub y todas sus capacidades.",
+    "finalPath": "offline-i18n.js",
+    "finalSha256": "1c3c946eb4d83dd537993e1c434ee5324095845dcb765099e2e80d88fd5e2a04",
+    "finalDisposition": "kept-github"
+  },
+  "package-lock.json": {
+    "sourceComparison": "identical",
+    "category": "D",
+    "reason": "Parche Capacitor crítico o distribución www incompleta.",
+    "finalPath": "package-lock.json",
+    "finalSha256": "cf24c54c7074589ad0f2c69426460fccd1d4566c1939507b3068ef8c1c7f4ac5",
+    "finalDisposition": "integrated"
+  },
+  "package.json": {
+    "sourceComparison": "different",
+    "category": "C",
+    "reason": "Conservar controles GitHub e incorporar mejoras compatibles V4.",
+    "finalPath": "package.json",
+    "finalSha256": "5d2419186690c033178430a028477c64479c9e56b02ba44a9831e313da41bd03",
+    "finalDisposition": "integrated"
+  },
+  "playwright.config.cjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "playwright.config.cjs",
+    "finalSha256": "b23dfab64f5a862ea529ec561fb026913ec712b18a736bf964bf4aea8e2ff94c",
+    "finalDisposition": "kept-github"
+  },
+  "portal.html": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "portal.html",
+    "finalSha256": "3af2e7313e65ab87541f9c6a908c52fa0d797aad665814a2b7089afca7d51b13",
+    "finalDisposition": "kept-github"
+  },
+  "qa-i18n-v87.cjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-i18n-v87.cjs",
+    "finalSha256": "94f42367b9744f8c2403b5f76e5cdbe91fc8758c9990734a81203984873a5dab",
+    "finalDisposition": "kept-github"
+  },
+  "qa-v74-autorizacion-escritorio.png": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-v74-autorizacion-escritorio.png",
+    "finalSha256": "766ff80e8486068cf402a95f157cbf304bccd88783742891e8a4e029d05fbda9",
+    "finalDisposition": "kept-github"
+  },
+  "qa-v74-autorizacion-movil.png": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-v74-autorizacion-movil.png",
+    "finalSha256": "edfaa87f46bd20bd85e69423b1a91ac47172f406bc61a86157558d01a82358c2",
+    "finalDisposition": "kept-github"
+  },
+  "qa-v74-cierre-movil.png": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-v74-cierre-movil.png",
+    "finalSha256": "32cc5524af070fff30ae099c2047d3f36ec51c43006b8085746e8c4ad6cef5c6",
+    "finalDisposition": "kept-github"
+  },
+  "qa-v74-cliente-movil.png": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-v74-cliente-movil.png",
+    "finalSha256": "01b6c73af7d8eca4bd448ce9972cd7dcb8871285738e4c2504df79cc2bf35799",
+    "finalDisposition": "kept-github"
+  },
+  "qa-v74.cjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-v74.cjs",
+    "finalSha256": "d0da3b7a821e6f7df8ffd85fb87a7bde6250795c83da43cd907ef60502875b34",
+    "finalDisposition": "kept-github"
+  },
+  "qa-v75-autorizacion-escritorio.png": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-v75-autorizacion-escritorio.png",
+    "finalSha256": "9af482dcb34043af17873044ff7491aed7feac88d5ba506b9d3dac655df7c87c",
+    "finalDisposition": "kept-github"
+  },
+  "qa-v75-autorizacion-movil.png": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-v75-autorizacion-movil.png",
+    "finalSha256": "c99ef8c36e5241098ee26264e1a81f8e6a438e9167cb99e4fae8ce8200baaa20",
+    "finalDisposition": "kept-github"
+  },
+  "qa-v75-cierre-movil.png": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-v75-cierre-movil.png",
+    "finalSha256": "26d59c55d1cb164d4ee89ad931618d345fdc8711a673514d32937ee26bfdcaa9",
+    "finalDisposition": "kept-github"
+  },
+  "qa-v75-cliente-movil.png": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-v75-cliente-movil.png",
+    "finalSha256": "01b6c73af7d8eca4bd448ce9972cd7dcb8871285738e4c2504df79cc2bf35799",
+    "finalDisposition": "kept-github"
+  },
+  "qa-v75-estado-escritorio.png": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-v75-estado-escritorio.png",
+    "finalSha256": "5b6f7408854dbd9664f3e887610407021e770f660cc048f17ba2ee1cd6fba4eb",
+    "finalDisposition": "kept-github"
+  },
+  "qa-v75-estado-movil.png": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-v75-estado-movil.png",
+    "finalSha256": "b0ea7719fda715a3180d43ade009edc9cda2135fa84bd33503191f2c4e51b6b9",
+    "finalDisposition": "kept-github"
+  },
+  "qa-v75.cjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-v75.cjs",
+    "finalSha256": "882a6cb475aede2b72bb47d89b5e73cc0e74f2e2b6431bc99210b5d21296a4b3",
+    "finalDisposition": "kept-github"
+  },
+  "qa-v76-autorizacion-escritorio.png": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-v76-autorizacion-escritorio.png",
+    "finalSha256": "693231b9bc29d1831c8d22a1db67d600c503e9db21f32f4b73d3abaa8c3ccd53",
+    "finalDisposition": "kept-github"
+  },
+  "qa-v76-autorizacion-movil.png": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-v76-autorizacion-movil.png",
+    "finalSha256": "54056a808cb1726531c3432fa5f980041735f207b5930a5a364af63b37ccf341",
+    "finalDisposition": "kept-github"
+  },
+  "qa-v76-cierre-movil.png": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-v76-cierre-movil.png",
+    "finalSha256": "af1d2721ecedc2d84e7700603a5800f37ae274977ca73284aa3d2f9f75fb72c8",
+    "finalDisposition": "kept-github"
+  },
+  "qa-v76-cliente-movil.png": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-v76-cliente-movil.png",
+    "finalSha256": "01b6c73af7d8eca4bd448ce9972cd7dcb8871285738e4c2504df79cc2bf35799",
+    "finalDisposition": "kept-github"
+  },
+  "qa-v76-estado-escritorio.png": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-v76-estado-escritorio.png",
+    "finalSha256": "dba90411d9621dbed797e61e8079afeb5fc5f7ca3d2262a2d0bb07f357cb079f",
+    "finalDisposition": "kept-github"
+  },
+  "qa-v76-estado-movil.png": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-v76-estado-movil.png",
+    "finalSha256": "bb4aee2a6baa4d54cec9d249b043b02f669090ccb649c6d1b76e213a0c22ebc0",
+    "finalDisposition": "kept-github"
+  },
+  "qa-v76.cjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-v76.cjs",
+    "finalSha256": "68ab9fe604027f2fe834871a4bc4fdd2b820115970bb01bf9fdc268426efabfb",
+    "finalDisposition": "kept-github"
+  },
+  "qa-v79-cliente-ubicacion.png": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-v79-cliente-ubicacion.png",
+    "finalSha256": "01b6c73af7d8eca4bd448ce9972cd7dcb8871285738e4c2504df79cc2bf35799",
+    "finalDisposition": "kept-github"
+  },
+  "qa-v79-colaborador-idiomas.png": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-v79-colaborador-idiomas.png",
+    "finalSha256": "e6f3d6b9580abed50e4ba572ef955f5cd589da390d0f542b5668648176921ed3",
+    "finalDisposition": "kept-github"
+  },
+  "qa-v79-location-i18n.cjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-v79-location-i18n.cjs",
+    "finalSha256": "0cfb8d7864255a48dfa8a2c600994c8793bea2c14fc30222040de4d8b0adfd20",
+    "finalDisposition": "kept-github"
+  },
+  "qa-v79-restaurante-ubicacion.png": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-v79-restaurante-ubicacion.png",
+    "finalSha256": "22308ded05110b0aa4d870a1dfbc67fefb92bc5d1675a18ac924c93b8d0aa97c",
+    "finalDisposition": "kept-github"
+  },
+  "qa-v80-correccion-final-v79.cjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-v80-correccion-final-v79.cjs",
+    "finalSha256": "0c60caee47b206ec1a009c8d8ae2341ba75ced66f0cdddb8e547201248669dbd",
+    "finalDisposition": "kept-github"
+  },
+  "qa-v84.cjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-v84.cjs",
+    "finalSha256": "e51809269268a09e09bcc34698cfc9ee23b418d7be34e124088b36b22c8d2879",
+    "finalDisposition": "kept-github"
+  },
+  "qa-v85.cjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-v85.cjs",
+    "finalSha256": "033e09e25d8e7ac997445343304ae6ccc3ab303afaebffa109eb162970ef6dec",
+    "finalDisposition": "kept-github"
+  },
+  "qa-v86.cjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-v86.cjs",
+    "finalSha256": "a50d478b451fbf2dfac28d106fa81aea04e942c4485160709c44d2e745117b46",
+    "finalDisposition": "kept-github"
+  },
+  "qa-v88.cjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-v88.cjs",
+    "finalSha256": "cc7a9536e56e05de25b69bae3b9bfbad39a1b86d93fac24b417321a9e86850ef",
+    "finalDisposition": "kept-github"
+  },
+  "qa-v89.cjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-v89.cjs",
+    "finalSha256": "5f4f0073f83a314441c3e19ffac300b79ea9b81b4b7cc6afab7540d41f790073",
+    "finalDisposition": "kept-github"
+  },
+  "qa-v91.cjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "qa-v91.cjs",
+    "finalSha256": "21d21a9510956af576143efd6609a20cbb450e2a8490deeece10f7fb64225154",
+    "finalDisposition": "kept-github"
+  },
+  "restaurante-manifest.en.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "restaurante-manifest.en.webmanifest",
+    "finalSha256": "b5fa12d14a4847753f8b79ea5097f060727752582ef788434dfd6988e37502d0",
+    "finalDisposition": "kept-github"
+  },
+  "restaurante-manifest.pl.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "restaurante-manifest.pl.webmanifest",
+    "finalSha256": "3239d275ded2402fec415429c1590a8619060e12646cc4365d63a965d24c8907",
+    "finalDisposition": "kept-github"
+  },
+  "restaurante-manifest.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "restaurante-manifest.webmanifest",
+    "finalSha256": "cdf94d9ff4f5080a0526b9bbce8429966911202e493a47890cbf54642778717d",
+    "finalDisposition": "kept-github"
+  },
+  "restaurante.html": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "restaurante.html",
+    "finalSha256": "6667b2ef63fe5fdf0dcceaacded17e74e5d9b16cfb0d78606460a48f50bf67f3",
+    "finalDisposition": "kept-github"
+  },
+  "scripts/browser-smoke.py": {
+    "sourceComparison": "only-v4",
+    "category": "B",
+    "reason": "Módulo adicional; revisar contratos, secretos y pruebas antes de entrega.",
+    "finalPath": "scripts/browser-smoke.py",
+    "finalSha256": "2c7f8e78081216bbad2572aad95cf0b2637f44e2a0ed7939aeecf6d917aeaa1e",
+    "finalDisposition": "integrated"
+  },
+  "scripts/concurrency-test.mjs": {
+    "sourceComparison": "only-v4",
+    "category": "B",
+    "reason": "Módulo adicional; revisar contratos, secretos y pruebas antes de entrega.",
+    "finalPath": "scripts/concurrency-test.mjs",
+    "finalSha256": "c981002053e3becc0b966b7d7e088965e0b42125b10241c8e1cf821391eb1721",
+    "finalDisposition": "integrated"
+  },
+  "scripts/prepare-capacitor.mjs": {
+    "sourceComparison": "identical",
+    "category": "D",
+    "reason": "Parche Capacitor crítico o distribución www incompleta.",
+    "finalPath": "scripts/prepare-capacitor.mjs",
+    "finalSha256": "6c3cce8280eaa8c3bcf818c560fb21e3551b22ad8671fe4f15c1307bc32d47c6",
+    "finalDisposition": "integrated"
+  },
+  "scripts/scan-secrets.mjs": {
+    "sourceComparison": "only-v4",
+    "category": "B",
+    "reason": "Módulo adicional; revisar contratos, secretos y pruebas antes de entrega.",
+    "finalPath": "scripts/scan-secrets.mjs",
+    "finalSha256": "2cfc97e9f91f866e7e7e013ac6492b7809348cd7f7dd9a852d6a8e419e3e5bfe",
+    "finalDisposition": "integrated"
+  },
+  "scripts/serve-static.cjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "scripts/serve-static.cjs",
+    "finalSha256": "f6ffbaa33d6f367904090a8ad421d7143262e03c8623a6d97345a00cf2458631",
+    "finalDisposition": "kept-github"
+  },
+  "scripts/verify-deployment.mjs": {
+    "sourceComparison": "only-v4",
+    "category": "B",
+    "reason": "Módulo adicional; revisar contratos, secretos y pruebas antes de entrega.",
+    "finalPath": "scripts/verify-deployment.mjs",
+    "finalSha256": "2b7b43f7029df26a130efa1dc680e82f5f30712a9e0a22e6010f7b4495f1c54d",
+    "finalDisposition": "integrated"
+  },
+  "service-worker.js": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "service-worker.js",
+    "finalSha256": "c0c3c948f80e5f19aadda7e360f8b1ba7512ae012b792e5e102c28e1c7c19de3",
+    "finalDisposition": "kept-github"
+  },
+  "styles.css": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "styles.css",
+    "finalSha256": "7075196520627110075719a46c6a71e80a9988b3e3d8c23f86fa48b23ee2535f",
+    "finalDisposition": "kept-github"
+  },
+  "supabase-config.js": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "supabase-config.js",
+    "finalSha256": "4c904090ce4442c234ee95061ad0392b424f5f14c22482cac3d51b3687d9438f",
+    "finalDisposition": "kept-github"
+  },
+  "supabase-schema-base-v70.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "supabase-schema-base-v70.sql",
+    "finalSha256": "16da084a23b61ac567283963987d975fa584989d1342c5724dcf982aa46056ef",
+    "finalDisposition": "kept-github"
+  },
+  "supabase-schema.sql": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "supabase-schema.sql",
+    "finalSha256": "489464846ab22a42b2ccc7fba30663586c0721883939771d6940f47a1bfd2e3e",
+    "finalDisposition": "kept-github"
+  },
+  "supabase/config.toml": {
+    "sourceComparison": "different",
+    "category": "C",
+    "reason": "Conservar controles GitHub e incorporar mejoras compatibles V4.",
+    "finalPath": "supabase/config.toml",
+    "finalSha256": "261d3c4683ee09fd1484afb49e308e3f1d5c5dd58bc7a363b8ad397d097f5c68",
+    "finalDisposition": "integrated"
+  },
+  "supabase/functions/_shared/cors.ts": {
+    "sourceComparison": "only-v4",
+    "category": "B",
+    "reason": "Módulo adicional; revisar contratos, secretos y pruebas antes de entrega.",
+    "finalPath": "supabase/functions/_shared/cors.ts",
+    "finalSha256": "f5f591f4a0368b63b8c45df61e4861834cc68658f46c60a1ed49f02b378c6cf9",
+    "finalDisposition": "integrated"
+  },
+  "supabase/functions/_shared/safe-equal.ts": {
+    "sourceComparison": "only-v4",
+    "category": "B",
+    "reason": "Módulo adicional; revisar contratos, secretos y pruebas antes de entrega.",
+    "finalPath": "supabase/functions/_shared/safe-equal.ts",
+    "finalSha256": "5186ff1cd574a936fbf8b921ec3b6fb1045c7127cfa3361f15502e4092396395",
+    "finalDisposition": "integrated"
+  },
+  "supabase/functions/courier-push/deno.json": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "supabase/functions/courier-push/deno.json",
+    "finalSha256": "13dc9354d23d53b77829e0d7b1c314f9f530cd4f1fec16ff999895f646e68497",
+    "finalDisposition": "kept-github"
+  },
+  "supabase/functions/courier-push/index.ts": {
+    "sourceComparison": "different",
+    "category": "C",
+    "reason": "Conservar controles GitHub e incorporar mejoras compatibles V4.",
+    "finalPath": "supabase/functions/courier-push/index.ts",
+    "finalSha256": "f825820a0858c47aa49cdcd944677243900cfe2b931b4db9a45c74db10bd651f",
+    "finalDisposition": "integrated"
+  },
+  "supabase/functions/create-customer-order/index.ts": {
+    "sourceComparison": "different",
+    "category": "C",
+    "reason": "Conservar controles GitHub e incorporar mejoras compatibles V4.",
+    "finalPath": "supabase/functions/create-customer-order/index.ts",
+    "finalSha256": "b69c7c078414ca621623b4ceb5524fcf21ad0392e55d36a9edfab0b73b5f8db4",
+    "finalDisposition": "integrated"
+  },
+  "supabase/functions/delete-own-restaurant-account/index.ts": {
+    "sourceComparison": "different",
+    "category": "C",
+    "reason": "Conservar controles GitHub e incorporar mejoras compatibles V4.",
+    "finalPath": "supabase/functions/delete-own-restaurant-account/index.ts",
+    "finalSha256": "9d90b3612f644e901aca67970c81f472d43e05a4086c7b3785c65420c08e8e5f",
+    "finalDisposition": "integrated"
+  },
+  "supabase/functions/delivery-dispatch/deno.json": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "supabase/functions/delivery-dispatch/deno.json",
+    "finalSha256": "e9ddd4706201f10c798b1e085b6529937e300cccbc082154735c5ef71aeae256",
+    "finalDisposition": "kept-github"
+  },
+  "supabase/functions/delivery-dispatch/index.ts": {
+    "sourceComparison": "different",
+    "category": "C",
+    "reason": "Conservar controles GitHub e incorporar mejoras compatibles V4.",
+    "finalPath": "supabase/functions/delivery-dispatch/index.ts",
+    "finalSha256": "fa0ff5f25ec50bf24620587aab302ccaae8e055b253f060961c42459122659e9",
+    "finalDisposition": "integrated"
+  },
+  "supabase/functions/delivery-quote/index.ts": {
+    "sourceComparison": "different",
+    "category": "C",
+    "reason": "Conservar controles GitHub e incorporar mejoras compatibles V4.",
+    "finalPath": "supabase/functions/delivery-quote/index.ts",
+    "finalSha256": "7b57c3ba142f2118b86e8e8cb32fd2cfa815cd338c88aa9c0b410c910b85ef48",
+    "finalDisposition": "integrated"
+  },
+  "supabase/functions/external-delivery-inbox/index.ts": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "supabase/functions/external-delivery-inbox/index.ts",
+    "finalSha256": "df9b58b33ad6b0e6f80e6b94a39be55e32456c3ac8c02da58eb5ee2d8dd4fa96",
+    "finalDisposition": "kept-github"
+  },
+  "supabase/functions/external-delivery-webhook/index.ts": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "supabase/functions/external-delivery-webhook/index.ts",
+    "finalSha256": "3772b1de8b3b425072b19c248192a7c91f52f00642196f2bcdb163c2ceb20554",
+    "finalDisposition": "kept-github"
+  },
+  "supabase/functions/fiscal-agent-gateway/index.ts": {
+    "sourceComparison": "only-v4",
+    "category": "B",
+    "reason": "Módulo adicional; revisar contratos, secretos y pruebas antes de entrega.",
+    "finalPath": "supabase/functions/fiscal-agent-gateway/index.ts",
+    "finalSha256": "ff0470a754437af122d76b7220dfd759c7919a2e1b8e2507d0ca0622da40830d",
+    "finalDisposition": "integrated"
+  },
+  "supabase/functions/integration-status/index.ts": {
+    "sourceComparison": "only-github",
+    "category": "A",
+    "reason": "Conservar GitHub y todas sus capacidades.",
+    "finalPath": "supabase/functions/integration-status/index.ts",
+    "finalSha256": "0f2c74121617139a94dff660803c19f946fefdfa514f5d31e9115e2d3d678a7d",
+    "finalDisposition": "kept-github"
+  },
+  "supabase/functions/marketplace-cancel-order/index.ts": {
+    "sourceComparison": "different",
+    "category": "C",
+    "reason": "Conservar controles GitHub e incorporar mejoras compatibles V4.",
+    "finalPath": "supabase/functions/marketplace-cancel-order/index.ts",
+    "finalSha256": "9d20ef4d678221d2d1029bd4982f7ccfa1b6b8574e64763072d29183c00eef89",
+    "finalDisposition": "integrated"
+  },
+  "supabase/functions/marketplace-checkout/index.ts": {
+    "sourceComparison": "different",
+    "category": "C",
+    "reason": "Conservar controles GitHub e incorporar mejoras compatibles V4.",
+    "finalPath": "supabase/functions/marketplace-checkout/index.ts",
+    "finalSha256": "759f6f5abd00d985d0456e13faa54295a5dc33f53e4523bd4fc59566988bf4d2",
+    "finalDisposition": "integrated"
+  },
+  "supabase/functions/marketplace-confirm-delivery/index.ts": {
+    "sourceComparison": "different",
+    "category": "C",
+    "reason": "Conservar controles GitHub e incorporar mejoras compatibles V4.",
+    "finalPath": "supabase/functions/marketplace-confirm-delivery/index.ts",
+    "finalSha256": "3f09a5030f7507fa244e433e09986f7b652912606e905a015cccf30653f76f74",
+    "finalDisposition": "integrated"
+  },
+  "supabase/functions/marketplace-onboarding/index.ts": {
+    "sourceComparison": "different",
+    "category": "C",
+    "reason": "Conservar controles GitHub e incorporar mejoras compatibles V4.",
+    "finalPath": "supabase/functions/marketplace-onboarding/index.ts",
+    "finalSha256": "d42251b496dc11c3e1e9e37a31f8566fda334982536e668b41b2d2ab35a44967",
+    "finalDisposition": "integrated"
+  },
+  "supabase/functions/marketplace-refund-reversals/index.ts": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "supabase/functions/marketplace-refund-reversals/index.ts",
+    "finalSha256": "94c7539803aaeecc42db5acfc4eb31e3e4b441dd1c6d1e215b7060e7c93edb02",
+    "finalDisposition": "kept-github"
+  },
+  "supabase/functions/marketplace-release-order/index.ts": {
+    "sourceComparison": "different",
+    "category": "C",
+    "reason": "Conservar controles GitHub e incorporar mejoras compatibles V4.",
+    "finalPath": "supabase/functions/marketplace-release-order/index.ts",
+    "finalSha256": "c76e8a3766fdaae4729ee915e0334da3b086cdd1817a3c56e3e5a02dbb708c9e",
+    "finalDisposition": "integrated"
+  },
+  "supabase/functions/marketplace-settlement/index.ts": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "supabase/functions/marketplace-settlement/index.ts",
+    "finalSha256": "e2af8dd07d663b1fbed5ecbd2ac5eebe2558cab0914d2603d96de77760fa780e",
+    "finalDisposition": "kept-github"
+  },
+  "supabase/functions/marketplace-webhook/index.ts": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "supabase/functions/marketplace-webhook/index.ts",
+    "finalSha256": "fccbfea1c2a42058a40fc1c1f1952837cd1bee155dc8363afd59a84c7990acc6",
+    "finalDisposition": "kept-github"
+  },
+  "supabase/functions/translate-public-content/index.ts": {
+    "sourceComparison": "different",
+    "category": "C",
+    "reason": "Conservar controles GitHub e incorporar mejoras compatibles V4.",
+    "finalPath": "supabase/functions/translate-public-content/index.ts",
+    "finalSha256": "b7507a9dee0a62c807ad6edabeb75a26982c02732dfd6ec28e12e955b7618f70",
+    "finalDisposition": "integrated"
+  },
+  "tests/cpu-order-sync.test.cjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "tests/cpu-order-sync.test.cjs",
+    "finalSha256": "cfc734f18a6e21f86fe3d82c4d62d9b59957506851da571e8495c1dcca51e175",
+    "finalDisposition": "kept-github"
+  },
+  "tests/delivery-release-p0.test.cjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "tests/delivery-release-p0.test.cjs",
+    "finalSha256": "e5d798e02782ce30d1fa30dce9845651c6d469f8d1ee17cbef84c4b0efc4b2ff",
+    "finalDisposition": "kept-github"
+  },
+  "tests/e2e/global-setup.cjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "tests/e2e/global-setup.cjs",
+    "finalSha256": "344b6c92b72aad860b619391ff5fa60c4e49b08f50b26d42e92d1725ca2746c0",
+    "finalDisposition": "kept-github"
+  },
+  "tests/e2e/interactions.spec.js": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "tests/e2e/interactions.spec.js",
+    "finalSha256": "6862534f1c0a97c6fa28b4474257ec677162f108b7d3b8dc2743340210b146b1",
+    "finalDisposition": "kept-github"
+  },
+  "tests/e2e/smoke.spec.js": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "tests/e2e/smoke.spec.js",
+    "finalSha256": "79ca1d5c3efe19b4211445229fca19b3043aec6b8d618be2faed9a82b22046e9",
+    "finalDisposition": "kept-github"
+  },
+  "tests/e2e/support/supabase-mock.cjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "tests/e2e/support/supabase-mock.cjs",
+    "finalSha256": "6bb18e10e763c85e33d363e80c79eaf64b4130fad9aadeda4d58d57b33e0876e",
+    "finalDisposition": "kept-github"
+  },
+  "tests/integration-guards.test.cjs": {
+    "sourceComparison": "only-github",
+    "category": "A",
+    "reason": "Conservar GitHub y todas sus capacidades.",
+    "finalPath": "tests/integration-guards.test.cjs",
+    "finalSha256": "a7f68cf0909888ffe70925784e6862d3778862a2e303ab43a4130aa35ea9bf2d",
+    "finalDisposition": "kept-github"
+  },
+  "tests/integration/concurrency-harness.test.cjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "tests/integration/concurrency-harness.test.cjs",
+    "finalSha256": "c7b09744c5a0bb57454b8eeacb5ce12e66a810bcfa3d123d56bbf8ae791dcf63",
+    "finalDisposition": "kept-github"
+  },
+  "tests/integration/supabase-isolation.test.cjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "tests/integration/supabase-isolation.test.cjs",
+    "finalSha256": "28f2fb9e39db5dee409b24575156a0962307c48580a03a025f7978b1798c5d16",
+    "finalDisposition": "kept-github"
+  },
+  "tests/integration/support/supabase-rest.cjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "tests/integration/support/supabase-rest.cjs",
+    "finalSha256": "be823411945e299f0cb94784426ba26ee5be9121a88abbe727021437934c4707",
+    "finalDisposition": "kept-github"
+  },
+  "tests/payment-checkout-hardening.test.cjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "tests/payment-checkout-hardening.test.cjs",
+    "finalSha256": "803dc3c98cd42f8a1ad40d01a5d9fc2e878ffe86af94d5e6e2a1ca025751c03c",
+    "finalDisposition": "kept-github"
+  },
+  "tests/payment-confirm-delivery-hardening.test.cjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "tests/payment-confirm-delivery-hardening.test.cjs",
+    "finalSha256": "c22efab3211c2223ca67781c78c18c8ca6d6085501bd9b53e7e11fee97d20be5",
+    "finalDisposition": "kept-github"
+  },
+  "tests/payment-refund-reversal-hardening.test.cjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "tests/payment-refund-reversal-hardening.test.cjs",
+    "finalSha256": "3005c8514f9ddc430ba51375f5049314f02a8bbfed2ce95eb2d339aad542c71c",
+    "finalDisposition": "kept-github"
+  },
+  "tests/payment-settlement-hardening.test.cjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "tests/payment-settlement-hardening.test.cjs",
+    "finalSha256": "5ed97f823e356066b48e5fe63ea74cafae6784c9e00be8971b47bac176580b71",
+    "finalDisposition": "kept-github"
+  },
+  "tests/recovery-load.test.cjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "tests/recovery-load.test.cjs",
+    "finalSha256": "d87a25fe226c5052c585203289ddaef2ac1bac3423665c9016e86ebc4bded0ec",
+    "finalDisposition": "kept-github"
+  },
+  "tests/shared/migration-v91-70.test.mjs": {
+    "sourceComparison": "only-v4",
+    "category": "B",
+    "reason": "Módulo adicional; revisar contratos, secretos y pruebas antes de entrega.",
+    "finalPath": "tests/shared/migration-v91-70.test.mjs",
+    "finalSha256": "48688b1811fd9223e9d47c141b2f81ff00d1c96c5eadcb7d5130bd15c07f20f1",
+    "finalDisposition": "integrated"
+  },
+  "tests/shared/shared-helpers.test.mjs": {
+    "sourceComparison": "only-v4",
+    "category": "B",
+    "reason": "Módulo adicional; revisar contratos, secretos y pruebas antes de entrega.",
+    "finalPath": "tests/shared/shared-helpers.test.mjs",
+    "finalSha256": "c8e3dc93ee055deee39975b2a9ec9a36d07c6eec466cf425937ec77bd23e5973",
+    "finalDisposition": "integrated"
+  },
+  "tests/sql-dispatch-singleflight.test.cjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "tests/sql-dispatch-singleflight.test.cjs",
+    "finalSha256": "a750410cebebaaf1db6ff0bcd2574d8df2a80d4571ca31f235bffdab53bbd8f6",
+    "finalDisposition": "kept-github"
+  },
+  "tests/timeout-cancellation.test.cjs": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "tests/timeout-cancellation.test.cjs",
+    "finalSha256": "2d8f25f1098a3888daa898a88bc6d61a8ee846954b6125a59d443de0d06cce72",
+    "finalDisposition": "kept-github"
+  },
+  "vendor/README.md": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "vendor/README.md",
+    "finalSha256": "ba8557e524625bf7f52a54be4e646c7b1876af9faf4fe5063e4832074c582e90",
+    "finalDisposition": "kept-github"
+  },
+  "vendor/SUPABASE-LICENSE.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "vendor/SUPABASE-LICENSE.txt",
+    "finalSha256": "334dd6820e2eaeab2064e7c59001b810566728a28a41a7c1dbf69bbee17d0936",
+    "finalDisposition": "kept-github"
+  },
+  "vendor/supabase-2.57.4.js": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "vendor/supabase-2.57.4.js",
+    "finalSha256": "7e94b62086deecef8c0ba3b38f514e2a1944ff6c81d92fb3ff967828c406c38f",
+    "finalDisposition": "kept-github"
+  },
+  "vercel.json": {
+    "sourceComparison": "different",
+    "category": "C",
+    "reason": "Conservar controles GitHub e incorporar mejoras compatibles V4.",
+    "finalPath": "vercel.json",
+    "finalSha256": "80e5ec936a6b333ca7fad9a7f25e087bf27411192119a0e829ff924b5d9564cf",
+    "finalDisposition": "integrated"
+  },
+  "www/BUILD-METADATA.json": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/BUILD-METADATA.json",
+    "finalSha256": "68b11ec28428e62459a6240b0a2d62d9d5f69c3fae056946d9d4988184808902",
+    "finalDisposition": "kept-github"
+  },
+  "www/admin-manifest.en.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/admin-manifest.en.webmanifest",
+    "finalSha256": "7e68b885b36021cab9d48d8c7442d06912ccc00fb30266fe0165873d0fad2281",
+    "finalDisposition": "kept-github"
+  },
+  "www/admin-manifest.pl.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/admin-manifest.pl.webmanifest",
+    "finalSha256": "dda581cb9dbd45d672ef0e5e6a41823413e2108ebe6d9726810f1296ebb50c62",
+    "finalDisposition": "kept-github"
+  },
+  "www/admin-manifest.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/admin-manifest.webmanifest",
+    "finalSha256": "9508fceaeaf16852c2dab234bb3465706deb2d92c0268781ac076d2fa9c6677e",
+    "finalDisposition": "kept-github"
+  },
+  "www/admin.html": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/admin.html",
+    "finalSha256": "e84c0ca8ea8476d3d1381451f95d6c1f114763921a3605f9e6208fcb1cf2a5e0",
+    "finalDisposition": "kept-github"
+  },
+  "www/admin.js": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/admin.js",
+    "finalSha256": "d155e4721b17495c333d7bc128b78b3162029ff6fb66b878223f391bdcb09bc0",
+    "finalDisposition": "kept-github"
+  },
+  "www/app-icon-192.png": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/app-icon-192.png",
+    "finalSha256": "aefe276e9a10c64a211ebd2782b724cb1fc6ccdec714ef5c46f624a8de001f9d",
+    "finalDisposition": "kept-github"
+  },
+  "www/app-icon-512.png": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/app-icon-512.png",
+    "finalSha256": "44f5955cc5bfe7d8028c5579067ceaea13d44de6c1296d92f8ffb464ca60aab0",
+    "finalDisposition": "kept-github"
+  },
+  "www/app-icon.svg": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/app-icon.svg",
+    "finalSha256": "389a7104de1dd8b0bafff28b7f9e77b772531c4933287a5e2f4144db55394cb4",
+    "finalDisposition": "kept-github"
+  },
+  "www/app.js": {
+    "sourceComparison": "different",
+    "category": "A",
+    "reason": "Conservar GitHub y todas sus capacidades.",
+    "finalPath": "www/app.js",
+    "finalSha256": "d7715a3d0f7ed44a42fd690cc4144b1f9e57fce8424086ccdd89923511b846a5",
+    "finalDisposition": "kept-github"
+  },
+  "www/auto-translate.js": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/auto-translate.js",
+    "finalSha256": "b14d57d3766a95d2bb7517312546435095ec5fd7b80f07a48750d98cfcdf7791",
+    "finalDisposition": "kept-github"
+  },
+  "www/cliente-manifest.en.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/cliente-manifest.en.webmanifest",
+    "finalSha256": "7bb630eb3ed406b1fc1fe63989e36d206e335e36aa79f8d98eae494302e3c9d4",
+    "finalDisposition": "kept-github"
+  },
+  "www/cliente-manifest.pl.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/cliente-manifest.pl.webmanifest",
+    "finalSha256": "a446e5d903cabe86ba82f50cebdc8c44774798a35155562cf3b3c4a491becf9c",
+    "finalDisposition": "kept-github"
+  },
+  "www/cliente-manifest.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/cliente-manifest.webmanifest",
+    "finalSha256": "559484ead17a156a865d4610a2988cb82661096eea7212ca8cd783ed6f596e8e",
+    "finalDisposition": "kept-github"
+  },
+  "www/cliente.html": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/cliente.html",
+    "finalSha256": "47ca8809900a97bb44da5b75eb4e65c92e095d7352a8e0654465406528642f56",
+    "finalDisposition": "kept-github"
+  },
+  "www/cliente.js": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/cliente.js",
+    "finalSha256": "012d8a70418d0440f2181cafce6af11abd3aea4ddcc9434053de2b796504b7b2",
+    "finalDisposition": "kept-github"
+  },
+  "www/colaborador-manifest.en.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/colaborador-manifest.en.webmanifest",
+    "finalSha256": "66b236c9124c64947171cc5a74cb42b671ad2a74d5bb1e737a896cdc6bdd0905",
+    "finalDisposition": "kept-github"
+  },
+  "www/colaborador-manifest.pl.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/colaborador-manifest.pl.webmanifest",
+    "finalSha256": "ee38d05f610f12e8b8e283d5fdb7e24a9eecfc4c1babb9fc61d4369377258a79",
+    "finalDisposition": "kept-github"
+  },
+  "www/colaborador-manifest.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/colaborador-manifest.webmanifest",
+    "finalSha256": "892d58e521159a4dc8c35e97545fcbd58d5e5bf0cb3aec9824c557e471c2791d",
+    "finalDisposition": "kept-github"
+  },
+  "www/colaborador.html": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/colaborador.html",
+    "finalSha256": "30418c75b5efb858def631a2cfe7127fafa2c0ca4aedef7697e9690ede75d52b",
+    "finalDisposition": "kept-github"
+  },
+  "www/colaborador.js": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/colaborador.js",
+    "finalSha256": "b9204b6df34995994ba88da52917b7e7c4f4ab81aec048c454c79ff68fe94884",
+    "finalDisposition": "kept-github"
+  },
+  "www/index.html": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/index.html",
+    "finalSha256": "fcb15fec19fb33e37bf61a3a779593da61c0f383d6805fb98b8dfd201ffa06ad",
+    "finalDisposition": "kept-github"
+  },
+  "www/manifest.en.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/manifest.en.webmanifest",
+    "finalSha256": "f47c004e4c49e4990d51b1fb3dd8fd39c2b4ecfba5c3a382aef7e96cdf4c4f0e",
+    "finalDisposition": "kept-github"
+  },
+  "www/manifest.pl.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/manifest.pl.webmanifest",
+    "finalSha256": "ab3c89b5ad2b69e40648edc79fe577b544ae9e61bf570cb3271d61f7f7d9b801",
+    "finalDisposition": "kept-github"
+  },
+  "www/manifest.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/manifest.webmanifest",
+    "finalSha256": "8d0381aa80ada71d5a6778ca887794e79f13278c7608870fa83f6e1d9e3b7388",
+    "finalDisposition": "kept-github"
+  },
+  "www/mesero-manifest.en.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/mesero-manifest.en.webmanifest",
+    "finalSha256": "8665ffaef4c7b0824561effef691e6208d69c9343272c1e7c9b9e8716bf3a64b",
+    "finalDisposition": "kept-github"
+  },
+  "www/mesero-manifest.pl.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/mesero-manifest.pl.webmanifest",
+    "finalSha256": "6cd723d24c0773d1ac67d631ea273f91418179a07648b5a39449c6b1a4e4e047",
+    "finalDisposition": "kept-github"
+  },
+  "www/mesero-manifest.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/mesero-manifest.webmanifest",
+    "finalSha256": "4011961d46726bb3c308db0c378aa0f0294368a547ee907da860cdc9bb76e585",
+    "finalDisposition": "kept-github"
+  },
+  "www/mesero.html": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/mesero.html",
+    "finalSha256": "d969173f53e58dcc1905a59b8184b4c24c014158c8cfe57d19ca9b121a00e5f1",
+    "finalDisposition": "kept-github"
+  },
+  "www/mesero.js": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/mesero.js",
+    "finalSha256": "007f4eb7eb9564bd89a9fc5dd4cb43aa91b4c217f148c238ef0c70a810639259",
+    "finalDisposition": "kept-github"
+  },
+  "www/offline-i18n.js": {
+    "sourceComparison": "different",
+    "category": "A",
+    "reason": "Conservar GitHub y todas sus capacidades.",
+    "finalPath": "www/offline-i18n.js",
+    "finalSha256": "1c3c946eb4d83dd537993e1c434ee5324095845dcb765099e2e80d88fd5e2a04",
+    "finalDisposition": "kept-github"
+  },
+  "www/restaurante-manifest.en.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/restaurante-manifest.en.webmanifest",
+    "finalSha256": "b5fa12d14a4847753f8b79ea5097f060727752582ef788434dfd6988e37502d0",
+    "finalDisposition": "kept-github"
+  },
+  "www/restaurante-manifest.pl.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/restaurante-manifest.pl.webmanifest",
+    "finalSha256": "3239d275ded2402fec415429c1590a8619060e12646cc4365d63a965d24c8907",
+    "finalDisposition": "kept-github"
+  },
+  "www/restaurante-manifest.webmanifest": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/restaurante-manifest.webmanifest",
+    "finalSha256": "cdf94d9ff4f5080a0526b9bbce8429966911202e493a47890cbf54642778717d",
+    "finalDisposition": "kept-github"
+  },
+  "www/restaurante.html": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/restaurante.html",
+    "finalSha256": "6667b2ef63fe5fdf0dcceaacded17e74e5d9b16cfb0d78606460a48f50bf67f3",
+    "finalDisposition": "kept-github"
+  },
+  "www/service-worker.js": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/service-worker.js",
+    "finalSha256": "c0c3c948f80e5f19aadda7e360f8b1ba7512ae012b792e5e102c28e1c7c19de3",
+    "finalDisposition": "kept-github"
+  },
+  "www/styles.css": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/styles.css",
+    "finalSha256": "7075196520627110075719a46c6a71e80a9988b3e3d8c23f86fa48b23ee2535f",
+    "finalDisposition": "kept-github"
+  },
+  "www/supabase-config.js": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/supabase-config.js",
+    "finalSha256": "4c904090ce4442c234ee95061ad0392b424f5f14c22482cac3d51b3687d9438f",
+    "finalDisposition": "kept-github"
+  },
+  "www/vendor/SUPABASE-LICENSE.txt": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/vendor/SUPABASE-LICENSE.txt",
+    "finalSha256": "334dd6820e2eaeab2064e7c59001b810566728a28a41a7c1dbf69bbee17d0936",
+    "finalDisposition": "kept-github"
+  },
+  "www/vendor/supabase-2.57.4.js": {
+    "sourceComparison": "identical",
+    "category": "A",
+    "reason": "Contenido idéntico byte por byte.",
+    "finalPath": "www/vendor/supabase-2.57.4.js",
+    "finalSha256": "7e94b62086deecef8c0ba3b38f514e2a1944ff6c81d92fb3ff967828c406c38f",
+    "finalDisposition": "kept-github"
+  }
+}

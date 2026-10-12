@@ -692,6 +692,7 @@ function scheduleRefundReversalWorker(
           {
             method:
               "POST",
+            redirect: "error",
             headers,
             body:
               JSON.stringify({

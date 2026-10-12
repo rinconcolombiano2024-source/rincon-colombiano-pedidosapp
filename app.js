@@ -33,6 +33,7 @@ settingsRevision: "rc_ordera_settings_revision",
   bankAccount: "rc_ordera_bank_account",
   bankTransferNote: "rc_ordera_bank_transfer_note",
   onlinePaymentProvider: "rc_ordera_online_payment_provider",
+  defaultVatRate: "rc_ordera_default_vat_rate",
   onlinePaymentNote: "rc_ordera_online_payment_note",
   clientAlarmEnabled: "rc_ordera_client_alarm_enabled",
   businessName: "rc_ordera_business_name",
@@ -520,6 +521,8 @@ productDescriptionPlInput: document.querySelector("#productDescriptionPlInput"),
 productDescriptionEnInput: document.querySelector("#productDescriptionEnInput"),
   productPriceInput: document.querySelector("#productPriceInput"),
   productStationSelect: document.querySelector("#productStationSelect"),
+  productVatSelect: document.querySelector("#productVatSelect"),
+  restaurantDefaultVatSelect: document.querySelector("#restaurantDefaultVatSelect"),
   productImageUrlInput: document.querySelector("#productImageUrlInput"),
   productImageFileInput: document.querySelector("#productImageFileInput"),
   productAvailableInput: document.querySelector("#productAvailableInput"),
@@ -606,6 +609,7 @@ let googleMapsApiKey = readGoogleMapsApiKey();
 let bankAccount = readBankAccount();
 let bankTransferNote = readBankTransferNote();
 let onlinePaymentProvider = readOnlinePaymentProvider();
+let defaultVatRate = normalizeVatRate(localStorage.getItem(STORAGE_KEYS.defaultVatRate));
 let onlinePaymentNote = readOnlinePaymentNote();
 let marketplaceAccountState = null;
 let businessLogoUrl = readBusinessLogoUrl();
@@ -3205,6 +3209,7 @@ function currentSettingsPayload() {
     bankAccount,
     bankTransferNote,
     onlinePaymentProvider,
+    defaultVatRate,
     onlinePaymentNote,
     businessLogoUrl,
     restaurantActive,
@@ -3516,6 +3521,7 @@ function localStoreCurrentSettings() {
   localStorage.setItem(STORAGE_KEYS.bankAccount, bankAccount);
   localStorage.setItem(STORAGE_KEYS.bankTransferNote, bankTransferNote);
   localStorage.setItem(STORAGE_KEYS.onlinePaymentProvider, onlinePaymentProvider);
+  localStorage.setItem(STORAGE_KEYS.defaultVatRate, defaultVatRate);
   localStorage.setItem(STORAGE_KEYS.onlinePaymentNote, onlinePaymentNote);
   localStorage.setItem(STORAGE_KEYS.restaurantActive, restaurantActive ? "1" : "0");
   localStorage.setItem(STORAGE_KEYS.restaurantOperationalOpen, restaurantOperationalOpen ? "1" : "0");
@@ -3556,6 +3562,7 @@ function applySettingsPayload(settings = {}) {
   bankAccount = preserveTextSetting(settings.bankAccount, bankAccount);
   bankTransferNote = preserveTextSetting(settings.bankTransferNote, bankTransferNote);
   onlinePaymentProvider = normalizeOnlinePaymentProvider(settings.onlinePaymentProvider ?? onlinePaymentProvider);
+  defaultVatRate = Object.hasOwn(settings, "defaultVatRate") ? normalizeVatRate(settings.defaultVatRate) : "";
   onlinePaymentNote = preserveTextSetting(settings.onlinePaymentNote, onlinePaymentNote);
   if (typeof settings.restaurantActive === "boolean") restaurantActive = settings.restaurantActive;
   if (typeof settings.restaurantOperationalOpen === "boolean") restaurantOperationalOpen = settings.restaurantOperationalOpen;
@@ -8447,7 +8454,13 @@ function updateQrPreview() {
     return;
   }
 
-  elements.qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(link)}`;
+  try {
+    elements.qrImage.src = window.RC_ORDERA_QR.image(link);
+  } catch (error) {
+    elements.qrImage.removeAttribute("src");
+    elements.qrHint.textContent = (window.RC_ORDERA_OFFLINE_I18N?.translate("No se pudo generar el QR. Copia el enlace o vuelve a intentarlo.", currentAppLanguage()) || "No se pudo generar el QR. Copia el enlace o vuelve a intentarlo.");
+    return;
+  }
   elements.qrHint.textContent = elements.qrTableInput.value.trim()
     ? "QR con mesa/ubicacion incluida. Puedes imprimirlo o mostrarlo al cliente."
     : "QR general del restaurante. El cliente escribira mesa, nombre o domicilio.";
@@ -8617,6 +8630,22 @@ function restaurantStationLabel(station) {
     dispatch: "Despacho",
     manager: "Encargado",
   }[station] || "Personal";
+}
+
+// Tasas de IVA admitidas (Polonia): "23", "8", "5", "0" y "ZW" (exento). Devuelve "" si no es válida.
+// Una tasa vacía significa "heredar del restaurante": la clave vatRate NO se guarda en el plato.
+function normalizeVatRate(value) {
+  // Fiscal device letters require its verified PTU configuration; never infer a tax category.
+  const raw = String(value ?? "").trim().toUpperCase().replace(/^VAT[_\s-]*/, "").replace(/\s*%$/, "").replace(/\s+/g, " ");
+  return ["23", "8", "5", "0", "ZW", "NP", "NP I", "NP II"].includes(raw) ? raw : "";
+}
+function menuVatSnapshot(dish) {
+  const field = Object.hasOwn(dish || {}, "vatRate") ? "vatRate"
+    : Object.hasOwn(dish || {}, "vat_rate") ? "vat_rate" : null;
+  if (!field) return {};
+  const value = dish[field];
+  // Preserve an explicitly unknown category: it must not inherit a different restaurant default.
+  return { vatRate: normalizeVatRate(value) || value };
 }
 
 function normalizeProductStation(station) {
@@ -10944,6 +10973,7 @@ function normalizeMenuCatalog(menu) {
             dish?.preparationStation ||
             dish?.preparation_station
           ),
+          ...menuVatSnapshot(dish),
 
           /*
            * Traducciones permanentes
@@ -12215,6 +12245,7 @@ function openMenuEditor() {
   editingProduct = null;
   clearProductForm();
   renderCurrencySettings();
+  if (elements.restaurantDefaultVatSelect) elements.restaurantDefaultVatSelect.value = defaultVatRate;
   renderMenuEditor();
 
   showRestaurantEditSection("restaurant-info");
@@ -12256,6 +12287,7 @@ function clearProductForm() {
 
   elements.productPriceInput.value = "";
   if (elements.productStationSelect) elements.productStationSelect.value = "kitchen";
+  if (elements.productVatSelect) elements.productVatSelect.value = "";
   elements.productImageUrlInput.value = "";
   elements.productAvailableInput.checked = true;
 
@@ -12434,6 +12466,12 @@ async function saveProduct() {
   let imageUrl = normalizeProductImageUrl(elements.productImageUrlInput.value);
   const available = elements.productAvailableInput.checked;
   const station = normalizeProductStation(elements.productStationSelect?.value);
+  const vatSelection = elements.productVatSelect?.value || "";
+  const vatRate = normalizeVatRate(vatSelection);
+  if (vatSelection && !vatRate) {
+    alert((window.RC_ORDERA_OFFLINE_I18N?.translate("Revisa la categoría de IVA antes de guardar.", currentAppLanguage()) || "Revisa la categoría de IVA antes de guardar."));
+    return;
+  }
 
   if (!category || !menuCatalog[category]) {
     alert("Selecciona una categoria.");
@@ -12471,6 +12509,7 @@ async function saveProduct() {
       available,
       imageUrl,
       station,
+      ...(vatRate ? { vatRate } : {}),
     };
 
     if (editingProduct) {
@@ -12560,6 +12599,11 @@ function editProduct(index) {
 
   if (elements.productStationSelect) {
     elements.productStationSelect.value = normalizeProductStation(product.station);
+  }
+  if (elements.productVatSelect) {
+    const explicit = Object.hasOwn(product, "vatRate") || Object.hasOwn(product, "vat_rate");
+    const category = normalizeVatRate(product.vatRate ?? product.vat_rate);
+    elements.productVatSelect.value = explicit && !category ? "__unverified__" : category;
   }
 
   elements.productImageUrlInput.value =
@@ -14999,6 +15043,11 @@ elements.renameCategoryButton.addEventListener("click", renameCategory);
 elements.deleteCategoryButton.addEventListener("click", deleteCategory);
 elements.newProductButton.addEventListener("click", startNewProduct);
 elements.saveProductButton.addEventListener("click", saveProduct);
+elements.restaurantDefaultVatSelect?.addEventListener("change", async () => {
+  defaultVatRate = normalizeVatRate(elements.restaurantDefaultVatSelect.value);
+  localStoreCurrentSettings();
+  await saveSettingsWhenPossible();
+});
 elements.cancelEditProductButton.addEventListener("click", clearProductForm);
 elements.resetMenuButton.addEventListener("click", resetMenu);
 // ============================================================

@@ -300,11 +300,11 @@ const CUSTOMER_I18N = {
     timelineDelivered: "Pedido entregado",
     timelineCancelled: "Pedido cancelado",
     courierTrackingTitle: "Seguimiento del colaborador",
-    courierTrackingWaiting: "La ubicacion aparecera cuando un colaborador acepte el domicilio.",
+    courierTrackingWaiting: "Esperando la ubicación del colaborador.",
     courierTrackingName: "Colaborador: {name}",
-    courierTrackingLocation: "Ubicacion actualizada {time}",
+    courierTrackingLocation: "Ubicación actualizada {time}",
     courierTrackingEta: "Llegada estimada: {time}",
-    courierTrackingMap: "Abrir ubicacion en el mapa",
+    courierTrackingMap: "Abrir ubicación en el mapa",
     courierTrackingNow: "ahora",
     historyTicket: "Ticket",
     historyNoTicket: "Sin ticket",
@@ -393,6 +393,7 @@ calculateMaps: "Calcular con Google Maps",
     noConnection: "No hay conexion con el restaurante.",
     addProductFirst: "Agrega al menos un producto.",
     sendingOrder: "Enviando pedido...",
+    orderSessionChanged: "La sesión o el restaurante cambió. Revisa el pedido antes de volver a enviarlo.",
     sendOrderError: "No se pudo enviar. Revisa internet o avisa al restaurante.",
     orderRateLimited: "Has enviado varios pedidos en poco tiempo. Espera unos minutos antes de intentarlo de nuevo.",
     menuChangedBeforeOrder: "El menu cambio antes de confirmar el pedido. Ya cargamos los precios y productos actuales; revisa el carrito.",
@@ -635,11 +636,11 @@ calculateMaps: "Calcular con Google Maps",
     timelineDelivered: "Zamowienie dostarczone",
     timelineCancelled: "Zamowienie anulowane",
     courierTrackingTitle: "Sledzenie kuriera",
-    courierTrackingWaiting: "Lokalizacja pojawi sie, gdy kurier zaakceptuje dostawe.",
+    courierTrackingWaiting: "Oczekiwanie na lokalizację kuriera.",
     courierTrackingName: "Kurier: {name}",
     courierTrackingLocation: "Lokalizacja zaktualizowana {time}",
     courierTrackingEta: "Szacowany czas przyjazdu: {time}",
-    courierTrackingMap: "Otworz lokalizacje na mapie",
+    courierTrackingMap: "Otwórz lokalizację na mapie",
     courierTrackingNow: "teraz",
     historyTicket: "Bilet",
     historyNoTicket: "Bez biletu",
@@ -727,7 +728,8 @@ kitchenNotesLabel: "Uwagi do kuchni",
     itemNotePlaceholder: "UWAGA DO TEGO DANIA",
     noConnection: "Brak polaczenia z restauracja.",
     addProductFirst: "Dodaj przynajmniej jeden produkt.",
-    sendingOrder: "Wysylanie zamowienia...",
+    sendingOrder: "Wysyłanie zamówienia...",
+    orderSessionChanged: "Sesja lub restauracja uległa zmianie. Sprawdź zamówienie przed ponownym wysłaniem.",
     sendOrderError: "Nie udalo sie wyslac. Sprawdz internet albo powiadom restauracje.",
     orderRateLimited: "Wysłano zbyt wiele zamówień w krótkim czasie. Odczekaj kilka minut i spróbuj ponownie.",
     menuChangedBeforeOrder: "Menu zmienilo sie przed potwierdzeniem zamowienia. Zaladowalismy aktualne produkty i ceny; sprawdz koszyk.",
@@ -970,7 +972,7 @@ kitchenNotesLabel: "Uwagi do kuchni",
     timelineDelivered: "Order delivered",
     timelineCancelled: "Order cancelled",
     courierTrackingTitle: "Courier tracking",
-    courierTrackingWaiting: "The location will appear after a courier accepts the delivery.",
+    courierTrackingWaiting: "Waiting for the courier’s location.",
     courierTrackingName: "Courier: {name}",
     courierTrackingLocation: "Location updated {time}",
     courierTrackingEta: "Estimated arrival: {time}",
@@ -1063,6 +1065,7 @@ kitchenNotesLabel: "Kitchen notes",
     noConnection: "No connection with the restaurant.",
     addProductFirst: "Add at least one product.",
     sendingOrder: "Sending order...",
+    orderSessionChanged: "Your session or restaurant changed. Review the order before sending it again.",
     sendOrderError: "Could not send. Check internet or tell the restaurant.",
     orderRateLimited: "Too many orders were sent in a short time. Wait a few minutes before trying again.",
     menuChangedBeforeOrder: "The menu changed before the order was confirmed. Current products and prices are loaded; review your cart.",
@@ -3487,6 +3490,7 @@ async function customerLoadRestaurantDirectoryNow(options = {}) {
   return true;
 }
 async function customerSelectRestaurant(storeId, options = {}) {
+  if (customerCheckoutBusy) { customerSetStatus(customerT("sendingOrder"), ""); return; }
   const nextStoreId = customerNormalizeText(storeId);
   if (!nextStoreId) return;
   const previousStoreId = customerStoreId;
@@ -5711,7 +5715,13 @@ function customerScheduleChatPoll(delayMs) {
       return;
     }
 
-    const loaded = await customerLoadChatMessages({ silent: true });
+    // A rejected transport read must follow the same bounded backoff as an RPC error.
+    let loaded = false;
+    try {
+      loaded = await customerLoadChatMessages({ silent: true });
+    } catch {
+      loaded = false;
+    }
 
     if (
       generation !== customerChatGeneration ||
@@ -5996,6 +6006,8 @@ async function customerHandlePaymentReturn() {
   nextUrl.searchParams.delete("order");
   window.history.replaceState({}, "", nextUrl.toString());
 }
+let customerOrderFlight = null;
+let customerPendingOrderMemory = null;
 function customerOrderFingerprint(orderPayload) {
   const fingerprintPayload = { ...orderPayload };
   delete fingerprintPayload.createdAt;
@@ -6030,7 +6042,21 @@ function customerReadPendingOrder(fingerprint) {
   }
   return null;
 }
-async function customerCreateCustomerOrder(
+function customerCreateCustomerOrder(orderPayload, total, tableLabel, customerName, orderType) {
+  const context = JSON.stringify([customerStoreId,customerUser?.id || null]);
+  const key = JSON.stringify([context,customerOrderFingerprint(orderPayload),tableLabel,customerName,orderType]);
+  if (customerOrderFlight) {
+    if (customerOrderFlight.key === key) return customerOrderFlight.promise;
+    return Promise.reject(new Error("ORDER_ALREADY_SENDING"));
+  }
+  const promise = customerCreateCustomerOrderRequest(orderPayload,total,tableLabel,customerName,orderType)
+    .then(result=>{
+      if(context!==JSON.stringify([customerStoreId,customerUser?.id || null]))throw new Error("ORDER_SESSION_CHANGED");
+      return result;
+    }).finally(()=>{customerOrderFlight=null;});
+  customerOrderFlight={key,promise};return promise;
+}
+async function customerCreateCustomerOrderRequest(
   orderPayload,
   total,
   tableLabel,
@@ -6041,7 +6067,10 @@ async function customerCreateCustomerOrder(
     throw new Error("ORDER_SERVICE_UNAVAILABLE");
   }
   const fingerprint = customerOrderFingerprint(orderPayload);
-  const pendingOrder = customerReadPendingOrder(fingerprint);
+  const context = JSON.stringify([customerStoreId,customerUser?.id || null]);
+  const memoryOrder = customerPendingOrderMemory;
+  const pendingOrder = memoryOrder?.context === context && memoryOrder.fingerprint === fingerprint
+    && Date.now() - memoryOrder.createdAt < 30 * 60 * 1000 ? memoryOrder : customerReadPendingOrder(fingerprint);
   const orderId =
     pendingOrder?.orderId ||
     customerGenerateId();
@@ -6067,6 +6096,7 @@ async function customerCreateCustomerOrder(
    */
   payloadForServer.clientGuardId =
     customerOrderGuardId();
+  customerPendingOrderMemory = {context,fingerprint,orderId,publicToken,createdAt:pendingOrder?.createdAt || Date.now()};
   const pendingStorageKey =
     customerPendingOrderStorageKey();
   /*
@@ -6220,8 +6250,8 @@ async function customerCreateCustomerOrder(
    * de empezar tracking/chat/pago con credenciales corruptas.
    */
   if (
-    !returnedId ||
-    !returnedPublicToken
+    returnedId !== orderId ||
+    returnedPublicToken !== publicToken
   ) {
     throw new Error(
       "ORDER_CREATE_INVALID_RESPONSE"
@@ -6231,6 +6261,7 @@ async function customerCreateCustomerOrder(
    * El pedido fue confirmado por el servidor.
    * La estructura de reintento ya no es necesaria.
    */
+  customerPendingOrderMemory = null;
   try {
     sessionStorage.removeItem(
       pendingStorageKey
@@ -6352,7 +6383,8 @@ async function customerLoadOrderTimeline() {
   }
 }
 function customerTrackingRelativeTime(value) {
-  const date = new Date(value || 0);
+  if (typeof value !== "string" || !value.trim()) return "";
+  const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
   const elapsedSeconds = Math.max(0, Math.round((Date.now() - date.getTime()) / 1000));
   if (elapsedSeconds < 30) return customerT("courierTrackingNow");
@@ -6375,11 +6407,17 @@ function customerRenderCourierTracking(row = null) {
     return;
   }
   const name = String(row?.courier_name || "").trim();
-  const lat = Number(row?.courier_lat);
-  const lng = Number(row?.courier_lng);
+  const coordinate = (value) => {
+    if (typeof value !== "number" && typeof value !== "string") return NaN;
+    if (typeof value === "string" && !value.trim()) return NaN;
+    return Number(value);
+  };
+  const lat = coordinate(row?.courier_lat);
+  const lng = coordinate(row?.courier_lng);
   const hasLocation = Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
   const lastLocation = customerTrackingRelativeTime(row?.courier_location_updated_at);
-  const etaDate = new Date(row?.estimated_delivery_at || row?.estimated_pickup_at || 0);
+  const etaValue = row?.estimated_delivery_at || row?.estimated_pickup_at;
+  const etaDate = new Date(typeof etaValue === "string" && etaValue.trim() ? etaValue : NaN);
   const eta = Number.isNaN(etaDate.getTime())
     ? ""
     : etaDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -6726,7 +6764,13 @@ function customerScheduleStatusPoll(delayMs) {
       return;
     }
 
-    const loaded = await customerPollOrderStatus();
+    // A rejected transport read must follow the same bounded backoff as an RPC error.
+    let loaded = false;
+    try {
+      loaded = await customerPollOrderStatus();
+    } catch {
+      loaded = false;
+    }
 
     if (
       signature !== customerStatusPollSignature ||
@@ -6920,12 +6964,12 @@ function customerRenderCart() {
   customerElements.cartTotal.textContent = customerFormatMoney(customerCartTotal());
   customerElements.deliveryFeeRow.hidden = customerElements.orderType.value !== "Domicilio";
   customerElements.deliveryFeeLabel.textContent = customerFormatMoney(customerDeliveryFee());
-customerElements.sendButton.disabled =
-  customerCart.length === 0;
+customerRenderCheckoutState();
 customerRenderHeaderCart();
 customerRenderSelectedRestaurantDetails();
 }
 function customerAddItem(dish) {
+  if (customerCheckoutBusy) { customerSetStatus(customerT("sendingOrder"), ""); return; }
   const productId =
     customerNormalizeProductId(dish.id || dish.productId) ||
     customerStableProductId(customerActiveCategory, dish.name, dish.description || "");
@@ -7104,7 +7148,33 @@ async function customerRefreshMenu() {
     customerSetStatus(customerT("menuLoadError"), "error");
   }
 }
+let customerCheckoutBusy = false;
+const customerCheckoutControls = new Map();
+function customerRenderCheckoutState() {
+  const controls = [...customerElements.cartItems.querySelectorAll("button,input,textarea"),
+    ...["tableInput", "nameInput", "orderType", "paymentMethod", "notesInput", "distanceInput", "phoneInput", "cityInput", "postalCodeInput", "addressInput", "buildingNumberInput", "apartmentInput", "neighborhoodInput", "referenceInput", "useLocationButton", "chooseMapLocationButton", "calculateDistanceButton"].map(key => customerElements[key]).filter(Boolean)];
+  if (customerCheckoutBusy) {
+    for (const control of controls) {
+      if (!customerCheckoutControls.has(control)) customerCheckoutControls.set(control, control.disabled);
+      control.disabled = true;
+    }
+  } else {
+    for (const [control, disabled] of customerCheckoutControls) control.disabled = disabled;
+    customerCheckoutControls.clear();
+  }
+  customerElements.sendButton.disabled = customerCheckoutBusy || customerCart.length === 0;
+  customerElements.sendButton.textContent = customerT(customerCheckoutBusy ? "sendingOrder" : "sendOrder");
+  customerElements.sendButton.setAttribute("aria-busy", String(customerCheckoutBusy));
+}
 async function customerSendOrder() {
+  if (customerCheckoutBusy) return;
+  customerCheckoutBusy = true;
+  customerRenderCheckoutState();
+  try { return await customerSendOrderRequest(); }
+  finally { customerCheckoutBusy = false; customerRenderCheckoutState(); }
+}
+async function customerSendOrderRequest() {
+  const checkoutContext = JSON.stringify([customerStoreId, customerUser?.id || null]);
   if (!customerClient || !customerStoreId) {
     customerSetStatus(customerT("noConnection"), "error");
     return;
@@ -7196,6 +7266,9 @@ try {
     await customerSaveProfile();
   }
 
+  if (checkoutContext !== JSON.stringify([customerStoreId, customerUser?.id || null])) {
+    throw new Error("ORDER_SESSION_CHANGED");
+  }
   insertedOrder = await customerCreateCustomerOrder(
     orderPayload,
     total,
@@ -7205,7 +7278,9 @@ try {
   );
 } catch (error) {
   console.error("ERROR REAL create_customer_order:", error);
-if (/ORDER_RATE_LIMITED/i.test(String(error?.message || ""))) {
+if (/ORDER_SESSION_CHANGED/i.test(String(error?.message || ""))) {
+  customerSetStatus(customerT("orderSessionChanged"), "error");
+} else if (/ORDER_RATE_LIMITED/i.test(String(error?.message || ""))) {
   customerSetStatus(customerT("orderRateLimited"), "error");
 } else if (/restaurant is closed/i.test(String(error?.message || ""))) {
   customerSetStatus(customerT("restaurantClosedOrder"), "error");
@@ -7225,7 +7300,7 @@ if (/ORDER_RATE_LIMITED/i.test(String(error?.message || ""))) {
   }
   if (!insertedOrder) {
     customerElements.sendButton.disabled = false;
- if (![customerT("orderRateLimited"), customerT("restaurantClosedOrder"), customerT("restaurantRegionMismatch"), customerT("deliveryQuoteRequired"), customerT("menuChangedBeforeOrder")].includes(customerElements.status.textContent)) {
+ if (![customerT("orderSessionChanged"), customerT("orderRateLimited"), customerT("restaurantClosedOrder"), customerT("restaurantRegionMismatch"), customerT("deliveryQuoteRequired"), customerT("menuChangedBeforeOrder")].includes(customerElements.status.textContent)) {
       customerSetStatus(customerT("sendOrderError"), "error");
     }
     return;
@@ -7300,6 +7375,7 @@ customerElements.menuGrid.addEventListener("click", (event) => {
   if (dish) customerAddItem(dish);
 });
 customerElements.cartItems.addEventListener("click", (event) => {
+  if (customerCheckoutBusy) return;
   const row = event.target.closest(".customer-cart-item");
   const action = event.target.dataset.action;
   if (!row || !action) return;
@@ -7311,6 +7387,7 @@ customerElements.cartItems.addEventListener("click", (event) => {
   customerRenderCart();
 });
 customerElements.cartItems.addEventListener("input", (event) => {
+  if (customerCheckoutBusy) return;
   const row = event.target.closest(".customer-cart-item");
   const action = event.target.dataset.action;
   if (!row || !action) return;

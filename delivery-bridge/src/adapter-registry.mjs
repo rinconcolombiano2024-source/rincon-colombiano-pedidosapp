@@ -1,3 +1,9 @@
+import { normalizeProvider } from "./providers.mjs";
+import { createWoltAdapter } from "./adapters/wolt.mjs";
+import { createGlovoAdapter } from "./adapters/glovo.mjs";
+import { createUberEatsAdapter } from "./adapters/ubereats.mjs";
+import { createConfigurableAdapter } from "./adapters/configurable.mjs";
+
 
 /**
  * RC ORDERA — Delivery Adapter Registry V1
@@ -99,4 +105,18 @@ export function createDefaultDeliveryRegistry() {
   // Providers require reviewed implementations,
   // official credentials and security tests.
   return new DeliveryAdapterRegistry();
+}
+
+export function createPreparedDeliveryRegistry() {
+  // Todos los proveedores están registrados pero FALLAN CERRADO hasta recibir credenciales y,
+  // en los marcados como provisionales, contrastar el contrato con la documentación oficial.
+  const registry = new DeliveryAdapterRegistry();
+  registry.register("wolt", (o) => createWoltAdapter(o));
+  registry.register("glovo", (o) => createGlovoAdapter(o));
+  registry.register("uber_eats", (o) => createUberEatsAdapter(o));
+  registry.register("pyszne", (o) => createConfigurableAdapter("pyszne", o));
+  registry.register("bolt_food", (o) => createConfigurableAdapter("bolt_food", o));
+  const create = registry.create.bind(registry);
+  registry.create = (provider, options) => create(normalizeProvider(provider), options);
+  return registry;
 }
