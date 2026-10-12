@@ -454,6 +454,7 @@ calculateMaps: "Calcular con Google Maps",
     paymentRedirecting: "Abriendo el pago seguro...",
     onlinePaymentFailed: "No fue posible iniciar el pago en linea. Puedes reintentarlo desde este pedido.",
     paymentSuccess: "El pago fue recibido y se esta confirmando.",
+    paymentVerificationPending: "Regresaste de la pasarela. Estamos comprobando el pago con el proveedor; todavía no está confirmado.",
     paymentCancelled: "El pago no se completo. El pedido sigue visible para que puedas reintentarlo.",
     confirmDelivery: "Confirmar que recibi el pedido",
     confirmingDelivery: "Confirmando entrega...",
@@ -790,6 +791,7 @@ kitchenNotesLabel: "Uwagi do kuchni",
     paymentRedirecting: "Otwieranie bezpiecznej platnosci...",
     onlinePaymentFailed: "Nie udalo sie uruchomic platnosci online. Mozesz sprobowac ponownie przy tym zamowieniu.",
     paymentSuccess: "Platnosc zostala odebrana i jest potwierdzana.",
+    paymentVerificationPending: "Wrócono z płatności. Sprawdzamy jej status u operatora; płatność nie jest jeszcze potwierdzona.",
     paymentCancelled: "Platnosc nie zostala zakonczona. Zamowienie pozostaje dostepne do ponowienia platnosci.",
     confirmDelivery: "Potwierdz odbior zamowienia",
     confirmingDelivery: "Potwierdzanie dostawy...",
@@ -1126,6 +1128,7 @@ kitchenNotesLabel: "Kitchen notes",
     paymentRedirecting: "Opening secure payment...",
     onlinePaymentFailed: "Online payment could not be started. You can retry it from this order.",
     paymentSuccess: "The payment was received and is being confirmed.",
+    paymentVerificationPending: "Returned from checkout. We are verifying payment with the provider; payment is not yet confirmed.",
     paymentCancelled: "The payment was not completed. The order remains available so you can retry.",
     confirmDelivery: "Confirm that I received the order",
     confirmingDelivery: "Confirming delivery...",
@@ -5998,7 +6001,9 @@ async function customerHandlePaymentReturn() {
   if (customerTrackedOrder?.id && (!returnedOrderId || returnedOrderId === customerTrackedOrder.id)) {
     customerSetView("orders", { keepScroll: true });
     if (result === "success") {
-      customerSetTrackingStatus(customerT("paymentSuccess"), "ok");
+      // The redirect URL is user-controlled; only a verified provider/backend
+      // payment record can establish payment. Never show success from a query string.
+      customerSetTrackingStatus(customerT("paymentVerificationPending"), "");
       customerPollOrderStatus().catch(() => {});
     } else {
       customerSetTrackingStatus(customerT("paymentCancelled"), "error");

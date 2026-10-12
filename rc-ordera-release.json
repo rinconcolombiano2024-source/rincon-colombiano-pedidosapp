@@ -1,14 +1,15 @@
 {
   "app": "RC ORDERA",
   "version": "91.0.4",
-  "release": "2026-10-12-r16",
-  "pwaCache": "rc-ordera-v91-0-4-v6-verified-20261012-pwa-safe-r16",
+  "release": "2026-10-12-r18",
+  "pwaCache": "rc-ordera-v91-0-4-v6-verified-20261012-pwa-safe-r18",
   "changes": [
     "restaurant QR/client/stations separate windows",
     "ES/PL/EN per-module PWA scopes",
     "fiscal setup button inside POS",
     "Supabase sync protections and query reductions",
-    "bounded customer order tracking refresh with trailing reconciliation"
+    "bounded customer order tracking refresh with trailing reconciliation",
+    "Online checkout return never claims payment from redirect parameters; provider confirmation remains required."
   ],
   "issuedAt": "2026-10-12"
 }
