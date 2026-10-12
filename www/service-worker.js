@@ -1,10 +1,11 @@
-const CACHE_NAME = "rc-ordera-v91-0-4-v6-verified-20261011-pwa-safe-r11";
+const CACHE_NAME = "rc-ordera-v91-0-4-v6-verified-20261012-pwa-safe-r12";
 const APP_FILES = [
   "./",
   "./index.html",
   "./portal.html",
   "./centro-integraciones.html",
   "./centro-integraciones-status.js",
+  "./restaurant-fiscal-ui.js",
   "./local-qr.js",
   "./install-app.js",
   "./install-app.css",
