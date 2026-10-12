@@ -4,7 +4,7 @@
   "id": "./restaurant-app-en",
   "description": "Restaurant orders, internal tickets, menu, staff, history, and closing reports.",
   "start_url": "./restaurante.html?app=v91.0.4&lang=en",
-  "scope": ".",
+  "scope": "./restaurante.html",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],
   "background_color": "#f4f6f9",

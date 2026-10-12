@@ -4,7 +4,7 @@
   "id": "./portal-app",
   "description": "RC ORDERA",
   "start_url": "./index.html?lang=en",
-  "scope": "./",
+  "scope": "./index.html",
   "display": "standalone",
   "display_override": [
     "standalone",
