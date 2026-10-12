@@ -475,8 +475,8 @@
     ]
   },
   "app.js": {
-    "sha256": "7014ccb36c1df0462305b8a31d53d2986d4cd1120e16ef70e8037a9d3bfab45f",
-    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs",
+    "sha256": "729744f29614b298c68cb54a85a5f982865c021ae11792fd42dae8d293f5445a",
+    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs",
     "edits": [
       {
         "before": "",
@@ -637,6 +637,16 @@
         "before": "  operation.finally(() => {\r\n    if (pendingDataSyncInFlight === operation) pendingDataSyncInFlight = null;\r\n  });",
         "after": "  // Attach both outcomes to the original promise; .finally() would create an\r\n  // unobserved rejected child promise whenever runPendingDataSync rejects.\r\n  const clearPendingSync = () => {\r\n    if (pendingDataSyncInFlight === operation) pendingDataSyncInFlight = null;\r\n  };\r\n  operation.then(clearPendingSync, clearPendingSync);",
         "afterByteOffset": 285832
+      },
+      {
+        "before": "  const trackingRequest = loadCurrentRestaurantDeliveryTracking(options.signal).catch((trackingError) => {\r\n    console.warn(\r\n      \"No fue posible confirmar el seguimiento de domicilios. Se conservara el ultimo estado valido.\",\r\n      trackingError\r\n    );\r\n\r\n    return clientDeliveryTrackingByOrderId instanceof Map\r\n      ? clientDeliveryTrackingByOrderId\r\n      : new Map();\r\n  });\r\n  const [ordersResponse, tracking] = await Promise.all([\r\n    ordersRequest,\r\n    trackingRequest,\r\n  ]);\r\n",
+        "after": "  // First read active orders: do not request courier tracking for empty/pickup-only restaurants.\r\n  const ordersResponse = await ordersRequest;\r\n",
+        "afterByteOffset": 235674
+      },
+      {
+        "before": "  const orders = data || [];\r\n  clientDeliveryTrackingByOrderId = tracking;\r\n",
+        "after": "  const orders = data || [];\r\n  // Only deliveries use tracking. Each pickup-only refresh previously called\r\n  // get_current_restaurant_delivery_tracking unnecessarily, even with zero orders.\r\n  const tracking = orders.some(clientOrderNeedsCourier)\r\n    ? await loadCurrentRestaurantDeliveryTracking(options.signal).catch((trackingError) => {\r\n        console.warn(\r\n          \"No se pudo confirmar el seguimiento de domicilios. Se conservara el ultimo estado valido.\",\r\n          trackingError\r\n        );\r\n        return clientDeliveryTrackingByOrderId instanceof Map\r\n          ? clientDeliveryTrackingByOrderId\r\n          : new Map();\r\n      })\r\n    : new Map();\r\n  // The operator may have signed out while awaiting a slower tracking RPC.\r\n  if (requestClient !== cloudState.client || requestUserId !== cloudState.user?.id) return false;\r\n  clientDeliveryTrackingByOrderId = tracking;\r\n",
+        "afterByteOffset": 236246
       }
     ]
   },
