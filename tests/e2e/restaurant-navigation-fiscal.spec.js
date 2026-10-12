@@ -41,6 +41,10 @@ test("restaurant QR and stations use a separate tab without navigating away from
   await expect.poll(() => stationsPage.url()).toContain("/mesero.html");
   expect(page.url()).toContain("/restaurante.html");
   await stationsPage.close();
+  // A modal is top-layer and must be dismissed before interacting with the
+  // restaurant dashboard. This tests a genuine user navigation sequence.
+  await page.locator("#waiterTeamDialog").evaluate(dialog => dialog.close());
+  await expect(page.locator("#waiterTeamDialog")).not.toBeVisible();
 
   // Direct Cocina navigation is a second entry point and must never take over POS.
   const kitchenLink = page.locator("#restaurantKitchenLink");
