@@ -20,7 +20,8 @@ test("QR, stations and kitchen open natively in new, isolated tabs", () => {
     assert.doesNotMatch(js, /addEventListener\("click", openWaiterLink\)/);
     assert.match(html, /id="openFiscalPrinterTopButton"/);
     assert.match(html, /id="connectFiscalPrinterButton"/);
-    assert.match(html, /restaurant-fiscal-ui\.js\?v=91\.0\.4-nav1/);
+    assert.match(html, /restaurant-fiscal-ui\.js\?v=91\.0\.4-nav\d+/);
+    assert.match(html, /app\.js\?v=91\.0\.4-nav\d+/);
     new vm.Script(js, { filename: prefix + "app.js" });
   }
 });
