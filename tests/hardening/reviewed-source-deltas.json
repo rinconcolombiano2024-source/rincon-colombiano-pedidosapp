@@ -409,8 +409,8 @@
     ]
   },
   "service-worker.js": {
-    "sha256": "94c98f533e188063cb833882c5c9c133c4323396bd2fda0532a460b6c1c44921",
-    "regressionTests": "tests/hardening/frontend.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/hardening/frontend.test.mjs",
+    "sha256": "f75bb6bc5f20251a1bf2a643a11c20d88afe7106cf5a7f3def8d1f25f70ecc4f",
+    "regressionTests": "tests/hardening/frontend.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/hardening/frontend.test.mjs; tests/pwa-release-marker.test.cjs",
     "edits": [
       {
         "before": "const CACHE_NAME = \"rc-ordera-v91-0-4-offline-r4-products-closures\";\n",
@@ -471,6 +471,11 @@
         "before": "  \"./local-qr.js\",\n",
         "after": "",
         "afterByteOffset": 773
+      },
+      {
+        "before": "const CACHE_NAME = \"rc-ordera-v91-0-4-v6-verified-20261012-pwa-safe-r14\";",
+        "after": "const CACHE_NAME = \"rc-ordera-v91-0-4-v6-verified-20261012-pwa-safe-r15\";",
+        "afterByteOffset": 0
       }
     ]
   },
