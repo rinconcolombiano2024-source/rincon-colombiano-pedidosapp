@@ -56,6 +56,10 @@ test("restaurant QR and stations use a separate tab without navigating away from
   await expect.poll(() => kitchenPage.url()).toMatch(/\/mesero\.html.*station=kitchen/);
   expect(page.url()).toContain("/restaurante.html");
   await kitchenPage.close();
+  // Returning to the restaurant tab must not sign the operator out or reset
+  // the active POS session after opening any of the three external modules.
+  await expect.poll(() => page.evaluate(() => Boolean(cloudState?.user?.id))).toBe(true);
+  await expect(page.locator("#openFiscalPrinterTopButton")).toBeVisible();
 });
 
 test("fiscal button is in the restaurant app; permission does not enable fiscal printing", async ({ page }) => {
