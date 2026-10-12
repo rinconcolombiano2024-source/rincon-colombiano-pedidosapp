@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Read-only deployment identity check. Never touches orders, Auth, caches or database.
-const release = "2026-10-12-r15";
+const release = "2026-10-12-r16";
 const siteValue = process.env.SITE_URL || "https://rincon-colombiano-pedidosapp.vercel.app";
 const site = siteValue.endsWith("/") ? siteValue.slice(0, -1) : siteValue;
 const url = site + "/rc-ordera-release.json?verify=" + Date.now();

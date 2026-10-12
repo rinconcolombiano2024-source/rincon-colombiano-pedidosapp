@@ -1718,6 +1718,8 @@ let customerTrackingRealtimeChannel = null;
 let customerTrackingRealtimeSignature = "";
 let customerTrackingRealtimeRow = null;
 let customerTrackingRefreshTimer = null;
+let customerTrackingRefreshPending = false;
+let customerTrackingRefreshGeneration = 0;
 let customerTrackingRealtimeRetryTimer = null;
 let customerTrackingRealtimeStableTimer = null;
 let customerTrackingRealtimeRetryDelay =
@@ -6439,6 +6441,8 @@ function customerRenderCourierTracking(row = null) {
   `;
 }
 function customerStopOrderTrackingRealtime() {
+  customerTrackingRefreshGeneration += 1;
+  customerTrackingRefreshPending = false;
   if (customerTrackingRealtimeRetryTimer) {
     window.clearTimeout(customerTrackingRealtimeRetryTimer);
     customerTrackingRealtimeRetryTimer = null;
@@ -6459,30 +6463,39 @@ function customerStopOrderTrackingRealtime() {
   if (channel && customerClient?.removeChannel) customerClient.removeChannel(channel).catch(() => {});
 }
 function customerScheduleTrackingRefresh() {
-  if (customerTrackingRefreshTimer) {
-    window.clearTimeout(customerTrackingRefreshTimer);
-    customerTrackingRefreshTimer = null;
-  }
+  if (document.visibilityState !== "visible" || !window.navigator.onLine
+    || !customerTrackedOrder?.id || !customerTrackedOrder.publicToken) return;
 
-  if (
-    document.visibilityState !== "visible" ||
-    !window.navigator.onLine
-  ) {
-    return;
-  }
+  // Fixed coalescing window: a continuous event stream must not postpone reads.
+  customerTrackingRefreshPending = true;
+  if (customerTrackingRefreshTimer) return;
+  const generation = customerTrackingRefreshGeneration;
+  const orderId = customerTrackedOrder.id;
+  const publicToken = customerTrackedOrder.publicToken;
+  const isCurrent = () => generation === customerTrackingRefreshGeneration
+    && orderId === customerTrackedOrder?.id && publicToken === customerTrackedOrder?.publicToken
+    && document.visibilityState === "visible" && window.navigator.onLine;
 
-  customerTrackingRefreshTimer = window.setTimeout(() => {
-    customerTrackingRefreshTimer = null;
-
-    if (
-      document.visibilityState !== "visible" ||
-      !window.navigator.onLine
-    ) {
-      return;
+  customerTrackingRefreshTimer = window.setTimeout(async () => {
+    try {
+      if (!isCurrent()) return;
+      // A read already in flight may predate this event. Wait, then reconcile once.
+      if (customerStatusPollInFlight) {
+        try { await customerStatusPollInFlight; } catch {}
+      }
+      if (!isCurrent()) return;
+      customerTrackingRefreshPending = false;
+      await customerPollOrderStatus();
+    } catch {
+      // Transport failures are handled by the existing bounded fallback polling.
+    } finally {
+      if (generation === customerTrackingRefreshGeneration) {
+        customerTrackingRefreshTimer = null;
+        // Events received during the read require exactly one trailing refresh.
+        if (customerTrackingRefreshPending && isCurrent()) customerScheduleTrackingRefresh();
+      }
     }
-
-    customerPollOrderStatus().catch(() => {});
-  }, 250);
+  }, 1000);
 }
 function customerStartOrderTrackingRealtime(row = {}) {
   if (!customerClient?.channel || !customerUser || !customerTrackedOrder?.id) return;
@@ -6500,7 +6513,11 @@ function customerStartOrderTrackingRealtime(row = {}) {
     .on(
       "postgres_changes",
       { event: "UPDATE", schema: "public", table: "customer_orders", filter: `id=eq.${customerTrackedOrder.id}` },
-      customerScheduleTrackingRefresh
+      () => {
+        if (channel === customerTrackingRealtimeChannel && signature === customerTrackingRealtimeSignature) {
+          customerScheduleTrackingRefresh();
+        }
+      }
     );
   if (courierId) {
     channel = channel.on(
