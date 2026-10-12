@@ -1,7 +1,7 @@
 {
   "cliente.js": {
-    "sha256": "c00ff37e8fc9980c94853d32e88d656bc231e5f1448e0a2c0b16f16fa35108bd",
-    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs",
+    "sha256": "66d2e87e6af9131119cda45ba671336028127b5673ba31e818d29f1b4541f813",
+    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs",
     "edits": [
       {
         "before": "",
@@ -182,6 +182,11 @@
         "before": "  customerMenuRealtimeTimer = window.setTimeout(async () => {\r\n    customerMenuRealtimeTimer = null;\r\n\r\n    if (\r\n",
         "after": "  // A queued refresh belongs to the restaurant that scheduled it.\r\n  const scheduledStoreId = customerStoreId;\r\n  customerMenuRealtimeTimer = window.setTimeout(async () => {\r\n    customerMenuRealtimeTimer = null;\r\n    if (scheduledStoreId !== customerStoreId) return;\r\n\r\n    if (\r\n",
         "afterByteOffset": 167967
+      },
+      {
+        "before": "      async () => {\r\n        if (storeId !== customerStoreId) return;\r\n        await customerLoadRestaurantDirectory({ silent: true });\r\n        if (storeId === customerStoreId) customerScheduleMenuRealtimeRefetch();\r\n      }\r\n    );",
+        "after": "      () => {\r\n        if (storeId !== customerStoreId) return;\r\n        // Directory Realtime and this store channel may report the same profile update.\r\n        // Share the existing bounded refresh window instead of issuing one RPC per event.\r\n        customerScheduleDirectoryRefresh();\r\n        customerScheduleMenuRealtimeRefetch();\r\n      }\r\n    );",
+        "afterByteOffset": 169689
       }
     ]
   },

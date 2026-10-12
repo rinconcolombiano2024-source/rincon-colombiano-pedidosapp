@@ -3672,10 +3672,12 @@ function customerStartMenuRealtime() {
         table: "restaurant_profiles",
         filter: `user_id=eq.${storeId}`,
       },
-      async () => {
+      () => {
         if (storeId !== customerStoreId) return;
-        await customerLoadRestaurantDirectory({ silent: true });
-        if (storeId === customerStoreId) customerScheduleMenuRealtimeRefetch();
+        // Directory Realtime and this store channel may report the same profile update.
+        // Share the existing bounded refresh window instead of issuing one RPC per event.
+        customerScheduleDirectoryRefresh();
+        customerScheduleMenuRealtimeRefetch();
       }
     );
   customerMenuRealtimeChannel = channel;
