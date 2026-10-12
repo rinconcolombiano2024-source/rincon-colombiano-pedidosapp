@@ -96,7 +96,7 @@ export function isTrustedSumUpHostedUrl(value: unknown): value is string {
       url.hostname === "checkout.sumup.com" &&
       !url.username && !url.password &&
       !url.port && !url.search && !url.hash &&
-      /^\\/pay\\/[0-9a-f-]{36}\\/?$/i.test(url.pathname);
+      /^\/pay\/[0-9a-f-]{36}\/?$/i.test(url.pathname);
   } catch {
     return false;
   }
