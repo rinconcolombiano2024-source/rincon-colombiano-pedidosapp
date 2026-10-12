@@ -13,7 +13,7 @@ test("release indicator is present and matches published files",()=>{
   assert.equal(info.app,"RC ORDERA");
   const sw=load("service-worker.js");
   assert.equal(sw,load("www/service-worker.js"));
-  assert.match(sw,new RegExp('const CACHE_NAME = "'+info.pwaCache.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+'";'));
+  assert.ok(sw.includes('const CACHE_NAME = "' + info.pwaCache + '";'), "PWA cache must match published release");
 });
 test("PWA cache rollover never removes local orders, indexedDB or localStorage",()=>{
   const sw=load("service-worker.js");
