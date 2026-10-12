@@ -18,6 +18,7 @@ const runtimeFiles = [
   "portal-manifest.pl.webmanifest",
   "portal-manifest.en.webmanifest",
   "portal.html",
+  "rc-ordera-release.json",
   "centro-integraciones.html",
   "centro-integraciones-status.js",
   "restaurant-fiscal-ui.js",
