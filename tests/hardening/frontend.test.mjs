@@ -61,6 +61,6 @@ test('integration centre reuses offline catalogue: all 74 entries have ES/PL/EN 
  assert.equal(i18n.translate('Centro de Integraciones','pl'),'Centrum integracji');assert.equal(i18n.translate('Consultar estado','en'),'Check status');
 });
 test('PWA hardening uses a fresh cache identity; source and runtime keep identical assets',()=>{
- const sw=readFileSync('service-worker.js','utf8');assert.match(sw,/v6-verified-20261012-pwa-safe-r13/);assert.match(sw,/\"\.\/restaurant-fiscal-ui\.js\"/);assert.doesNotMatch(sw,/production-hardening-20261010/);
+ const sw=readFileSync('service-worker.js','utf8');assert.match(sw,/v6-verified-20261012-pwa-safe-r14/);assert.match(sw,/\"\.\/restaurant-fiscal-ui\.js\"/);assert.doesNotMatch(sw,/production-hardening-20261010/);
  for(const name of ['service-worker.js','cliente.js','offline-i18n.js','centro-integraciones.html','centro-integraciones-status.js'])assert.deepEqual(readFileSync(name),readFileSync('www/'+name));
 });
