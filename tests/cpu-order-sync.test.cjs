@@ -238,6 +238,30 @@ test('joining pending synchronization does not request another round', async () 
   d.resolve(true); await Promise.all(work);
 });
 
+test('permanent SQL and authorization failures never trigger automatic retry storms', () => {
+  const scheduled = [];
+  const h = runtime({
+    cloudState: { client: {}, user: { id: 'owner' } },
+    SYNC_INFRASTRUCTURE_BACKOFF_MS: 300000,
+    pendingDataSyncRetryNotBefore: 0,
+    isOrderRevisionConflictError: e => e?.code === 'ORDER_REVISION_CONFLICT',
+    isTemporarySyncInfrastructureError: e => e?.status === 503,
+    schedulePendingDataSyncRetry: delay => scheduled.push(delay),
+  });
+  vm.runInContext(section('function schedulePendingOrderRecovery(', 'async function runPendingDataSync('), h.c);
+  for (const code of ['42501','42P01','42703','42883','PGRST202','PGRST204','RC_ORDERA_SCHEMA_OUTDATED','RC_ORDERA_SCHEMA_INCOMPLETE']) {
+    h.c.schedulePendingOrderRecovery({ code, message: 'permanent schema or RLS issue' });
+  }
+  h.c.schedulePendingOrderRecovery({ code: 'ORDER_REVISION_CONFLICT' });
+  assert.deepEqual(scheduled, [], 'no RPC retry timer may be registered');
+  assert.equal(h.c.pendingDataSyncRetryNotBefore, 0);
+  h.c.schedulePendingOrderRecovery({ status: 503, code: 'PGRST002' });
+  assert.equal(scheduled.length, 1);
+  assert.equal(scheduled[0], 300000, 'temporary outage backs off instead of spinning');
+  h.c.schedulePendingOrderRecovery();
+  assert.equal(scheduled.length, 2, 'an explicit new save may still schedule a recovery');
+});
+
 test('root and www app.js are byte-identical, central Realtime remains disabled', () => {
   if (!process.env.RC_CPU_APP_SOURCE) assert.deepEqual(fs.readFileSync(path.join(__dirname, '../app.js')), fs.readFileSync(path.join(__dirname, '../www/app.js')));
   assert.match(source, /const CENTRAL_REALTIME_ENABLED = false;/);
