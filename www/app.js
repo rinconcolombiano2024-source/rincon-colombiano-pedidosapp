@@ -8917,9 +8917,12 @@ function syncPendingData(options = {}) {
 
   const operation = runPendingDataSync(options);
   pendingDataSyncInFlight = operation;
-  operation.finally(() => {
+  // Attach both outcomes to the original promise; .finally() would create an
+  // unobserved rejected child promise whenever runPendingDataSync rejects.
+  const clearPendingSync = () => {
     if (pendingDataSyncInFlight === operation) pendingDataSyncInFlight = null;
-  });
+  };
+  operation.then(clearPendingSync, clearPendingSync);
   return operation;
 }
 
