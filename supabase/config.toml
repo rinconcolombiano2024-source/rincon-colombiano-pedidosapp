@@ -39,3 +39,10 @@ verify_jwt = true
 
 [functions.fiscal-agent-gateway]
 verify_jwt = false
+
+# R19: false JWT gateway to permit guest publicToken; both functions internally gate secrets.
+[functions.sumup-checkout]
+verify_jwt = false
+
+[functions.sumup-webhook]
+verify_jwt = false
