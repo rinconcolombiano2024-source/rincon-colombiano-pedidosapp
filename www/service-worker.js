@@ -28,7 +28,6 @@ const APP_FILES = [
   "./supabase-config.js",
   "./vendor/supabase-2.57.4.js",
   "./vendor/qrcode-generator-2.0.4.js",
-  "./local-qr.js",
   "./manifest.webmanifest",
   "./restaurante-manifest.webmanifest",
   "./restaurante-manifest.pl.webmanifest",

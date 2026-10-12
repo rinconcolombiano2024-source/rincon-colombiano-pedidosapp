@@ -404,7 +404,7 @@
     ]
   },
   "service-worker.js": {
-    "sha256": "851d752007132a3dc0ea4c3034be1fce3b50780fc8f163445245737c002a18cc",
+    "sha256": "94c98f533e188063cb833882c5c9c133c4323396bd2fda0532a460b6c1c44921",
     "regressionTests": "tests/hardening/frontend.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/hardening/frontend.test.mjs",
     "edits": [
       {
@@ -461,6 +461,11 @@
         "before": "pwa-safe-r13",
         "after": "pwa-safe-r14",
         "afterByteOffset": 59
+      },
+      {
+        "before": "  \"./local-qr.js\",\n",
+        "after": "",
+        "afterByteOffset": 773
       }
     ]
   },
