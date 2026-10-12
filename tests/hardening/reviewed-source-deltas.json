@@ -470,7 +470,7 @@
     ]
   },
   "app.js": {
-    "sha256": "660baca31b000e735ab2d9a96ba0372e438ae1f0a759ddb00a3c2178bf7fe177",
+    "sha256": "84e4ec0cc327bbd175dcf7f7e05bbe04d329c41b0cc483be398d5769f9cfaeae",
     "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs",
     "edits": [
       {
@@ -622,6 +622,11 @@
         "before": "",
         "after": "No repetimos escrituras por errores permanentes de autorización\r\n   * o contrato SQL. Se conserva el pedido pendiente y el operario\r\n   * podrá sincronizar manualmente después de corregir la causa.\r\n   * Evita ciclos de RPC inútiles que saturan CPU en Supabase.\r\n   */\r\n  const permanentFailureCode = String(\r\n    error?.code || error?.cause?.code || \"\"\r\n  ).trim().toUpperCase();\r\n  if (error && [\r\n    \"42501\", \"42P01\", \"42703\", \"42883\", \"PGRST202\", \"PGRST204\",\r\n    \"RC_ORDERA_SCHEMA_OUTDATED\", \"RC_ORDERA_SCHEMA_INCOMPLETE\"\r\n  ].includes(permanentFailureCode)) {\r\n    console.warn(\"[RC ORDERA] Error SQL/permisos permanente: pendiente conservado sin reintentos automáticos.\");\r\n    return;\r\n  }\r\n\r\n  /*\r\n   * ",
         "afterByteOffset": 287847
+      },
+      {
+        "before": "  if (isOrderRevisionConflictError(error) ||\r\n      /ORDER_REVISION_REQUIRED/i.test(String(error?.message || \"\"))) {",
+        "after": "  if (String(error?.code || error?.cause?.code || \"\").trim() === \"40001\" ||\r\n      isOrderRevisionConflictError(error) ||\r\n      /ORDER_REVISION_REQUIRED/i.test(String(error?.message || \"\"))) {",
+        "afterByteOffset": 193830
       }
     ]
   },
