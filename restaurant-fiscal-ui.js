@@ -53,6 +53,7 @@
   function translate() {
     const copy=messages[lang()];
     keys.forEach((id,i)=>{ const node=el(id); if(node) node.textContent=copy[i]; });
+    if (el("openFiscalPrinterTopButton")) el("openFiscalPrinterTopButton").textContent = "🧾 " + copy[0];
     status.textContent=copy[state];
     summary.textContent=copy[1]; // Never claim fiscal connection from browser permission.
   }
@@ -74,11 +75,13 @@
     } catch (error) {state=error?.name==="NotFoundError"?13:14;}
     finally {busy=false;permit.disabled=false;inspect.disabled=false;translate();}
   }
-  trigger.addEventListener("click",()=>{
+  function showFiscalDialog() {
     state=!auth()?9:!serial()?8:12;
     translate();
     if(!modal.open) modal.showModal();
-  });
+  }
+  trigger.addEventListener("click", showFiscalDialog);
+  el("openFiscalPrinterTopButton")?.addEventListener("click", showFiscalDialog);
   permit.addEventListener("click",()=>{void action(true);});
   inspect.addEventListener("click",()=>{void action(false);});
   el("fiscalCloseButton")?.addEventListener("click",()=>modal.close());
