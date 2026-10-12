@@ -4,7 +4,7 @@
   "id": "./admin-app-pl",
   "description": "Prywatny panel administracyjny RC ORDERA.",
   "start_url": "./admin.html?app=v91.0.4&lang=pl",
-  "scope": "./",
+  "scope": "./admin.html",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],
   "background_color": "#f3f6f8",

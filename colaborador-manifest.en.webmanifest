@@ -4,7 +4,7 @@
   "id": "./courier-app-en",
   "description": "Delivery assignments and tracking for RC ORDERA couriers.",
   "start_url": "./colaborador.html?app=v91.0.4&lang=en",
-  "scope": "./",
+  "scope": "./colaborador.html",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],
   "background_color": "#f4f6f9",

@@ -4,7 +4,7 @@
   "id": "./restaurant-app-pl",
   "description": "Zamówienia, bony wewnętrzne, menu, personel, historia i zamknięcia restauracji.",
   "start_url": "./restaurante.html?app=v91.0.4&lang=pl",
-  "scope": ".",
+  "scope": "./restaurante.html",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],
   "background_color": "#f4f6f9",
