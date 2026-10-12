@@ -14,6 +14,7 @@ el navegador podía volver a consultar el catálogo por cada evento.
 - Se mantiene la comprobación visible/online existente y se conserva
   el refresco de menú y su representación local.
 - Una ventana posterior puede actualizar de nuevo el menú.
+- Si se cambia de restaurante antes de ejecutar el timer, se descarta el refresco obsoleto.
 - No se modifica la creación de pedidos, Auth, RLS, Stripe, ni Supabase SQL.
 - Se conservan las páginas de cliente, restaurante, estaciones, idiomas
   ES/PL/EN y el botón de impresora fiscal en la aplicación.

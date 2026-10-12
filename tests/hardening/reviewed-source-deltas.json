@@ -1,6 +1,6 @@
 {
   "cliente.js": {
-    "sha256": "c73bb69a9ab3d71be17ae0511f1fa2cb3820895fe88f3786b7a25e9b0b059e07",
+    "sha256": "c00ff37e8fc9980c94853d32e88d656bc231e5f1448e0a2c0b16f16fa35108bd",
     "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs",
     "edits": [
       {
@@ -177,6 +177,11 @@
         "before": "  }, 350);\r\n}\r\nfunction customerStartMenuRealtime()",
         "after": "  }, 1200);\r\n}\r\nfunction customerStartMenuRealtime()",
         "afterByteOffset": 168540
+      },
+      {
+        "before": "  customerMenuRealtimeTimer = window.setTimeout(async () => {\r\n    customerMenuRealtimeTimer = null;\r\n\r\n    if (\r\n",
+        "after": "  // A queued refresh belongs to the restaurant that scheduled it.\r\n  const scheduledStoreId = customerStoreId;\r\n  customerMenuRealtimeTimer = window.setTimeout(async () => {\r\n    customerMenuRealtimeTimer = null;\r\n    if (scheduledStoreId !== customerStoreId) return;\r\n\r\n    if (\r\n",
+        "afterByteOffset": 167967
       }
     ]
   },

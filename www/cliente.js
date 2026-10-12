@@ -3617,8 +3617,11 @@ function customerScheduleMenuRealtimeRefetch() {
     return;
   }
 
+  // A queued refresh belongs to the restaurant that scheduled it.
+  const scheduledStoreId = customerStoreId;
   customerMenuRealtimeTimer = window.setTimeout(async () => {
     customerMenuRealtimeTimer = null;
+    if (scheduledStoreId !== customerStoreId) return;
 
     if (
       document.visibilityState !== "visible" ||
