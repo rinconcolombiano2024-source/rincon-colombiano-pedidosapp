@@ -3058,10 +3058,9 @@ function customerStopDirectoryRealtime() {
   if (channel && customerClient?.removeChannel) customerClient.removeChannel(channel).catch(() => {});
 }
 function customerScheduleDirectoryRefresh() {
-  if (customerDirectoryRealtimeTimer) {
-    window.clearTimeout(customerDirectoryRealtimeTimer);
-    customerDirectoryRealtimeTimer = null;
-  }
+  // Coalesce bursts of profile changes into one directory read per window.
+  // Do not restart the timer on each event: sustained Realtime traffic must not starve refreshes.
+  if (customerDirectoryRealtimeTimer) return;
 
   if (
     document.visibilityState !== "visible" ||
@@ -3081,7 +3080,7 @@ function customerScheduleDirectoryRefresh() {
     }
 
     customerLoadRestaurantDirectory({ silent: true }).catch(() => {});
-  }, 300);
+  }, 5000);
 }
 function customerScheduleDirectoryPoll(delayMs = customerDirectoryPollingDelay) {
   if (

@@ -1,7 +1,7 @@
 {
   "cliente.js": {
-    "sha256": "5726faba5cd496b8d19d40cb28b946118ae80893e045b9ea3027fc1deee33a9b",
-    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs",
+    "sha256": "14f07fd0e9b84a33ec3bd2137c4f46a99a2f03d3eb0607ea799bd76afc17cd83",
+    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs",
     "edits": [
       {
         "before": "",
@@ -162,6 +162,11 @@
         "before": "    const loaded = await customerPollOrderStatus();\r\n",
         "after": "    // A rejected transport read must follow the same bounded backoff as an RPC error.\r\n    let loaded = false;\r\n    try {\r\n      loaded = await customerPollOrderStatus();\r\n    } catch {\r\n      loaded = false;\r\n    }\r\n",
         "afterByteOffset": 265885
+      },
+      {
+        "before": "function customerScheduleDirectoryRefresh() {\r\n  if (customerDirectoryRealtimeTimer) {\r\n    window.clearTimeout(customerDirectoryRealtimeTimer);\r\n    customerDirectoryRealtimeTimer = null;\r\n  }\r\n\r\n  if (\r\n    document.visibilityState !== \"visible\" ||\r\n    !window.navigator.onLine\r\n  ) {\r\n    return;\r\n  }\r\n\r\n  customerDirectoryRealtimeTimer = window.setTimeout(() => {\r\n    customerDirectoryRealtimeTimer = null;\r\n\r\n    if (\r\n      document.visibilityState !== \"visible\" ||\r\n      !window.navigator.onLine\r\n    ) {\r\n      return;\r\n    }\r\n\r\n    customerLoadRestaurantDirectory({ silent: true }).catch(() => {});\r\n  }, 300);\r\n}\r\n",
+        "after": "function customerScheduleDirectoryRefresh() {\r\n  // Coalesce bursts of profile changes into one directory read per window.\r\n  // Do not restart the timer on each event: sustained Realtime traffic must not starve refreshes.\r\n  if (customerDirectoryRealtimeTimer) return;\r\n\r\n  if (\r\n    document.visibilityState !== \"visible\" ||\r\n    !window.navigator.onLine\r\n  ) {\r\n    return;\r\n  }\r\n\r\n  customerDirectoryRealtimeTimer = window.setTimeout(() => {\r\n    customerDirectoryRealtimeTimer = null;\r\n\r\n    if (\r\n      document.visibilityState !== \"visible\" ||\r\n      !window.navigator.onLine\r\n    ) {\r\n      return;\r\n    }\r\n\r\n    customerLoadRestaurantDirectory({ silent: true }).catch(() => {});\r\n  }, 5000);\r\n}\r\n",
+        "afterByteOffset": 147296
       }
     ]
   },
