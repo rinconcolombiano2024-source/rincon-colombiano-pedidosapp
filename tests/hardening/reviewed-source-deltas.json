@@ -1,7 +1,7 @@
 {
   "cliente.js": {
-    "sha256": "66d2e87e6af9131119cda45ba671336028127b5673ba31e818d29f1b4541f813",
-    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs",
+    "sha256": "b46989d00a3f4c266a90b534c675345c38e7d90e5c280df9c9119bab7f962514",
+    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs",
     "edits": [
       {
         "before": "",
@@ -187,6 +187,41 @@
         "before": "      async () => {\r\n        if (storeId !== customerStoreId) return;\r\n        await customerLoadRestaurantDirectory({ silent: true });\r\n        if (storeId === customerStoreId) customerScheduleMenuRealtimeRefetch();\r\n      }\r\n    );",
         "after": "      () => {\r\n        if (storeId !== customerStoreId) return;\r\n        // Directory Realtime and this store channel may report the same profile update.\r\n        // Share the existing bounded refresh window instead of issuing one RPC per event.\r\n        customerScheduleDirectoryRefresh();\r\n        customerScheduleMenuRealtimeRefetch();\r\n      }\r\n    );",
         "afterByteOffset": 169689
+      },
+      {
+        "before": "      customerScheduleTrackingRefresh\r\n",
+        "after": "      () => {\r\n        if (channel === customerTrackingRealtimeChannel && signature === customerTrackingRealtimeSignature) {\r\n          customerScheduleTrackingRefresh();\r\n        }\r\n      }\r\n",
+        "afterByteOffset": 256813
+      },
+      {
+        "before": "\r\n    customerPollOrderStatus().catch(() => {});\r\n  }, 250);\r\n",
+        "after": "  }, 1000);\r\n",
+        "afterByteOffset": 255919
+      },
+      {
+        "before": "  customerTrackingRefreshTimer = window.setTimeout(() => {\r\n    customerTrackingRefreshTimer = null;\r\n\r\n    if (\r\n      document.visibilityState !== \"visible\" ||\r\n      !window.navigator.onLine\r\n    ) {\r\n      return;\r\n",
+        "after": "  customerTrackingRefreshTimer = window.setTimeout(async () => {\r\n    try {\r\n      if (!isCurrent()) return;\r\n      // A read already in flight may predate this event. Wait, then reconcile once.\r\n      if (customerStatusPollInFlight) {\r\n        try { await customerStatusPollInFlight; } catch {}\r\n      }\r\n      if (!isCurrent()) return;\r\n      customerTrackingRefreshPending = false;\r\n      await customerPollOrderStatus();\r\n    } catch {\r\n      // Transport failures are handled by the existing bounded fallback polling.\r\n    } finally {\r\n      if (generation === customerTrackingRefreshGeneration) {\r\n        customerTrackingRefreshTimer = null;\r\n        // Events received during the read require exactly one trailing refresh.\r\n        if (customerTrackingRefreshPending && isCurrent()) customerScheduleTrackingRefresh();\r\n      }\r\n",
+        "afterByteOffset": 255693
+      },
+      {
+        "before": "  if (\r\n    document.visibilityState !== \"visible\" ||\r\n    !window.navigator.onLine\r\n  ) {\r\n    return;\r\n  }\r\n",
+        "after": "  // Fixed coalescing window: a continuous event stream must not postpone reads.\r\n  customerTrackingRefreshPending = true;\r\n  if (customerTrackingRefreshTimer) return;\r\n  const generation = customerTrackingRefreshGeneration;\r\n  const orderId = customerTrackedOrder.id;\r\n  const publicToken = customerTrackedOrder.publicToken;\r\n  const isCurrent = () => generation === customerTrackingRefreshGeneration\r\n    && orderId === customerTrackedOrder?.id && publicToken === customerTrackedOrder?.publicToken\r\n    && document.visibilityState === \"visible\" && window.navigator.onLine;\r\n",
+        "afterByteOffset": 255581
+      },
+      {
+        "before": "  if (customerTrackingRefreshTimer) {\r\n    window.clearTimeout(customerTrackingRefreshTimer);\r\n    customerTrackingRefreshTimer = null;\r\n  }\r\n",
+        "after": "  if (document.visibilityState !== \"visible\" || !window.navigator.onLine\r\n    || !customerTrackedOrder?.id || !customerTrackedOrder.publicToken) return;\r\n",
+        "afterByteOffset": 255437
+      },
+      {
+        "before": "",
+        "after": "  customerTrackingRefreshGeneration += 1;\r\n  customerTrackingRefreshPending = false;\r\n",
+        "afterByteOffset": 254604
+      },
+      {
+        "before": "",
+        "after": "let customerTrackingRefreshPending = false;\r\nlet customerTrackingRefreshGeneration = 0;\r\n",
+        "afterByteOffset": 92440
       }
     ]
   },
@@ -429,7 +464,7 @@
     ]
   },
   "service-worker.js": {
-    "sha256": "f75bb6bc5f20251a1bf2a643a11c20d88afe7106cf5a7f3def8d1f25f70ecc4f",
+    "sha256": "8d2f7004494c5d6354425f38150eabca68d02e44e19966bf99181e2f01586e16",
     "regressionTests": "tests/hardening/frontend.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/hardening/frontend.test.mjs; tests/pwa-release-marker.test.cjs",
     "edits": [
       {
@@ -495,6 +530,11 @@
       {
         "before": "const CACHE_NAME = \"rc-ordera-v91-0-4-v6-verified-20261012-pwa-safe-r14\";",
         "after": "const CACHE_NAME = \"rc-ordera-v91-0-4-v6-verified-20261012-pwa-safe-r15\";",
+        "afterByteOffset": 0
+      },
+      {
+        "before": "const CACHE_NAME = \"rc-ordera-v91-0-4-v6-verified-20261012-pwa-safe-r15\";\n",
+        "after": "const CACHE_NAME = \"rc-ordera-v91-0-4-v6-verified-20261012-pwa-safe-r16\";\n",
         "afterByteOffset": 0
       }
     ]
