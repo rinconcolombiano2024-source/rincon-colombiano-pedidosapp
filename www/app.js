@@ -7425,6 +7425,12 @@ clientOrdersRealtimeStableTimer = setTimeout(() => {
   startClientOrdersPolling();
 }
 
+// Bound repeated courier-tracking reads during UI/Reconnection bursts.
+// Cache is per signed-in restaurant and per Supabase client instance.
+const CLIENT_TRACKING_MIN_READ_GAP_MS = 3000;
+let clientTrackingLastSuccessfulReadAt = 0;
+let clientTrackingLastRestaurantUserId = "";
+let clientTrackingLastClient = null;
 async function loadCurrentRestaurantDeliveryTracking(signal = null) {
   if (!cloudState.client || !cloudState.user || !navigator.onLine) {
     return clientDeliveryTrackingByOrderId instanceof Map
@@ -7432,6 +7438,18 @@ async function loadCurrentRestaurantDeliveryTracking(signal = null) {
       : new Map();
   }
   if (clientOrdersTrackingInFlight) return clientOrdersTrackingInFlight;
+  if (
+    clientTrackingLastSuccessfulReadAt > 0 &&
+    Date.now() - clientTrackingLastSuccessfulReadAt < CLIENT_TRACKING_MIN_READ_GAP_MS &&
+    clientTrackingLastRestaurantUserId === cloudState.user.id &&
+    clientTrackingLastClient === cloudState.client
+  ) {
+    return clientDeliveryTrackingByOrderId instanceof Map
+      ? clientDeliveryTrackingByOrderId
+      : new Map();
+  }
+  const requestClient = cloudState.client;
+  const requestRestaurantId = cloudState.user.id;
   clientOrdersTrackingInFlight = (async () => {
     const { data, error } = await withCloudTimeout(
       cloudState.client.rpc("get_current_restaurant_delivery_tracking"),
@@ -7456,7 +7474,16 @@ async function loadCurrentRestaurantDeliveryTracking(signal = null) {
 
   throw error;
 }
-    return new Map((Array.isArray(data) ? data : []).map((row) => [String(row.customer_order_id), row]));
+    const next = new Map((Array.isArray(data) ? data : []).map((row) => [String(row.customer_order_id), row]));
+    // A sign-out or restaurant switch while awaiting the RPC cannot poison
+    // a new restaurant's cache or leak old tracking data into its UI.
+    if (cloudState.client === requestClient && cloudState.user?.id === requestRestaurantId) {
+      clientDeliveryTrackingByOrderId = next;
+      clientTrackingLastSuccessfulReadAt = Date.now();
+      clientTrackingLastRestaurantUserId = requestRestaurantId;
+      clientTrackingLastClient = requestClient;
+    }
+    return next;
   })();
   try {
     return await clientOrdersTrackingInFlight;
