@@ -18,7 +18,7 @@ function harness(file){
     waiterMembership:{station:"waiter"},waiterOrdersChannel:null,waiterMenuChannel:null,
     waiterOrdersRealtimeStatus:"idle",
     waiterRealtimeMenuRefreshTimer:null,waiterRealtimeSentOrdersRefreshTimer:null,
-    waiterStopRealtime(){this.waiterOrdersRealtimeStatus="idle";this.waiterMenuChannel=null;this.waiterOrdersChannel=null},
+    waiterStopRealtime(){state.waiterOrdersRealtimeStatus="idle";state.waiterMenuChannel=null;state.waiterOrdersChannel=null},
     waiterLoadMenu:async()=>{menu++;return true},
     waiterLoadSentOrders:async()=>{orders++;return true},
     waiterShowToast:()=>{toasts++},
