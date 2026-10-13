@@ -37,6 +37,14 @@ const reserve=()=>db.query("select public.rc_sumup_reserve_checkout($1,$2,'MCXXX
 test("SQL is fail-closed when restaurant has not selected SumUp",async()=>{
  await assert.rejects(reserve(),/SUMUP_RESTAURANT_DISABLED/);
 });
+test("Stripe or another provider reservation always blocks SumUp re-charge",async()=>{
+ await db.query("update app_settings set settings=$1 where user_id=$2",[{onlinePaymentProvider:"sumup"},merchantId]);
+ await db.query("insert into payment_transactions(customer_order_id,provider,provider_reference,payment_method,status,amount,currency,idempotency_key,provider_session_id) values($1,'stripe','cs_test','online','failed',123.45,'PLN','stripe:uncertain','cs_test')",[orderId]);
+ await assert.rejects(reserve(),/SUMUP_OTHER_PROVIDER_RECONCILIATION_REQUIRED/);
+ const none=await db.query("select count(*)::int as n from rc_sumup_payment_attempts");
+ assert.equal(none.rows[0].n,0);
+ await db.query("delete from payment_transactions where customer_order_id=$1",[orderId]);
+});
 test("one exact-cent checkout reserved; replay is not allowed to POST again",async()=>{
  await db.query("update app_settings set settings=$1 where user_id=$2",[{onlinePaymentProvider:"sumup"},merchantId]);
  const first=(await reserve()).rows[0].a;
@@ -70,6 +78,36 @@ test("verified PAID is idempotent and creates exactly one recorded payment",asyn
  const order=await db.query("select payment_status,payment_provider,payment_amount from customer_orders where id=$1",[orderId]);
  assert.equal(order.rows[0].payment_status,"paid");assert.equal(order.rows[0].payment_provider,"sumup");
  assert.equal(Number(order.rows[0].payment_amount),123.45);
+});
+test("provider claim cannot mark paid when another PSP transaction appears asynchronously",async()=>{
+ const secondOrder=randomUUID(),secondCheckout=randomUUID();
+ await db.query("insert into customer_orders(id,user_id,status,payment_method,payment_status,currency,total,updated_at) values($1,$2,'pending','Online','pending','PLN',11,now())",[secondOrder,merchantId]);
+ const reserve2=await db.query("select public.rc_sumup_reserve_checkout($1,$2,'MCXXXXXX') as a",[secondOrder,merchantId]);
+ const attemptId=reserve2.rows[0].a.attemptId;
+ await db.query("select public.rc_sumup_commit_checkout($1,$2,$3)",[attemptId,secondCheckout,"https://checkout.sumup.com/pay/"+secondCheckout]);
+ await db.query("insert into payment_transactions(customer_order_id,provider,provider_reference,payment_method,status,amount,currency,idempotency_key,provider_session_id) values($1,'stripe','cs_uncertain','online','pending',11,'PLN','stripe:earlier','cs_uncertain')",[secondOrder]);
+ const response=(await db.query("select public.rc_sumup_apply_verified_checkout($1,'PAID') as r",[secondCheckout])).rows[0].r;
+ assert.equal(response.status,"needs_review");
+ const [sale,sumupCount]=await Promise.all([
+   db.query("select payment_status from customer_orders where id=$1",[secondOrder]),
+   db.query("select count(*)::int as n from payment_transactions where customer_order_id=$1 and provider='sumup'",[secondOrder])
+ ]);
+ assert.equal(sale.rows[0].payment_status,"pending");
+ assert.equal(sumupCount.rows[0].n,0);
+});
+test("all provider paths lock the order before payment attempts",()=>{
+ const sql=readFileSync("MIGRACION-V91-73-SUMUP-SINGLE-MERCHANT-LEDGER.sql","utf8");
+ for(const name of ["rc_sumup_reserve_checkout","rc_sumup_commit_checkout","rc_sumup_apply_verified_checkout"]){
+  const start=sql.indexOf("CREATE OR REPLACE FUNCTION public."+name);
+  assert.ok(start>=0);
+  const chunk=sql.slice(start,sql.indexOf("END $;",start));
+  assert.ok(chunk.indexOf("FROM public.customer_orders")>0);
+  assert.ok(chunk.indexOf("FROM public.rc_sumup_payment_attempts")>0);
+  const lockedOrder=chunk.indexOf("FROM public.customer_orders",chunk.indexOf("CREATE OR REPLACE FUNCTION"));
+  const lockAttempt=chunk.indexOf("FOR UPDATE",lockedOrder)+10;
+  assert.match(chunk.slice(lockedOrder,lockAttempt),/FOR UPDATE/);
+  assert.match(chunk.slice(lockAttempt),/rc_sumup_payment_attempts[\\s\\S]*?FOR UPDATE/);
+ }
 });
 test("client roles cannot call private reservation RPC directly",async()=>{
  await db.exec("set role anon");
