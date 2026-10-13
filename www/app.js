@@ -3726,6 +3726,18 @@ function closeRestaurantAuthDialog() {
   if (elements.restaurantAuthDialog?.open) elements.restaurantAuthDialog.close();
 }
 
+function updateRestaurantAuthHomeLinks() {
+  const locale = document.querySelector("#autoLanguageSelect")?.value || "es";
+  const labels = {
+    es: "← Inicio y estaciones",
+    pl: "← Strona główna i stanowiska",
+    en: "← Home and stations",
+  };
+  document.querySelectorAll("[data-rc-auth-home]").forEach((link) => {
+    link.textContent = labels[locale] || labels.es;
+  });
+}
+
 function openSignInScreen() {
   openRestaurantAuthDialog("login");
 }
@@ -14711,7 +14723,9 @@ elements.authCountryCodeInput?.addEventListener("change", () => {
   renderMarketplaceAccountState();
   prepareRestaurantPlaceAutocomplete().catch(() => {});
 });
+updateRestaurantAuthHomeLinks();
 document.querySelector("#autoLanguageSelect")?.addEventListener("change", () => {
+  updateRestaurantAuthHomeLinks();
   queueMicrotask(() => {
     if (elements.restaurantAuthDialog?.open) setRestaurantAuthMode(elements.authForm.dataset.mode);
   });
