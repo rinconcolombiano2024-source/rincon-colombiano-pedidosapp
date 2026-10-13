@@ -1,7 +1,7 @@
 /**
- * SumUp Hosted Checkout transport for a FUTURE RC ORDERA payment provider.
+ * SumUp Hosted Checkout transport for the gated single-restaurant provider.
  *
- * Intentionally not wired into checkout routes or financial ledgers. A caller
+ * Used by the gated checkout and webhook routes. A caller
  * must first reserve one immutable payment attempt in the database, validate
  * customer ownership, enforce unique references and handle asynchronous
  * reconciliation. Do not switch existing Stripe Connect settlement to SumUp.
@@ -45,10 +45,11 @@ function fail(): never {
   throw new Error("SUMUP_CHECKOUT_UNVERIFIED");
 }
 
-function checkConfig(config: SumUpConfig): string {
+export function validateSumUpConfig(config: SumUpConfig): string {
   if (
     !config.apiKey ||
     config.apiKey.trim() !== config.apiKey ||
+    /[\x00-\x1f\x7f]/.test(config.apiKey) ||
     !/^[A-Za-z0-9]{6,32}$/.test(config.merchantCode)
   ) {
     fail();
@@ -163,10 +164,19 @@ export function verifyHostedCheckout(
 ): SumUpCheckout {
   const { id, status, body } = verifyCore(raw, config, attempt);
   const hostedUrl = body["hosted_checkout_url"];
+  // The hosted_checkout flag is a CREATE request option, not a guaranteed
+  // response property. Some valid SumUp responses return only the hosted URL.
+  // Still reject any explicitly disabled or malformed echo, and validate the
+  // exact merchant/reference/amount/currency/official checkout URL above.
+  const hostedConfig = body["hosted_checkout"];
   if (
     status !== "PENDING" ||
     !isTrustedSumUpHostedUrl(hostedUrl) ||
-    object(body["hosted_checkout"])["enabled"] !== true
+    (hostedConfig !== undefined &&
+      (hostedConfig === null ||
+        typeof hostedConfig !== "object" ||
+        Array.isArray(hostedConfig) ||
+        (hostedConfig as Record<string, unknown>)["enabled"] !== true))
   ) {
     fail();
   }
@@ -217,7 +227,7 @@ export async function createSumUpHostedCheckout(
   attempt: SumUpAttempt,
   fetchImpl: typeof fetch = fetch,
 ): Promise<SumUpCheckout> {
-  const appOrigin = checkConfig(config);
+  const appOrigin = validateSumUpConfig(config);
   const checkoutReference = referenceForAttempt(attempt);
   const response = await fetchImpl(`${SUMUP_API_ORIGIN}/v0.1/checkouts`, {
     method: "POST",
@@ -248,7 +258,7 @@ export async function retrieveSumUpCheckout(
   attempt: SumUpAttempt,
   fetchImpl: typeof fetch = fetch,
 ): Promise<SumUpVerifiedStatus> {
-  checkConfig(config);
+  validateSumUpConfig(config);
   referenceForAttempt(attempt);
   if (!UUID.test(checkoutId)) {
     fail();
