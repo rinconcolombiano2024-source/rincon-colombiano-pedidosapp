@@ -8493,9 +8493,20 @@ async function sendRestaurantChatMessage(orderId, card) {
   }
 }
 
+// Android/iOS Capacitor serve bundled pages from a private localhost origin.
+// That origin must NEVER be put in a customer QR or a new browser/window tab.
+// Only native runtimes use the public HTTPS site; ordinary web/PWA keeps its URL.
+function restaurantModuleUrl(filename) {
+  const native = window.Capacitor?.isNativePlatform?.() === true;
+  const base = native
+    ? "https://rincon-colombiano-pedidosapp.vercel.app/"
+    : window.location.href;
+  return new URL("./" + filename, base);
+}
+
 function buildClientOrderLink() {
   if (!cloudState.user) return "";
-  const url = new URL("./cliente.html", window.location.href);
+  const url = restaurantModuleUrl("cliente.html");
   url.searchParams.set("store", cloudState.user.id);
   url.searchParams.set("app", APP_VERSION);
   const tableLabel = elements.qrTableInput.value.trim();
@@ -8633,7 +8644,7 @@ function handleRestaurantDashboardAction(action) {
 
 function buildWaiterLink() {
   if (!cloudState.user) return "";
-  const url = new URL("./mesero.html", window.location.href);
+  const url = restaurantModuleUrl("mesero.html");
   url.searchParams.set("store", cloudState.user.id);
   url.searchParams.set("app", APP_VERSION);
   return url.toString();
