@@ -4,6 +4,7 @@
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { inspectSumUpWebhook,parseSumUpWebhookEvent } from "../_shared/sumup-webhook.ts";
+import { validateSumUpConfig } from "../_shared/sumup-hosted.ts";
 import { withCors } from "../_shared/cors.ts";
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const answer=(status:number)=>new Response(null,{status,headers:{"cache-control":"no-store"}});
@@ -17,6 +18,7 @@ Deno.serve(withCors(async(req:Request)=>{
  const restaurantId=Deno.env.get("RC_SUMUP_RESTAURANT_USER_ID")||"";
  if(Deno.env.get("RC_SUMUP_PAYMENTS_ENABLED")!=="1" || !url || !key || !apiKey ||
   !merchantCode || !appOrigin || !UUID.test(restaurantId))return answer(503);
+ try {validateSumUpConfig({apiKey,merchantCode,appOrigin});} catch {return answer(503);}
  if(Number(req.headers.get("content-length")||0)>4096)return answer(413);
  let raw:unknown;
  try {
@@ -36,13 +38,16 @@ Deno.serve(withCors(async(req:Request)=>{
  if(!event)return answer(204);
  const admin=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
  const record=await admin.from("rc_sumup_payment_attempts")
-   .select("checkout_id,order_id,restaurant_user_id,merchant_code,attempt_number,amount_minor,currency")
+   .select("checkout_id,order_id,restaurant_user_id,merchant_code,attempt_number,amount_minor,currency,status")
    .eq("checkout_id",event.checkoutId).maybeSingle();
  if(record.error)return answer(503);
  const row=record.data;
  if(!row)return answer(204);
  if(row.restaurant_user_id!==restaurantId || row.merchant_code!==merchantCode ||
     row.currency!=="PLN")return answer(503);
+ // Paid is a committed ledger state, not a claim from the incoming event.
+ // Replayed callbacks need no provider GET or database mutation.
+ if(row.status==="paid")return answer(204);
  try {
    const inspected=await inspectSumUpWebhook(
      raw,

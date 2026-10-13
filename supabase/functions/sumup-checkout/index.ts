@@ -4,7 +4,7 @@
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { withCors } from "../_shared/cors.ts";
-import { createSumUpHostedCheckout, isTrustedSumUpHostedUrl } from "../_shared/sumup-hosted.ts";
+import { createSumUpHostedCheckout, isTrustedSumUpHostedUrl, validateSumUpConfig } from "../_shared/sumup-hosted.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const JSON_HEADERS = {"content-type":"application/json; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff"};
@@ -48,6 +48,10 @@ Deno.serve(withCors(async(request:Request)=>{
   try {backendUrl=new URL(url);} catch {return disabled();}
   if(backendUrl.protocol!=="https:" || !/^[a-z0-9]{20}\.supabase\.co$/.test(backendUrl.hostname) ||
      backendUrl.pathname!=="/" || backendUrl.username || backendUrl.password)return disabled();
+  const providerConfig={apiKey,merchantCode,appOrigin,
+    webhookUrl:backendUrl.origin+"/functions/v1/sumup-webhook"};
+  // Reject configuration errors before any order lookup or immutable reservation.
+  try {validateSumUpConfig(providerConfig);} catch {return disabled();}
   let body:Record<string,unknown>;
   try{body=await smallJson(request);}catch{return response(400,{error:"INVALID_REQUEST"});}
   const orderId=typeof body.orderId==="string"?body.orderId.trim():"";
@@ -99,10 +103,7 @@ Deno.serve(withCors(async(request:Request)=>{
   // No automatic POST retry: a lost response may have created a checkout.
   let checkout;
   try {
-    checkout=await createSumUpHostedCheckout({
-      apiKey,merchantCode,appOrigin,
-      webhookUrl:backendUrl.origin+"/functions/v1/sumup-webhook",
-    },{
+    checkout=await createSumUpHostedCheckout(providerConfig,{
       orderId,attemptNumber:Number(attempt.attemptNumber),
       amountMinor:Number(attempt.amountMinor),currency:"PLN"
     });
