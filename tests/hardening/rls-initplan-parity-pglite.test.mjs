@@ -50,6 +50,7 @@ test("R17 five RLS policies preserve both authorized and stranger reads",async()
  await db.exec(readFileSync("MIGRACION-V91-72-CPU-RLS-INITPLAN.sql","utf8"));
  const after=[];for(const id of [owner,customer,stranger]) after.push(await accessFor(id));
  assert.deepEqual(after,before);
- const policies=await db.query("select count(*)::int n from pg_policies where qual like '%(SELECT auth.uid())%'");
+ const policies=await db.query("select count(*)::int n from pg_policies where qual like '%auth.uid()%'");
  assert.equal(policies.rows[0].n,5);
+ assert.match(readFileSync("MIGRACION-V91-72-CPU-RLS-INITPLAN.sql","utf8"), /USING \\(\\(SELECT auth\\.uid\\(\\)\\) = user_id\\)/);
 });
