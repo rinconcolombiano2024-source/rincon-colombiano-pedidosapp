@@ -63,7 +63,8 @@ test("Image upload completion after switching restaurants does not write to anot
 test("A late RPC from the previous account cannot replace the next account's menu", async () => {
   const h = harness({ rpcDeferred: true });
   const save = h.save();
-  await Promise.resolve();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.rpcCalls, 1, "RPC must be in-flight before switching accounts");
   h.state.user = { id: "restaurant-B" };
   h.releaseRpc();
   await assert.rejects(save, error => error.code === "RC_ORDERA_MENU_SESSION_CHANGED");
