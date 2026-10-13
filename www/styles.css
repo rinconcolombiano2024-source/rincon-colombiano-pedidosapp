@@ -10017,3 +10017,46 @@ body.customer-page .customer-cart-close {
 @media (prefers-reduced-motion: reduce) {
   #openFiscalPrinterTopButton { transition: none; }
 }
+
+/* Station authorization recovery: no dead ends on phone-sized displays. */
+.waiter-access-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 22px;
+}
+.waiter-access-actions > button,
+.waiter-access-actions > a {
+  min-height: 48px;
+  min-width: 0;
+  padding: 12px 16px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  text-decoration: none;
+  font: inherit;
+  font-weight: 750;
+  line-height: 1.35;
+}
+#waiterRetryAccessButton { background: #147b46; border-color: #147b46; color: #fff; }
+#waiterAccessSwitchAccountButton { background: #fff; border: 1px solid #a3b5c7; color: #123348; }
+.waiter-access-home-link {
+  grid-column: 1 / -1;
+  background: #f2f6fa;
+  border: 1px solid #cbd5e1;
+  color: #173b55;
+}
+.waiter-access-actions > :focus-visible {
+  outline: 3px solid #e7ad1b;
+  outline-offset: 3px;
+}
+.waiter-access-actions > button:disabled { opacity: .65; cursor: wait; }
+@media (max-width: 640px) {
+  .waiter-access-actions { grid-template-columns: minmax(0, 1fr); }
+  .waiter-access-home-link { grid-column: auto; }
+  .waiter-brand { min-width: 0; flex: 1 1 auto; }
+  .waiter-brand > div { min-width: 0; }
+  .waiter-brand strong { white-space: normal; overflow-wrap: break-word; }
+}
