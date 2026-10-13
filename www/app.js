@@ -496,6 +496,8 @@ const elements = {
   installHelpDialog: document.querySelector("#installHelpDialog"),
   editMenuButton: document.querySelector("#editMenuButton"),
   menuEditorDialog: document.querySelector("#menuEditorDialog"),
+  publishCurrentMenuButton: document.querySelector("#publishCurrentMenuButton"),
+  menuPublicationStatus: document.querySelector("#menuPublicationStatus"),
   restaurantInfoTabButton: document.querySelector("#restaurantInfoTabButton"),
 restaurantHoursTabButton: document.querySelector("#restaurantHoursTabButton"),
 restaurantMenuTabButton: document.querySelector("#restaurantMenuTabButton"),
@@ -4983,11 +4985,19 @@ function isMenuRevisionConflict(error) {
 }
 
 async function verifyPublicMenuProjection(expectedMenu, expectedRevision = null) {
-  const { data, error } = await cloudState.client
+  const readClient = cloudState.client;
+  const readRestaurantId = cloudState.user?.id;
+  if (!readClient || !readRestaurantId) throw new Error("La sesión no está disponible para verificar el menú.");
+  const { data, error } = await readClient
     .from("restaurant_public_catalogs")
     .select("menu, menu_revision")
-    .eq("restaurant_user_id", cloudState.user.id)
+    .eq("restaurant_user_id", readRestaurantId)
     .maybeSingle();
+  if (readClient !== cloudState.client || readRestaurantId !== cloudState.user?.id) {
+    const changedSession = new Error("Cambió la cuenta durante la verificación del menú. Vuelve a sincronizar.");
+    changedSession.code = "MENU_SESSION_CHANGED";
+    throw changedSession;
+  }
   if (error) throw error;
   if (!data) {
     const projectionError = new Error(appUiText("No se pudo confirmar la publicacion del menu. Intenta nuevamente."));
@@ -5009,34 +5019,37 @@ async function verifyPublicMenuProjection(expectedMenu, expectedRevision = null)
   return data;
 }
 
-async function confirmSavedCloudMenu(confirmed, fallbackMenu) {
+async function confirmSavedCloudMenu(confirmed, fallbackMenu, submittedMenu = null) {
   const confirmedMenu = normalizeMenuCatalog(confirmed?.menu || fallbackMenu || EMPTY_MENU_CATALOG);
-  if (!confirmed?.menu && !fallbackMenu) throw new Error("La nube no confirmo el menu guardado.");
+  if (!confirmed?.menu && !fallbackMenu) throw new Error("La nube no confirmó el menú guardado.");
   const revision = confirmed?.menuRevision ?? confirmed?.menu_revision;
-  menuCatalog = confirmedMenu;
-  saveMenuCache();
+  const submitted = normalizeMenuCatalog(submittedMenu || confirmedMenu);
+  // Never overwrite product descriptions edited while a previous save was in flight.
+  const localChangesPending = !menuCatalogsMatch(menuCatalog, submitted);
+  if (!localChangesPending) {
+    menuCatalog = confirmedMenu;
+    saveMenuCache();
+  } else {
+    markMenuPending();
+  }
   storeCloudRevision(STORAGE_KEYS.menuRevision, revision);
-  storeConfirmedCloudMenu(menuCatalog);
-  queueMicrotask(() => {
-    verifyPublicMenuProjection(menuCatalog, revision).catch((error) => {
-      console.error("No fue posible confirmar el catalogo publico en segundo plano.", error);
-      markMenuPending();
-      updateCloudStatus("Menu pendiente de verificacion");
-      showToast(appUiText("El menu se guardo, pero la publicacion para clientes necesita reintento."));
-    });
-  });
-  return { ...(confirmed || {}), menu: menuCatalog, menuRevision: revision };
+  storeConfirmedCloudMenu(confirmedMenu);
+  // Private RPC success does not prove customers can see the saved menu.
+  await verifyPublicMenuProjection(confirmedMenu, revision);
+  return { ...(confirmed || {}), menu: confirmedMenu, menuRevision: revision, localChangesPending };
 }
 
 async function saveCloudMenu() {
   if (!cloudState.client || !cloudState.user) return null;
-  const nextMenu = await materializeMenuImagesForCloud(menuCatalog);
-  if (!menuCatalogsMatch(menuCatalog, nextMenu)) {
+  const menuBeforeImageUpload = normalizeMenuCatalog(menuCatalog);
+  const nextMenu = await materializeMenuImagesForCloud(menuBeforeImageUpload);
+  if (menuCatalogsMatch(menuCatalog, menuBeforeImageUpload) && !menuCatalogsMatch(menuCatalog, nextMenu)) {
     menuCatalog = nextMenu;
     saveMenuCache();
     renderMenu();
     if (elements.menuEditorDialog?.open) renderMenuEditor();
   }
+  let submittedMenu = nextMenu;
   let { data: rpcData, error: rpcError } = await cloudState.client.rpc("save_current_restaurant_menu", {
     p_menu: nextMenu,
     p_expected_revision: storedCloudRevision(STORAGE_KEYS.menuRevision) || null,
@@ -5052,11 +5065,16 @@ async function saveCloudMenu() {
     const remoteMenu = normalizeMenuCatalog(currentRow?.menu || EMPTY_MENU_CATALOG);
     const mergedMenu = mergeConcurrentMenuChanges(baseMenu, nextMenu, remoteMenu);
     const remoteRevision = currentRow?.menu_revision;
-    menuCatalog = mergedMenu;
-    saveMenuCache();
+    if (menuCatalogsMatch(menuCatalog, nextMenu)) {
+      menuCatalog = mergedMenu;
+      saveMenuCache();
+    } else {
+      markMenuPending();
+    }
     storeCloudRevision(STORAGE_KEYS.menuRevision, remoteRevision);
+    submittedMenu = mergedMenu;
     if (menuCatalogsMatch(mergedMenu, remoteMenu)) {
-      return confirmSavedCloudMenu({ menu: remoteMenu, menu_revision: remoteRevision }, remoteMenu);
+      return confirmSavedCloudMenu({ menu: remoteMenu, menu_revision: remoteRevision }, remoteMenu, submittedMenu);
     }
     ({ data: rpcData, error: rpcError } = await cloudState.client.rpc("save_current_restaurant_menu", {
       p_menu: mergedMenu,
@@ -5065,7 +5083,7 @@ async function saveCloudMenu() {
   }
   if (!rpcError) {
     const confirmed = Array.isArray(rpcData) ? rpcData[0] : rpcData;
-    return confirmSavedCloudMenu(confirmed);
+    return confirmSavedCloudMenu(confirmed, null, submittedMenu);
   }
   if (isMissingRestaurantRpc(rpcError)) {
     const schemaError = new Error(appUiText("La base de datos necesita la migracion V91 antes de guardar el menu."));
@@ -11129,9 +11147,9 @@ function saveMenuCatalog() {
 
 function syncResultMessage(successMessage, result = {}) {
   if (result.synced) return successMessage;
-  if (result.pending) return `${successMessage} Quedo pendiente de sincronizar cuando vuelva internet.`;
-  if (result.localOnly) return `${successMessage} Guardado solo en este equipo porque no hay sesion en nube.`;
-  if (result.error) return "No se pudo confirmar en la nube. Se conservo localmente para reintentar.";
+  if (result.error) return "Guardado en este dispositivo; no se pudo confirmar la publicación para Cliente y Caja. No borres los datos: vuelve a sincronizar.";
+  if (result.pending) return `${successMessage} Quedó pendiente de publicarse para Cliente y otros equipos.`;
+  if (result.localOnly) return `${successMessage} Guardado solo en este equipo porque no hay sesión en nube.`;
   return successMessage;
 }
 
@@ -11183,16 +11201,15 @@ async function saveMenuWhenPossibleNow(options = {}) {
     try {
       if (!silent) updateCloudStatus("Guardando menu...");
 
-      await withCloudTimeout(
+      const confirmedSave = await withCloudTimeout(
         saveCloudMenu(),
-        "No fue posible confirmar el menu en nube a tiempo."
+        "No fue posible confirmar el menú para clientes en la nube a tiempo."
       );
-
-if (menuPendingToken) {
-  clearMenuPending(
-    menuPendingToken
-  );
-}
+      if (confirmedSave?.localChangesPending ||
+          (menuPendingToken && !clearMenuPending(menuPendingToken))) {
+        updateCloudStatus("Menú pendiente de sincronización");
+        return { pending: true };
+      }
       updateCloudStatus("Sincronizado");
       return { synced: true };
     } catch (error) {
@@ -11209,6 +11226,47 @@ if (menuPendingToken) {
   }
   updateCloudStatus();
   return { localOnly: true };
+}
+
+async function publishCurrentRestaurantMenu() {
+  const button = elements.publishCurrentMenuButton;
+  const status = elements.menuPublicationStatus;
+  if (!button || !status || button.disabled) return;
+  if (!cloudState.user) {
+    status.textContent = "Inicia sesión como propietario del restaurante para publicar el menú.";
+    return;
+  }
+  if (!navigator.onLine) {
+    status.textContent = "Sin internet. Los cambios siguen guardados en este equipo; no borres sus datos.";
+    return;
+  }
+  const count = menuProductCount(menuCatalog);
+  if (count === 0) {
+    status.textContent = "No hay productos para publicar. No se enviará un menú vacío.";
+    return;
+  }
+  button.disabled = true;
+  status.textContent = "Comprobando que Cliente y Caja reciben el menú...";
+  try {
+    // Explicit operator confirmation: publish this device's current local
+    // menu, preserving the existing revision and conflict-merge safeguards.
+    markMenuPending();
+    saveMenuCache({ immediate: true });
+    const result = await saveMenuWhenPossible({ silent: false });
+    if (result.synced && !hasPendingMenu()) {
+      status.textContent = "Menú publicado y comprobado para clientes.";
+      showToast("Menú publicado y comprobado para clientes.");
+    } else {
+      status.textContent = result.error
+        ? "No se confirmó la publicación. Los cambios siguen en este dispositivo; vuelve a intentarlo."
+        : "Hay cambios pendientes de sincronizar. Conserva este dispositivo y vuelve a intentarlo.";
+    }
+  } catch (error) {
+    console.error("Error al publicar el menú público:", error);
+    status.textContent = "No se pudo verificar el menú. Los productos locales se conservaron.";
+  } finally {
+    button.disabled = false;
+  }
 }
 
 function saveMenuWhenPossible(options = {}) {
@@ -15146,6 +15204,7 @@ elements.restaurantMenuTabButton?.addEventListener("click", () => {
   showRestaurantEditSection("restaurant-menu");
 });
 elements.editMenuButton.addEventListener("click", openMenuEditor);
+elements.publishCurrentMenuButton?.addEventListener("click", publishCurrentRestaurantMenu);
 elements.restaurantDashboardSummary?.addEventListener("click", (event) => {
   const button = event.target.closest("[data-restaurant-dashboard-action]");
   if (!button) return;

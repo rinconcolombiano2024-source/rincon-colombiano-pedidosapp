@@ -21,7 +21,7 @@ test("QR, stations and kitchen open natively in new, isolated tabs", () => {
     assert.match(html, /id="openFiscalPrinterTopButton"/);
     assert.match(html, /id="connectFiscalPrinterButton"/);
     assert.match(html, /restaurant-fiscal-ui\.js\?v=91\.0\.4-nav\d+/);
-    assert.match(html, /app\.js\?v=91\.0\.4-nav\d+/);
+    assert.match(html, /app\.js\?v=91\.0\.4-(?:nav\d+|menuverify\d+)/);
     new vm.Script(js, { filename: prefix + "app.js" });
   }
 });

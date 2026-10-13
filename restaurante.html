@@ -13,7 +13,7 @@
     <link rel="manifest" href="restaurante-manifest.webmanifest" />
     <link rel="icon" href="app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="app-icon-192.png" />
-    <link rel="stylesheet" href="styles.css?v=91.0.4-nav1" />
+    <link rel="stylesheet" href="styles.css?v=91.0.4-menuverify1" />
   </head>
   <body class="auth-checking">
     <section class="auth-screen" id="authScreen" hidden>
@@ -634,6 +634,13 @@
   data-edit-panel="restaurant-menu"
   hidden
 >
+        <section class="menu-publication-panel" aria-label="Publicación del menú">
+          <div>
+            <strong>Menú público de Cliente y Caja</strong>
+            <p id="menuPublicationStatus" role="status" aria-live="polite">Los productos editados en este equipo solo aparecerán en Cliente y Caja después de confirmar la publicación.</p>
+          </div>
+          <button id="publishCurrentMenuButton" type="button">Publicar y verificar menú</button>
+        </section>
         <div class="menu-editor-layout">
           <section class="editor-section">
             <h3>Categorias</h3>
@@ -1161,7 +1168,7 @@
     <script src="auto-translate.js?v=91.0.4"></script>
     <script src="vendor/qrcode-generator-2.0.4.js"></script>
     <script src="local-qr.js"></script>
-    <script src="app.js?v=91.0.4-nav4"></script>
+    <script src="app.js?v=91.0.4-menuverify1"></script>
     <script src="restaurant-fiscal-ui.js?v=91.0.4-nav2"></script>
   </body>
 </html>
