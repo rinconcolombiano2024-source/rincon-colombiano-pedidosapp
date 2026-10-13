@@ -42,11 +42,11 @@ if (FN) {
     check(`${name}: origen propio permitido`, ok.headers.get("access-control-allow-origin") === SITE, `ACAO=${ok.headers.get("access-control-allow-origin")} (si falla: añade tu dominio a RC_ALLOWED_ORIGINS)`);
   }
   const gw = await get(`${FN}/fiscal-agent-gateway`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
-  check("fiscal-agent-gateway rechaza peticiones sin token", [401, 503].includes(gw.status), `HTTP ${gw.status}`);
+  check("fiscal-agent-gateway rechaza peticiones sin token", gw.status === 401, `HTTP ${gw.status}${gw.status === 503 ? " — servicio sin configurar/no disponible" : ""}`);
   const wh = await get(`${FN}/external-delivery-webhook`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
-  check("external-delivery-webhook rechaza peticiones sin firma", [401, 503].includes(wh.status), `HTTP ${wh.status}`);
+  check("external-delivery-webhook rechaza peticiones sin firma", wh.status === 401, `HTTP ${wh.status}${wh.status === 503 ? " — servicio sin configurar/no disponible" : ""}`);
   const st = await get(`${FN}/marketplace-webhook`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
-  check("marketplace-webhook (Stripe) rechaza peticiones sin firma", [400, 401, 403, 503].includes(st.status), `HTTP ${st.status}`);
+  check("marketplace-webhook (Stripe) rechaza peticiones sin firma", [400, 401, 403].includes(st.status), `HTTP ${st.status}${st.status === 503 ? " — webhook sin configurar/no disponible" : ""}`);
   const dd = await get(`${FN}/delivery-dispatch`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
   check("delivery-dispatch rechaza sin secreto", [401, 403].includes(dd.status), `HTTP ${dd.status}`);
 } else console.log("(omitido) Defina FUNCTIONS_URL para verificar las Edge Functions");
