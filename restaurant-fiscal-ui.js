@@ -164,3 +164,154 @@
       .finally(() => { opening = false; });
   });
 })();
+
+/* RC ORDERA: read-only menu publication audit.
+ * One database read only when the owner explicitly clicks the button.
+ * Never writes a product, updates its revision, clears a cache or modifies a cart.
+ */
+(() => {
+  "use strict";
+  const publishButton = document.getElementById("publishCurrentMenuButton");
+  const publicationStatus = document.getElementById("menuPublicationStatus");
+  if (!publishButton || !publicationStatus) return;
+  const localize = {
+    es: {
+      action: "Comparar Cliente y Caja",
+      loading: "Comparando menú local con el publicado…",
+      noSession: "Inicia sesión como propietario para comprobar el menú público.",
+      offline: "Sin conexión. Las descripciones locales no se han borrado.",
+      changedSession: "Cambió la sesión. Vuelve a comparar antes de publicar.",
+      failed: "No se pudo leer el menú público. Conserva los datos de este equipo.",
+      summary: (l,r,lc,rc)=>`Este equipo: ${l} productos, ${lc} descripciones ES. Cliente y Caja: ${r} productos, ${rc} descripciones ES.`,
+      synced: "Los productos y descripciones coinciden con la nube.",
+      pending: n=>`Hay ${n} productos distintos o sin publicar. Usa «Publicar y verificar menú» desde este equipo para sincronizarlos.`,
+      samples: n=>`Revisar: ${n}`,
+      label: n=>`Revisión publicada: ${n}.`,
+    },
+    pl: {
+      action: "Porównaj menu klienta i kasy",
+      loading: "Porównywanie menu lokalnego z opublikowanym…",
+      noSession: "Zaloguj się jako właściciel, aby sprawdzić menu publiczne.",
+      offline: "Brak połączenia. Lokalne opisy nie zostały usunięte.",
+      changedSession: "Sesja się zmieniła. Porównaj menu ponownie.",
+      failed: "Nie udało się pobrać menu publicznego. Zachowaj dane na tym urządzeniu.",
+      summary: (l,r,lc,rc)=>`To urządzenie: ${l} produktów, ${lc} opisów ES. Klient i kasa: ${r} produktów, ${rc} opisów ES.`,
+      synced: "Produkty i opisy są zgodne z chmurą.",
+      pending: n=>`${n} produktów jest innych lub nieopublikowanych. Użyj „Opublikuj i sprawdź menu” na tym urządzeniu.`,
+      samples: n=>`Sprawdź: ${n}`,
+      label: n=>`Opublikowana wersja: ${n}.`,
+    },
+    en: {
+      action: "Compare Customer and Cashier",
+      loading: "Comparing local menu with the published menu…",
+      noSession: "Sign in as the owner to check the public menu.",
+      offline: "Offline. Local descriptions have not been deleted.",
+      changedSession: "Session changed. Compare the menu again.",
+      failed: "Could not read the public menu. Keep this device's data.",
+      summary: (l,r,lc,rc)=>`This device: ${l} products, ${lc} ES descriptions. Customer and Cashier: ${r} products, ${rc} ES descriptions.`,
+      synced: "Products and descriptions match the cloud.",
+      pending: n=>`${n} products differ or are not published. Use “Publish and verify menu” on this device.`,
+      samples: n=>`Check: ${n}`,
+      label: n=>`Published revision: ${n}.`,
+    },
+  };
+  const button = document.createElement("button");
+  button.type = "button";
+  button.id = "compareMenuPublicationButton";
+  const output = document.createElement("p");
+  output.id = "menuPublicationAuditResult";
+  output.setAttribute("role", "status");
+  output.setAttribute("aria-live", "polite");
+  output.style.whiteSpace = "pre-line";
+  publicationStatus.insertAdjacentElement("afterend", output);
+  publishButton.insertAdjacentElement("afterend", button);
+  function t() {
+    const lang = (document.documentElement.lang || "es").split("-")[0].toLowerCase();
+    return localize[lang] || localize.es;
+  }
+  function updateButtonLanguage() { button.textContent = t().action; }
+  updateButtonLanguage();
+  const observer = typeof MutationObserver === "function"
+    ? new MutationObserver(updateButtonLanguage) : null;
+  observer?.observe(document.documentElement,{attributes:true,attributeFilter:["lang"]});
+  window.addEventListener("pagehide",()=>observer?.disconnect(),{once:true});
+
+  function snapshot(raw) {
+    const entries = [];
+    for (const [category, products] of Object.entries(raw || {})) {
+      if (!Array.isArray(products)) continue;
+      for (const p of products) {
+        if (!p || typeof p !== "object") continue;
+        const id = String(p.id || p.productId || "").trim();
+        const base = p.translations?.es || {};
+        const pl = p.translations?.pl || {};
+        const en = p.translations?.en || {};
+        entries.push({
+          id,
+          name: String(p.name || ""),
+          description: String(p.description || base.description || "").trim(),
+          signature: JSON.stringify([
+            category, p.name || "", p.description || "", Number(p.price || 0),
+            p.available !== false, String(p.station || ""),
+            base.name || "", base.description || "", pl.name || "", pl.description || "",
+            en.name || "", en.description || "", String(p.imageUrl || ""),
+          ]),
+        });
+      }
+    }
+    return entries;
+  }
+  let running = false;
+  async function compare() {
+    if (running) return;
+    const words = t();
+    if (typeof cloudState === "undefined" || !cloudState.user?.id || !cloudState.client) {
+      output.textContent = words.noSession;
+      return;
+    }
+    if (!navigator.onLine) { output.textContent = words.offline; return; }
+    running = true;
+    button.disabled = true;
+    output.textContent = words.loading;
+    const id = cloudState.user.id;
+    const client = cloudState.client;
+    // Snapshot first. Edits made during the request remain untouched.
+    const localBefore = snapshot(typeof menuCatalog === "undefined" ? {} : menuCatalog);
+    try {
+      const {data,error} = await client.from("restaurant_public_catalogs")
+        .select("menu, menu_revision").eq("restaurant_user_id",id).maybeSingle();
+      if (client !== cloudState.client || id !== cloudState.user?.id) {
+        output.textContent = t().changedSession;
+        return;
+      }
+      if (error || !data) throw error || new Error("PUBLIC_MENU_MISSING");
+      const remote = snapshot(data.menu);
+      const key = (p,i) => p.id || `no-id-${i}`;
+      const published = new Map(remote.map((p,i)=>[key(p,i),p]));
+      const localIds = new Set(localBefore.map(key));
+      const mismatched = localBefore.filter((p,i)=> {
+        const copy=published.get(key(p,i));
+        return !copy || copy.signature !== p.signature;
+      });
+      const extra = remote.filter((p,i)=>!localIds.has(key(p,i)));
+      const examples = [...mismatched,...extra].slice(0,5).map(p=>p.name).filter(Boolean);
+      const totalDiff = mismatched.length+extra.length;
+      const descriptionCount = list => list.filter(p=>p.description).length;
+      const wordsNow = t();
+      const sentences = [
+        wordsNow.summary(localBefore.length,remote.length,descriptionCount(localBefore),descriptionCount(remote)),
+        wordsNow.label(data.menu_revision),
+        totalDiff ? wordsNow.pending(totalDiff) : wordsNow.synced,
+      ];
+      if (examples.length) sentences.push(wordsNow.samples(examples.join(", ")));
+      output.textContent = sentences.join("\n");
+    } catch (error) {
+      console.error("[RC ORDERA] Menu publication read-only comparison:", error);
+      output.textContent = t().failed;
+    } finally {
+      running = false;
+      button.disabled = false;
+    }
+  }
+  button.addEventListener("click",()=>{void compare();});
+})();
