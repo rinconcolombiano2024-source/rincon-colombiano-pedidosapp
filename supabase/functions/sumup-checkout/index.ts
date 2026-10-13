@@ -4,7 +4,7 @@
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { withCors } from "../_shared/cors.ts";
-import { createSumUpHostedCheckout, isTrustedSumUpHostedUrl } from "../_shared/sumup-hosted.ts";
+import { createSumUpHostedCheckout, isTrustedSumUpHostedUrl, findSumUpCheckoutForAttempt } from "../_shared/sumup-hosted.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const JSON_HEADERS = {"content-type":"application/json; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff"};
@@ -50,7 +50,7 @@ Deno.serve(withCors(async(request:Request)=>{
      backendUrl.pathname!=="/" || backendUrl.username || backendUrl.password)return disabled();
   let body:Record<string,unknown>;
   try{body=await smallJson(request);}catch{return response(400,{error:"INVALID_REQUEST"});}
-  const orderId=typeof body.orderId==="string"?body.orderId.trim():"";
+  const orderId=typeof body.orderId==="string"?body.orderId.trim().toLowerCase():"";
   const publicToken=typeof body.publicToken==="string"?body.publicToken.trim():"";
   if(!UUID.test(orderId) || publicToken.length>512)return response(400,{error:"ORDER_INVALID"});
   const admin=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
@@ -88,6 +88,26 @@ Deno.serve(withCors(async(request:Request)=>{
     return response(503,{error:"SUMUP_RESERVATION_UNAVAILABLE"});
   const attempt=reserved.data as Record<string,unknown>;
   if(attempt.creationAllowed!==true){
+    if(attempt.status === "creating" || body.action === "reconcile") {
+      try {
+        const recovered = await findSumUpCheckoutForAttempt({apiKey,merchantCode,appOrigin}, {
+          orderId,attemptNumber:Number(attempt.attemptNumber),amountMinor:Number(attempt.amountMinor),currency:"PLN"
+        });
+        if(!recovered) return response(409,{error:"SUMUP_RECONCILIATION_REQUIRED"});
+        const saved=await admin.rpc("rc_sumup_recover_verified_checkout",{
+          p_attempt_id:attempt.attemptId,p_restaurant_user_id:restaurantId,p_merchant_code:merchantCode,
+          p_checkout_id:recovered.checkoutId,p_provider_status:recovered.providerStatus,p_hosted_url:recovered.hostedUrl
+        });
+        if(saved.error || !saved.data || typeof saved.data!=="object")
+          return response(503,{error:"SUMUP_CHECKOUT_NEEDS_RECONCILIATION"});
+        if(saved.data.status === "paid") return response(200,{reconciled:true,paymentStatus:"paid"});
+        if(saved.data.status === "pending" && isTrustedSumUpHostedUrl(recovered.hostedUrl))
+          return response(200,{url:recovered.hostedUrl,checkoutId:recovered.checkoutId,reused:true});
+        return response(409,{error:"SUMUP_RECONCILIATION_REQUIRED"});
+      } catch {
+        return response(503,{error:"SUMUP_CHECKOUT_NEEDS_RECONCILIATION"});
+      }
+    }
     if(attempt.status==="pending" && isTrustedSumUpHostedUrl(attempt.url))
       return response(200,{url:attempt.url,checkoutId:attempt.checkoutId,reused:true});
     return response(409,{error:"SUMUP_RECONCILIATION_REQUIRED"});

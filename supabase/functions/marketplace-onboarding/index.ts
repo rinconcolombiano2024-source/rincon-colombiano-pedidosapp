@@ -182,12 +182,14 @@ async function stripeRequest(url: string, options: RequestInit) {
   );
 
   let result: Response;
+  let raw: string;
 
   try {
     result = await fetch(url, {
       ...options,
       signal: controller.signal,
     });
+    raw = await result.text();
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
       throw new Error("STRIPE_TIMEOUT");
@@ -197,7 +199,6 @@ async function stripeRequest(url: string, options: RequestInit) {
     clearTimeout(timeout);
   }
 
-  const raw = await result.text();
   let data: any = {};
 
   if (raw) {

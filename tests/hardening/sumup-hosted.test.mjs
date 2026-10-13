@@ -24,6 +24,7 @@ const good = {
 
 test("deterministic, bounded reference; no untrusted amount or attempt", () => {
   assert.equal(referenceForAttempt(attempt), good.checkout_reference);
+  assert.equal(referenceForAttempt({...attempt,orderId:orderId.toUpperCase()}),good.checkout_reference);
   assert.throws(() => referenceForAttempt({ ...attempt, amountMinor: 0 }));
   assert.throws(() => referenceForAttempt({ ...attempt, amountMinor: 120.5 }));
   assert.throws(() => referenceForAttempt({ ...attempt, currency: "EUR" }));
@@ -55,6 +56,19 @@ test("provider checkout is rejected if financial or merchant fields drift", () =
   assert.throws(() => verifyHostedCheckout({ ...good, amount: 123.4501 }, config, attempt));
   assert.throws(() => verifyHostedCheckout({ ...good, status: "PAID" }, config, attempt));
   assert.throws(() => verifyHostedCheckout({ ...good, hosted_checkout: { enabled: false } }, config, attempt));
+});
+
+test("provider amount rejects every nonzero fractional grosz without tolerance", () => {
+  assert.throws(() => verifyHostedCheckout({ ...good, amount: 123.4500000001 }, config, attempt));
+  assert.throws(() => verifyRetrievedCheckout({ ...good, amount: 123.4499999999, status: "PAID" }, checkoutId, config, attempt));
+});
+
+test("exact decimal provider values accept one grosz and large PLN boundaries", () => {
+  for (const amountMinor of [1, 10, 29, 1990, 12345, 100000000]) {
+    const input = { ...attempt, amountMinor };
+    const result = verifyHostedCheckout({ ...good, amount: amountMinor / 100 }, config, input);
+    assert.equal(result.id, checkoutId);
+  }
 });
 
 test("returning from hosted checkout never marks paid; retrieve verifies amount, ID and status", () => {
