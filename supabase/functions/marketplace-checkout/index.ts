@@ -1,3 +1,4 @@
+import { routeSumUpCheckout } from "../_shared/checkout-provider.ts";
 import { withCors } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
@@ -610,7 +611,7 @@ Deno.serve(withCors(
           "customer_orders",
         )
         .select(
-          "id,user_id,customer_user_id,status,total,currency,payment_method,payment_status,payment_provider,order_json",
+          "id,user_id,customer_user_id,status,total,currency,payment_method,payment_status,payment_provider,order_json,order_type,tip_amount,final_delivery_fee",
         )
         .eq(
           "id",
@@ -703,6 +704,11 @@ Deno.serve(withCors(
         },
       );
     }
+
+    const sumUpResponse = await routeSumUpCheckout(order, suppliedToken, authorization,
+      (name) => Deno.env.get(name), () => admin.from("app_settings")
+        .select("settings").eq("user_id", order.user_id).maybeSingle());
+    if (sumUpResponse) return sumUpResponse;
 
     // Stop reusing one order across independent PSPs. This is an API
     // preflight only: database-level checkout reservation is authoritative.

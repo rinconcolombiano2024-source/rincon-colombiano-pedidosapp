@@ -5432,6 +5432,17 @@ function customerSafeStripeCheckoutUrl(value) {
     return "";
   }
 }
+function customerSafeOnlineCheckoutUrl(value, provider = "stripe") {
+  if (provider === "stripe" || provider === "stripe_connect") return customerSafeStripeCheckoutUrl(value);
+  if (provider !== "sumup" || typeof value !== "string" || value.length > 8192) return "";
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.hostname === "checkout.sumup.com" &&
+      !url.username && !url.password && !url.port && !url.search && !url.hash &&
+      /^\/pay\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/?$/i.test(url.pathname)
+      ? url.toString() : "";
+  } catch { return ""; }
+}
 async function customerStartOnlinePayment(orderId, publicToken) {
   if (!customerClient || !orderId || !publicToken || !navigator.onLine) {
     customerSetTrackingStatus(customerT("onlinePaymentFailed"), "error");
@@ -5454,12 +5465,12 @@ async function customerStartOnlinePayment(orderId, publicToken) {
     error = requestError;
   }
 
-  const checkoutUrl = customerSafeStripeCheckoutUrl(data?.url);
+  const checkoutUrl = customerSafeOnlineCheckoutUrl(data?.url, data?.provider || "stripe");
 
   if (error || !checkoutUrl) {
     console.error(
       "No fue posible iniciar el pago online:",
-      error || { reason: "INVALID_STRIPE_CHECKOUT_URL" }
+      error || { reason: "INVALID_CHECKOUT_URL" }
     );
     customerSetTrackingStatus(customerT("onlinePaymentFailed"), "error");
     return false;

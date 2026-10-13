@@ -1,15 +1,16 @@
 {
   "app": "RC ORDERA",
   "version": "91.0.4",
-  "release": "2026-10-12-r18",
-  "pwaCache": "rc-ordera-v91-0-4-v6-verified-20261012-pwa-safe-r18",
+  "release": "2026-10-13-r19",
+  "pwaCache": "rc-ordera-v91-0-4-v6-verified-20261013-pwa-safe-r19",
   "changes": [
     "restaurant QR/client/stations separate windows",
     "ES/PL/EN per-module PWA scopes",
     "fiscal setup button inside POS",
     "Supabase sync protections and query reductions",
     "bounded customer order tracking refresh with trailing reconciliation",
-    "Online checkout return never claims payment from redirect parameters; provider confirmation remains required."
+    "Online checkout return never claims payment from redirect parameters; provider confirmation remains required.",
+    "Gated server-selected SumUp routing and provider-specific checkout URLs; no automatic Stripe fallback."
   ],
-  "issuedAt": "2026-10-12"
+  "issuedAt": "2026-10-13"
 }
