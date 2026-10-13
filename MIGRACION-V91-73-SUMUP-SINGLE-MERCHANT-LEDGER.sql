@@ -63,14 +63,21 @@ CREATE OR REPLACE FUNCTION public.rc_sumup_commit_checkout(
  p_attempt_id uuid,p_checkout_id uuid,p_hosted_url text)
 RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 DECLARE a public.rc_sumup_payment_attempts%ROWTYPE; o public.customer_orders%ROWTYPE;
+        order_key uuid;
 BEGIN
- SELECT * INTO a FROM public.rc_sumup_payment_attempts WHERE id=p_attempt_id FOR UPDATE;
+ -- Consistent lock order across reservation, checkout and webhook: ORDER then ATTEMPT.
+ -- Reading immutable reservation ownership without FOR UPDATE cannot deadlock on attempt.
+ SELECT order_id INTO order_key FROM public.rc_sumup_payment_attempts WHERE id=p_attempt_id;
+ IF NOT FOUND THEN RAISE EXCEPTION 'SUMUP_PROVIDER_CHECKOUT_MISMATCH'; END IF;
+ SELECT * INTO o FROM public.customer_orders WHERE id=order_key FOR UPDATE;
+ IF NOT FOUND OR o.status<>'pending' OR lower(o.payment_status) NOT IN ('pending','failed','')
+    OR lower(o.payment_method)<>'online' OR upper(o.currency)<>'PLN' THEN
+   RAISE EXCEPTION 'SUMUP_ORDER_CHANGED'; END IF;
+ SELECT * INTO a FROM public.rc_sumup_payment_attempts
+   WHERE id=p_attempt_id AND order_id=order_key FOR UPDATE;
  IF NOT FOUND OR a.status<>'creating' OR a.checkout_id IS NOT NULL OR p_checkout_id IS NULL
  OR p_hosted_url IS DISTINCT FROM 'https://checkout.sumup.com/pay/'||p_checkout_id::text THEN
    RAISE EXCEPTION 'SUMUP_PROVIDER_CHECKOUT_MISMATCH'; END IF;
- SELECT * INTO o FROM public.customer_orders WHERE id=a.order_id FOR UPDATE;
- IF NOT FOUND OR o.status<>'pending' OR lower(o.payment_status) NOT IN ('pending','failed','') THEN
-   RAISE EXCEPTION 'SUMUP_ORDER_CHANGED'; END IF;
  UPDATE public.rc_sumup_payment_attempts SET checkout_id=p_checkout_id,hosted_url=p_hosted_url,
   status='pending',updated_at=now() WHERE id=a.id;
  RETURN true;
@@ -83,13 +90,20 @@ CREATE OR REPLACE FUNCTION public.rc_sumup_apply_verified_checkout(
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 DECLARE a public.rc_sumup_payment_attempts%ROWTYPE; o public.customer_orders%ROWTYPE;
         tx public.payment_transactions%ROWTYPE;
+        order_key uuid;
 BEGIN
  IF p_provider_status NOT IN ('PENDING','PAID','FAILED','EXPIRED') THEN
   RAISE EXCEPTION 'SUMUP_UNKNOWN_PROVIDER_STATUS'; END IF;
- SELECT * INTO a FROM public.rc_sumup_payment_attempts WHERE checkout_id=p_checkout_id FOR UPDATE;
+ -- The webhook must not lock ATTEMPT before ORDER: cancellation and reservation
+ -- lock ORDER first, so reversing creates an AB/BA deadlock under production load.
+ SELECT order_id INTO order_key FROM public.rc_sumup_payment_attempts
+  WHERE checkout_id=p_checkout_id;
  IF NOT FOUND THEN RAISE EXCEPTION 'SUMUP_UNKNOWN_CHECKOUT'; END IF;
- SELECT * INTO o FROM public.customer_orders WHERE id=a.order_id FOR UPDATE;
+ SELECT * INTO o FROM public.customer_orders WHERE id=order_key FOR UPDATE;
  IF NOT FOUND THEN RAISE EXCEPTION 'SUMUP_ORDER_MISSING'; END IF;
+ SELECT * INTO a FROM public.rc_sumup_payment_attempts
+  WHERE checkout_id=p_checkout_id AND order_id=order_key FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'SUMUP_UNKNOWN_CHECKOUT'; END IF;
  IF a.status='paid' THEN RETURN jsonb_build_object('status','paid','idempotent',true); END IF;
  IF p_provider_status='PENDING' THEN RETURN jsonb_build_object('status',a.status); END IF;
  IF p_provider_status IN ('FAILED','EXPIRED') THEN
