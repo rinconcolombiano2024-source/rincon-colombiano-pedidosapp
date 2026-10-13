@@ -3373,16 +3373,30 @@ async function activateCurrentUserRole(role) {
   }
 }
 
+// Cache only confirmed profile writes in this page session. The payload's
+// updated_at changes every load and must not force a repeat PostgreSQL UPDATE.
+let confirmedRestaurantOwnerProfileWrite = null;
 async function ensureRestaurantOwnerIdentity(profile = restaurantProfileFromUserMetadata(), options = {}) {
   if (!cloudState.client || !cloudState.user) return;
-  try {
-    const { error } = await cloudState.client.from("user_profiles").upsert(restaurantOwnerUserProfilePayload(profile));
-    if (error) throw error;
-  } catch (error) {
-    console.warn("No se pudo actualizar el perfil general del propietario.", error);
+  const requestClient = cloudState.client;
+  const requestUserId = cloudState.user.id;
+  const payload = restaurantOwnerUserProfilePayload(profile);
+  const { updated_at: _writeTimestamp, ...identityFields } = payload;
+  const payloadFingerprint = JSON.stringify(identityFields);
+  const previous = confirmedRestaurantOwnerProfileWrite;
+  if (!(previous?.client === requestClient && previous?.userId === requestUserId && previous?.fingerprint === payloadFingerprint)) {
+    try {
+      const { error } = await requestClient.from("user_profiles").upsert(payload);
+      if (error) throw error;
+      // Never cache another user's response after an asynchronous sign-out.
+      if (cloudState.client === requestClient && cloudState.user?.id === requestUserId) {
+        confirmedRestaurantOwnerProfileWrite = { client: requestClient, userId: requestUserId, fingerprint: payloadFingerprint };
+      }
+    } catch (error) {
+      console.warn("No se pudo actualizar el perfil general del propietario.", error);
+    }
   }
-  // An active platform owner role was already checked in the same server load.
-  // Do not re-run an UPDATE-producing RPC just to refresh its updated_at.
+  // Auth and role repair are independent of the profile upsert cache.
   if (!options.roleAlreadyActive) await activateCurrentUserRole("restaurant_owner");
 }
 
