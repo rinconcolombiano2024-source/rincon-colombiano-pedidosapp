@@ -120,7 +120,7 @@
 
     .apps {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 20px;
     }
 
@@ -284,6 +284,14 @@
         <div class="button">
           Administrar restaurante
         </div>
+      </a>
+
+      <!-- ESTACIONES / PERSONAL -->
+      <a class="app-card" href="mesero.html" aria-label="Acceso de personal">
+        <div class="icon">👨‍🍳</div>
+        <h2>Personal y estaciones</h2>
+        <p>Pide al propietario que autorice tu correo en una estacion.</p>
+        <div class="button">Estaciones</div>
       </a>
 
       <!-- COLABORADOR -->
