@@ -565,8 +565,8 @@
     ]
   },
   "app.js": {
-    "sha256": "e92229e47f1b3f5f90921a8a23ec237fb052efd24f61cf8ac2741302ce07db06",
-    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs",
+    "sha256": "09c99160c3afbc35dbe4f074aaa721c8b79c0d74c33c3d4acbe931e25eb28225",
+    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs",
     "edits": [
       {
         "before": "",
@@ -792,6 +792,21 @@
         "before": "    return new Map((Array.isArray(data) ? data : []).map((row) => [String(row.customer_order_id), row]));\r\n",
         "after": "    const next = new Map((Array.isArray(data) ? data : []).map((row) => [String(row.customer_order_id), row]));\r\n    // A sign-out or restaurant switch while awaiting the RPC cannot poison\r\n    // a new restaurant's cache or leak old tracking data into its UI.\r\n    if (cloudState.client === requestClient && cloudState.user?.id === requestRestaurantId) {\r\n      clientDeliveryTrackingByOrderId = next;\r\n      clientTrackingLastSuccessfulReadAt = Date.now();\r\n      clientTrackingLastRestaurantUserId = requestRestaurantId;\r\n      clientTrackingLastClient = requestClient;\r\n    }\r\n    return next;\r\n",
         "afterByteOffset": 232780
+      },
+      {
+        "before": "",
+        "after": "// Android/iOS Capacitor serve bundled pages from a private localhost origin.\n// That origin must NEVER be put in a customer QR or a new browser/window tab.\n// Only native runtimes use the public HTTPS site; ordinary web/PWA keeps its URL.\nfunction restaurantModuleUrl(filename) {\n  const native = window.Capacitor?.isNativePlatform?.() === true;\n  const base = native\n    ? \"https://rincon-colombiano-pedidosapp.vercel.app/\"\n    : window.location.href;\n  return new URL(\"./\" + filename, base);\n}\n\n",
+        "afterByteOffset": 271467
+      },
+      {
+        "before": "new URL(\"./cliente.html\", window.location.href)",
+        "after": "restaurantModuleUrl(\"cliente.html\")",
+        "afterByteOffset": 272050
+      },
+      {
+        "before": "new URL(\"./mesero.html\", window.location.href)",
+        "after": "restaurantModuleUrl(\"mesero.html\")",
+        "afterByteOffset": 276028
       }
     ]
   },
