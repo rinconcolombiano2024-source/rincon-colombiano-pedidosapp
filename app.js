@@ -3376,6 +3376,7 @@ async function activateCurrentUserRole(role) {
 // Cache only confirmed profile writes in this page session. The payload's
 // updated_at changes every load and must not force a repeat PostgreSQL UPDATE.
 let confirmedRestaurantOwnerProfileWrite = null;
+let restaurantOwnerProfileWriteInFlight = null;
 async function ensureRestaurantOwnerIdentity(profile = restaurantProfileFromUserMetadata(), options = {}) {
   if (!cloudState.client || !cloudState.user) return;
   const requestClient = cloudState.client;
@@ -3383,20 +3384,42 @@ async function ensureRestaurantOwnerIdentity(profile = restaurantProfileFromUser
   const payload = restaurantOwnerUserProfilePayload(profile);
   const { updated_at: _writeTimestamp, ...identityFields } = payload;
   const payloadFingerprint = JSON.stringify(identityFields);
-  const previous = confirmedRestaurantOwnerProfileWrite;
-  if (!(previous?.client === requestClient && previous?.userId === requestUserId && previous?.fingerprint === payloadFingerprint)) {
-    try {
-      const { error } = await requestClient.from("user_profiles").upsert(payload);
-      if (error) throw error;
-      // Never cache another user's response after an asynchronous sign-out.
-      if (cloudState.client === requestClient && cloudState.user?.id === requestUserId) {
-        confirmedRestaurantOwnerProfileWrite = { client: requestClient, userId: requestUserId, fingerprint: payloadFingerprint };
+  const matchesRequest = (entry) => entry?.client === requestClient &&
+    entry.userId === requestUserId && entry.fingerprint === payloadFingerprint;
+  try {
+    // One owner and one Supabase client must never race multiple profile UPDATEs.
+    // A different payload waits for the prior write, preserving the latest data.
+    while (!matchesRequest(confirmedRestaurantOwnerProfileWrite)) {
+      const active = restaurantOwnerProfileWriteInFlight;
+      if (active?.client === requestClient && active.userId === requestUserId) {
+        if (active.fingerprint === payloadFingerprint) {
+          await active.promise; // Share the same result or error; retry on a later load.
+          break;
+        }
+        await active.promise.catch(() => {}); // Different payload may still need writing.
+        continue;
       }
-    } catch (error) {
-      console.warn("No se pudo actualizar el perfil general del propietario.", error);
+      // An old request must not issue a write after the account was switched.
+      if (cloudState.client !== requestClient || cloudState.user?.id !== requestUserId) break;
+      const marker = { client: requestClient, userId: requestUserId, fingerprint: payloadFingerprint, promise: null };
+      const request = (async () => {
+        const { error } = await requestClient.from("user_profiles").upsert(payload);
+        if (error) throw error;
+        if (cloudState.client === requestClient && cloudState.user?.id === requestUserId) {
+          confirmedRestaurantOwnerProfileWrite = { client: requestClient, userId: requestUserId, fingerprint: payloadFingerprint };
+        }
+      })();
+      marker.promise = request.finally(() => {
+        if (restaurantOwnerProfileWriteInFlight === marker) restaurantOwnerProfileWriteInFlight = null;
+      });
+      restaurantOwnerProfileWriteInFlight = marker;
+      await marker.promise;
+      break;
     }
+  } catch (error) {
+    console.warn("No se pudo actualizar el perfil general del propietario.", error);
   }
-  // Auth and role repair are independent of the profile upsert cache.
+  // Auth and role repair are independent of profile write deduplication.
   if (!options.roleAlreadyActive) await activateCurrentUserRole("restaurant_owner");
 }
 
