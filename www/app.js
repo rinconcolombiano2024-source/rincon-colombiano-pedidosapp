@@ -7431,64 +7431,86 @@ const CLIENT_TRACKING_MIN_READ_GAP_MS = 3000;
 let clientTrackingLastSuccessfulReadAt = 0;
 let clientTrackingLastRestaurantUserId = "";
 let clientTrackingLastClient = null;
+// Avoid sharing in-flight courier tracking between different authenticated
+// restaurant sessions. Older promises may finish after a user switches account.
+let clientOrdersTrackingFlightClient = null;
+let clientOrdersTrackingFlightRestaurantId = "";
 async function loadCurrentRestaurantDeliveryTracking(signal = null) {
-  if (!cloudState.client || !cloudState.user || !navigator.onLine) {
-    return clientDeliveryTrackingByOrderId instanceof Map
+  const requestClient = cloudState.client;
+  const requestRestaurantId = cloudState.user?.id || "";
+  const cachedForSession = () =>
+    clientTrackingLastRestaurantUserId === requestRestaurantId &&
+    clientTrackingLastClient === requestClient &&
+    clientDeliveryTrackingByOrderId instanceof Map
       ? clientDeliveryTrackingByOrderId
       : new Map();
+
+  if (!requestClient || !requestRestaurantId || !navigator.onLine) {
+    return cachedForSession();
   }
-  if (clientOrdersTrackingInFlight) return clientOrdersTrackingInFlight;
+
+  // Coalesce only requests for exactly the same restaurant AND Supabase client.
+  // Do not reuse a former account's pending RPC after a rapid account switch.
+  if (
+    clientOrdersTrackingInFlight &&
+    clientOrdersTrackingFlightClient === requestClient &&
+    clientOrdersTrackingFlightRestaurantId === requestRestaurantId
+  ) {
+    return clientOrdersTrackingInFlight;
+  }
   if (
     clientTrackingLastSuccessfulReadAt > 0 &&
     Date.now() - clientTrackingLastSuccessfulReadAt < CLIENT_TRACKING_MIN_READ_GAP_MS &&
-    clientTrackingLastRestaurantUserId === cloudState.user.id &&
-    clientTrackingLastClient === cloudState.client
+    clientTrackingLastRestaurantUserId === requestRestaurantId &&
+    clientTrackingLastClient === requestClient
   ) {
-    return clientDeliveryTrackingByOrderId instanceof Map
-      ? clientDeliveryTrackingByOrderId
-      : new Map();
+    return cachedForSession();
   }
-  const requestClient = cloudState.client;
-  const requestRestaurantId = cloudState.user.id;
-  clientOrdersTrackingInFlight = (async () => {
+
+  const flight = (async () => {
     const { data, error } = await withCloudTimeout(
-      cloudState.client.rpc("get_current_restaurant_delivery_tracking"),
+      requestClient.rpc("get_current_restaurant_delivery_tracking"),
       undefined, 8000, signal
     );
-   if (error) {
-  const missingFunction =
-    /PGRST202|could not find the function|42883/i.test(
-      `${error.code || ""} ${error.message || ""}`
-    );
-
-  if (missingFunction) {
-    return clientDeliveryTrackingByOrderId instanceof Map
-      ? clientDeliveryTrackingByOrderId
-      : new Map();
-  }
-
-  console.error(
-    "No se pudo actualizar el seguimiento de domicilios:",
-    error.code || error.message
-  );
-
-  throw error;
-}
-    const next = new Map((Array.isArray(data) ? data : []).map((row) => [String(row.customer_order_id), row]));
-    // A sign-out or restaurant switch while awaiting the RPC cannot poison
-    // a new restaurant's cache or leak old tracking data into its UI.
-    if (cloudState.client === requestClient && cloudState.user?.id === requestRestaurantId) {
-      clientDeliveryTrackingByOrderId = next;
-      clientTrackingLastSuccessfulReadAt = Date.now();
-      clientTrackingLastRestaurantUserId = requestRestaurantId;
-      clientTrackingLastClient = requestClient;
+    if (error) {
+      const missingFunction =
+        /PGRST202|could not find the function|42883/i.test(
+          `${error.code || ""} ${error.message || ""}`
+        );
+      if (missingFunction) return cachedForSession();
+      console.error(
+        "No se pudo actualizar el seguimiento de domicilios:",
+        error.code || error.message
+      );
+      throw error;
     }
+
+    // Discard the outcome of an obsolete session, even if its request itself
+    // succeeded. Do not allow stale courier information into another tenant.
+    if (cloudState.client !== requestClient || cloudState.user?.id !== requestRestaurantId) {
+      return new Map();
+    }
+    const next = new Map(
+      (Array.isArray(data) ? data : []).map((row) => [String(row.customer_order_id), row])
+    );
+    clientDeliveryTrackingByOrderId = next;
+    clientTrackingLastSuccessfulReadAt = Date.now();
+    clientTrackingLastRestaurantUserId = requestRestaurantId;
+    clientTrackingLastClient = requestClient;
     return next;
   })();
+  clientOrdersTrackingInFlight = flight;
+  clientOrdersTrackingFlightClient = requestClient;
+  clientOrdersTrackingFlightRestaurantId = requestRestaurantId;
   try {
-    return await clientOrdersTrackingInFlight;
+    return await flight;
   } finally {
-    clientOrdersTrackingInFlight = null;
+    // An earlier request must never clear a newer session's in-flight slot.
+    if (clientOrdersTrackingInFlight === flight) {
+      clientOrdersTrackingInFlight = null;
+      clientOrdersTrackingFlightClient = null;
+      clientOrdersTrackingFlightRestaurantId = "";
+    }
   }
 }
 
