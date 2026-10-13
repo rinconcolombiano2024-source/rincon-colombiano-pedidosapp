@@ -74,7 +74,11 @@
       <section class="waiter-access-card" id="waiterAccessCard" hidden>
         <h1>Falta autorizacion</h1>
         <p id="waiterAccessMessage">Pide al propietario que autorice tu correo en una estacion.</p>
-        <button id="waiterRetryAccessButton" type="button">Activar autorizacion</button>
+        <div class="waiter-access-actions" role="group" aria-label="Opciones de acceso a Estaciones">
+          <button id="waiterRetryAccessButton" type="button">Activar autorización</button>
+          <button id="waiterAccessSwitchAccountButton" type="button">Iniciar sesión / Cambiar cuenta</button>
+          <a id="waiterAccessHomeLink" class="waiter-access-home-link" href="./index.html">Volver al inicio de RC ORDERA</a>
+        </div>
       </section>
 
       <section class="waiter-shift-bar" id="waiterShiftBar" aria-label="Jornada laboral" hidden>
