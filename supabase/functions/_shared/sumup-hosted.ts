@@ -153,10 +153,19 @@ export function verifyHostedCheckout(
 ): SumUpCheckout {
   const { id, status, body } = verifyCore(raw, config, attempt);
   const hostedUrl = body["hosted_checkout_url"];
+  // The hosted_checkout flag is a CREATE request option, not a guaranteed
+  // response property. Some valid SumUp responses return only the hosted URL.
+  // Still reject any explicitly disabled or malformed echo, and validate the
+  // exact merchant/reference/amount/currency/official checkout URL above.
+  const hostedConfig = body["hosted_checkout"];
   if (
     status !== "PENDING" ||
     !isTrustedSumUpHostedUrl(hostedUrl) ||
-    object(body["hosted_checkout"])["enabled"] !== true
+    (hostedConfig !== undefined &&
+      (hostedConfig === null ||
+        typeof hostedConfig !== "object" ||
+        Array.isArray(hostedConfig) ||
+        (hostedConfig as Record<string, unknown>)["enabled"] !== true))
   ) {
     fail();
   }
