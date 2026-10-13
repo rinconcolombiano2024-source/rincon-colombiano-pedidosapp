@@ -483,8 +483,8 @@
     ]
   },
   "offline-i18n.js": {
-    "sha256": "802c97c7f7fee447c97dcb085f44cf932fee6e21e91f112b724cd704959cc18d",
-    "regressionTests": "tests/hardening/frontend.test.mjs",
+    "sha256": "ab338be3fc376320ecf45e83e94e635fa5fdb43db9ee8f1ef9ecd925be1a2192",
+    "regressionTests": "tests/hardening/frontend.test.mjs; tests/waiter-access-recovery.test.cjs",
     "edits": [
       {
         "before": "",
@@ -500,6 +500,11 @@
         "before": "",
         "after": "    [\"integration.a11y.summary\", \"Resumen de preparación\", \"Podsumowanie gotowości\", \"Readiness summary\"],\n    [\"integration.a11y.categories\", \"Categorías\", \"Kategorie\", \"Categories\"],\n    [\"integration.a11y.diagnostics\", \"Diagnóstico de integraciones\", \"Diagnostyka integracji\", \"Integration diagnostics\"],\n",
         "afterByteOffset": 32
+      },
+      {
+        "before": "",
+        "after": "    [\"stations.recovery.group\", \"Opciones de acceso a Estaciones\", \"Opcje dostępu do stanowisk\", \"Station access options\"],\n    [\"stations.recovery.activate\", \"Activar autorización\", \"Aktywuj uprawnienia\", \"Activate authorization\"],\n    [\"stations.recovery.switchAccount\", \"Iniciar sesión / Cambiar cuenta\", \"Zaloguj się / Zmień konto\", \"Sign in / Switch account\"],\n    [\"stations.recovery.home\", \"Volver al inicio de RC ORDERA\", \"Wróć do strony głównej RC ORDERA\", \"Back to RC ORDERA home\"],\n    [\"stations.recovery.signedOut\", \"Inicia sesión con una cuenta autorizada por el restaurante.\", \"Zaloguj się na konto upoważnione przez restaurację.\", \"Sign in with an account authorized by the restaurant.\"],\n    [\"stations.recovery.signOutError\", \"No fue posible cerrar la sesión. Comprueba internet y vuelve a intentarlo. También puedes volver al inicio.\", \"Nie udało się wylogować. Sprawdź internet i spróbuj ponownie. Możesz też wrócić na stronę główną.\", \"Could not sign out. Check your internet connection and try again. You can also return to the home page.\"],\n",
+        "afterByteOffset": 148447
       }
     ]
   },
