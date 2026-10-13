@@ -147,3 +147,25 @@ test("stale authorization claim cannot reopen blocked card after changing accoun
   assert.equal(elements.authCard.hidden, true);
   assert.equal(elements.accessMessage.textContent, "");
 });
+
+test("station access recovery has local Spanish, Polish and English text", () => {
+  assert.equal(load("offline-i18n.js"), load("www/offline-i18n.js"));
+  const browser = { window: {} };
+  vm.runInNewContext(load("offline-i18n.js"), browser);
+  const i18n = browser.window.RC_ORDERA_OFFLINE_I18N;
+  const captions = [
+    "Opciones de acceso a Estaciones",
+    "Activar autorización",
+    "Iniciar sesión / Cambiar cuenta",
+    "Volver al inicio de RC ORDERA",
+    "Inicia sesión con una cuenta autorizada por el restaurante.",
+    "No fue posible cerrar la sesión. Comprueba internet y vuelve a intentarlo. También puedes volver al inicio.",
+  ];
+  for (const caption of captions) {
+    assert.ok(i18n.keyForSource(caption), "missing offline translation key for " + caption);
+    for (const language of ["pl", "en"]) {
+      const translated = i18n.translate(caption, language);
+      assert.ok(translated && translated !== caption, language + ": " + caption);
+    }
+  }
+});
