@@ -57,6 +57,18 @@ test("provider checkout is rejected if financial or merchant fields drift", () =
   assert.throws(() => verifyHostedCheckout({ ...good, hosted_checkout: { enabled: false } }, config, attempt));
 });
 
+test("official SumUp response can omit the request-only hosted_checkout flag", () => {
+  // Hosted Checkout documentation guarantees hosted_checkout_url when enabled,
+  // but does not require the request flag to be echoed in each response.
+  const { hosted_checkout: unused, ...withoutEcho } = good;
+  assert.equal(verifyHostedCheckout(withoutEcho, config, attempt).hostedUrl, good.hosted_checkout_url);
+  assert.throws(() => verifyHostedCheckout({ ...withoutEcho, hosted_checkout: null }, config, attempt));
+  assert.throws(() => verifyHostedCheckout({ ...withoutEcho, hosted_checkout: "true" }, config, attempt));
+  assert.throws(() => verifyHostedCheckout({ ...withoutEcho, merchant_code: "WRONG" }, config, attempt));
+  assert.throws(() => verifyHostedCheckout({ ...withoutEcho, amount: 10 }, config, attempt));
+  assert.throws(() => verifyHostedCheckout({ ...withoutEcho, hosted_checkout_url: "https://evil.invalid/pay/" + checkoutId }, config, attempt));
+});
+
 test("returning from hosted checkout never marks paid; retrieve verifies amount, ID and status", () => {
   const pending = verifyRetrievedCheckout(good, checkoutId, config, attempt);
   assert.equal(pending.paid, false);

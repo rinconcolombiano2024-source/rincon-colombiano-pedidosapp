@@ -34,7 +34,8 @@ BEGIN
  IF p_merchant_code !~ '^[A-Za-z0-9]{6,32}$' THEN RAISE EXCEPTION 'SUMUP_BAD_MERCHANT'; END IF;
  SELECT * INTO o FROM public.customer_orders WHERE id=p_order_id AND user_id=p_restaurant_user_id FOR UPDATE;
  IF NOT FOUND OR o.status <> 'pending' OR lower(o.payment_method)<>'online'
-  OR lower(o.payment_status) NOT IN ('pending','failed','') OR upper(o.currency)<>'PLN' THEN
+  OR lower(o.payment_status) NOT IN ('pending','failed','') OR upper(o.currency)<>'PLN'
+ OR (lower(coalesce(o.payment_provider,'')) NOT IN ('','sumup')) THEN
   RAISE EXCEPTION 'SUMUP_ORDER_NOT_ELIGIBLE'; END IF;
  SELECT settings->>'onlinePaymentProvider' INTO selected FROM public.app_settings
   WHERE user_id=p_restaurant_user_id;
@@ -58,6 +59,11 @@ BEGIN
  END IF;
  IF a.restaurant_user_id<>p_restaurant_user_id OR a.merchant_code<>p_merchant_code
   OR a.amount_minor<>minor::bigint THEN RAISE EXCEPTION 'SUMUP_ATTEMPT_DRIFT'; END IF;
+ -- Persist provider ownership in the same transaction that reserves a SumUp
+ -- attempt. The client cannot switch provider to initiate a second checkout.
+ UPDATE public.customer_orders SET payment_provider='sumup',updated_at=now()
+  WHERE id=p_order_id AND lower(coalesce(payment_provider,'')) IN ('','sumup');
+ IF NOT FOUND THEN RAISE EXCEPTION 'SUMUP_PROVIDER_SWITCH_FORBIDDEN'; END IF;
  RETURN jsonb_build_object('attemptId',a.id,'orderId',a.order_id,'attemptNumber',1,
  'amountMinor',a.amount_minor,'currency','PLN','status',a.status,
  'checkoutId',a.checkout_id,'url',a.hosted_url,'creationAllowed',fresh);
@@ -77,11 +83,13 @@ BEGIN
  IF NOT FOUND THEN RAISE EXCEPTION 'SUMUP_PROVIDER_CHECKOUT_MISMATCH'; END IF;
  SELECT * INTO o FROM public.customer_orders WHERE id=order_key FOR UPDATE;
  IF NOT FOUND OR o.status<>'pending' OR lower(o.payment_status) NOT IN ('pending','failed','')
-    OR lower(o.payment_method)<>'online' OR upper(o.currency)<>'PLN' THEN
+    OR lower(o.payment_method)<>'online' OR upper(o.currency)<>'PLN'
+    OR lower(coalesce(o.payment_provider,'')) <> 'sumup' THEN
    RAISE EXCEPTION 'SUMUP_ORDER_CHANGED'; END IF;
  SELECT * INTO a FROM public.rc_sumup_payment_attempts
    WHERE id=p_attempt_id AND order_id=order_key FOR UPDATE;
  IF NOT FOUND OR a.status<>'creating' OR a.checkout_id IS NOT NULL OR p_checkout_id IS NULL
+ OR o.total*100 <> a.amount_minor
  OR p_hosted_url IS DISTINCT FROM 'https://checkout.sumup.com/pay/'||p_checkout_id::text THEN
    RAISE EXCEPTION 'SUMUP_PROVIDER_CHECKOUT_MISMATCH'; END IF;
  UPDATE public.rc_sumup_payment_attempts SET checkout_id=p_checkout_id,hosted_url=p_hosted_url,
@@ -111,6 +119,11 @@ BEGIN
   WHERE checkout_id=p_checkout_id AND order_id=order_key FOR UPDATE;
  IF NOT FOUND THEN RAISE EXCEPTION 'SUMUP_UNKNOWN_CHECKOUT'; END IF;
  IF a.status='paid' THEN RETURN jsonb_build_object('status','paid','idempotent',true); END IF;
+ -- Never recognize a NEW provider capture against an altered sale total.
+ IF upper(o.currency) <> 'PLN' OR o.total*100 <> a.amount_minor THEN
+  UPDATE public.rc_sumup_payment_attempts SET status='needs_review',updated_at=now() WHERE id=a.id;
+  RETURN jsonb_build_object('status','needs_review','reason','AMOUNT_DRIFT');
+ END IF;
  IF p_provider_status='PENDING' THEN RETURN jsonb_build_object('status',a.status); END IF;
  IF p_provider_status IN ('FAILED','EXPIRED') THEN
   UPDATE public.rc_sumup_payment_attempts SET status=lower(p_provider_status),updated_at=now()

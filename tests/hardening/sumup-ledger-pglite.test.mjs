@@ -51,6 +51,8 @@ test("one exact-cent checkout reserved; replay is not allowed to POST again",asy
  assert.equal(first.creationAllowed,true);
  assert.equal(Number(first.amountMinor),12345);
  assert.equal(first.status,"creating");
+ const providerOwner=await db.query("select payment_provider from public.customer_orders where id=$1",[orderId]);
+ assert.equal(providerOwner.rows[0].payment_provider,"sumup","reservation must bind provider ownership");
  const again=(await reserve()).rows[0].a;
  assert.equal(again.creationAllowed,false);
  assert.equal(again.attemptId,first.attemptId);
@@ -95,6 +97,32 @@ test("provider claim cannot mark paid when another PSP transaction appears async
  assert.equal(sale.rows[0].payment_status,"pending");
  assert.equal(sumupCount.rows[0].n,0);
 });
+test("previous Stripe ownership prevents any SumUp checkout",async()=>{
+ const stripeOrderId=randomUUID();
+ await db.query("insert into customer_orders(id,user_id,status,payment_method,payment_status,payment_provider,currency,total,updated_at) values($1,$2,'pending','Online','pending','stripe_connect','PLN',13,now())",[stripeOrderId,merchantId]);
+ await assert.rejects(
+   db.query("select public.rc_sumup_reserve_checkout($1,$2,'MCXXXXXX')",[stripeOrderId,merchantId]),
+   /SUMUP_ORDER_NOT_ELIGIBLE/
+ );
+ const attempts=await db.query("select count(*)::int as n from rc_sumup_payment_attempts where order_id=$1",[stripeOrderId]);
+ assert.equal(attempts.rows[0].n,0);
+});
+
+test("server-side amount drift never marks a SumUp payment paid",async()=>{
+ const changedOrderId=randomUUID(),changedCheckoutId=randomUUID();
+ await db.query("insert into customer_orders(id,user_id,status,payment_method,payment_status,currency,total,updated_at) values($1,$2,'pending','Online','pending','PLN',29.50,now())",[changedOrderId,merchantId]);
+ const reserved=(await db.query("select public.rc_sumup_reserve_checkout($1,$2,'MCXXXXXX') as a",[changedOrderId,merchantId])).rows[0].a;
+ await db.query("select public.rc_sumup_commit_checkout($1,$2,$3)",[reserved.attemptId,changedCheckoutId,"https://checkout.sumup.com/pay/"+changedCheckoutId]);
+ await db.query("update customer_orders set total=30 where id=$1",[changedOrderId]);
+ const response=(await db.query("select public.rc_sumup_apply_verified_checkout($1,'PAID') as a",[changedCheckoutId])).rows[0].a;
+ assert.equal(response.status,"needs_review");
+ assert.equal(response.reason,"AMOUNT_DRIFT");
+ const order=await db.query("select payment_status from customer_orders where id=$1",[changedOrderId]);
+ assert.equal(order.rows[0].payment_status,"pending");
+ const payments=await db.query("select count(*)::int as n from payment_transactions where customer_order_id=$1",[changedOrderId]);
+ assert.equal(payments.rows[0].n,0);
+});
+
 test("all provider paths lock the order before payment attempts",()=>{
  const sql=readFileSync("MIGRACION-V91-73-SUMUP-SINGLE-MERCHANT-LEDGER.sql","utf8");
  for(const name of ["rc_sumup_reserve_checkout","rc_sumup_commit_checkout","rc_sumup_apply_verified_checkout"]){
