@@ -8,10 +8,10 @@ const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 async function download(path) {
   const response = await fetch(`${site}/${path}?verify=${Date.now()}`, {cache: "no-store", signal:AbortSignal.timeout(12000)});
   if (!response.ok) throw Error(`${path}: HTTP ${response.status}`);
-  return Buffer.from(await response.arrayBuffer());
+  return new Uint8Array(await response.arrayBuffer());
 }
 try {
-  const actual = JSON.parse((await download('rc-ordera-release.json')).toString());
+  const actual = JSON.parse(new TextDecoder().decode(await download('rc-ordera-release.json')));
   if (actual.app !== expected.app || actual.release !== expected.release || actual.pwaCache !== expected.pwaCache)
     throw Error(`servidor=${actual.release}, esperado=${expected.release}`);
   // A reused release label must not hide missing menu, station or payment fixes.
