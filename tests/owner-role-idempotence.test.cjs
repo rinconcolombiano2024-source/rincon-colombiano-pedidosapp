@@ -5,10 +5,11 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 const source=fs.readFileSync('app.js','utf8');
 const original=fs.readFileSync('www/app.js','utf8');
-const start=source.indexOf('async function ensureRestaurantOwnerIdentity(');
+const start=source.indexOf('// Cache only confirmed profile writes in this page session.');
 const finish=source.indexOf('function applyRestaurantProfile(',start);
 const ensureFn=source.slice(start,finish);
-assert.ok(ensureFn.startsWith('async function ensureRestaurantOwnerIdentity('));
+assert.ok(ensureFn.includes('async function ensureRestaurantOwnerIdentity('));
+assert.ok(ensureFn.includes('let confirmedRestaurantOwnerProfileWrite = null;'));
 
 async function run(ownerRoleActive, upsertError=false){
   let activationCalls=0,upserts=0;
