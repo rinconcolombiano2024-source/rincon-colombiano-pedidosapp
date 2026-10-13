@@ -1,7 +1,7 @@
 {
   "cliente.js": {
-    "sha256": "9700bcb4fb6f5ef8f592ccb425ea7772d9013e227b4b0e5671ed6473a57a956e",
-    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs",
+    "sha256": "bb0e085bc689fa306fe9333bb09d76d6c8a1ba2a431ffc668d1cc6897b4934ab",
+    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-live-menu-localizations.test.cjs",
     "edits": [
       {
         "before": "",
@@ -242,6 +242,21 @@
         "before": "if (result === \"success\") {\r\n      customerSetTrackingStatus(customerT(\"paymentSuccess\"), \"ok\");\r\n      customerPollOrderStatus().catch(() => {});\r\n    } else {",
         "after": "if (result === \"success\") {\r\n      // The redirect URL is user-controlled; only a verified provider/backend\r\n      // payment record can establish payment. Never show success from a query string.\r\n      customerSetTrackingStatus(customerT(\"paymentVerificationPending\"), \"\");\r\n      customerPollOrderStatus().catch(() => {});\r\n    } else {",
         "afterByteOffset": 239683
+      },
+      {
+        "before": "function customerDescriptionDisplay(dish) {\r\n  return customerMenuTextDisplay(dish?.description || \"\");\r\n}",
+        "after": "// Prefer the merchant's explicit ES/PL/EN translations. The published menu\r\n// is authoritative; stale browser translations must never overwrite an edit.\r\nfunction customerHasSavedDishTranslation(dish, field) {\r\n  const value = dish?.translations?.[customerLanguage]?.[field];\r\n  return typeof value === \"string\" && value.trim().length > 0;\r\n}\r\nfunction customerLocalizedDishField(dish, field) {\r\n  if (customerHasSavedDishTranslation(dish, field)) {\r\n    const localized = dish.translations[customerLanguage][field];\r\n    return field === \"description\"\r\n      ? customerNormalizeProductDescription(localized)\r\n      : localized.trim().slice(0, 180);\r\n  }\r\n  const source = field === \"description\" ? dish?.description : dish?.name;\r\n  return customerMenuTextDisplay(source);\r\n}\r\nfunction customerDescriptionDisplay(dish) {\r\n  return customerLocalizedDishField(dish, \"description\");\r\n}",
+        "afterByteOffset": 84232
+      },
+      {
+        "before": "function customerQueueDescriptionTranslation(dish) {\r\n  customerQueueMenuTextTranslation(dish?.description || \"\");\r\n}",
+        "after": "function customerQueueDescriptionTranslation(dish) {\r\n  if (!customerHasSavedDishTranslation(dish, \"description\")) {\r\n    customerQueueMenuTextTranslation(dish?.description || \"\");\r\n  }\r\n}",
+        "afterByteOffset": 87625
+      },
+      {
+        "before": "        const displayName = customerMenuTextDisplay(dish.name) || dish.name;\r\n        const displayCategory = customerMenuTextDisplay(category) || category;\r\n        const description = customerDescriptionDisplay(dish);\r\n        customerQueueMenuTextTranslation(dish.name);\r\n        customerQueueMenuTextTranslation(category);\r\n        customerQueueDescriptionTranslation(dish);",
+        "after": "        const displayName = customerLocalizedDishField(dish, \"name\") || dish.name;\r\n        const displayCategory = customerMenuTextDisplay(category) || category;\r\n        const description = customerDescriptionDisplay(dish);\r\n        if (!customerHasSavedDishTranslation(dish, \"name\")) {\r\n          customerQueueMenuTextTranslation(dish.name);\r\n        }\r\n        customerQueueMenuTextTranslation(category);\r\n        customerQueueDescriptionTranslation(dish);",
+        "afterByteOffset": 272933
       }
     ]
   },
