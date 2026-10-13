@@ -106,7 +106,7 @@ test("all provider paths lock the order before payment attempts",()=>{
   const lockedOrder=chunk.indexOf("FROM public.customer_orders",chunk.indexOf("CREATE OR REPLACE FUNCTION"));
   const lockAttempt=chunk.indexOf("FOR UPDATE",lockedOrder)+10;
   assert.match(chunk.slice(lockedOrder,lockAttempt),/FOR UPDATE/);
-  assert.match(chunk.slice(lockAttempt),/rc_sumup_payment_attempts[\\s\\S]*?FOR UPDATE/);
+  assert.match(chunk.slice(lockAttempt),/rc_sumup_payment_attempts[\s\S]*?FOR UPDATE/);
  }
 });
 test("client roles cannot call private reservation RPC directly",async()=>{
