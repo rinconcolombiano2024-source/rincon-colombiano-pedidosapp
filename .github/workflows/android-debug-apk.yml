@@ -37,11 +37,14 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android SDK 36
+      # GitHub ubuntu-latest already includes ANDROID_HOME, command-line tools,
+      # and preaccepted Android SDK licenses. setup-android@v3 fails when it
+      # unconditionally attempts to install the removed SDK package "tools".
+      - name: Verify existing Android SDK and install platform 36
         run: |
+          test -n "${ANDROID_HOME:-}"
+          command -v sdkmanager
+          sdkmanager --version
           sdkmanager --install "platforms;android-36" "build-tools;36.0.0"
 
       - name: Install locked Node dependencies
