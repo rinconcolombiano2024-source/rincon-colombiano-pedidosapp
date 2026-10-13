@@ -1511,8 +1511,24 @@ function customerMenuTextDisplay(text) {
   const key = customerDescriptionTranslationKey(customerLanguage, cleanText);
   return customerDescriptionTranslations[key] || customerFallbackDescriptionTranslation(cleanText, customerLanguage);
 }
+// Prefer the merchant's explicit ES/PL/EN translations. The published menu
+// is authoritative; stale browser translations must never overwrite an edit.
+function customerHasSavedDishTranslation(dish, field) {
+  const value = dish?.translations?.[customerLanguage]?.[field];
+  return typeof value === "string" && value.trim().length > 0;
+}
+function customerLocalizedDishField(dish, field) {
+  if (customerHasSavedDishTranslation(dish, field)) {
+    const localized = dish.translations[customerLanguage][field];
+    return field === "description"
+      ? customerNormalizeProductDescription(localized)
+      : localized.trim().slice(0, 180);
+  }
+  const source = field === "description" ? dish?.description : dish?.name;
+  return customerMenuTextDisplay(source);
+}
 function customerDescriptionDisplay(dish) {
-  return customerMenuTextDisplay(dish?.description || "");
+  return customerLocalizedDishField(dish, "description");
 }
 function customerScheduleDescriptionRender() {
   if (customerDescriptionTranslationRenderTimer) return;
@@ -1571,7 +1587,9 @@ function customerQueueMenuTextTranslation(text) {
     });
 }
 function customerQueueDescriptionTranslation(dish) {
-  customerQueueMenuTextTranslation(dish?.description || "");
+  if (!customerHasSavedDishTranslation(dish, "description")) {
+    customerQueueMenuTextTranslation(dish?.description || "");
+  }
 }
 function customerRenderGreeting(fullName = customerResolvedProfileName) {
   const firstName = customerNormalizeText(fullName).split(/\s+/)[0] || "";
@@ -6890,10 +6908,12 @@ function customerRenderMenu() {
   customerElements.menuGrid.innerHTML = entries
     .map(
       ({ category, dish, index }) => {
-        const displayName = customerMenuTextDisplay(dish.name) || dish.name;
+        const displayName = customerLocalizedDishField(dish, "name") || dish.name;
         const displayCategory = customerMenuTextDisplay(category) || category;
         const description = customerDescriptionDisplay(dish);
-        customerQueueMenuTextTranslation(dish.name);
+        if (!customerHasSavedDishTranslation(dish, "name")) {
+          customerQueueMenuTextTranslation(dish.name);
+        }
         customerQueueMenuTextTranslation(category);
         customerQueueDescriptionTranslation(dish);
         return `
@@ -7141,7 +7161,11 @@ async function customerLoadMenu(options = {}) {
     customerStoreMenuCache(requestedStoreId, loadedMenu, customerSettings);
   }
   customerMenu = loadedMenu;
-  customerActiveCategory = Object.keys(customerMenu)[0] || "";
+  // Preserve the browsing position when Realtime updates a menu. Only select
+  // the first category if the previously selected category was removed.
+  if (!Object.prototype.hasOwnProperty.call(customerMenu, customerActiveCategory)) {
+    customerActiveCategory = Object.keys(customerMenu)[0] || "";
+  }
   customerSyncCartWithCurrentMenu();
   if (customerTableFromQr) {
     customerElements.tableInput.value = customerTableFromQr;
