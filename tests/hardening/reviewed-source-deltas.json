@@ -902,7 +902,7 @@
     ]
   },
   "mesero.js": {
-    "sha256": "5edcaa90dc2eccc4698dda6e2ece6bc7709f06e44ba3afa2ae939ddea72b74b3",
+    "sha256": "f323cc63568d0ee4381bcd115dc51ba28162a041b4a546195f1aa51349f183ab",
     "edits": [
       {
         "before": "let waiterMenuLoadInFlight = null;\r\n",
@@ -928,8 +928,38 @@
         "before": "      () => {\r\n        waiterLoadSentOrders().catch(console.error);\r\n      }\r\n",
         "after": "      () => {\r\n        if (channel !== waiterOrdersChannel) return;\r\n        waiterScheduleLiveSummaryRefresh(\"orders\");\r\n      }\r\n",
         "afterByteOffset": 54917
+      },
+      {
+        "before": "",
+        "after": "switchAccountButton: document.querySelector(\"#waiterAccessSwitchAccountButton\"),\r\n  ",
+        "afterByteOffset": 1857
+      },
+      {
+        "before": "",
+        "after": "authorizationUserId = waiterUser.id;\r\n  const authorizationClient = waiterClient;\r\n  const ",
+        "afterByteOffset": 60504
+      },
+      {
+        "before": "",
+        "after": "// Switching accounts while this RPC is pending must never restore the\r\n  // old account's authorization screen over a new account's login.\r\n  if (waiterUser?.id !== authorizationUserId || waiterClient !== authorizationClient) return false;\r\n  ",
+        "afterByteOffset": 60813
+      },
+      {
+        "before": "",
+        "after": "// An old account's station result is never a permission for the new login.\r\nif (waiterUser?.id !== authorizationUserId || waiterClient !== authorizationClient) return false;\r\n",
+        "afterByteOffset": 61694
+      },
+      {
+        "before": "",
+        "after": "witchAccount() {\r\n  // Leave the unauthorized screen without granting station access.\r\n  // The waiter auth storage key is isolated from the restaurant POS.\r\n  const button = waiterElements.switchAccountButton;\r\n  if (!waiterClient?.auth || button.disabled) return;\r\n  button.disabled = true;\r\n  try {\r\n    const { error } = await waiterClient.auth.signOut({ scope: \"local\" });\r\n    if (error) throw error;\r\n    waiterStopRealtime();\r\n    waiterUser = null;\r\n    waiterMembership = null;\r\n    waiterMemberships = [];\r\n    waiterBusinessContext = null;\r\n    waiterAuthorizeInFlight = null;\r\n    waiterAuthorizeLastCompletedAt = 0;\r\n    waiterElements.email.value = \"\";\r\n    waiterElements.password.value = \"\";\r\n    waiterElements.recoveryForm.hidden = true;\r\n    waiterElements.authForm.hidden = false;\r\n    waiterRenderLoggedOut();\r\n    waiterSetMessage(waiterElements.authMessage, \"Inicia sesión con una cuenta autorizada por el restaurante.\");\r\n    waiterElements.email.focus();\r\n  } catch (error) {\r\n    console.error(\"No fue posible cambiar la sesión de Estaciones.\", error);\r\n    waiterElements.accessMessage.textContent =\r\n      \"No fue posible cerrar la sesión. Comprueba internet y vuelve a intentarlo. También puedes volver al inicio.\";\r\n  } finally {\r\n    button.disabled = false;\r\n  }\r\n}\r\n\r\nasync function waiterS",
+        "afterByteOffset": 71678
+      },
+      {
+        "before": "",
+        "after": "switchAccountButton?.addEventListener(\"click\", waiterSwitchAccount);\r\nwaiterElements.",
+        "afterByteOffset": 77066
       }
     ],
-    "regressionTests": "tests/waiter-realtime-coalesce.test.cjs"
+    "regressionTests": "tests/waiter-realtime-coalesce.test.cjs; tests/waiter-access-recovery.test.cjs"
   }
 }
