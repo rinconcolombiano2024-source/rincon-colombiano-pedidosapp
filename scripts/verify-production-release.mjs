@@ -6,7 +6,7 @@ const expected = JSON.parse(readFileSync(new URL('../rc-ordera-release.json', im
 const site = (process.env.SITE_URL || 'https://rincon-colombiano-pedidosapp.vercel.app').replace(/\/$/, '');
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 async function download(path) {
-  const response = await fetch(`${site}/${path}?verify=${Date.now()}`, {cache:'no-store', signal:AbortSignal.timeout(12000)});
+  const response = await fetch(`${site}/${path}?verify=${Date.now()}`, {cache: "no-store", signal:AbortSignal.timeout(12000)});
   if (!response.ok) throw Error(`${path}: HTTP ${response.status}`);
   return Buffer.from(await response.arrayBuffer());
 }
