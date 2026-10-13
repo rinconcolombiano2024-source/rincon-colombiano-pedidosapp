@@ -610,7 +610,7 @@ Deno.serve(withCors(
           "customer_orders",
         )
         .select(
-          "id,user_id,customer_user_id,status,total,currency,payment_method,payment_status,order_json",
+          "id,user_id,customer_user_id,status,total,currency,payment_method,payment_status,payment_provider,order_json",
         )
         .eq(
           "id",
@@ -702,6 +702,13 @@ Deno.serve(withCors(
             "Not authorized",
         },
       );
+    }
+
+    // Stop reusing one order across independent PSPs. This is an API
+    // preflight only: database-level checkout reservation is authoritative.
+    const existingProvider = String(order.payment_provider || "").trim().toLowerCase();
+    if (existingProvider && existingProvider !== "stripe_connect") {
+      return response(409, { error: "Order is reserved for another payment provider" });
     }
 
     const paymentStatus =
