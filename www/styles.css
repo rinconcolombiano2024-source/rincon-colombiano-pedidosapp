@@ -10060,3 +10060,37 @@ body.customer-page .customer-cart-close {
   .waiter-brand > div { min-width: 0; }
   .waiter-brand strong { white-space: normal; overflow-wrap: break-word; }
 }
+
+/* Publishing status is separate from editing: do not imply a local save is public. */
+.menu-publication-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  margin: 12px 0 20px;
+  border: 1px solid #b9d5c2;
+  border-left: 5px solid #15803d;
+  border-radius: 12px;
+  background: #f0fdf4;
+  color: #163826;
+}
+.menu-publication-panel strong { display: block; font-size: 1.05rem; }
+.menu-publication-panel p { margin: 7px 0 0; line-height: 1.45; }
+.menu-publication-panel button {
+  flex: 0 0 auto;
+  padding: 12px 18px;
+  min-height: 46px;
+  border-radius: 10px;
+  border: 1px solid #166534;
+  background: #166534;
+  color: white;
+  font-weight: 750;
+  cursor: pointer;
+}
+.menu-publication-panel button:disabled { opacity: .65; cursor: wait; }
+.menu-publication-panel button:focus-visible { outline: 3px solid #efbf3a; outline-offset: 3px; }
+@media (max-width: 640px) {
+  .menu-publication-panel { align-items: stretch; flex-direction: column; }
+  .menu-publication-panel button { width: 100%; }
+}
