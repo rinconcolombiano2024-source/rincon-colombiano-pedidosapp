@@ -7161,7 +7161,11 @@ async function customerLoadMenu(options = {}) {
     customerStoreMenuCache(requestedStoreId, loadedMenu, customerSettings);
   }
   customerMenu = loadedMenu;
-  customerActiveCategory = Object.keys(customerMenu)[0] || "";
+  // Preserve the browsing position when Realtime updates a menu. Only select
+  // the first category if the previously selected category was removed.
+  if (!Object.prototype.hasOwnProperty.call(customerMenu, customerActiveCategory)) {
+    customerActiveCategory = Object.keys(customerMenu)[0] || "";
+  }
   customerSyncCartWithCurrentMenu();
   if (customerTableFromQr) {
     customerElements.tableInput.value = customerTableFromQr;
