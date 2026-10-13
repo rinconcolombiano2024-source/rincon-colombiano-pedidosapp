@@ -96,3 +96,71 @@
   state=serial()?12:8;
   translate();
 })();
+
+/*
+ * Capacitor native module links. The regular HTML anchors continue opening
+ * separate tabs on the web. Android uses the official Browser plugin so that
+ * opening Cliente/Estaciones does not replace or terminate the POS WebView.
+ * This independent bridge is bundled with the existing restaurant runtime.
+ */
+(() => {
+  "use strict";
+  const ids = new Set(["openClientPageButton", "openWaiterLinkButton", "restaurantKitchenLink"]);
+  let opening = false;
+  const translations = {
+    es: {
+      upgrade: "Actualiza la aplicación Android de RC ORDERA para abrir módulos sin cerrar el restaurante.",
+      invalid: "El enlace al módulo no es válido. Vuelve a generar el enlace.",
+      failed: "No se pudo abrir la ventana del módulo. El restaurante permanece abierto.",
+    },
+    pl: {
+      upgrade: "Zaktualizuj aplikację RC ORDERA na Androidzie, aby otwierać moduły bez zamykania restauracji.",
+      invalid: "Nieprawidłowy link do modułu. Wygeneruj link ponownie.",
+      failed: "Nie można otworzyć modułu. Panel restauracji pozostaje otwarty.",
+    },
+    en: {
+      upgrade: "Update the RC ORDERA Android app to open modules without closing the restaurant.",
+      invalid: "The module link is invalid. Regenerate the link.",
+      failed: "Could not open the module window. The restaurant remains open.",
+    },
+  };
+  function notify(key) {
+    const locale = document.documentElement.lang;
+    const msg = (translations[locale] || translations.es)[key];
+    const toast = document.getElementById("toastNotice");
+    if (!toast) return;
+    toast.textContent = msg;
+    toast.hidden = false;
+  }
+  function allowedUrl(raw) {
+    if (!raw) return null;
+    try {
+      const url = new URL(raw, window.location.href);
+      if (url.protocol !== "https:" ||
+          url.hostname !== "rincon-colombiano-pedidosapp.vercel.app" ||
+          url.port || url.username || url.password ||
+          !["/cliente.html", "/mesero.html"].includes(url.pathname)) return null;
+      return url.toString();
+    } catch {
+      return null;
+    }
+  }
+  document.addEventListener("click", (event) => {
+    const anchor = event.target?.closest?.("a[id]");
+    if (!anchor || !ids.has(anchor.id)) return;
+    const capacitor = window.Capacitor;
+    if (typeof capacitor?.isNativePlatform !== "function" ||
+        !capacitor.isNativePlatform()) return; // Normal browser _blank links.
+    if (event.defaultPrevented) return; // Auth and module checks run first.
+    event.preventDefault(); // Never navigate the main native WebView.
+    if (opening) return; // One external launch at a time.
+    const url = allowedUrl(anchor.getAttribute("href"));
+    if (!url) return notify("invalid");
+    const browser = capacitor.Plugins?.Browser;
+    if (typeof browser?.open !== "function") return notify("upgrade");
+    opening = true;
+    Promise.resolve().then(() => browser.open({ url }))
+      .catch(() => notify("failed"))
+      .finally(() => { opening = false; });
+  });
+})();
