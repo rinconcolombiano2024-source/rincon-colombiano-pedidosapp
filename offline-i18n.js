@@ -1106,6 +1106,12 @@
     ["v87.waiter.shiftUnavailable", "Registro de jornada no disponible", "Ewidencja czasu pracy jest niedostępna", "Work log unavailable"],
     ["close.dailyConfirmError", "No fue posible confirmar el cierre diario.", "Nie udało się potwierdzić zamknięcia dnia.", "The daily close could not be confirmed."],
     ["close.annualConfirmError", "No fue posible confirmar el cierre anual.", "Nie udało się potwierdzić zamknięcia roku.", "The annual close could not be confirmed."],
+    ["stations.recovery.group", "Opciones de acceso a Estaciones", "Opcje dostępu do stanowisk", "Station access options"],
+    ["stations.recovery.activate", "Activar autorización", "Aktywuj uprawnienia", "Activate authorization"],
+    ["stations.recovery.switchAccount", "Iniciar sesión / Cambiar cuenta", "Zaloguj się / Zmień konto", "Sign in / Switch account"],
+    ["stations.recovery.home", "Volver al inicio de RC ORDERA", "Wróć do strony głównej RC ORDERA", "Back to RC ORDERA home"],
+    ["stations.recovery.signedOut", "Inicia sesión con una cuenta autorizada por el restaurante.", "Zaloguj się na konto upoważnione przez restaurację.", "Sign in with an account authorized by the restaurant."],
+    ["stations.recovery.signOutError", "No fue posible cerrar la sesión. Comprueba internet y vuelve a intentarlo. También puedes volver al inicio.", "Nie udało się wylogować. Sprawdź internet i spróbuj ponownie. Możesz też wrócić na stronę główną.", "Could not sign out. Check your internet connection and try again. You can also return to the home page."],
   ];
 
   const languages = ["es", "pl", "en"];

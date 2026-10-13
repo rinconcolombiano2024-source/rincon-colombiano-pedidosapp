@@ -11,7 +11,7 @@
     <link rel="manifest" href="mesero-manifest.webmanifest" />
     <link rel="icon" href="app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="app-icon-192.png" />
-    <link rel="stylesheet" href="styles.css?v=91.0.4" />
+    <link rel="stylesheet" href="styles.css?v=91.0.4-access-recovery1" />
   </head>
   <body class="waiter-page">
     <header class="waiter-topbar">
@@ -74,7 +74,11 @@
       <section class="waiter-access-card" id="waiterAccessCard" hidden>
         <h1>Falta autorizacion</h1>
         <p id="waiterAccessMessage">Pide al propietario que autorice tu correo en una estacion.</p>
-        <button id="waiterRetryAccessButton" type="button">Activar autorizacion</button>
+        <div class="waiter-access-actions" role="group" aria-label="Opciones de acceso a Estaciones">
+          <button id="waiterRetryAccessButton" type="button">Activar autorización</button>
+          <button id="waiterAccessSwitchAccountButton" type="button">Iniciar sesión / Cambiar cuenta</button>
+          <a id="waiterAccessHomeLink" class="waiter-access-home-link" href="./index.html">Volver al inicio de RC ORDERA</a>
+        </div>
       </section>
 
       <section class="waiter-shift-bar" id="waiterShiftBar" aria-label="Jornada laboral" hidden>
@@ -226,7 +230,7 @@
     <script src="supabase-config.js?v=91.0.4"></script>
     <script src="offline-i18n.js?v=91.0.4"></script>
     <script src="auto-translate.js?v=91.0.4"></script>
-    <script src="mesero.js?v=91.0.4"></script>
+    <script src="mesero.js?v=91.0.4-access-recovery1"></script>
   </body>
 </html>
 

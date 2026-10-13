@@ -30,6 +30,7 @@ const waiterElements = {
   accessCard: document.querySelector("#waiterAccessCard"),
   accessMessage: document.querySelector("#waiterAccessMessage"),
   retryAccessButton: document.querySelector("#waiterRetryAccessButton"),
+  switchAccountButton: document.querySelector("#waiterAccessSwitchAccountButton"),
   app: document.querySelector("#waiterApp"),
   stationBoard: document.querySelector("#restaurantStationBoard"),
   stationEyebrow: document.querySelector("#restaurantStationEyebrow"),
@@ -1706,11 +1707,16 @@ function waiterAuthorize(options = {}) {
     return Promise.resolve(true);
   }
 
+  const authorizationUserId = waiterUser.id;
+  const authorizationClient = waiterClient;
   const operation = (async () => {
   waiterSetStatus("Verificando autorizacion...");
   const claimResult = await waiterClient.rpc("claim_my_restaurant_staff_invitation", {
     p_restaurant_user_id: waiterStoreId,
   });
+  // Switching accounts while this RPC is pending must never restore the
+  // old account's authorization screen over a new account's login.
+  if (waiterUser?.id !== authorizationUserId || waiterClient !== authorizationClient) return false;
   if (claimResult.error && !["42883", "PGRST202"].includes(claimResult.error.code)) {
     waiterElements.authCard.hidden = true;
     waiterElements.app.hidden = true;
@@ -1725,6 +1731,8 @@ function waiterAuthorize(options = {}) {
   p_restaurant_user_id: waiterStoreId,
 });
 
+// An old account's station result is never a permission for the new login.
+if (waiterUser?.id !== authorizationUserId || waiterClient !== authorizationClient) return false;
 if (error) {
   waiterElements.authCard.hidden = true;
   waiterElements.app.hidden = true;
@@ -1950,6 +1958,38 @@ async function waiterSignUp() {
   }
 }
 
+async function waiterSwitchAccount() {
+  // Leave the unauthorized screen without granting station access.
+  // The waiter auth storage key is isolated from the restaurant POS.
+  const button = waiterElements.switchAccountButton;
+  if (!waiterClient?.auth || button.disabled) return;
+  button.disabled = true;
+  try {
+    const { error } = await waiterClient.auth.signOut({ scope: "local" });
+    if (error) throw error;
+    waiterStopRealtime();
+    waiterUser = null;
+    waiterMembership = null;
+    waiterMemberships = [];
+    waiterBusinessContext = null;
+    waiterAuthorizeInFlight = null;
+    waiterAuthorizeLastCompletedAt = 0;
+    waiterElements.email.value = "";
+    waiterElements.password.value = "";
+    waiterElements.recoveryForm.hidden = true;
+    waiterElements.authForm.hidden = false;
+    waiterRenderLoggedOut();
+    waiterSetMessage(waiterElements.authMessage, "Inicia sesión con una cuenta autorizada por el restaurante.");
+    waiterElements.email.focus();
+  } catch (error) {
+    console.error("No fue posible cambiar la sesión de Estaciones.", error);
+    waiterElements.accessMessage.textContent =
+      "No fue posible cerrar la sesión. Comprueba internet y vuelve a intentarlo. También puedes volver al inicio.";
+  } finally {
+    button.disabled = false;
+  }
+}
+
 async function waiterSignOut() {
   waiterStopRealtime();
   try {
@@ -2058,6 +2098,7 @@ waiterElements.changeStationButton?.addEventListener(
 );
 waiterElements.signOutButton.addEventListener("click", waiterSignOut);
 waiterElements.retryAccessButton.addEventListener("click", waiterActivateAuthorization);
+waiterElements.switchAccountButton?.addEventListener("click", waiterSwitchAccount);
 waiterElements.refreshButton.addEventListener("click", () => waiterLoadMenu().catch(() => waiterSetMessage(waiterElements.orderMessage, "No fue posible actualizar el menu. Intenta nuevamente.", "error")));
 waiterElements.refreshSentButton.addEventListener("click", waiterLoadSentOrders);
 waiterElements.dailyCloseButton.addEventListener("click", waiterCloseDay);
