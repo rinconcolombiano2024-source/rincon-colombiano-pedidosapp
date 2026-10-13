@@ -8584,7 +8584,12 @@ async function syncMenuBeforeQr() {
       );
     }
 
-    await saveCloudMenu();
+    // Opening the QR is a read-only action when the menu is already confirmed.
+    // Avoid an unnecessary save_current_restaurant_menu RPC (and Realtime
+    // publication) on every visit. Still publish first-time/dirty menus.
+    if (menuPendingToken || !storedCloudRevision(STORAGE_KEYS.menuRevision)) {
+      await saveCloudMenu();
+    }
 
     if (menuPendingToken) {
       clearMenuPending(
@@ -8607,20 +8612,35 @@ async function syncMenuBeforeQr() {
   }
 }
 
+let qrDialogOpening = false;
 async function openQrDialog() {
-  if (!cloudState.configured) {
-    alert("La conexion de la nube no esta disponible. Intenta nuevamente antes de usar pedidos por QR.");
-    return;
+  if (qrDialogOpening) return;
+  qrDialogOpening = true;
+  if (elements.qrButton) {
+    elements.qrButton.disabled = true;
+    elements.qrButton.setAttribute("aria-busy", "true");
   }
-  if (!cloudState.user) {
-    alert("Inicia sesion para generar el QR del cliente.");
-    openSignInScreen();
-    return;
+  try {
+    if (!cloudState.configured) {
+      alert("La conexion de la nube no esta disponible. Intenta nuevamente antes de usar pedidos por QR.");
+      return;
+    }
+    if (!cloudState.user) {
+      alert("Inicia sesion para generar el QR del cliente.");
+      openSignInScreen();
+      return;
+    }
+    const synced = await syncMenuBeforeQr();
+    if (!synced) return;
+    updateQrPreview();
+    if (!elements.qrDialog.open) elements.qrDialog.showModal();
+  } finally {
+    qrDialogOpening = false;
+    if (elements.qrButton) {
+      elements.qrButton.disabled = false;
+      elements.qrButton.setAttribute("aria-busy", "false");
+    }
   }
-  const synced = await syncMenuBeforeQr();
-  if (!synced) return;
-  updateQrPreview();
-  elements.qrDialog.showModal();
 }
 
 async function copyQrLink() {
