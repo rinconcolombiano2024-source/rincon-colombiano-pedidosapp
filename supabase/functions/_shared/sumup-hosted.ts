@@ -283,7 +283,7 @@ export async function retrieveSumUpCheckout(
 export async function findSumUpCheckoutForAttempt(
   config: SumUpConfig, attempt: SumUpAttempt, fetchImpl: typeof fetch = fetch,
 ): Promise<{ checkoutId: string; providerStatus: SumUpStatus; hostedUrl: string | null } | null> {
-  checkConfig(config);
+  validateSumUpConfig(config);
   const reference = referenceForAttempt(attempt);
   const url = new URL(`${SUMUP_API_ORIGIN}/v0.1/checkouts`);
   url.searchParams.set("checkout_reference", reference);
