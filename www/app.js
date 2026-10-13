@@ -496,6 +496,8 @@ const elements = {
   installHelpDialog: document.querySelector("#installHelpDialog"),
   editMenuButton: document.querySelector("#editMenuButton"),
   menuEditorDialog: document.querySelector("#menuEditorDialog"),
+  publishCurrentMenuButton: document.querySelector("#publishCurrentMenuButton"),
+  menuPublicationStatus: document.querySelector("#menuPublicationStatus"),
   restaurantInfoTabButton: document.querySelector("#restaurantInfoTabButton"),
 restaurantHoursTabButton: document.querySelector("#restaurantHoursTabButton"),
 restaurantMenuTabButton: document.querySelector("#restaurantMenuTabButton"),
@@ -11226,6 +11228,47 @@ async function saveMenuWhenPossibleNow(options = {}) {
   return { localOnly: true };
 }
 
+async function publishCurrentRestaurantMenu() {
+  const button = elements.publishCurrentMenuButton;
+  const status = elements.menuPublicationStatus;
+  if (!button || !status || button.disabled) return;
+  if (!cloudState.user) {
+    status.textContent = "Inicia sesión como propietario del restaurante para publicar el menú.";
+    return;
+  }
+  if (!navigator.onLine) {
+    status.textContent = "Sin internet. Los cambios siguen guardados en este equipo; no borres sus datos.";
+    return;
+  }
+  const count = menuProductCount(menuCatalog);
+  if (count === 0) {
+    status.textContent = "No hay productos para publicar. No se enviará un menú vacío.";
+    return;
+  }
+  button.disabled = true;
+  status.textContent = "Comprobando que Cliente y Caja reciben el menú...";
+  try {
+    // Explicit operator confirmation: publish this device's current local
+    // menu, preserving the existing revision and conflict-merge safeguards.
+    markMenuPending();
+    saveMenuCache({ immediate: true });
+    const result = await saveMenuWhenPossible({ silent: false });
+    if (result.synced && !hasPendingMenu()) {
+      status.textContent = `Publicado y verificado para Cliente y Caja: ${count} productos.`;
+      showToast("Menú publicado y comprobado para clientes.");
+    } else {
+      status.textContent = result.error
+        ? "No se confirmó la publicación. Los cambios siguen en este dispositivo; vuelve a intentarlo."
+        : "Hay cambios pendientes de sincronizar. Conserva este dispositivo y vuelve a intentarlo.";
+    }
+  } catch (error) {
+    console.error("Error al publicar el menú público:", error);
+    status.textContent = "No se pudo verificar el menú. Los productos locales se conservaron.";
+  } finally {
+    button.disabled = false;
+  }
+}
+
 function saveMenuWhenPossible(options = {}) {
   const operation = () => saveMenuWhenPossibleNow(options);
   const queuedOperation = menuSaveQueue.catch(() => {}).then(operation);
@@ -15161,6 +15204,7 @@ elements.restaurantMenuTabButton?.addEventListener("click", () => {
   showRestaurantEditSection("restaurant-menu");
 });
 elements.editMenuButton.addEventListener("click", openMenuEditor);
+elements.publishCurrentMenuButton?.addEventListener("click", publishCurrentRestaurantMenu);
 elements.restaurantDashboardSummary?.addEventListener("click", (event) => {
   const button = event.target.closest("[data-restaurant-dashboard-action]");
   if (!button) return;
