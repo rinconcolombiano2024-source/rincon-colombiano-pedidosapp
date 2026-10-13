@@ -840,5 +840,36 @@
         "afterByteOffset": 49005
       }
     ]
+  },
+  "mesero.js": {
+    "sha256": "5edcaa90dc2eccc4698dda6e2ece6bc7709f06e44ba3afa2ae939ddea72b74b3",
+    "edits": [
+      {
+        "before": "let waiterMenuLoadInFlight = null;\r\n",
+        "after": "let waiterMenuLoadInFlight = null;\r\n// One window per staff Realtime stream; bursts must not trigger unbounded Supabase reads.\r\nlet waiterRealtimeMenuRefreshTimer = null;\r\nlet waiterRealtimeSentOrdersRefreshTimer = null;\r\n",
+        "afterByteOffset": 5180
+      },
+      {
+        "before": "function waiterScheduleRealtimeReconnect() {\r\n",
+        "after": "function waiterScheduleLiveSummaryRefresh(scope) {\r\n  const isMenu = scope === \"menu\";\r\n  if (isMenu ? waiterRealtimeMenuRefreshTimer !== null : waiterRealtimeSentOrdersRefreshTimer !== null) return;\r\n  const expectedClient = waiterClient;\r\n  const expectedUserId = waiterUser?.id;\r\n  const expectedStoreId = waiterStoreId;\r\n  const expectedChannel = waiterOrdersChannel;\r\n  const timer = window.setTimeout(() => {\r\n    if (isMenu) waiterRealtimeMenuRefreshTimer = null;\r\n    else waiterRealtimeSentOrdersRefreshTimer = null;\r\n    if (!navigator.onLine || expectedClient !== waiterClient || expectedUserId !== waiterUser?.id ||\r\n        expectedStoreId !== waiterStoreId || expectedChannel !== waiterOrdersChannel ||\r\n        waiterOrdersRealtimeStatus !== \"SUBSCRIBED\") return;\r\n    if (isMenu) {\r\n      waiterLoadMenu().then(() => waiterShowToast(\"Menu actualizado por el restaurante.\")).catch(console.error);\r\n    } else {\r\n      waiterLoadSentOrders().catch(console.error);\r\n    }\r\n  }, 1000);\r\n  if (isMenu) waiterRealtimeMenuRefreshTimer = timer;\r\n  else waiterRealtimeSentOrdersRefreshTimer = timer;\r\n}\r\nfunction waiterScheduleRealtimeReconnect() {\r\n",
+        "afterByteOffset": 51986
+      },
+      {
+        "before": "function waiterStopRealtime() {\r\n  waiterStopStationPolling();",
+        "after": "function waiterStopRealtime() {\r\n  // A disconnected or changed staff account must not execute queued reads.\r\n  if (waiterRealtimeMenuRefreshTimer !== null) window.clearTimeout(waiterRealtimeMenuRefreshTimer);\r\n  if (waiterRealtimeSentOrdersRefreshTimer !== null) window.clearTimeout(waiterRealtimeSentOrdersRefreshTimer);\r\n  waiterRealtimeMenuRefreshTimer = null;\r\n  waiterRealtimeSentOrdersRefreshTimer = null;\r\n  waiterStopStationPolling();",
+        "afterByteOffset": 50823
+      },
+      {
+        "before": "      () => {\r\n        waiterLoadMenu().catch(console.error);\r\n        waiterShowToast(\r\n          \"Menu actualizado por el restaurante.\"\r\n        );\r\n      }\r\n",
+        "after": "      () => {\r\n        if (channel !== waiterOrdersChannel) return;\r\n        waiterScheduleLiveSummaryRefresh(\"menu\");\r\n      }\r\n",
+        "afterByteOffset": 54567
+      },
+      {
+        "before": "      () => {\r\n        waiterLoadSentOrders().catch(console.error);\r\n      }\r\n",
+        "after": "      () => {\r\n        if (channel !== waiterOrdersChannel) return;\r\n        waiterScheduleLiveSummaryRefresh(\"orders\");\r\n      }\r\n",
+        "afterByteOffset": 54917
+      }
+    ],
+    "regressionTests": "tests/waiter-realtime-coalesce.test.cjs"
   }
 }
