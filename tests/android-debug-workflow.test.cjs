@@ -16,9 +16,9 @@ test("APK CI is debug-only, nonsecret, manually repeatable and uses JDK 21",()=>
   assert.match(w,/npx cap add android/);
   assert.match(w,/npx cap sync android/);
   // Rebuild debug APK when source assets or native dependencies actually change.
-  assert.match(w,/- 'app\\.js'/);
-  assert.match(w,/- 'www\\/app\\.js'/);
-  assert.match(w,/- 'scripts\\/prepare-capacitor\\.mjs'/);
+  assert.ok(w.includes("- 'app.js'"));
+  assert.ok(w.includes("- 'www/app.js'"));
+  assert.ok(w.includes("- 'scripts/prepare-capacitor.mjs'"));
   assert.match(w,/:app:assembleDebug/);
   assert.match(w,/actions\/upload-artifact@v4/);
   assert.doesNotMatch(w,/assembleRelease|bundleRelease|KEYSTORE_PASSWORD|ANDROID_KEYSTORE|VITE_SECRET|service_role|secrets\./i);
