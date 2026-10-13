@@ -14,7 +14,7 @@ test("restaurant editor has explicit and visible publish/verify button; web and 
   const html=read("restaurante.html"),js=read("app.js");
   assert.match(html,/id="publishCurrentMenuButton" type="button"/);
   assert.match(html,/id="menuPublicationStatus" role="status" aria-live="polite"/);
-  assert.match(html,/app\.js\?v=91\.0\.4-menuverify1/);
+  assert.match(html,/app\.js\?v=91\.0\.4-nav3/);
   assert.match(html,/styles\.css\?v=91\.0\.4-menuverify1/);
   assert.match(js,/publishCurrentMenuButton: document\.querySelector\("#publishCurrentMenuButton"\)/);
   assert.match(js,/publishCurrentMenuButton\?\.addEventListener\("click", publishCurrentRestaurantMenu\)/);

@@ -595,8 +595,8 @@
     ]
   },
   "app.js": {
-    "sha256": "f4c7d5e514717d1b066c261e7e71bc7f9937e6a983ee89262944699fc47d5567",
-    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs",
+    "sha256": "f1488bff084ee78c6b0476c1a987265e25b2c0ea62d90525501b6847a19851cd",
+    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs",
     "edits": [
       {
         "before": "",
@@ -877,12 +877,27 @@
         "before": "status.textContent = `Publicado y verificado para Cliente y Caja: ${count} productos.`;",
         "after": "status.textContent = \"Menú publicado y comprobado para clientes.\";",
         "afterByteOffset": 353102
+      },
+      {
+        "before": "",
+        "after": "function updateRestaurantAuthHomeLinks() {\r\n  const locale = document.querySelector(\"#autoLanguageSelect\")?.value || \"es\";\r\n  const labels = {\r\n    es: \"← Inicio y estaciones\",\r\n    pl: \"← Strona główna i stanowiska\",\r\n    en: \"← Home and stations\",\r\n  };\r\n  document.querySelectorAll(\"[data-rc-auth-home]\").forEach((link) => {\r\n    link.textContent = labels[locale] || labels.es;\r\n  });\r\n}\r\n\r\n",
+        "afterByteOffset": 126392
+      },
+      {
+        "before": "",
+        "after": "updateRestaurantAuthHomeLinks();\r\n",
+        "afterByteOffset": 485264
+      },
+      {
+        "before": "",
+        "after": "  updateRestaurantAuthHomeLinks();\r\n",
+        "afterByteOffset": 485381
       }
     ]
   },
   "restaurante.html": {
-    "sha256": "304dc875a871557c47912034c497b0a5a8ff815e4f7a7f5eeea000db061d74fc",
-    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/hardening/frontend.test.mjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs",
+    "sha256": "0f3ca9fa8d862c4db5d798e9f5f555e771e44b440d4ac6f8ec4b1b61b9106a4e",
+    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/hardening/frontend.test.mjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs",
     "edits": [
       {
         "before": "",
@@ -958,6 +973,21 @@
         "before": "app.js?v=91.0.4-nav4",
         "after": "app.js?v=91.0.4-menuverify1",
         "afterByteOffset": 49491
+      },
+      {
+        "before": "",
+        "after": "<a id=\"restaurantAuthHomeLink\" href=\"./index.html\" class=\"rc-module-link\" data-rc-auth-home>← Inicio y estaciones</a>\n",
+        "afterByteOffset": 2150
+      },
+      {
+        "before": "",
+        "after": "\n          <a id=\"restaurantAuthDialogHomeLink\" class=\"rc-module-link\" href=\"./index.html\" data-rc-auth-home>← Inicio y estaciones</a>",
+        "afterByteOffset": 6314
+      },
+      {
+        "before": "app.js?v=91.0.4-menuverify1",
+        "after": "app.js?v=91.0.4-nav3",
+        "afterByteOffset": 49747
       }
     ]
   },
