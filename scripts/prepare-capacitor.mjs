@@ -32,6 +32,7 @@ const runtimeFiles = [
   "cliente.js",
   "colaborador.js",
   "mesero.js",
+  "station-menu-resume.js",
   "admin.js",
   "offline-i18n.js",
   "auto-translate.js",
