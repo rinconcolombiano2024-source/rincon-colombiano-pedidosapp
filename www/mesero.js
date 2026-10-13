@@ -97,6 +97,9 @@ let waiterStationPollGeneration = 0;
 let waiterAuthorizeInFlight = null;
 let waiterAuthorizeLastCompletedAt = 0;
 let waiterMenuLoadInFlight = null;
+// One window per staff Realtime stream; bursts must not trigger unbounded Supabase reads.
+let waiterRealtimeMenuRefreshTimer = null;
+let waiterRealtimeSentOrdersRefreshTimer = null;
 let waiterStationLoadInFlight = null;
 let waiterStationLoadPending = false;
 let waiterStationRetryTimer = null;
@@ -1380,6 +1383,11 @@ function waiterStartStationPolling(options = {}) {
 }
 
 function waiterStopRealtime() {
+  // A disconnected or changed staff account must not execute queued reads.
+  if (waiterRealtimeMenuRefreshTimer !== null) window.clearTimeout(waiterRealtimeMenuRefreshTimer);
+  if (waiterRealtimeSentOrdersRefreshTimer !== null) window.clearTimeout(waiterRealtimeSentOrdersRefreshTimer);
+  waiterRealtimeMenuRefreshTimer = null;
+  waiterRealtimeSentOrdersRefreshTimer = null;
   waiterStopStationPolling();
   if (waiterStationRetryTimer !== null) window.clearTimeout(waiterStationRetryTimer);
   waiterStationRetryTimer = null;
@@ -1399,6 +1407,28 @@ function waiterStopRealtime() {
   channels.forEach((channel) => {
     if (channel && waiterClient?.removeChannel) waiterClient.removeChannel(channel).catch(() => {});
   });
+}
+function waiterScheduleLiveSummaryRefresh(scope) {
+  const isMenu = scope === "menu";
+  if (isMenu ? waiterRealtimeMenuRefreshTimer !== null : waiterRealtimeSentOrdersRefreshTimer !== null) return;
+  const expectedClient = waiterClient;
+  const expectedUserId = waiterUser?.id;
+  const expectedStoreId = waiterStoreId;
+  const expectedChannel = waiterOrdersChannel;
+  const timer = window.setTimeout(() => {
+    if (isMenu) waiterRealtimeMenuRefreshTimer = null;
+    else waiterRealtimeSentOrdersRefreshTimer = null;
+    if (!navigator.onLine || expectedClient !== waiterClient || expectedUserId !== waiterUser?.id ||
+        expectedStoreId !== waiterStoreId || expectedChannel !== waiterOrdersChannel ||
+        waiterOrdersRealtimeStatus !== "SUBSCRIBED") return;
+    if (isMenu) {
+      waiterLoadMenu().then(() => waiterShowToast("Menu actualizado por el restaurante.")).catch(console.error);
+    } else {
+      waiterLoadSentOrders().catch(console.error);
+    }
+  }, 1000);
+  if (isMenu) waiterRealtimeMenuRefreshTimer = timer;
+  else waiterRealtimeSentOrdersRefreshTimer = timer;
 }
 function waiterScheduleRealtimeReconnect() {
   if (
@@ -1462,10 +1492,8 @@ if (canTakeOrders) {
         filter: `restaurant_user_id=eq.${waiterStoreId}`,
       },
       () => {
-        waiterLoadMenu().catch(console.error);
-        waiterShowToast(
-          "Menu actualizado por el restaurante."
-        );
+        if (channel !== waiterOrdersChannel) return;
+        waiterScheduleLiveSummaryRefresh("menu");
       }
     )
     .on(
@@ -1478,7 +1506,8 @@ if (canTakeOrders) {
           `created_by_user_id=eq.${waiterUser.id}`,
       },
       () => {
-        waiterLoadSentOrders().catch(console.error);
+        if (channel !== waiterOrdersChannel) return;
+        waiterScheduleLiveSummaryRefresh("orders");
       }
     );
 
