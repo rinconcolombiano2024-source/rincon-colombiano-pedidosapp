@@ -595,7 +595,7 @@
     ]
   },
   "app.js": {
-    "sha256": "fc09458dcdefe0fb81dc27568f822bc4fb6e30079dbc68c19aed589f1d517df0",
+    "sha256": "f4c7d5e514717d1b066c261e7e71bc7f9937e6a983ee89262944699fc47d5567",
     "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs",
     "edits": [
       {
@@ -872,6 +872,11 @@
         "before": "elements.editMenuButton.addEventListener(\"click\", openMenuEditor);\r\n",
         "after": "elements.editMenuButton.addEventListener(\"click\", openMenuEditor);\r\nelements.publishCurrentMenuButton?.addEventListener(\"click\", publishCurrentRestaurantMenu);\r\n",
         "afterByteOffset": 503141
+      },
+      {
+        "before": "status.textContent = `Publicado y verificado para Cliente y Caja: ${count} productos.`;",
+        "after": "status.textContent = \"Menú publicado y comprobado para clientes.\";",
+        "afterByteOffset": 353102
       }
     ]
   },
