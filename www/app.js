@@ -11313,6 +11313,11 @@ async function publishCurrentRestaurantMenu() {
   }
 }
 
+// One in-flight save per restaurant, plus at most one trailing publication.
+// Product edits stay in the local pending journal until public confirmation.
+let menuSaveInFlight = null;
+let menuSaveTrailingRequested = false;
+let menuSaveFlightContext = null;
 function saveMenuWhenPossible(options = {}) {
   if (menuSaveInFlight) {
     // Never share the result of another restaurant's in-flight publication.
