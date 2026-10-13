@@ -55,7 +55,7 @@ Deno.serve(withCors(async(request:Request)=>{
   if(!UUID.test(orderId) || publicToken.length>512)return response(400,{error:"ORDER_INVALID"});
   const admin=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
   const result=await admin.from("customer_orders")
-    .select("id,user_id,customer_user_id,status,payment_status,payment_method,currency")
+    .select("id,user_id,customer_user_id,status,payment_status,payment_method,payment_provider,currency")
     .eq("id",orderId).maybeSingle();
   if(result.error)return response(503,{error:"ORDER_LOOKUP_FAILED"});
   const order=result.data;
@@ -75,6 +75,10 @@ Deno.serve(withCors(async(request:Request)=>{
     tokenValid=proof.data===true;
   }
   if(!authenticated && !tokenValid)return response(403,{error:"NOT_AUTHORIZED"});
+  // A previous or uncertain Stripe attempt must not silently switch PSP.
+  const existingProvider=String(order.payment_provider||"").trim().toLowerCase();
+  if(existingProvider && existingProvider!=="sumup")
+    return response(409,{error:"ORDER_RESERVED_FOR_OTHER_PAYMENT_PROVIDER"});
   if(order.status!=="pending" || String(order.payment_method).toLowerCase()!=="online" ||
       !["pending","failed",""].includes(String(order.payment_status).toLowerCase()) ||
       String(order.currency).toUpperCase()!=="PLN")
