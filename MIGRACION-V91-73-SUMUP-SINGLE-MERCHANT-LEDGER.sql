@@ -118,12 +118,12 @@ BEGIN
  SELECT * INTO a FROM public.rc_sumup_payment_attempts
   WHERE checkout_id=p_checkout_id AND order_id=order_key FOR UPDATE;
  IF NOT FOUND THEN RAISE EXCEPTION 'SUMUP_UNKNOWN_CHECKOUT'; END IF;
- -- Never recognize a captured provider event against an altered sale total.
+ IF a.status='paid' THEN RETURN jsonb_build_object('status','paid','idempotent',true); END IF;
+ -- Never recognize a NEW provider capture against an altered sale total.
  IF upper(o.currency) <> 'PLN' OR o.total*100 <> a.amount_minor THEN
   UPDATE public.rc_sumup_payment_attempts SET status='needs_review',updated_at=now() WHERE id=a.id;
   RETURN jsonb_build_object('status','needs_review','reason','AMOUNT_DRIFT');
  END IF;
- IF a.status='paid' THEN RETURN jsonb_build_object('status','paid','idempotent',true); END IF;
  IF p_provider_status='PENDING' THEN RETURN jsonb_build_object('status',a.status); END IF;
  IF p_provider_status IN ('FAILED','EXPIRED') THEN
   UPDATE public.rc_sumup_payment_attempts SET status=lower(p_provider_status),updated_at=now()
