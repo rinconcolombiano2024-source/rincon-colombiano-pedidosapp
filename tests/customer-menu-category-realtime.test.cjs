@@ -22,7 +22,7 @@ for (const path of ["cliente.js", "www/cliente.js"]) {
     };
     assert.equal(run(["Platos", "Bebidas"], "Bebidas"), "Bebidas", "selected category survives updates");
     assert.equal(run(["Platos", "Postres"], "Bebidas"), "Platos", "removed category uses first available category");
-    assert.equal(run(["Platos", "Postres"], "Postres"), "valid active category is unchanged");
+    assert.equal(run(["Platos", "Postres"], "Postres"), "Postres", "valid active category is unchanged");
     assert.equal(run([], "Platos"), "", "empty menus are handled");
   });
 }
