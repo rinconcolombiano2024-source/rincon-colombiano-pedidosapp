@@ -39,6 +39,12 @@ BEGIN
  SELECT settings->>'onlinePaymentProvider' INTO selected FROM public.app_settings
   WHERE user_id=p_restaurant_user_id;
  IF selected IS DISTINCT FROM 'sumup' THEN RAISE EXCEPTION 'SUMUP_RESTAURANT_DISABLED'; END IF;
+ -- Fail closed if this order has ever entered a different PSP checkout ledger.
+ -- Even a locally failed Stripe attempt can have an asynchronous capture.
+ IF EXISTS (
+  SELECT 1 FROM public.payment_transactions
+   WHERE customer_order_id=p_order_id AND provider <> 'sumup'
+ ) THEN RAISE EXCEPTION 'SUMUP_OTHER_PROVIDER_RECONCILIATION_REQUIRED'; END IF;
  minor:=o.total*100;
  IF minor<>trunc(minor) OR minor NOT BETWEEN 1 AND 100000000 THEN
   RAISE EXCEPTION 'SUMUP_AMOUNT_NOT_EXACT'; END IF;
@@ -112,6 +118,8 @@ BEGIN
   RETURN jsonb_build_object('status',lower(p_provider_status));
  END IF;
  IF o.status='cancelled' OR o.canonical_status='cancelled'
+ OR EXISTS (SELECT 1 FROM public.payment_transactions
+   WHERE customer_order_id=a.order_id AND provider <> 'sumup')
  OR lower(o.payment_status) NOT IN ('pending','failed','')
  OR (o.payment_provider<>'' AND lower(o.payment_provider)<>'sumup') THEN
   UPDATE public.rc_sumup_payment_attempts SET status='needs_review',updated_at=now() WHERE id=a.id;
