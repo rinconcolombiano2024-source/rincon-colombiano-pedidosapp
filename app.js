@@ -8589,50 +8589,63 @@ function updateQrPreview() {
     : "QR general del restaurante. El cliente escribira mesa, nombre o domicilio.";
 }
 
+// QR is a read-only customer link unless this device has unpublished menu edits.
+// Guard against double taps causing simultaneous Supabase row locks/RPC writes.
+let qrMenuSyncInFlight = null;
 async function syncMenuBeforeQr() {
-  if (!cloudState.user) return false;
+  if (qrMenuSyncInFlight) return qrMenuSyncInFlight;
+  const pendingFlight = syncMenuBeforeQrOnce();
+  qrMenuSyncInFlight = pendingFlight;
+  try {
+    return await pendingFlight;
+  } finally {
+    if (qrMenuSyncInFlight === pendingFlight) qrMenuSyncInFlight = null;
+  }
+}
 
+async function syncMenuBeforeQrOnce() {
+  if (!cloudState.client || !cloudState.user) return false;
   if (!navigator.onLine) {
-    alert(
-      "Para que el QR muestre el menu real actualizado, conecta internet y vuelve a abrir el QR."
-    );
+    alert("Para que el QR muestre el menu real actualizado, conecta internet y vuelve a abrir el QR.");
     return false;
   }
-
-  const settingsPendingToken =
-    currentSettingsPendingToken();
-
-  const menuPendingToken =
-    currentMenuPendingToken();
-
+  const accountId = cloudState.user.id;
+  const sessionClient = cloudState.client;
+  const settingsPendingToken = currentSettingsPendingToken();
+  const menuPendingToken = currentMenuPendingToken();
   try {
     if (settingsPendingToken) {
       await saveCloudSettings();
-
-      clearSettingsPending(
-        settingsPendingToken
-      );
+      clearSettingsPending(settingsPendingToken);
     }
-
-    await saveCloudMenu();
-
-    if (menuPendingToken) {
-      clearMenuPending(
-        menuPendingToken
-      );
+    // A confirmed unchanged local snapshot means a save RPC would only lock
+    // app_settings and reverify the same data. Cliente reads the public menu
+    // independently; another device's newer menu must not be overwritten.
+    const confirmedMenu = readConfirmedCloudMenu();
+    const unchangedConfirmedMenu = !menuPendingToken &&
+      storedCloudRevision(STORAGE_KEYS.menuRevision) > 0 &&
+      Boolean(confirmedMenu) && menuCatalogsMatch(menuCatalog, confirmedMenu);
+    if (!unchangedConfirmedMenu) {
+      const saved = await saveCloudMenu();
+      if (saved?.localChangesPending) {
+        updateCloudStatus();
+        return false;
+      }
+      if (menuPendingToken && !clearMenuPending(menuPendingToken)) {
+        // An edit during publication retains its pending token and is never
+        // mislabeled as synchronized by a second, overlapping QR request.
+        updateCloudStatus();
+        return false;
+      }
     }
-
+    if (accountId !== cloudState.user?.id || sessionClient !== cloudState.client) return false;
     updateCloudStatus();
     return true;
   } catch (error) {
     console.error(error);
     markMenuPending();
     updateCloudStatus();
-
-    alert(
-      "No pude subir el menu actual a la nube. El QR podria mostrar un menu viejo hasta que vuelva a sincronizar."
-    );
-
+    alert("No pude subir el menu actual a la nube. El QR podria mostrar un menu viejo hasta que vuelva a sincronizar.");
     return false;
   }
 }
@@ -8647,10 +8660,12 @@ async function openQrDialog() {
     openSignInScreen();
     return;
   }
+  const accountId = cloudState.user.id;
+  const sessionClient = cloudState.client;
   const synced = await syncMenuBeforeQr();
-  if (!synced) return;
+  if (!synced || accountId !== cloudState.user?.id || sessionClient !== cloudState.client) return;
   updateQrPreview();
-  elements.qrDialog.showModal();
+  if (!elements.qrDialog.open) elements.qrDialog.showModal();
 }
 
 async function copyQrLink() {

@@ -5,6 +5,16 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/android-debug-apk.yml'
+      - 'app.js'
+      - 'www/app.js'
+      - 'cliente.js'
+      - 'mesero.js'
+      - 'restaurante.html'
+      - 'restaurant-fiscal-ui.js'
+      - 'scripts/prepare-capacitor.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'capacitor.config.json'
   workflow_dispatch:
 
 permissions:
