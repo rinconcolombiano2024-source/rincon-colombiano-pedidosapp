@@ -45,7 +45,7 @@ test("Android opens customer + station through native Browser and keeps restaura
   const second=h.click("openWaiterLinkButton","https://rincon-colombiano-pedidosapp.vercel.app/mesero.html");
   assert.equal(second.defaultPrevented,true);
   assert.equal(h.calls.length,1,"second launch must not stack while pending");
-  h.finish(); await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+  h.finish(); await new Promise(setImmediate); // let the Browser.open finally microtask release its single-flight guard
   const station=h.click("restaurantKitchenLink","https://rincon-colombiano-pedidosapp.vercel.app/mesero.html?station=kitchen");
   assert.equal(station.defaultPrevented,true);
   await Promise.resolve();
