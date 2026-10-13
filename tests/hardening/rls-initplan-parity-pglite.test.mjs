@@ -45,10 +45,10 @@ async function accessFor(id){
  } finally {await db.exec("reset role");}
 }
 test("R17 five RLS policies preserve both authorized and stranger reads",async()=>{
- const before=await Promise.all([accessFor(owner),accessFor(customer),accessFor(stranger)]);
+ const before=[];for(const id of [owner,customer,stranger]) before.push(await accessFor(id));
  assert.deepEqual(before.map(x=>[x.app,x.orders,x.customer]),[[1,1,1],[0,0,1],[0,0,0]]);
  await db.exec(readFileSync("MIGRACION-V91-72-CPU-RLS-INITPLAN.sql","utf8"));
- const after=await Promise.all([accessFor(owner),accessFor(customer),accessFor(stranger)]);
+ const after=[];for(const id of [owner,customer,stranger]) after.push(await accessFor(id));
  assert.deepEqual(after,before);
  const policies=await db.query("select count(*)::int n from pg_policies where qual like '%(SELECT auth.uid())%'");
  assert.equal(policies.rows[0].n,5);
