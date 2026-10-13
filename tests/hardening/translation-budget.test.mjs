@@ -4,7 +4,10 @@ import {readFileSync} from 'node:fs';
 import {PGlite} from '@electric-sql/pglite';
 const db=new PGlite();
 await db.exec('CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role;');
-for(const f of ['MIGRACION-V86-04-TRADUCCIONES-SEGURAS.sql','MIGRACION-V5-20261010-08-TRANSLATION-GLOBAL-CAP.sql','MIGRACION-V5-20261010-09-TRANSLATION-BUDGET-FENCE.sql'])await db.exec(readFileSync(f,'utf8'));
+// The reviewed historical body hashes use LF. Normalize checkout line endings,
+// not SQL content or the migration's drift/privilege checks.
+const migrationSql=f=>readFileSync(f,'utf8').replace(/\r\n/g,'\n');
+for(const f of ['MIGRACION-V86-04-TRADUCCIONES-SEGURAS.sql','MIGRACION-V5-20261010-08-TRANSLATION-GLOBAL-CAP.sql','MIGRACION-V5-20261010-09-TRANSLATION-BUDGET-FENCE.sql'])await db.exec(migrationSql(f));
 test.after(()=>db.close());
 const hash=i=>i.toString(16).padStart(64,'0');
 const quota=async(i,h=120,gh=100,gd=100)=> (await db.query('select rc_ordera_consume_translation_quota_v2($1,$2,$3,$4) q',[hash(i),h,gh,gd])).rows[0].q;
@@ -39,7 +42,7 @@ test('actual SQL: private quotas reject anon/authenticated and reject invalid ha
  await db.exec('SET ROLE service_role');await clear().catch(()=>{});assert.ok(['ok','global_limit','client_limit'].includes(await quota(999)));await db.exec('RESET ROLE');
 });
 test('migration rejects unexpected function drift and can be reapplied unchanged',async()=>{
- const sql=readFileSync('MIGRACION-V5-20261010-09-TRANSLATION-BUDGET-FENCE.sql','utf8');await db.exec(sql);
+ const sql=migrationSql('MIGRACION-V5-20261010-09-TRANSLATION-BUDGET-FENCE.sql');await db.exec(sql);
  await db.exec("CREATE OR REPLACE FUNCTION public.rc_ordera_consume_translation_quota_v2(p_client_hash text,p_hourly_limit integer DEFAULT 120,p_global_hourly_limit integer DEFAULT 2000,p_global_daily_limit integer DEFAULT 10000) RETURNS text LANGUAGE sql AS $$ SELECT 'unsafe'::text $$");
  await assert.rejects(()=>db.exec(sql),/Unexpected quota v2 body/);await db.exec('ROLLBACK');
 });

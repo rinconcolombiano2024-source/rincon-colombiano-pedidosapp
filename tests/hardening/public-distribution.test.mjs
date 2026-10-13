@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync,readdirSync,existsSync} from 'node:fs';
-import {join} from 'node:path';
+import {join,sep} from 'node:path';
 
 test('Vercel serves only the reviewed frontend distribution, never the repository root',()=>{
   const config=JSON.parse(readFileSync('vercel.json','utf8'));
@@ -10,7 +10,8 @@ test('Vercel serves only the reviewed frontend distribution, never the repositor
   assert.equal(config.buildCommand,'');
   assert.equal(config.installCommand,'');
   const walk=dir=>readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(join(dir,e.name)):[join(dir,e.name)]);
-  for(const file of walk(config.outputDirectory)) {
+  for(const nativeFile of walk(config.outputDirectory)) {
+    const file=nativeFile.split(sep).join('/');
     assert.match(file,/\.(?:html|js|css|webmanifest|svg|png|txt|json)$/);
     if(file.endsWith('.txt'))assert.match(file,/vendor\/(?:QRCODE|SUPABASE)-LICENSE\.txt$/);
     if(file.endsWith('.json'))assert.ok(['www/BUILD-METADATA.json','www/rc-ordera-release.json'].includes(file), 'deny unknown JSON assets: '+file);

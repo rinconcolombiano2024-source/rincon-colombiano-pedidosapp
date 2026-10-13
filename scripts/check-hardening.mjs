@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 import {readdirSync,readFileSync,statSync} from 'node:fs';
-import {join,relative} from 'node:path';
+import {join,relative,sep} from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {stripTypeScriptTypes} from 'node:module';
 const ignored=new Set(['node_modules','.git','test-results','playwright-report']);
 function* files(dir){for(const n of readdirSync(dir)){if(ignored.has(n))continue;const p=join(dir,n);if(statSync(p).isDirectory())yield* files(p);else yield p;}}
-const paths=[...files('.')];let syntax=0;
+const paths=[...files('.')].map(p=>p.split(sep).join('/'));let syntax=0;
 for(const p of paths.filter(p=>/\.(?:mjs|cjs|js|ts)$/.test(p))){
  if(p.endsWith('.ts')){
   const source=stripTypeScriptTypes(readFileSync(p,'utf8'),{mode:'strip',sourceUrl:p});

@@ -449,7 +449,9 @@ calculateMaps: "Calcular con Google Maps",
     payOnDelivery: "Paga {amount} en {method} cuando el restaurante confirme.",
     cashLower: "efectivo",
     cardLower: "datafono/tarjeta",
-    onlinePayment: "Pago online — BLIK, tarjeta y otros",
+    onlinePayment: "Pago online",
+    onlinePaymentSumUp: "Pagar con SumUp",
+    onlinePaymentStripe: "Pagar con Stripe",
     payOnlineNow: "Pagar ahora de forma segura",
     paymentRedirecting: "Abriendo el pago seguro...",
     onlinePaymentFailed: "No fue posible iniciar el pago en linea. Puedes reintentarlo desde este pedido.",
@@ -786,7 +788,9 @@ kitchenNotesLabel: "Uwagi do kuchni",
     payOnDelivery: "Zapalc {amount} metoda {method}, gdy restauracja potwierdzi.",
     cashLower: "gotowka",
     cardLower: "terminal/karta",
-    onlinePayment: "Płatność online — BLIK, karta i inne",
+    onlinePayment: "Płatność online",
+    onlinePaymentSumUp: "Zapłać przez SumUp",
+    onlinePaymentStripe: "Zapłać przez Stripe",
     payOnlineNow: "Zapłać teraz bezpiecznie",
     paymentRedirecting: "Otwieranie bezpiecznej platnosci...",
     onlinePaymentFailed: "Nie udalo sie uruchomic platnosci online. Mozesz sprobowac ponownie przy tym zamowieniu.",
@@ -1123,7 +1127,9 @@ kitchenNotesLabel: "Kitchen notes",
     payOnDelivery: "Pay {amount} by {method} when the restaurant confirms.",
     cashLower: "cash",
     cardLower: "card terminal/card",
-    onlinePayment: "Online payment — BLIK, card and more",
+    onlinePayment: "Online payment",
+    onlinePaymentSumUp: "Pay with SumUp",
+    onlinePaymentStripe: "Pay with Stripe",
     payOnlineNow: "Pay securely online",
     paymentRedirecting: "Opening secure payment...",
     onlinePaymentFailed: "Online payment could not be started. You can retry it from this order.",
@@ -3246,8 +3252,12 @@ function customerRenderPaymentMethods() {
   const option = customerElements.onlinePaymentOption;
   if (!option) return;
   const restaurant = customerSelectedRestaurant();
-  const enabled = customerSettings.onlinePaymentProvider === "stripe"
+  const provider = customerNormalizeOnlineProvider(customerSettings.onlinePaymentProvider);
+  const enabled = provider !== "disabled"
     && restaurant?.countryCode === "PL";
+  const label = provider === "sumup" ? "onlinePaymentSumUp" : provider === "stripe" ? "onlinePaymentStripe" : "onlinePayment";
+  option.setAttribute("data-i18n", label);
+  option.textContent = customerT(label);
   option.hidden = !enabled;
   option.disabled = !enabled;
   if (!enabled && customerElements.paymentMethod?.value === "Online") {
@@ -5414,7 +5424,42 @@ function customerSafeStripeCheckoutUrl(value) {
     return "";
   }
 }
+function customerNormalizeOnlineProvider(value) {
+  const normalized = String(value || "disabled").toLowerCase();
+  return ["stripe", "sumup"].includes(normalized) ? normalized : "disabled";
+}
+function customerSafeProviderCheckoutUrl(value, provider) {
+  if (provider === "stripe") return customerSafeStripeCheckoutUrl(value);
+  if (provider !== "sumup" || typeof value !== "string" || value.length > 256) return "";
+  try {
+    const url = new URL(value);
+    const uuid = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}";
+    if (url.protocol !== "https:" || url.hostname !== "checkout.sumup.com" || url.username ||
+        url.password || url.port || url.search || url.hash || !new RegExp("^/pay/" + uuid + "/?$").test(url.pathname)) return "";
+    return url.toString();
+  } catch { return ""; }
+}
+let customerOnlinePaymentFlight = null;
 async function customerStartOnlinePayment(orderId, publicToken) {
+  const provider = customerNormalizeOnlineProvider(customerSettings.onlinePaymentProvider);
+  if (customerOnlinePaymentFlight) {
+    const current = customerOnlinePaymentFlight;
+    return current.orderId === orderId && current.publicToken === publicToken && current.provider === provider
+      && current.client === customerClient && current.storeId === customerStoreId
+      && current.userId === (customerUser?.id || null) ? current.promise : false;
+  }
+  if (provider === "disabled") {
+    customerSetTrackingStatus(customerT("onlinePaymentFailed"), "error");
+    return false;
+  }
+  const flight = { orderId, publicToken, provider, client: customerClient,
+    storeId: customerStoreId, userId: customerUser?.id || null, promise: null };
+  customerOnlinePaymentFlight = flight;
+  flight.promise = customerPerformOnlinePayment(orderId, publicToken, flight);
+  try { return await flight.promise; }
+  finally { if (customerOnlinePaymentFlight === flight) customerOnlinePaymentFlight = null; }
+}
+async function customerPerformOnlinePayment(orderId, publicToken, flight) {
   if (!customerClient || !orderId || !publicToken || !navigator.onLine) {
     customerSetTrackingStatus(customerT("onlinePaymentFailed"), "error");
     return false;
@@ -5426,7 +5471,7 @@ async function customerStartOnlinePayment(orderId, publicToken) {
   let error = null;
 
   try {
-    const result = await customerClient.functions.invoke("marketplace-checkout", {
+    const result = await flight.client.functions.invoke(flight.provider === "sumup" ? "sumup-checkout" : "marketplace-checkout", {
       body: { orderId, publicToken },
     });
 
@@ -5436,12 +5481,23 @@ async function customerStartOnlinePayment(orderId, publicToken) {
     error = requestError;
   }
 
-  const checkoutUrl = customerSafeStripeCheckoutUrl(data?.url);
+  if (customerClient !== flight.client || customerStoreId !== flight.storeId ||
+      (customerUser?.id || null) !== flight.userId ||
+      customerNormalizeOnlineProvider(customerSettings.onlinePaymentProvider) !== flight.provider) return false;
+  if (!error && flight.provider === "sumup" && data?.reconciled === true && data.paymentStatus === "paid") {
+    // Provider recovery still does not let browser flags mark the order paid.
+    customerSetTrackingStatus(customerT("paymentVerificationPending"), "");
+    if (customerTrackedOrder?.id === orderId) {
+      try { await customerPollOrderStatus(); } catch { /* Keep verification pending; never manufacture PAID. */ }
+    }
+    return true;
+  }
+  const checkoutUrl = customerSafeProviderCheckoutUrl(data?.url, flight.provider);
 
   if (error || !checkoutUrl) {
     console.error(
       "No fue posible iniciar el pago online:",
-      error || { reason: "INVALID_STRIPE_CHECKOUT_URL" }
+      error || { reason: "INVALID_PROVIDER_CHECKOUT_URL" }
     );
     customerSetTrackingStatus(customerT("onlinePaymentFailed"), "error");
     return false;
@@ -7118,9 +7174,7 @@ async function customerLoadMenu(options = {}) {
     googleMapsApiKey: customerNormalizeText(data.settings?.googleMapsApiKey),
     bankAccount: customerNormalizeText(data.settings?.bankAccount),
     bankTransferNote: customerNormalizeText(data.settings?.bankTransferNote),
-    onlinePaymentProvider: String(data.settings?.onlinePaymentProvider || "disabled").toLowerCase() === "stripe"
-      ? "stripe"
-      : "disabled",
+    onlinePaymentProvider: customerNormalizeOnlineProvider(data.settings?.onlinePaymentProvider),
     onlinePaymentNote: customerNormalizeText(data.settings?.onlinePaymentNote),
   };
   customerRestoreTrackedOrder();

@@ -9,7 +9,9 @@ const scriptSrc = (csp) => (/script-src([^;]*)/.exec(csp)?.[1] ?? "").trim().spl
 const SERVED = [...readdirSync(".").filter((f) => f.endsWith(".html") && f !== "index-restaurante-backup.html"),
   ...readdirSync("www").filter((f) => f.endsWith(".html")).map((f) => `www/${f}`)];
 
-const inline = (html) => [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)].map((m) => m[1]).filter((b) => b.trim());
+// HTML input preprocessing normalizes CRLF/CR to LF before CSP script hashing.
+// Keep every remaining character significant; do not loosen authorized hashes.
+const inline = (html) => [...html.replace(/\r\n?/g, '\n').matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)].map((m) => m[1]).filter((b) => b.trim());
 
 test("CSP activa y Report-Only: sin 'unsafe-inline' ni 'unsafe-eval' en script-src", () => {
   for (const k of ["Content-Security-Policy", "Content-Security-Policy-Report-Only"]) {

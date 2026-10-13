@@ -11333,7 +11333,7 @@ function readBankTransferNote() {
 }
 
 function normalizeOnlinePaymentProvider(value) {
-  return ["disabled", "stripe"].includes(value) ? value : "disabled";
+  return ["disabled", "stripe", "sumup"].includes(value) ? value : "disabled";
 }
 
 function readOnlinePaymentProvider() {

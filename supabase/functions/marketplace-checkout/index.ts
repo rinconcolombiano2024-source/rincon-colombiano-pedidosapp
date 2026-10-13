@@ -1294,6 +1294,9 @@ Deno.serve(withCors(
       if (
         reserveError
       ) {
+        if (String(reserveError.message || "").includes("SUMUP_OTHER_PROVIDER_RECONCILIATION_REQUIRED")) {
+          return response(409, { error: "Payment provider reconciliation required", retryable: false });
+        }
         if (
           reserveError.code !==
           "23505"

@@ -30,6 +30,7 @@ await db.exec(`
  );
 `);
 await db.exec(readFileSync("MIGRACION-V91-73-SUMUP-SINGLE-MERCHANT-LEDGER.sql","utf8"));
+await db.exec(readFileSync("supabase/migrations/20261013055141_sumup_hosted_checkout_url_compat.sql","utf8"));
 await db.query("insert into customer_orders(id,user_id,status,payment_method,payment_status,currency,total,updated_at) values($1,$2,'pending','Online','pending','PLN',123.45,now())",[orderId,merchantId]);
 await db.query("insert into app_settings(user_id,settings) values($1,$2)",[merchantId,{onlinePaymentProvider:"disabled"}]);
 test.after(()=>db.close());
@@ -57,6 +58,17 @@ test("one exact-cent checkout reserved; replay is not allowed to POST again",asy
  const count=await db.query("select count(*)::int as n from rc_sumup_payment_attempts");
  assert.equal(count.rows[0].n,1);
 });
+test("official hosted page can have a different UUID than the provider checkout",async()=>{
+ const attemptId=(await reserve()).rows[0].a.attemptId;
+ await db.exec("begin");
+ try {
+   const pageId="8f9316a3-cda9-42a9-9771-54d534315676";
+   const result=await db.query("select public.rc_sumup_commit_checkout($1,$2,$3) as ok",
+     [attemptId,checkoutId,"https://checkout.sumup.com/pay/"+pageId]);
+   assert.equal(result.rows[0].ok,true);
+ } finally {await db.exec("rollback");}
+});
+
 test("merchant mismatch and false hosted URL are rejected before marking active",async()=>{
  await assert.rejects(()=>db.query("select public.rc_sumup_reserve_checkout($1,$2,'WRONGMERCH')",[orderId,otherId]),/NOT_ELIGIBLE/);
  const id=(await reserve()).rows[0].a.attemptId;
@@ -113,4 +125,49 @@ test("client roles cannot call private reservation RPC directly",async()=>{
  await db.exec("set role anon");
  try {await assert.rejects(reserve(),/permission denied/i);}
  finally {await db.exec("reset role");}
+});
+
+test("new guard blocks reverse PSP reservations and does not discard paid evidence",async()=>{
+ await db.exec(readFileSync("supabase/migrations/20261013060200_sumup_cross_provider_reservation_guard.sql","utf8"));
+ const id=randomUUID();
+ await db.query("insert into customer_orders(id,user_id,status,payment_method,payment_status,currency,total,updated_at) values($1,$2,'pending','Online','pending','PLN',11,now())",[id,merchantId]);
+ await db.query("select public.rc_sumup_reserve_checkout($1,$2,'MCXXXXXX')",[id,merchantId]);
+ const insert=(status,key)=>db.query("insert into payment_transactions(customer_order_id,provider,provider_reference,payment_method,status,amount,currency,idempotency_key,provider_session_id) values($1,'stripe','cs_test','online',$2,11,'PLN',$3,'cs_test')",[id,status,key]);
+ await assert.rejects(()=>insert('pending','stripe:new'),/SUMUP_OTHER_PROVIDER_RECONCILIATION_REQUIRED/);
+ await insert('paid','stripe:late-verified-evidence');
+ const count=await db.query("select count(*)::int as n from payment_transactions where customer_order_id=$1",[id]);
+ assert.equal(count.rows[0].n,1);
+});
+
+test("Stripe-only orders are unaffected by the reverse reservation guard",async()=>{
+ const id=randomUUID();
+ await db.query("insert into customer_orders(id,user_id,status,payment_method,payment_status,currency,total,updated_at) values($1,$2,'pending','Online','pending','PLN',11,now())",[id,merchantId]);
+ await db.query("insert into payment_transactions(customer_order_id,provider,provider_reference,payment_method,status,amount,currency,idempotency_key,provider_session_id) values($1,'stripe','cs_normal','online','pending',11,'PLN','stripe:normal','cs_normal')",[id]);
+ const count=await db.query("select count(*)::int as n from payment_transactions where customer_order_id=$1",[id]);
+ assert.equal(count.rows[0].n,1);
+});
+
+test("lost creation response recovers verified PAID without another checkout and remains idempotent",async()=>{
+ const id=randomUUID(),pspId=randomUUID();
+ await db.query("insert into customer_orders(id,user_id,status,payment_method,payment_status,currency,total,updated_at) values($1,$2,'pending','Online','pending','PLN',11,now())",[id,merchantId]);
+ const reserved=(await db.query("select public.rc_sumup_reserve_checkout($1,$2,'MCXXXXXX') as a",[id,merchantId])).rows[0].a;
+ const recover=(owner=merchantId,checkout=pspId)=>db.query("select public.rc_sumup_recover_verified_checkout($1,$2,'MCXXXXXX',$3,'PAID',null) as r",[reserved.attemptId,owner,checkout]);
+ await assert.rejects(()=>recover(otherId),/IDENTITY_MISMATCH/);
+ const result=(await recover()).rows[0].r;assert.equal(result.status,'paid');
+ assert.equal((await recover()).rows[0].r.idempotent,true);
+ await assert.rejects(()=>recover(merchantId,randomUUID()),/IDENTITY_MISMATCH/);
+ const ledger=await db.query("select count(*)::int as n from payment_transactions where customer_order_id=$1",[id]);
+ assert.equal(ledger.rows[0].n,1);
+});
+
+test("recovery binds evidence but does not pay a changed order; anon cannot recover",async()=>{
+ const id=randomUUID(),pspId=randomUUID();
+ await db.query("insert into customer_orders(id,user_id,status,payment_method,payment_status,currency,total,updated_at) values($1,$2,'pending','Online','pending','PLN',11,now())",[id,merchantId]);
+ const reserved=(await db.query("select public.rc_sumup_reserve_checkout($1,$2,'MCXXXXXX') as a",[id,merchantId])).rows[0].a;
+ const recover=()=>db.query("select public.rc_sumup_recover_verified_checkout($1,$2,'MCXXXXXX',$3,'PAID',null) as r",[reserved.attemptId,merchantId,pspId]);
+ await db.exec("set role anon");try{await assert.rejects(recover,/permission denied/);}finally{await db.exec("reset role");}
+ await db.query("update customer_orders set total=12 where id=$1",[id]);
+ assert.equal((await recover()).rows[0].r.status,'needs_review');
+ const ledger=await db.query("select count(*)::int as n from payment_transactions where customer_order_id=$1",[id]);
+ assert.equal(ledger.rows[0].n,0);
 });
