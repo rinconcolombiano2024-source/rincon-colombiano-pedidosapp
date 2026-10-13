@@ -11254,7 +11254,7 @@ async function publishCurrentRestaurantMenu() {
     saveMenuCache({ immediate: true });
     const result = await saveMenuWhenPossible({ silent: false });
     if (result.synced && !hasPendingMenu()) {
-      status.textContent = `Publicado y verificado para Cliente y Caja: ${count} productos.`;
+      status.textContent = "Menú publicado y comprobado para clientes.";
       showToast("Menú publicado y comprobado para clientes.");
     } else {
       status.textContent = result.error
