@@ -5058,14 +5058,14 @@ async function saveCloudMenu() {
   const client = cloudState.client;
   const ownerId = cloudState.user?.id;
   if (!client || !ownerId) {
-    const error = new Error("RC_ORDERA_MENU_SESSION_REQUIRED");
+    const error = new Error();
     error.code = "RC_ORDERA_MENU_SESSION_REQUIRED";
     throw error;
   }
   if (cloudMenuWriteFlight) {
     if (cloudMenuWriteOwner?.client !== client ||
         cloudMenuWriteOwner?.ownerId !== ownerId) {
-      const error = new Error("RC_ORDERA_MENU_SESSION_CHANGED");
+      const error = new Error();
       error.code = "RC_ORDERA_MENU_SESSION_CHANGED";
       throw error;
     }
@@ -5085,7 +5085,7 @@ async function saveCloudMenu() {
 }
 async function saveCloudMenuRequest() {
   if (!cloudState.client || !cloudState.user) {
-    const error = new Error("RC_ORDERA_MENU_SESSION_REQUIRED");
+    const error = new Error();
     error.code = "RC_ORDERA_MENU_SESSION_REQUIRED";
     throw error;
   }
