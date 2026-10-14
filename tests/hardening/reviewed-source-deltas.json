@@ -650,8 +650,8 @@
     ]
   },
   "app.js": {
-    "sha256": "83d2ddae290e3da122454078000e96707f22b1bd074f5345949ebd0f47074215",
-    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/qr-menu-rpc-throttle.test.cjs; tests/menu-save-burst-coalesce.test.cjs; tests/menu-session-publication-guard.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/menu-cloud-rpc-singleflight.test.cjs; tests/portal-stations-entry.test.cjs",
+    "sha256": "b145a21284b91d6a655b4afbe5b12fcfea904a20d3a99802b61fe2a25491962f",
+    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/qr-menu-rpc-throttle.test.cjs; tests/menu-save-burst-coalesce.test.cjs; tests/menu-session-publication-guard.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/menu-cloud-rpc-singleflight.test.cjs; tests/portal-stations-entry.test.cjs; tests/restaurant-settings-pending-confirmation.test.cjs",
     "edits": [
       {
         "before": "",
@@ -982,6 +982,11 @@
         "before": "    es: \"← Inicio y estaciones\",\r\n    pl: \"← Strona główna i stanowiska\",\r\n    en: \"← Home and stations\",",
         "after": "    es: \"← Inicio\",\r\n    pl: \"← Strona główna\",\r\n    en: \"← Home\",",
         "afterByteOffset": 126536
+      },
+      {
+        "before": "     if (settingsPendingToken) {\r\n  clearSettingsPending(\r\n    settingsPendingToken\r\n  );\r\n}\r\n\r\n      updateCloudStatus(\"Sincronizado\");\r\n      return { synced: true };",
+        "after": "      // Keep the later edit queued if settings changed while the first RPC\r\n      // was in flight. Never tell the operator that an unsent edit is synced.\r\n      if (settingsPendingToken && !clearSettingsPending(settingsPendingToken)) {\r\n        updateCloudStatus(\"Ajustes pendientes de sincronización\");\r\n        return { pending: true };\r\n      }\r\n      // A new edit may have been queued after a save that started clean.\r\n      if (hasPendingSettings()) {\r\n        updateCloudStatus(\"Ajustes pendientes de sincronización\");\r\n        return { pending: true };\r\n      }\r\n      updateCloudStatus(\"Sincronizado\");\r\n      return { synced: true };",
+        "afterByteOffset": 354163
       }
     ]
   },
