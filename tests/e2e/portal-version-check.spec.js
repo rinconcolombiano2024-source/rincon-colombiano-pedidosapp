@@ -10,7 +10,7 @@ test("portal version check is manual and never navigates without a second click"
   await expect(page.locator(".apps > a")).toHaveCount(3);
   await page.route("**/rc-ordera-release.json?check=*",route=>route.fulfill({
     status:200, contentType:"application/json",
-    body:JSON.stringify({app:"RC ORDERA",release:"2026-10-14-r23"}),
+    body:JSON.stringify({app:"RC ORDERA",release:"2026-10-14-r24"}),
   }));
   await button.click();
   await expect(status).toContainText("actualizada");
