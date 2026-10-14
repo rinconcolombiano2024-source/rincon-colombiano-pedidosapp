@@ -316,12 +316,12 @@
       {
         "before": "              <button type=\"button\" data-action=\"remove\">${customerEscapeHtml(customerT(\"remove\"))}</button>",
         "after": "              ${item.qty > 1 ? `<button type=\"button\" data-action=\"split\" aria-label=\"${customerEscapeHtml(customerT(\"splitItem\"))}\">${customerEscapeHtml(customerT(\"splitItem\"))}</button>` : \"\"}\r\n              <button type=\"button\" data-action=\"remove\">${customerEscapeHtml(customerT(\"remove\"))}</button>",
-        "afterByteOffset": 278118
+        "afterByteOffset": 278001
       },
       {
         "before": "  if (action === \"remove\") customerCart = customerCart.filter((entry) => entry.id !== item.id);",
         "after": "  if (action === \"split\" && item.qty > 1) {\r\n    item.qty -= 1;\r\n    customerCart.splice(customerCart.indexOf(item) + 1, 0, {\r\n      ...item,\r\n      id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,\r\n      qty: 1,\r\n      note: \"\",\r\n    });\r\n  }\r\n  if (action === \"remove\") customerCart = customerCart.filter((entry) => entry.id !== item.id);",
-        "afterByteOffset": 297325
+        "afterByteOffset": 297208
       },
       {
         "before": "itemNoteLabel: \"Observaciones para este producto\",",
