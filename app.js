@@ -5058,14 +5058,14 @@ async function saveCloudMenu() {
   const client = cloudState.client;
   const ownerId = cloudState.user?.id;
   if (!client || !ownerId) {
-    const error = new Error("Sin sesión confirmada: el menú continúa guardado en este equipo.");
+    const error = new Error("RC_ORDERA_MENU_SESSION_REQUIRED");
     error.code = "RC_ORDERA_MENU_SESSION_REQUIRED";
     throw error;
   }
   if (cloudMenuWriteFlight) {
     if (cloudMenuWriteOwner?.client !== client ||
         cloudMenuWriteOwner?.ownerId !== ownerId) {
-      const error = new Error("Cambió el restaurante durante una publicación. Conserva el menú local.");
+      const error = new Error("RC_ORDERA_MENU_SESSION_CHANGED");
       error.code = "RC_ORDERA_MENU_SESSION_CHANGED";
       throw error;
     }
@@ -5085,7 +5085,7 @@ async function saveCloudMenu() {
 }
 async function saveCloudMenuRequest() {
   if (!cloudState.client || !cloudState.user) {
-    const error = new Error("No se confirma un menú sin sesión de restaurante.");
+    const error = new Error("RC_ORDERA_MENU_SESSION_REQUIRED");
     error.code = "RC_ORDERA_MENU_SESSION_REQUIRED";
     throw error;
   }
