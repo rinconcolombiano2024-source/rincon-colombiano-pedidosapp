@@ -389,7 +389,9 @@ calculateMaps: "Calcular con Google Maps",
     emptyCart: "Agrega productos del menu.",
     unavailable: "No disponible",
     remove: "Quitar",
-    itemNotePlaceholder: "NOTA PARA ESTE PLATO",
+    itemNoteLabel: "Observaciones para este producto",
+    splitItem: "Separar una unidad",
+    itemNotePlaceholder: "Ej.: sin carne, sin azúcar, salsa aparte",
     noConnection: "No hay conexion con el restaurante.",
     addProductFirst: "Agrega al menos un producto.",
     sendingOrder: "Enviando pedido...",
@@ -726,7 +728,9 @@ kitchenNotesLabel: "Uwagi do kuchni",
     emptyCart: "Dodaj produkty z menu.",
     unavailable: "Niedostepne",
     remove: "Usun",
-    itemNotePlaceholder: "UWAGA DO TEGO DANIA",
+    itemNoteLabel: "Uwagi do tego produktu",
+    splitItem: "Oddziel jedną sztukę",
+    itemNotePlaceholder: "Np. bez mięsa, bez cukru, sos osobno",
     noConnection: "Brak polaczenia z restauracja.",
     addProductFirst: "Dodaj przynajmniej jeden produkt.",
     sendingOrder: "Wysyłanie zamówienia...",
@@ -1063,7 +1067,9 @@ kitchenNotesLabel: "Kitchen notes",
     emptyCart: "Add products from the menu.",
     unavailable: "Unavailable",
     remove: "Remove",
-    itemNotePlaceholder: "NOTE FOR THIS DISH",
+    itemNoteLabel: "Instructions for this item",
+    splitItem: "Separate one item",
+    itemNotePlaceholder: "E.g. no meat, no sugar, sauce on the side",
     noConnection: "No connection with the restaurant.",
     addProductFirst: "Add at least one product.",
     sendingOrder: "Sending order...",
@@ -7015,9 +7021,11 @@ function customerRenderCart() {
               <button type="button" data-action="minus">-</button>
               <input type="number" min="1" step="1" value="${item.qty}" data-action="qty" />
               <button type="button" data-action="plus">+</button>
+              ${item.qty > 1 ? `<button type="button" data-action="split" aria-label="${customerEscapeHtml(customerT("splitItem"))}">${customerEscapeHtml(customerT("splitItem"))}</button>` : ""}
               <button type="button" data-action="remove">${customerEscapeHtml(customerT("remove"))}</button>
             </div>
-            <input class="customer-note-input" type="text" value="${customerEscapeHtml(
+            <label class="customer-item-note-label" for="customer-note-${customerEscapeHtml(item.id)}">${customerEscapeHtml(customerT("itemNoteLabel"))}</label>
+            <input id="customer-note-${customerEscapeHtml(item.id)}" class="customer-note-input" type="text" maxlength="250" value="${customerEscapeHtml(
               item.note
             )}" data-action="note" placeholder="${customerEscapeHtml(customerT("itemNotePlaceholder"))}" />
           </article>
@@ -7449,6 +7457,15 @@ customerElements.cartItems.addEventListener("click", (event) => {
   if (!item) return;
   if (action === "plus") item.qty += 1;
   if (action === "minus") item.qty = Math.max(1, item.qty - 1);
+  if (action === "split" && item.qty > 1) {
+    item.qty -= 1;
+    customerCart.splice(customerCart.indexOf(item) + 1, 0, {
+      ...item,
+      id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+      qty: 1,
+      note: "",
+    });
+  }
   if (action === "remove") customerCart = customerCart.filter((entry) => entry.id !== item.id);
   customerRenderCart();
 });
