@@ -59,7 +59,7 @@ Deno.serve(withCors(async(request:Request)=>{
   if(!UUID.test(orderId) || publicToken.length>512)return response(400,{error:"ORDER_INVALID"});
   const admin=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
   const result=await admin.from("customer_orders")
-    .select("id,user_id,customer_user_id,status,payment_status,payment_method,payment_provider,currency")
+    .select("id,user_id,customer_user_id,status,payment_status,payment_method,payment_provider,currency,order_type,tip_amount,final_delivery_fee")
     .eq("id",orderId).maybeSingle();
   if(result.error)return response(503,{error:"ORDER_LOOKUP_FAILED"});
   const order=result.data;
@@ -87,6 +87,9 @@ Deno.serve(withCors(async(request:Request)=>{
       !["pending","failed",""].includes(String(order.payment_status).toLowerCase()) ||
       String(order.currency).toUpperCase()!=="PLN")
     return response(409,{error:"ORDER_NOT_PAYABLE"});
+  if(!["Comer en el punto","Recoger en el punto"].includes(order.order_type) ||
+     Number(order.tip_amount||0)!==0 || Number(order.final_delivery_fee||0)!==0)
+    return response(409,{error:"SUMUP_ORDER_TYPE_UNSUPPORTED"});
   // Database transaction locks the order and creates exactly one attempt.
   // It checks the restaurant's persisted SumUp opt-in and server-calculated cents.
   const reserved=await admin.rpc("rc_sumup_reserve_checkout",{

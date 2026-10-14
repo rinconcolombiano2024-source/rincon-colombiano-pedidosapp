@@ -3260,12 +3260,18 @@ function customerDeduplicateRestaurants(restaurants = []) {
 function customerSelectedRestaurant() {
   return customerRestaurants.find((restaurant) => restaurant.userId === customerStoreId) || null;
 }
+function customerNormalizeOnlinePaymentProvider(value) {
+  const provider = String(value || "disabled").toLowerCase();
+  return ["stripe", "sumup"].includes(provider) ? provider : "disabled";
+}
 function customerRenderPaymentMethods() {
   const option = customerElements.onlinePaymentOption;
   if (!option) return;
   const restaurant = customerSelectedRestaurant();
-  const enabled = customerSettings.onlinePaymentProvider === "stripe"
-    && restaurant?.countryCode === "PL";
+  const provider = customerNormalizeOnlinePaymentProvider(customerSettings.onlinePaymentProvider);
+  const supportedMode = ["Comer en el punto", "Recoger en el punto"].includes(customerElements.orderType?.value);
+  const enabled = restaurant?.countryCode === "PL"
+    && (provider === "stripe" || (provider === "sumup" && supportedMode));
   option.hidden = !enabled;
   option.disabled = !enabled;
   if (!enabled && customerElements.paymentMethod?.value === "Online") {
@@ -5306,6 +5312,7 @@ function customerNormalizeNoteDraft(value) {
   return String(value || "").toUpperCase();
 }
 function customerRenderDeliveryFields() {
+  customerRenderPaymentMethods();
   const isDelivery = customerElements.orderType.value === "Domicilio";
   customerElements.deliveryFields.hidden = !isDelivery;
   customerElements.tableInput.placeholder = isDelivery ? customerT("deliveryTablePlaceholder") : customerT("tablePlaceholder");
@@ -5432,6 +5439,17 @@ function customerSafeStripeCheckoutUrl(value) {
     return "";
   }
 }
+function customerSafeOnlineCheckoutUrl(value, provider = "stripe") {
+  if (provider === "stripe" || provider === "stripe_connect") return customerSafeStripeCheckoutUrl(value);
+  if (provider !== "sumup" || typeof value !== "string" || value.length > 8192) return "";
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.hostname === "checkout.sumup.com" &&
+      !url.username && !url.password && !url.port && !url.search && !url.hash &&
+      /^\/pay\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/?$/i.test(url.pathname)
+      ? url.toString() : "";
+  } catch { return ""; }
+}
 async function customerStartOnlinePayment(orderId, publicToken) {
   if (!customerClient || !orderId || !publicToken || !navigator.onLine) {
     customerSetTrackingStatus(customerT("onlinePaymentFailed"), "error");
@@ -5454,12 +5472,12 @@ async function customerStartOnlinePayment(orderId, publicToken) {
     error = requestError;
   }
 
-  const checkoutUrl = customerSafeStripeCheckoutUrl(data?.url);
+  const checkoutUrl = customerSafeOnlineCheckoutUrl(data?.url, data?.provider || "stripe");
 
   if (error || !checkoutUrl) {
     console.error(
       "No fue posible iniciar el pago online:",
-      error || { reason: "INVALID_STRIPE_CHECKOUT_URL" }
+      error || { reason: "INVALID_CHECKOUT_URL" }
     );
     customerSetTrackingStatus(customerT("onlinePaymentFailed"), "error");
     return false;
@@ -7138,9 +7156,7 @@ async function customerLoadMenu(options = {}) {
     googleMapsApiKey: customerNormalizeText(data.settings?.googleMapsApiKey),
     bankAccount: customerNormalizeText(data.settings?.bankAccount),
     bankTransferNote: customerNormalizeText(data.settings?.bankTransferNote),
-    onlinePaymentProvider: String(data.settings?.onlinePaymentProvider || "disabled").toLowerCase() === "stripe"
-      ? "stripe"
-      : "disabled",
+    onlinePaymentProvider: customerNormalizeOnlinePaymentProvider(data.settings?.onlinePaymentProvider),
     onlinePaymentNote: customerNormalizeText(data.settings?.onlinePaymentNote),
   };
   customerRestoreTrackedOrder();
