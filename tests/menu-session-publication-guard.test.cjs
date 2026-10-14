@@ -7,7 +7,7 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const app = fs.readFileSync(path.join(root, "app.js"), "utf8");
 assert.equal(app, fs.readFileSync(path.join(root, "www/app.js"), "utf8"));
-const from = app.indexOf("async function saveCloudMenu() {");
+const from = app.indexOf("// One in-flight Supabase menu RPC");
 const to = app.indexOf("async function saveRestaurantPublicProfile()", from);
 assert.ok(from > 0 && to > from);
 
