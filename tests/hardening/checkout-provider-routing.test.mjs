@@ -57,3 +57,27 @@ test('actual gateway passes verified guest token and never dispatches unauthoriz
   assert.equal(result.status,allowed?200:403);assert.equal(calls,allowed?1:0);
  }
 });
+
+for (const file of ['cliente.js','www/cliente.js']) test(file+': SumUp survives settings loading and only enables local/pickup payments',()=>{
+ const s=readFileSync(file,'utf8');
+ const elements={onlinePaymentOption:{},orderType:{value:'Recoger en el punto'},paymentMethod:{value:'Online'}};
+ const settings={onlinePaymentProvider:'sumup'}; const restaurant={countryCode:'PL'};
+ const ctx=vm.createContext({customerElements:elements,customerSettings:settings,customerSelectedRestaurant:()=>restaurant});
+ vm.runInContext(s.slice(s.indexOf('function customerNormalizeOnlinePaymentProvider('),s.indexOf('function customerClearRestaurantSelection(')),ctx);
+ assert.equal(ctx.customerNormalizeOnlinePaymentProvider('sumup'),'sumup');
+ assert.equal(ctx.customerNormalizeOnlinePaymentProvider('unknown'),'disabled');
+ ctx.customerRenderPaymentMethods();assert.equal(elements.onlinePaymentOption.hidden,false);
+ elements.orderType.value='Domicilio';ctx.customerRenderPaymentMethods();assert.equal(elements.onlinePaymentOption.hidden,true);assert.equal(elements.paymentMethod.value,'Efectivo');
+ settings.onlinePaymentProvider='stripe';ctx.customerRenderPaymentMethods();assert.equal(elements.onlinePaymentOption.hidden,false);
+ restaurant.countryCode='CO';ctx.customerRenderPaymentMethods();assert.equal(elements.onlinePaymentOption.hidden,true);
+ assert.match(s,/onlinePaymentProvider: customerNormalizeOnlinePaymentProvider\(data.settings\?\.onlinePaymentProvider\)/);
+ assert.match(s,/function customerRenderDeliveryFields\(\)\s*{\s*customerRenderPaymentMethods\(\)/);
+});
+for (const file of ['app.js','www/app.js']) test(file+': saving unrelated settings preserves provisioned SumUp',()=>{
+ const s=readFileSync(file,'utf8'),ctx=vm.createContext({});
+ vm.runInContext(s.slice(s.indexOf('function normalizeOnlinePaymentProvider('),s.indexOf('function readOnlinePaymentProvider(')),ctx);
+ for(const p of ['disabled','stripe','sumup'])assert.equal(ctx.normalizeOnlinePaymentProvider(p),p);
+ assert.equal(ctx.normalizeOnlinePaymentProvider('unknown'),'disabled');
+ const html=readFileSync(file.startsWith('www/')?'www/restaurante.html':'restaurante.html','utf8');
+ assert.match(html,/<option value="sumup" disabled>SumUp<\/option>/);
+});

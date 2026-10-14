@@ -3260,12 +3260,18 @@ function customerDeduplicateRestaurants(restaurants = []) {
 function customerSelectedRestaurant() {
   return customerRestaurants.find((restaurant) => restaurant.userId === customerStoreId) || null;
 }
+function customerNormalizeOnlinePaymentProvider(value) {
+  const provider = String(value || "disabled").toLowerCase();
+  return ["stripe", "sumup"].includes(provider) ? provider : "disabled";
+}
 function customerRenderPaymentMethods() {
   const option = customerElements.onlinePaymentOption;
   if (!option) return;
   const restaurant = customerSelectedRestaurant();
-  const enabled = customerSettings.onlinePaymentProvider === "stripe"
-    && restaurant?.countryCode === "PL";
+  const provider = customerNormalizeOnlinePaymentProvider(customerSettings.onlinePaymentProvider);
+  const supportedMode = ["Comer en el punto", "Recoger en el punto"].includes(customerElements.orderType?.value);
+  const enabled = restaurant?.countryCode === "PL"
+    && (provider === "stripe" || (provider === "sumup" && supportedMode));
   option.hidden = !enabled;
   option.disabled = !enabled;
   if (!enabled && customerElements.paymentMethod?.value === "Online") {
@@ -5306,6 +5312,7 @@ function customerNormalizeNoteDraft(value) {
   return String(value || "").toUpperCase();
 }
 function customerRenderDeliveryFields() {
+  customerRenderPaymentMethods();
   const isDelivery = customerElements.orderType.value === "Domicilio";
   customerElements.deliveryFields.hidden = !isDelivery;
   customerElements.tableInput.placeholder = isDelivery ? customerT("deliveryTablePlaceholder") : customerT("tablePlaceholder");
@@ -7149,9 +7156,7 @@ async function customerLoadMenu(options = {}) {
     googleMapsApiKey: customerNormalizeText(data.settings?.googleMapsApiKey),
     bankAccount: customerNormalizeText(data.settings?.bankAccount),
     bankTransferNote: customerNormalizeText(data.settings?.bankTransferNote),
-    onlinePaymentProvider: String(data.settings?.onlinePaymentProvider || "disabled").toLowerCase() === "stripe"
-      ? "stripe"
-      : "disabled",
+    onlinePaymentProvider: customerNormalizeOnlinePaymentProvider(data.settings?.onlinePaymentProvider),
     onlinePaymentNote: customerNormalizeText(data.settings?.onlinePaymentNote),
   };
   customerRestoreTrackedOrder();
