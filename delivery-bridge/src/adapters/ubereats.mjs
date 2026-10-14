@@ -9,12 +9,13 @@ export const UBEREATS_META = Object.freeze({ provider: "uber_eats", provisional:
  * OAuth workflow is implemented. A valid HTTPS URL alone is not a safe host.
  * Only the reviewed Uber API order endpoint is eligible for future fetches.
  */
-export function safeUberOrderHref(value) {
+export function safeUberOrderHref(value, expectedOrderId) {
   if (typeof value !== "string") return null;
   try {
     const u = new URL(value);
     if (u.origin !== "https://api.uber.com" || u.username || u.password ||
         u.search || u.hash || !/^\/v2\/eats\/order\/[^/]+$/.test(u.pathname)) return null;
+    if (decodeURIComponent(u.pathname.slice("/v2/eats/order/".length)) !== String(expectedOrderId ?? "")) return null;
     return u.toString();
   } catch { return null; }
 }
@@ -31,9 +32,10 @@ export function createUberEatsAdapter(options = {}) {
       const type = String(p.event_type ?? "");
       const status = String(pick(p, "meta.status") ?? "").toUpperCase() || "NOTIFIED";
       const eventType = type.includes("cancel") ? "order_cancelled" : type.includes("notification") ? "order_created" : "order_status";
-      const href = safeUberOrderHref(p.resource_href);
+      const orderId = pick(p, "meta.resource_id") ?? p.order_id;
+      const href = safeUberOrderHref(p.resource_href, orderId);
       return buildEvent("uber_eats", {
-        orderId: pick(p, "meta.resource_id") ?? p.order_id,
+        orderId,
         eventId: p.event_id, eventType, status,
         items: [], needsFetch: eventType === "order_created", fetchHref: href,
       });
