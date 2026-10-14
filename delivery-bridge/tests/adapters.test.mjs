@@ -196,3 +196,38 @@ test("Uber order detail href is host, path and credential restricted (SSRF prote
     "not-a-url"
   ]) assert.equal(a.normalize(payload(href)).fetchHref,null,href);
 });
+
+test("signed webhooks accept standard Headers and preserve original UTF-8 bytes", () => {
+  const scheme={type:"hmac-sha256",header:"x-sig",encoding:"hex"};
+  const payload='{"notes":"tamales y lechona ñ ☕"}';
+  const bytes=new TextEncoder().encode(payload);
+  const signature=createHmac("sha256",SECRET).update(bytes).digest("hex");
+  assert.equal(verifyWith(scheme,{headers:new Headers({"X-Sig":signature}),rawBody:bytes},SECRET),true);
+  assert.equal(verifyWith(scheme,{headers:new Headers({"X-Sig":signature}),rawBody:payload},SECRET),true);
+  assert.equal(verifyWith(scheme,{headers:{"X-Sig":signature},rawBody:bytes},SECRET),true);
+  assert.equal(verifyWith(scheme,{headers:new Headers({"X-Sig":signature}),rawBody:new Uint8Array([...bytes,32])},SECRET),false);
+  assert.equal(verifyWith(scheme,{headers:new Headers({"X-Sig":signature}),rawBody:{text:payload}},SECRET),false);
+});
+
+test("timestamped binary webhooks authenticate literal timestamp-dot-payload bytes only",()=>{
+  const now=1800000000000;
+  const timestamp=String(Math.floor(now/1000));
+  const bytes=new TextEncoder().encode('{"orderId":"ñ-123","total":2000}');
+  const signed=Buffer.concat([Buffer.from(timestamp+"."),Buffer.from(bytes)]);
+  const signature=createHmac("sha256",SECRET).update(signed).digest("hex");
+  const scheme={type:"hmac-sha256",header:"x-sig",timestampHeader:"x-ts",toleranceSeconds:300};
+  const headers=new Headers({"X-Sig":signature,"X-Ts":timestamp});
+  assert.equal(verifyWith(scheme,{headers,rawBody:bytes,now},SECRET),true);
+  assert.equal(verifyWith(scheme,{headers,rawBody:bytes,now:now+301000},SECRET),false);
+  const altered=new Uint8Array(bytes);altered[1]^=1;
+  assert.equal(verifyWith(scheme,{headers,rawBody:altered,now},SECRET),false);
+  assert.equal(verifyWith(scheme,{headers:new Headers({"X-Sig":"invalid","X-Ts":timestamp}),rawBody:bytes,now},SECRET),false);
+  assert.equal(verifyWith(scheme,{headers:new Headers({"X-Sig":signature}),rawBody:bytes,now},SECRET),false);
+});
+
+test("static-token adapter compares standard Headers without changing behavior for plain headers",()=>{
+  const adapter=reg.create("glovo",{webhookSecret:SECRET});
+  assert.equal(adapter.verify({headers:new Headers({Authorization:SECRET}),rawBody:"{}"}),true);
+  assert.equal(adapter.verify({headers:{AUTHORIZATION:SECRET},rawBody:"{}"}),true);
+  assert.equal(adapter.verify({headers:new Headers({Authorization:SECRET+"x"}),rawBody:"{}"}),false);
+});
