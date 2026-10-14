@@ -132,7 +132,7 @@ test("Browser launch failure is reported and a retry remains possible", async ()
 
 
 test("Android preserves station query parameters when opening HTTPS module", async () => {
-  const h = harness({ href: "./mesero.html?station=bar&lang=pl", id: "restaurantBarLink" });
+  const h = harness({ href: "./mesero.html?station=bar&lang=pl", id: "restaurantKitchenLink" });
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(h.prevented, true);
   assert.deepEqual(h.opened, ["https://rincon-colombiano-pedidosapp.vercel.app/mesero.html?station=bar&lang=pl"]);
