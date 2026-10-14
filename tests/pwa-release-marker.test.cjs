@@ -28,8 +28,8 @@ test("runtime release check reads one no-store marker and never touches customer
   const script=load("scripts/verify-production-release.mjs");
   assert.match(script,/rc-ordera-release\.json/);
   assert.match(script,/cache: "no-store"/);
-  assert.match(script,/['"]index\\.html['"]/);
-  assert.match(script,/await download\\(''\\)/);
+  assert.match(script,/['"]index\.html['"]/);
+  assert.match(script,/await download\(''\)/);
   assert.match(script,/restaurantStaffAccessLink/);
   assert.match(script,/waiterTeamButton/);
   assert.doesNotMatch(script,/\.from\(|\.rpc\(|localStorage|service_role|DELETE|POST/);
