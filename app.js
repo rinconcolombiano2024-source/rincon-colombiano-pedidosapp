@@ -5053,8 +5053,18 @@ async function confirmSavedCloudMenu(confirmed, fallbackMenu, submittedMenu = nu
 
 async function saveCloudMenu() {
   if (!cloudState.client || !cloudState.user) return null;
+  const requestClient = cloudState.client;
+  const requestUserId = cloudState.user.id;
+  const assertMenuOwnerSession = () => {
+    if (requestClient !== cloudState.client || requestUserId !== cloudState.user?.id) {
+      const changed = new Error(appUiText("La sesión cambió durante el guardado del menú. Conserva los cambios de este dispositivo."));
+      changed.code = "RC_ORDERA_MENU_SESSION_CHANGED";
+      throw changed;
+    }
+  };
   const menuBeforeImageUpload = normalizeMenuCatalog(menuCatalog);
   const nextMenu = await materializeMenuImagesForCloud(menuBeforeImageUpload);
+  assertMenuOwnerSession();
   if (menuCatalogsMatch(menuCatalog, menuBeforeImageUpload) && !menuCatalogsMatch(menuCatalog, nextMenu)) {
     menuCatalog = nextMenu;
     saveMenuCache();
@@ -5062,10 +5072,11 @@ async function saveCloudMenu() {
     if (elements.menuEditorDialog?.open) renderMenuEditor();
   }
   let submittedMenu = nextMenu;
-  let { data: rpcData, error: rpcError } = await cloudState.client.rpc("save_current_restaurant_menu", {
+  let { data: rpcData, error: rpcError } = await requestClient.rpc("save_current_restaurant_menu", {
     p_menu: nextMenu,
     p_expected_revision: storedCloudRevision(STORAGE_KEYS.menuRevision) || null,
   });
+  assertMenuOwnerSession();
   if (rpcError && isMenuRevisionConflict(rpcError)) {
     const baseMenu = readConfirmedCloudMenu();
     if (!baseMenu) {
@@ -5074,6 +5085,7 @@ async function saveCloudMenu() {
       throw conflictError;
     }
     const currentRow = await readCurrentCloudSettingsRow();
+    assertMenuOwnerSession();
     const remoteMenu = normalizeMenuCatalog(currentRow?.menu || EMPTY_MENU_CATALOG);
     const mergedMenu = mergeConcurrentMenuChanges(baseMenu, nextMenu, remoteMenu);
     const remoteRevision = currentRow?.menu_revision;
@@ -5086,16 +5098,21 @@ async function saveCloudMenu() {
     storeCloudRevision(STORAGE_KEYS.menuRevision, remoteRevision);
     submittedMenu = mergedMenu;
     if (menuCatalogsMatch(mergedMenu, remoteMenu)) {
-      return confirmSavedCloudMenu({ menu: remoteMenu, menu_revision: remoteRevision }, remoteMenu, submittedMenu);
+      const verified = await confirmSavedCloudMenu({ menu: remoteMenu, menu_revision: remoteRevision }, remoteMenu, submittedMenu);
+      assertMenuOwnerSession();
+      return verified;
     }
-    ({ data: rpcData, error: rpcError } = await cloudState.client.rpc("save_current_restaurant_menu", {
+    ({ data: rpcData, error: rpcError } = await requestClient.rpc("save_current_restaurant_menu", {
       p_menu: mergedMenu,
       p_expected_revision: remoteRevision ?? null,
     }));
+    assertMenuOwnerSession();
   }
   if (!rpcError) {
     const confirmed = Array.isArray(rpcData) ? rpcData[0] : rpcData;
-    return confirmSavedCloudMenu(confirmed, null, submittedMenu);
+    const verified = await confirmSavedCloudMenu(confirmed, null, submittedMenu);
+    assertMenuOwnerSession();
+    return verified;
   }
   if (isMissingRestaurantRpc(rpcError)) {
     const schemaError = new Error(appUiText("La base de datos necesita la migracion V91 antes de guardar el menu."));
@@ -11296,11 +11313,49 @@ async function publishCurrentRestaurantMenu() {
   }
 }
 
+// One in-flight save per restaurant, plus at most one trailing publication.
+// Product edits stay in the local pending journal until public confirmation.
+let menuSaveInFlight = null;
+let menuSaveTrailingRequested = false;
+let menuSaveFlightContext = null;
 function saveMenuWhenPossible(options = {}) {
-  const operation = () => saveMenuWhenPossibleNow(options);
-  const queuedOperation = menuSaveQueue.catch(() => {}).then(operation);
-  menuSaveQueue = queuedOperation;
-  return queuedOperation;
+  if (menuSaveInFlight) {
+    // Never share the result of another restaurant's in-flight publication.
+    if (menuSaveFlightContext?.client !== cloudState.client ||
+        menuSaveFlightContext?.userId !== cloudState.user?.id) {
+      return Promise.resolve({ pending: true });
+    }
+    menuSaveTrailingRequested = true;
+    return menuSaveInFlight;
+  }
+
+  const context = { client: cloudState.client, userId: cloudState.user?.id };
+  const run = async () => {
+    let result = await saveMenuWhenPossibleNow(options);
+    // A burst of editing can update the local menu during the first RPC.
+    // Run exactly one follow-up if a newer pending revision exists; a failed
+    // publication never triggers a blind retry or a new Supabase write storm.
+    if (menuSaveTrailingRequested && !result?.error && hasPendingMenu() &&
+        cloudState.client === context.client &&
+        cloudState.user?.id === context.userId && navigator.onLine) {
+      menuSaveTrailingRequested = false;
+      result = await saveMenuWhenPossibleNow(options);
+    }
+    return result;
+  };
+  const flight = menuSaveQueue.catch(() => {}).then(run);
+  menuSaveInFlight = flight;
+  menuSaveFlightContext = context;
+  menuSaveQueue = flight.catch(() => {});
+  const clear = () => {
+    if (menuSaveInFlight === flight) {
+      menuSaveInFlight = null;
+      menuSaveFlightContext = null;
+      menuSaveTrailingRequested = false;
+    }
+  };
+  flight.then(clear, clear);
+  return flight;
 }
 
 function readCurrencySymbol() {
