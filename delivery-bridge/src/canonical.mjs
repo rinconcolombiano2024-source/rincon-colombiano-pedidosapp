@@ -51,6 +51,8 @@ export function buildEvent(provider, f) {
     quantity: Number.isInteger(it.quantity) && it.quantity > 0 && it.quantity <= 999 ? it.quantity
       : (() => { throw new DeliveryAdapterError("INVALID_FIELD", "Invalid quantity"); })(),
     unitPriceGrosz: it.unitPriceGrosz,
+    // Preserve instructions per line, including repeated products with different notes.
+    notes: typeof it.notes === "string" ? it.notes.trim().slice(0, 500) || null : null,
     options: (it.options ?? []).map((o) => ({ externalId: String(o.externalId), name: String(o.name).slice(0, 200), unitPriceGrosz: o.unitPriceGrosz ?? 0, quantity: o.quantity ?? 1 })),
   }));
   return Object.freeze({
