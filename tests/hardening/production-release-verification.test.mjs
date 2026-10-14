@@ -18,5 +18,5 @@ function run(mode) {
 }
 test('production verifier accepts identical release and critical files',()=>{const r=run('same');assert.equal(r.status,0,r.stderr);});
 test('production verifier rejects stale POS even when release marker matches',()=>{const r=run('stale');assert.equal(r.status,1);assert.match(r.stderr,/app.js/);});
-test('production verifier rejects an outdated root portal with the correct marker',()=>{const r=run('home');assert.equal(r.status,1);assert.match(r.stderr,/ruta \\//);});
+test('production verifier rejects an outdated root portal with the correct marker',()=>{const r=run('home');assert.equal(r.status,1);assert.ok(r.stderr.includes('ruta /'),r.stderr);});
 test('production verifier rejects mismatched marker',()=>{assert.equal(run('marker').status,1);});
