@@ -630,8 +630,8 @@
     ]
   },
   "app.js": {
-    "sha256": "08a0e5a15476f3e0a92926014cc3172ecb3081040d8dbe4d77d78acadfa5b72d",
-    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/qr-menu-rpc-throttle.test.cjs; tests/menu-save-burst-coalesce.test.cjs; tests/menu-session-publication-guard.test.cjs; tests/hardening/checkout-provider-routing.test.mjs",
+    "sha256": "aac46aa20dc754d67dc98e1e5bb26e59d90f856595440851f3759adada8bef56",
+    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/qr-menu-rpc-throttle.test.cjs; tests/menu-save-burst-coalesce.test.cjs; tests/menu-session-publication-guard.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/menu-cloud-rpc-singleflight.test.cjs",
     "edits": [
       {
         "before": "",
@@ -952,6 +952,11 @@
         "before": "return [\"disabled\", \"stripe\"].includes(value) ? value : \"disabled\";",
         "after": "return [\"disabled\", \"stripe\", \"sumup\"].includes(value) ? value : \"disabled\";",
         "afterByteOffset": 364093
+      },
+      {
+        "before": "async function saveCloudMenu() {\r\n  if (!cloudState.client || !cloudState.user) return null;",
+        "after": "// One in-flight Supabase menu RPC across editor, QR and background sync.\r\nlet cloudMenuWriteFlight = null;\r\nlet cloudMenuWriteOwner = null;\r\nasync function saveCloudMenu() {\r\n  const client = cloudState.client;\r\n  const ownerId = cloudState.user?.id;\r\n  if (!client || !ownerId) {\r\n    const error = new Error(\"Sin sesión confirmada: el menú continúa guardado en este equipo.\");\r\n    error.code = \"RC_ORDERA_MENU_SESSION_REQUIRED\";\r\n    throw error;\r\n  }\r\n  if (cloudMenuWriteFlight) {\r\n    if (cloudMenuWriteOwner?.client !== client ||\r\n        cloudMenuWriteOwner?.ownerId !== ownerId) {\r\n      const error = new Error(\"Cambió el restaurante durante una publicación. Conserva el menú local.\");\r\n      error.code = \"RC_ORDERA_MENU_SESSION_CHANGED\";\r\n      throw error;\r\n    }\r\n    return cloudMenuWriteFlight;\r\n  }\r\n  const operation = saveCloudMenuRequest();\r\n  cloudMenuWriteOwner = { client, ownerId };\r\n  cloudMenuWriteFlight = operation;\r\n  try {\r\n    return await operation;\r\n  } finally {\r\n    if (cloudMenuWriteFlight === operation) {\r\n      cloudMenuWriteFlight = null;\r\n      cloudMenuWriteOwner = null;\r\n    }\r\n  }\r\n}\r\nasync function saveCloudMenuRequest() {\r\n  if (!cloudState.client || !cloudState.user) {\r\n    const error = new Error(\"No se confirma un menú sin sesión de restaurante.\");\r\n    error.code = \"RC_ORDERA_MENU_SESSION_REQUIRED\";\r\n    throw error;\r\n  }",
+        "afterByteOffset": 161490
       }
     ]
   },
