@@ -85,7 +85,17 @@ function toBuf(str, encoding) {
 /** Verificación genérica: HMAC-SHA256 o token estático, ambos en tiempo constante. */
 export function verifyWith(scheme, { headers, rawBody, now = Date.now() }, secret) {
   if (!secret || String(secret).length < 16) return false;
-  const h = (n) => headers?.[n.toLowerCase()] ?? headers?.[n] ?? null;
+  const h = (name) => {
+    if (typeof name !== "string" || !headers) return null;
+    try {
+      if (typeof headers.get === "function") return headers.get(name);
+      if (typeof headers !== "object" || Array.isArray(headers)) return null;
+      const key = Object.keys(headers).find((candidate) => candidate.toLowerCase() === name.toLowerCase());
+      return key && typeof headers[key] === "string" ? headers[key] : null;
+    } catch {
+      return null;
+    }
+  };
   if (scheme.type === "static-token") {
     const got = h(scheme.header);
     if (typeof got !== "string") return false;
@@ -97,12 +107,17 @@ export function verifyWith(scheme, { headers, rawBody, now = Date.now() }, secre
     let sig = h(scheme.header);
     if (typeof sig !== "string") return false;
     if (scheme.prefix && sig.startsWith(scheme.prefix)) sig = sig.slice(scheme.prefix.length);
-    let signed = rawBody;
+    // Signatures must cover original UTF-8 bytes, not Uint8Array.toString().
+    const body = typeof rawBody === "string"
+      ? Buffer.from(rawBody, "utf8")
+      : rawBody instanceof Uint8Array ? Buffer.from(rawBody) : null;
+    if (!body) return false;
+    let signed = body;
     if (scheme.timestampHeader) {
       const ts = h(scheme.timestampHeader);
       if (!/^\d{10}$/.test(String(ts))) return false;
       if (Math.abs(Math.floor(now / 1000) - Number(ts)) > (scheme.toleranceSeconds ?? 300)) return false;
-      signed = `${ts}.${rawBody}`;
+      signed = Buffer.concat([Buffer.from(`${ts}.`, "utf8"), body]);
     }
     const expected = createHmac("sha256", secret).update(signed).digest();
     const encoding = scheme.encoding ?? "hex";
