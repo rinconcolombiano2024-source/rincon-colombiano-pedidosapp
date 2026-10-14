@@ -132,7 +132,7 @@ export function verifyWith(scheme, { headers, rawBody, now = Date.now() }, secre
 }
 
 export function parseJson(rawBody, max = 256 * 1024) {
-  if (typeof rawBody !== "string" || rawBody.length === 0 || rawBody.length > max) {
+  if (typeof rawBody !== "string" || rawBody.length === 0 || !Number.isSafeInteger(max) || max < 1 || Buffer.byteLength(rawBody, "utf8") > max) {
     throw new DeliveryAdapterError("INVALID_BODY", "Invalid body");
   }
   try {
