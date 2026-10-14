@@ -95,3 +95,14 @@ test("distribution, Capacitor native plugin and no polling remain consistent",()
   assert.equal(lock.packages["node_modules/@capacitor/browser"].version,"8.0.5");
   assert.doesNotMatch(read("restaurant-fiscal-ui.js"),/setInterval\s*\(/);
 });
+
+test("staff entry from the restaurant sign-in screen opens the public station in Android",async()=>{
+ const html=read('restaurante.html');
+ const href=html.match(/id="restaurantStaffAccessLink" href="([^"]+)"/)[1];
+ const h=runtime();
+ assert.equal(h.click('restaurantStaffAccessLink',href).defaultPrevented,true);
+ await Promise.resolve();
+ assert.deepEqual(h.calls,['https://rincon-colombiano-pedidosapp.vercel.app/mesero.html']);
+ assert.equal(h.location.href,'https://localhost/restaurante.html');
+ h.finish();
+});

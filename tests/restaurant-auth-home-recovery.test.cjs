@@ -29,7 +29,7 @@ test("localized home link works for ES PL EN and does not modify session",()=>{
   querySelectorAll:()=>links
  }});
  vm.runInContext(src.slice(start,end),ctx);
- for(const [language,expected] of [["es","Inicio y estaciones"],["pl","Strona główna i stanowiska"],["en","Home and stations"]]){
+ for(const [language,expected] of [["es","Inicio"],["pl","Strona główna"],["en","Home"]]){
   locale=language;
   vm.runInContext("updateRestaurantAuthHomeLinks()",ctx);
   assert.ok(links.every(x=>x.textContent.includes(expected)));

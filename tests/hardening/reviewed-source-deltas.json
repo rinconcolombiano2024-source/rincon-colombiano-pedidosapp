@@ -539,8 +539,8 @@
     ]
   },
   "service-worker.js": {
-    "sha256": "2485df2787b7b7107be1ab2515b1a1949f0bbf1af86cf826db65808c7657ec52",
-    "regressionTests": "tests/hardening/frontend.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/hardening/frontend.test.mjs; tests/pwa-release-marker.test.cjs; tests/hardening/payment-return-safety.test.mjs",
+    "sha256": "907e557abae920ec222a09456c254e8d0e531ace608391ed709c06dcbf16ed87",
+    "regressionTests": "tests/hardening/frontend.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/hardening/frontend.test.mjs; tests/pwa-release-marker.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/portal-stations-entry.test.cjs",
     "edits": [
       {
         "before": "const CACHE_NAME = \"rc-ordera-v91-0-4-offline-r4-products-closures\";\n",
@@ -631,12 +631,17 @@
         "before": "0",
         "after": "1",
         "afterByteOffset": 70
+      },
+      {
+        "before": "rc-ordera-v91-0-4-v6-verified-20261014-pwa-safe-r21",
+        "after": "rc-ordera-v91-0-4-v6-verified-20261014-pwa-safe-r22",
+        "afterByteOffset": 20
       }
     ]
   },
   "app.js": {
-    "sha256": "2777bdf1c1239526a2ef73137e6021a5a4fd25ed18d4cd3da093722232596ee8",
-    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/qr-menu-rpc-throttle.test.cjs; tests/menu-save-burst-coalesce.test.cjs; tests/menu-session-publication-guard.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/menu-cloud-rpc-singleflight.test.cjs",
+    "sha256": "83d2ddae290e3da122454078000e96707f22b1bd074f5345949ebd0f47074215",
+    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/qr-menu-rpc-throttle.test.cjs; tests/menu-save-burst-coalesce.test.cjs; tests/menu-session-publication-guard.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/menu-cloud-rpc-singleflight.test.cjs; tests/portal-stations-entry.test.cjs",
     "edits": [
       {
         "before": "",
@@ -962,12 +967,17 @@
         "before": "async function saveCloudMenu() {\r\n  if (!cloudState.client || !cloudState.user) return null;",
         "after": "// One in-flight Supabase menu RPC across editor, QR and background sync.\r\nlet cloudMenuWriteFlight = null;\r\nlet cloudMenuWriteOwner = null;\r\nasync function saveCloudMenu() {\r\n  const client = cloudState.client;\r\n  const ownerId = cloudState.user?.id;\r\n  if (!client || !ownerId) {\r\n    const error = new Error();\r\n    error.code = \"RC_ORDERA_MENU_SESSION_REQUIRED\";\r\n    throw error;\r\n  }\r\n  if (cloudMenuWriteFlight) {\r\n    if (cloudMenuWriteOwner?.client !== client ||\r\n        cloudMenuWriteOwner?.ownerId !== ownerId) {\r\n      const error = new Error();\r\n      error.code = \"RC_ORDERA_MENU_SESSION_CHANGED\";\r\n      throw error;\r\n    }\r\n    return cloudMenuWriteFlight;\r\n  }\r\n  const operation = saveCloudMenuRequest();\r\n  cloudMenuWriteOwner = { client, ownerId };\r\n  cloudMenuWriteFlight = operation;\r\n  try {\r\n    return await operation;\r\n  } finally {\r\n    if (cloudMenuWriteFlight === operation) {\r\n      cloudMenuWriteFlight = null;\r\n      cloudMenuWriteOwner = null;\r\n    }\r\n  }\r\n}\r\nasync function saveCloudMenuRequest() {\r\n  if (!cloudState.client || !cloudState.user) {\r\n    const error = new Error();\r\n    error.code = \"RC_ORDERA_MENU_SESSION_REQUIRED\";\r\n    throw error;\r\n  }",
         "afterByteOffset": 161490
+      },
+      {
+        "before": "    es: \"← Inicio y estaciones\",\r\n    pl: \"← Strona główna i stanowiska\",\r\n    en: \"← Home and stations\",",
+        "after": "    es: \"← Inicio\",\r\n    pl: \"← Strona główna\",\r\n    en: \"← Home\",",
+        "afterByteOffset": 126536
       }
     ]
   },
   "restaurante.html": {
-    "sha256": "40fbf6df71860dd5cba62ee60e54559911e7a83a070d06657e41a62568c07a40",
-    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/hardening/frontend.test.mjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/hardening/checkout-provider-routing.test.mjs",
+    "sha256": "94e93be82d7013d7e9c11bc143f7e17df6c367942e0d96cd17f0c70505f7c7f2",
+    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/hardening/frontend.test.mjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/portal-stations-entry.test.cjs; tests/portal-stations-entry.test.cjs; tests/portal-stations-entry.test.cjs",
     "edits": [
       {
         "before": "",
@@ -1068,6 +1078,26 @@
         "before": "2",
         "after": "4",
         "afterByteOffset": 49892
+      },
+      {
+        "before": "id=\"waiterTeamButton\" type=\"button\">Estaciones</button>",
+        "after": "id=\"waiterTeamButton\" type=\"button\">Personal y estaciones</button>",
+        "afterByteOffset": 7928
+      },
+      {
+        "before": "<a id=\"restaurantAuthHomeLink\" href=\"./index.html\" class=\"rc-module-link\" data-rc-auth-home>← Inicio y estaciones</a>",
+        "after": "<a id=\"restaurantStaffAccessLink\" href=\"./mesero.html\" class=\"rc-module-link\" target=\"_blank\" rel=\"noopener noreferrer\">Personal y estaciones</a>\n<a id=\"restaurantAuthHomeLink\" href=\"./index.html\" class=\"rc-module-link\" data-rc-auth-home>← Inicio</a>",
+        "afterByteOffset": 2150
+      },
+      {
+        "before": "data-rc-auth-home>← Inicio y estaciones</a>",
+        "after": "data-rc-auth-home>← Inicio</a>",
+        "afterByteOffset": 6538
+      },
+      {
+        "before": "id=\"restaurantStaffAccessLink\" href=\"./mesero.html\"",
+        "after": "id=\"restaurantStaffAccessLink\" href=\"https://rincon-colombiano-pedidosapp.vercel.app/mesero.html\"",
+        "afterByteOffset": 2153
       }
     ]
   },

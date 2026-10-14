@@ -105,7 +105,7 @@
  */
 (() => {
   "use strict";
-  const ids = new Set(["openClientPageButton", "openWaiterLinkButton", "restaurantKitchenLink"]);
+  const ids = new Set(["openClientPageButton", "openWaiterLinkButton", "restaurantKitchenLink", "restaurantStaffAccessLink"]);
   let opening = false;
   const translations = {
     es: {

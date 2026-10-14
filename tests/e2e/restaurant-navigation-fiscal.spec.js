@@ -86,3 +86,28 @@ test("fiscal button is in the restaurant app; permission does not enable fiscal 
   await chooseLanguage(page, "en");
   await expect(page.locator("#fiscalRequestPortButton")).toHaveText("Authorize USB/serial port");
 });
+
+for (const language of ['es','pl','en']) test(`portal keeps staff inside restaurant and language selector clear of cards (${language})`,async({page,context})=>{
+ await installSupabaseMock(page);
+ await page.goto(`/index.html?lang=${language}`,{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#autoLanguageSelect')).toHaveCount(1);
+ await page.locator('#autoLanguageSelect').selectOption(language);
+ await expect(page.locator('html')).toHaveAttribute('lang',language);
+ await expect(page.locator('.apps > a')).toHaveCount(3);
+ await expect(page.locator('.apps a[href="mesero.html"]')).toHaveCount(0);
+ const selector=await page.locator('.app-language-floating').boundingBox();
+ const brand=await page.locator('.brand').boundingBox();
+ expect(selector.y+selector.height).toBeLessThanOrEqual(brand.y);
+ await page.locator('.apps a[href="restaurante.html"]').scrollIntoViewIfNeeded();
+ // The selector scrolls away; it cannot cover a role card as in the reported screenshot.
+ const position=await page.locator('.app-language-floating').evaluate(el=>getComputedStyle(el).position);
+ expect(position).toBe('static');
+ await page.locator('.apps a[href="restaurante.html"]').click();
+ await expect(page.locator('#restaurantStaffAccessLink')).toBeVisible();
+ const opened=context.waitForEvent('page');
+ await page.locator('#restaurantStaffAccessLink').click();
+ const station=await opened;
+ await expect.poll(()=>station.url()).toContain('/mesero.html');
+ expect(page.url()).toContain('/restaurante.html');
+ await station.close();
+});
