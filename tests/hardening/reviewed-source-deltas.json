@@ -1,6 +1,6 @@
 {
   "cliente.js": {
-    "sha256": "d1caee85ec6ee4a254928465cafaf66e45ecc7489b9e730d85697698cdfff3a6",
+    "sha256": "7cc1298de721cd882f82ab3d2915afdafac5622b6d6b84b7ec93fae9505c4f9a",
     "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs",
     "edits": [
       {
@@ -312,6 +312,31 @@
         "before": "            <input class=\"customer-note-input\" type=\"text\" value=\"${customerEscapeHtml(",
         "after": "            <label class=\"customer-item-note-label\" for=\"customer-note-${customerEscapeHtml(item.id)}\">${customerEscapeHtml(customerT(\"itemNoteLabel\"))}</label>\r\n            <input id=\"customer-note-${customerEscapeHtml(item.id)}\" class=\"customer-note-input\" type=\"text\" maxlength=\"250\" value=\"${customerEscapeHtml(",
         "afterByteOffset": 278131
+      },
+      {
+        "before": "              <button type=\"button\" data-action=\"remove\">${customerEscapeHtml(customerT(\"remove\"))}</button>",
+        "after": "              ${item.qty > 1 ? `<button type=\"button\" data-action=\"split\" aria-label=\"${customerEscapeHtml(customerT(\"splitItem\"))}\">${customerEscapeHtml(customerT(\"splitItem\"))}</button>` : \"\"}\r\n              <button type=\"button\" data-action=\"remove\">${customerEscapeHtml(customerT(\"remove\"))}</button>",
+        "afterByteOffset": 278118
+      },
+      {
+        "before": "  if (action === \"remove\") customerCart = customerCart.filter((entry) => entry.id !== item.id);",
+        "after": "  if (action === \"split\" && item.qty > 1) {\r\n    item.qty -= 1;\r\n    customerCart.splice(customerCart.indexOf(item) + 1, 0, {\r\n      ...item,\r\n      id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,\r\n      qty: 1,\r\n      note: \"\",\r\n    });\r\n  }\r\n  if (action === \"remove\") customerCart = customerCart.filter((entry) => entry.id !== item.id);",
+        "afterByteOffset": 297325
+      },
+      {
+        "before": "itemNoteLabel: \"Observaciones para este producto\",",
+        "after": "itemNoteLabel: \"Observaciones para este producto\",\r\n    splitItem: \"Separar una unidad\",",
+        "afterByteOffset": 22391
+      },
+      {
+        "before": "itemNoteLabel: \"Uwagi do tego produktu\",",
+        "after": "itemNoteLabel: \"Uwagi do tego produktu\",\r\n    splitItem: \"Oddziel jedną sztukę\",",
+        "afterByteOffset": 42161
+      },
+      {
+        "before": "itemNoteLabel: \"Instructions for this item\",",
+        "after": "itemNoteLabel: \"Instructions for this item\",\r\n    splitItem: \"Separate one item\",",
+        "afterByteOffset": 61440
       }
     ]
   },
