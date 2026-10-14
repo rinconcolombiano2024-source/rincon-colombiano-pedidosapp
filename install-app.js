@@ -42,7 +42,7 @@
   // User-initiated only: no polling, no cache deletion and no reload while working in POS.
   const versionButton = document.querySelector('[data-check-portal-version]');
   const versionStatus = document.querySelector('#portalVersionStatus');
-  const currentRelease = document.documentElement.getAttribute('data-rc-release');
+  const currentRelease = document.documentElement.getAttribute?.('data-rc-release');
   if (versionButton && versionStatus && currentRelease) {
     const versionCopy = {
       es: {check:'Comprobar versión',checking:'Consultando versión publicada...',current:'Esta pantalla está actualizada.',outdated:'Hay una versión nueva. Pulsa el botón para abrirla; no se borrarán tus datos.',open:'Abrir versión nueva',error:'No se pudo verificar la versión. Comprueba internet e inténtalo de nuevo.'},
