@@ -1,6 +1,6 @@
 {
   "cliente.js": {
-    "sha256": "f53e93ea7a562496d3da481c559603041c4934b2ac4c746209a144d8547c7f78",
+    "sha256": "d1caee85ec6ee4a254928465cafaf66e45ecc7489b9e730d85697698cdfff3a6",
     "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs",
     "edits": [
       {
@@ -292,6 +292,26 @@
         "before": "  if (!rpcError) {\r\n    const row = Array.isArray(rpcData) ? rpcData[0] : rpcData;",
         "after": "  // Only a missing legacy RPC warrants extra reads; overload/auth errors must not fan out.\r\n  if (rpcError && !customerIsMissingRpc(rpcError)) throw rpcError;\r\n  if (!rpcError) {\r\n    const row = Array.isArray(rpcData) ? rpcData[0] : rpcData;",
         "afterByteOffset": 167865
+      },
+      {
+        "before": "itemNotePlaceholder: \"NOTA PARA ESTE PLATO\"",
+        "after": "itemNoteLabel: \"Observaciones para este producto\",\r\n    itemNotePlaceholder: \"Ej.: sin carne, sin azúcar, salsa aparte\"",
+        "afterByteOffset": 22391
+      },
+      {
+        "before": "itemNotePlaceholder: \"UWAGA DO TEGO DANIA\"",
+        "after": "itemNoteLabel: \"Uwagi do tego produktu\",\r\n    itemNotePlaceholder: \"Np. bez mięsa, bez cukru, sos osobno\"",
+        "afterByteOffset": 42123
+      },
+      {
+        "before": "itemNotePlaceholder: \"NOTE FOR THIS DISH\"",
+        "after": "itemNoteLabel: \"Instructions for this item\",\r\n    itemNotePlaceholder: \"E.g. no meat, no sugar, sauce on the side\"",
+        "afterByteOffset": 61360
+      },
+      {
+        "before": "            <input class=\"customer-note-input\" type=\"text\" value=\"${customerEscapeHtml(",
+        "after": "            <label class=\"customer-item-note-label\" for=\"customer-note-${customerEscapeHtml(item.id)}\">${customerEscapeHtml(customerT(\"itemNoteLabel\"))}</label>\r\n            <input id=\"customer-note-${customerEscapeHtml(item.id)}\" class=\"customer-note-input\" type=\"text\" maxlength=\"250\" value=\"${customerEscapeHtml(",
+        "afterByteOffset": 278131
       }
     ]
   },
