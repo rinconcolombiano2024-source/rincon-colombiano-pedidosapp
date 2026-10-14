@@ -5051,8 +5051,44 @@ async function confirmSavedCloudMenu(confirmed, fallbackMenu, submittedMenu = nu
   return { ...(confirmed || {}), menu: confirmedMenu, menuRevision: revision, localChangesPending };
 }
 
+// One in-flight Supabase menu RPC across editor, QR and background sync.
+let cloudMenuWriteFlight = null;
+let cloudMenuWriteOwner = null;
 async function saveCloudMenu() {
-  if (!cloudState.client || !cloudState.user) return null;
+  const client = cloudState.client;
+  const ownerId = cloudState.user?.id;
+  if (!client || !ownerId) {
+    const error = new Error("Sin sesión confirmada: el menú continúa guardado en este equipo.");
+    error.code = "RC_ORDERA_MENU_SESSION_REQUIRED";
+    throw error;
+  }
+  if (cloudMenuWriteFlight) {
+    if (cloudMenuWriteOwner?.client !== client ||
+        cloudMenuWriteOwner?.ownerId !== ownerId) {
+      const error = new Error("Cambió el restaurante durante una publicación. Conserva el menú local.");
+      error.code = "RC_ORDERA_MENU_SESSION_CHANGED";
+      throw error;
+    }
+    return cloudMenuWriteFlight;
+  }
+  const operation = saveCloudMenuRequest();
+  cloudMenuWriteOwner = { client, ownerId };
+  cloudMenuWriteFlight = operation;
+  try {
+    return await operation;
+  } finally {
+    if (cloudMenuWriteFlight === operation) {
+      cloudMenuWriteFlight = null;
+      cloudMenuWriteOwner = null;
+    }
+  }
+}
+async function saveCloudMenuRequest() {
+  if (!cloudState.client || !cloudState.user) {
+    const error = new Error("No se confirma un menú sin sesión de restaurante.");
+    error.code = "RC_ORDERA_MENU_SESSION_REQUIRED";
+    throw error;
+  }
   const requestClient = cloudState.client;
   const requestUserId = cloudState.user.id;
   const assertMenuOwnerSession = () => {
