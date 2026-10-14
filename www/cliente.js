@@ -3590,6 +3590,8 @@ async function customerFetchPublicMenuNow(storeId) {
   const { data: rpcData, error: rpcError } = await customerClient.rpc("get_public_restaurant_menu", {
     p_user_id: storeId,
   });
+  // Only a missing legacy RPC warrants extra reads; overload/auth errors must not fan out.
+  if (rpcError && !customerIsMissingRpc(rpcError)) throw rpcError;
   if (!rpcError) {
     const row = Array.isArray(rpcData) ? rpcData[0] : rpcData;
     if (row) return row;

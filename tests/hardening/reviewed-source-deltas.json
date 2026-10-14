@@ -1,7 +1,7 @@
 {
   "cliente.js": {
-    "sha256": "7616139360be58fcf3282094a3598f9837a99f9047105be4b5deb981b386a8a8",
-    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs",
+    "sha256": "f53e93ea7a562496d3da481c559603041c4934b2ac4c746209a144d8547c7f78",
+    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs",
     "edits": [
       {
         "before": "",
@@ -287,6 +287,11 @@
         "before": "function customerRenderDeliveryFields() {\r\n",
         "after": "function customerRenderDeliveryFields() {\r\n  customerRenderPaymentMethods();\r\n",
         "afterByteOffset": 215760
+      },
+      {
+        "before": "  if (!rpcError) {\r\n    const row = Array.isArray(rpcData) ? rpcData[0] : rpcData;",
+        "after": "  // Only a missing legacy RPC warrants extra reads; overload/auth errors must not fan out.\r\n  if (rpcError && !customerIsMissingRpc(rpcError)) throw rpcError;\r\n  if (!rpcError) {\r\n    const row = Array.isArray(rpcData) ? rpcData[0] : rpcData;",
+        "afterByteOffset": 167865
       }
     ]
   },
@@ -544,7 +549,7 @@
     ]
   },
   "service-worker.js": {
-    "sha256": "adfd8e80290a3a6ee1d1cda777837f3b7847d936e86ee90973c3165a0b7e2d49",
+    "sha256": "aa555f9d529c4354ed08c3575c79e428a7f340106288a8a042f5bef2527b55c4",
     "regressionTests": "tests/hardening/frontend.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/hardening/frontend.test.mjs; tests/pwa-release-marker.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/portal-stations-entry.test.cjs",
     "edits": [
       {
@@ -646,12 +651,17 @@
         "before": "r22",
         "after": "r23",
         "afterByteOffset": 68
+      },
+      {
+        "before": "rc-ordera-v91-0-4-v6-verified-20261014-pwa-safe-r23",
+        "after": "rc-ordera-v91-0-4-v6-verified-20261014-sync-guard-r24",
+        "afterByteOffset": 20
       }
     ]
   },
   "app.js": {
-    "sha256": "83d2ddae290e3da122454078000e96707f22b1bd074f5345949ebd0f47074215",
-    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/qr-menu-rpc-throttle.test.cjs; tests/menu-save-burst-coalesce.test.cjs; tests/menu-session-publication-guard.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/menu-cloud-rpc-singleflight.test.cjs; tests/portal-stations-entry.test.cjs",
+    "sha256": "080ba7b114d52aa3d82c6f1d0af2e1dc4dab4e7a4b0fe728e17accbe1680a2c0",
+    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/qr-menu-rpc-throttle.test.cjs; tests/menu-save-burst-coalesce.test.cjs; tests/menu-session-publication-guard.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/menu-cloud-rpc-singleflight.test.cjs; tests/portal-stations-entry.test.cjs; tests/central-refresh-session.test.cjs",
     "edits": [
       {
         "before": "",
@@ -982,6 +992,46 @@
         "before": "    es: \"← Inicio y estaciones\",\r\n    pl: \"← Strona główna i stanowiska\",\r\n    en: \"← Home and stations\",",
         "after": "    es: \"← Inicio\",\r\n    pl: \"← Strona główna\",\r\n    en: \"← Home\",",
         "afterByteOffset": 126536
+      },
+      {
+        "before": "",
+        "after": "const requestClient = cloudState.client;\r\nconst requestUserId = cloudState.user.id;\r\n",
+        "afterByteOffset": 219619
+      },
+      {
+        "before": "        cloudState.client\r\n",
+        "after": "        requestClient\r\n",
+        "afterByteOffset": 219850
+      },
+      {
+        "before": "          .eq(\"user_id\", cloudState.user.id)\r\n",
+        "after": "          .eq(\"user_id\", requestUserId)\r\n",
+        "afterByteOffset": 220041
+      },
+      {
+        "before": "        cloudState.client\r\n",
+        "after": "        requestClient\r\n",
+        "afterByteOffset": 220351
+      },
+      {
+        "before": "          .eq(\"user_id\", cloudState.user.id)\r\n",
+        "after": "          .eq(\"user_id\", requestUserId)\r\n",
+        "afterByteOffset": 220672
+      },
+      {
+        "before": "        cloudState.client\r\n",
+        "after": "        requestClient\r\n",
+        "afterByteOffset": 220977
+      },
+      {
+        "before": "          .eq(\"user_id\", cloudState.user.id)\r\n",
+        "after": "          .eq(\"user_id\", requestUserId)\r\n",
+        "afterByteOffset": 221070
+      },
+      {
+        "before": "",
+        "after": "\r\n    // Never apply a late snapshot to another restaurant or a signed-out session.\r\n    if (requestClient !== cloudState.client || requestUserId !== cloudState.user?.id) {\r\n      return false;\r\n    }\r\n",
+        "afterByteOffset": 221441
       }
     ]
   },

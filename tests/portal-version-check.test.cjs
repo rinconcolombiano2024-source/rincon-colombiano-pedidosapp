@@ -9,7 +9,7 @@ const read = p => fs.readFileSync(path.join(root,p),"utf8");
 test("new portal includes explicit version checker, without restoring public stations",()=>{
   const html=read("index.html");
   assert.equal(html,read("www/index.html"));
-  assert.match(html,/data-rc-release="2026-10-14-r23"/);
+  assert.match(html,/data-rc-release="2026-10-14-r24"/);
   assert.match(html,/data-check-portal-version/);
   assert.match(html,/id="portalVersionStatus"/);
   assert.doesNotMatch(html,/(?:Personal y estaciones|href="mesero\.html")/i);
@@ -30,7 +30,7 @@ test("version check is manual, bounded and cannot erase order or fiscal data",()
 });
 test("PWA release is incremented and mirrored, without deleting browser order storage",()=>{
   const marker=JSON.parse(read("rc-ordera-release.json"));
-  assert.equal(marker.release,"2026-10-14-r23");
+  assert.equal(marker.release,"2026-10-14-r24");
   assert.equal(read("rc-ordera-release.json"),read("www/rc-ordera-release.json"));
   const worker=read("service-worker.js");
   assert.equal(worker,read("www/service-worker.js"));
