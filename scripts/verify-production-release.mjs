@@ -15,11 +15,23 @@ try {
   if (actual.app !== expected.app || actual.release !== expected.release || actual.pwaCache !== expected.pwaCache)
     throw Error(`servidor=${actual.release}, esperado=${expected.release}`);
   // A reused release label must not hide missing menu, station or payment fixes.
-  for (const path of ['app.js','cliente.js','mesero.js','mesero.html','restaurante.html','offline-i18n.js','styles.css','service-worker.js']) {
+  for (const path of ['index.html','app.js','cliente.js','mesero.js','mesero.html','restaurante.html','offline-i18n.js','styles.css','service-worker.js']) {
     if (digest(await download(path)) !== digest(readFileSync(new URL(`../${path}`, import.meta.url))))
       throw Error(`${path}: contenido publicado distinto del repositorio`);
   }
-  console.log(`DESPLIEGUE CONFIRMADO: ${expected.release}; 8 archivos críticos verificados en ${site}`);
+  // The deployment entry point must serve the same portal as the committed index.
+  // A previous release can otherwise keep showing staff access on the public home.
+  const publishedHome = new TextDecoder().decode(await download(''));
+  const expectedHome = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  if (publishedHome !== expectedHome)
+    throw Error('ruta /: portada desplegada distinta de index.html del repositorio');
+  if (/Personal y estaciones/i.test(publishedHome) || /href=["'][^"']*mesero\.html/i.test(publishedHome))
+    throw Error('ruta /: estaciones aparecen fuera del inicio de sesión del restaurante');
+  const publishedRestaurant = new TextDecoder().decode(await download('restaurante.html'));
+  if (!/id=["']restaurantStaffAccessLink["']/.test(publishedRestaurant) ||
+      !/id=["']waiterTeamButton["']/.test(publishedRestaurant))
+    throw Error('restaurante.html: falta acceso controlado a personal y estaciones');
+  console.log(`DESPLIEGUE CONFIRMADO: ${expected.release}; 9 archivos críticos y portada / verificados en ${site}`);
 } catch (error) {
   console.error(`DESPLIEGUE NO CONFIRMADO: ${error.message}`);
   process.exitCode = 1;
