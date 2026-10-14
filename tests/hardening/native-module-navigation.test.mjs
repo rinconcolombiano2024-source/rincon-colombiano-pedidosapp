@@ -145,3 +145,20 @@ test("Unsafe javascript scheme never reaches Capacitor Browser", async () => {
   assert.deepEqual(h.opened, []);
   assert.equal(h.messages.length, 1);
 });
+
+
+test("Native Browser rejects insecure HTTP module URLs", async () => {
+  const h = harness({ href: "http://rincon-colombiano-pedidosapp.vercel.app/cliente.html" });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.prevented, true);
+  assert.deepEqual(h.opened, []);
+  assert.equal(h.messages.length, 1);
+});
+
+test("Native Browser rejects URLs with embedded credentials", async () => {
+  const h = harness({ href: "https://user:password@rincon-colombiano-pedidosapp.vercel.app/cliente.html" });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.prevented, true);
+  assert.deepEqual(h.opened, []);
+  assert.equal(h.messages.length, 1);
+});
