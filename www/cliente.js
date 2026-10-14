@@ -390,6 +390,7 @@ calculateMaps: "Calcular con Google Maps",
     unavailable: "No disponible",
     remove: "Quitar",
     itemNoteLabel: "Observaciones para este producto",
+    splitItem: "Separar una unidad",
     itemNotePlaceholder: "Ej.: sin carne, sin azúcar, salsa aparte",
     noConnection: "No hay conexion con el restaurante.",
     addProductFirst: "Agrega al menos un producto.",
@@ -728,6 +729,7 @@ kitchenNotesLabel: "Uwagi do kuchni",
     unavailable: "Niedostepne",
     remove: "Usun",
     itemNoteLabel: "Uwagi do tego produktu",
+    splitItem: "Oddziel jedną sztukę",
     itemNotePlaceholder: "Np. bez mięsa, bez cukru, sos osobno",
     noConnection: "Brak polaczenia z restauracja.",
     addProductFirst: "Dodaj przynajmniej jeden produkt.",
@@ -1066,6 +1068,7 @@ kitchenNotesLabel: "Kitchen notes",
     unavailable: "Unavailable",
     remove: "Remove",
     itemNoteLabel: "Instructions for this item",
+    splitItem: "Separate one item",
     itemNotePlaceholder: "E.g. no meat, no sugar, sauce on the side",
     noConnection: "No connection with the restaurant.",
     addProductFirst: "Add at least one product.",
@@ -7018,6 +7021,7 @@ function customerRenderCart() {
               <button type="button" data-action="minus">-</button>
               <input type="number" min="1" step="1" value="${item.qty}" data-action="qty" />
               <button type="button" data-action="plus">+</button>
+              ${item.qty > 1 ? `<button type="button" data-action="split" aria-label="${customerEscapeHtml(customerT("splitItem"))}">${customerEscapeHtml(customerT("splitItem"))}</button>` : ""}
               <button type="button" data-action="remove">${customerEscapeHtml(customerT("remove"))}</button>
             </div>
             <label class="customer-item-note-label" for="customer-note-${customerEscapeHtml(item.id)}">${customerEscapeHtml(customerT("itemNoteLabel"))}</label>
@@ -7453,6 +7457,15 @@ customerElements.cartItems.addEventListener("click", (event) => {
   if (!item) return;
   if (action === "plus") item.qty += 1;
   if (action === "minus") item.qty = Math.max(1, item.qty - 1);
+  if (action === "split" && item.qty > 1) {
+    item.qty -= 1;
+    customerCart.splice(customerCart.indexOf(item) + 1, 0, {
+      ...item,
+      id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+      qty: 1,
+      note: "",
+    });
+  }
   if (action === "remove") customerCart = customerCart.filter((entry) => entry.id !== item.id);
   customerRenderCart();
 });
