@@ -129,3 +129,19 @@ test("Browser launch failure is reported and a retry remains possible", async ()
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(calls, 2);
 });
+
+
+test("Android preserves station query parameters when opening HTTPS module", async () => {
+  const h = harness({ href: "./mesero.html?station=bar&lang=pl", id: "restaurantBarLink" });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.prevented, true);
+  assert.deepEqual(h.opened, ["https://rincon-colombiano-pedidosapp.vercel.app/mesero.html?station=bar&lang=pl"]);
+});
+
+test("Unsafe javascript scheme never reaches Capacitor Browser", async () => {
+  const h = harness({ href: "javascript:alert(1)" });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.prevented, true);
+  assert.deepEqual(h.opened, []);
+  assert.equal(h.messages.length, 1);
+});
