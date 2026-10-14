@@ -84,7 +84,8 @@ function toBuf(str, encoding) {
 
 /** Verificación genérica: HMAC-SHA256 o token estático, ambos en tiempo constante. */
 export function verifyWith(scheme, { headers, rawBody, now = Date.now() }, secret) {
-  if (!secret || String(secret).length < 16) return false;
+  if (!scheme || typeof scheme !== "object" || Array.isArray(scheme)) return false;
+  if (typeof secret !== "string" || secret.length < 16) return false;
   const h = (name) => {
     if (typeof name !== "string" || !headers) return null;
     try {
