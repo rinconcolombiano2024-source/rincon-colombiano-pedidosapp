@@ -29,7 +29,11 @@ export function toGrosz(value, { unit = "minor" } = {}) {
 }
 
 export function pick(obj, path) {
-  return String(path).split(".").reduce((acc, k) => (acc == null ? undefined : acc[k]), obj);
+  return String(path).split(".").reduce((acc, k) => {
+    if (acc == null || ["__proto__", "prototype", "constructor"].includes(k)) return undefined;
+    if ((typeof acc !== "object" && typeof acc !== "function") || !Object.prototype.hasOwnProperty.call(acc, k)) return undefined;
+    return acc[k];
+  }, obj);
 }
 
 export function requireString(value, name, max = 160) {
