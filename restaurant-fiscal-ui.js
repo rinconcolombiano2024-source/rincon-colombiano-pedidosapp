@@ -135,7 +135,12 @@
   function allowedUrl(raw) {
     if (!raw) return null;
     try {
-      const url = new URL(raw, window.location.href);
+      // Resolve relative module links against the deployed origin on native Android.
+      // Capacitor serves local assets from a different origin, which must never
+      // be passed to the external Browser plugin as a customer/station URL.
+      const deployedOrigin = "https://rincon-colombiano-pedidosapp.vercel.app/";
+      const base = window.Capacitor?.isNativePlatform?.() ? deployedOrigin : window.location.href;
+      const url = new URL(raw, base);
       if (url.protocol !== "https:" ||
           url.hostname !== "rincon-colombiano-pedidosapp.vercel.app" ||
           url.port || url.username || url.password ||
