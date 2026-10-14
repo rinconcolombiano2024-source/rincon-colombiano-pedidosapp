@@ -9,7 +9,7 @@ const end = source.indexOf("/* RC ORDERA: read-only menu publication audit.", st
 assert.ok(start >= 0 && end > start, "Native navigation module exists");
 const bridge = source.slice(start, end);
 
-function harness({ native = true, href = "./cliente.html", id = "openClientPageButton" } = {}) {
+function harness({ native = true, href = "./cliente.html", id = "openClientPageButton", defaultPrevented = false, browserAvailable = true } = {}) {
   let listener;
   const opened = [];
   const messages = [];
@@ -27,7 +27,7 @@ function harness({ native = true, href = "./cliente.html", id = "openClientPageB
       location: { href: "https://localhost/restaurante.html" },
       Capacitor: {
         isNativePlatform: () => native,
-        Plugins: { Browser: { open: async ({ url }) => { opened.push(url); } } }
+        Plugins: { Browser: browserAvailable ? { open: async ({ url }) => { opened.push(url); } } : undefined }
       }
     }
   };
@@ -36,7 +36,7 @@ function harness({ native = true, href = "./cliente.html", id = "openClientPageB
   const anchor = { id, getAttribute: () => href };
   listener({
     target: { closest: () => anchor },
-    defaultPrevented: false,
+    defaultPrevented,
     preventDefault() { prevented = true; }
   });
   return { opened, messages, get prevented() { return prevented; } };
@@ -65,6 +65,30 @@ test("Web navigation remains owned by the browser", async () => {
 
 test("Disallowed module URL cannot open through native bridge", async () => {
   const h = harness({ href: "https://evil.example/cliente.html" });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.prevented, true);
+  assert.deepEqual(h.opened, []);
+  assert.equal(h.messages.length, 1);
+});
+
+
+test("Previously cancelled click never opens an external module", async () => {
+  const h = harness({ defaultPrevented: true });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.prevented, false);
+  assert.deepEqual(h.opened, []);
+});
+
+test("Missing native Browser plugin keeps restaurant open and explains upgrade", async () => {
+  const h = harness({ browserAvailable: false });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.prevented, true);
+  assert.deepEqual(h.opened, []);
+  assert.equal(h.messages.length, 1);
+});
+
+test("Non-allowlisted HTTPS module path is blocked", async () => {
+  const h = harness({ href: "https://rincon-colombiano-pedidosapp.vercel.app/admin.html" });
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(h.prevented, true);
   assert.deepEqual(h.opened, []);
