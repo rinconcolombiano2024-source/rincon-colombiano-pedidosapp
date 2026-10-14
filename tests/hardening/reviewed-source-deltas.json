@@ -508,8 +508,8 @@
     ]
   },
   "offline-i18n.js": {
-    "sha256": "e52ff5f785d2d15ea7a474ddc37e672a3662e63f3efee87b01fa43528b6cf1af",
-    "regressionTests": "tests/hardening/frontend.test.mjs; tests/waiter-access-recovery.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs",
+    "sha256": "7e2f165431ddbe67c322731904af2aef67a89cb0fbd3d830d7c89b67fde60868",
+    "regressionTests": "tests/hardening/frontend.test.mjs; tests/waiter-access-recovery.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-settings-pending-confirmation.test.cjs",
     "edits": [
       {
         "before": "",
@@ -540,6 +540,11 @@
         "before": "",
         "after": "\n    [\"portal.checkVersion\", \"Comprobar versión\", \"Sprawdź wersję\", \"Check version\"],",
         "afterByteOffset": 24224
+      },
+      {
+        "before": "",
+        "after": "\n    [\"settings.pending\", \"Ajustes pendientes de sincronización\", \"Ustawienia oczekują na synchronizację\", \"Settings awaiting synchronization\"],",
+        "afterByteOffset": 68902
       }
     ]
   },
