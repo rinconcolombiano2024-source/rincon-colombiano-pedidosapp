@@ -1,4 +1,4 @@
-const CACHE_NAME = "rc-ordera-v91-0-4-v6-verified-20261014-pwa-safe-r22";
+const CACHE_NAME = "rc-ordera-v91-0-4-v6-verified-20261014-pwa-safe-r23";
 const APP_FILES = [
   "./",
   "./index.html",

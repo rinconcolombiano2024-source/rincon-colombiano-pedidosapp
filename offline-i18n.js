@@ -192,6 +192,7 @@
     ["restaurant.stations", "Estaciones", "Stanowiska", "Stations"],
     ["restaurant.enableAlarm", "Activar alarma", "Włącz alarm", "Enable alarm"],
     ["restaurant.downloadApp", "Descargar app", "Pobierz aplikację", "Download app"],
+    ["portal.checkVersion", "Comprobar versión", "Sprawdź wersję", "Check version"],
     ["restaurant.nextTicket", "Proximo ticket", "Następny numer", "Next ticket"],
     ["restaurant.customerService", "Atencion al cliente", "Obsługa klientów", "Customer service"],
     ["restaurant.checkingStatus", "Comprobando estado...", "Sprawdzanie statusu...", "Checking status..."],

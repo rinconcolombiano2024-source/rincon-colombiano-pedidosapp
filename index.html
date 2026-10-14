@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-rc-release="2026-10-14-r23">
 <head>
   <meta charset="UTF-8" />
   <meta
@@ -228,7 +228,32 @@
         align-items: flex-start;
       }
     }
-  </style>
+  
+    .portal-version-tools {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 8px 14px;
+      margin: 12px 0 20px;
+    }
+    .portal-version-button {
+      min-height: 40px;
+      padding: 9px 15px;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      background: #fff;
+      color: #172033;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 750;
+      cursor: pointer;
+    }
+    .portal-version-button:focus-visible { outline: 3px solid #ff4b19; outline-offset: 3px; }
+    .portal-version-button:disabled { opacity: .6; cursor: progress; }
+    .portal-version-status { margin: 0; color: #344054; font-size: 13px; line-height: 1.5; }
+    .portal-version-status[hidden] { display: none; }
+</style>
   <link rel="stylesheet" href="install-app.css" />
   <script src="install-app.js" defer></script>
 <link rel="manifest" href="portal-manifest.webmanifest" />
@@ -255,6 +280,10 @@
         Pide comida, administra tu restaurante o realiza entregas.
       </p>
     </header>
+    <div class="portal-version-tools" data-no-auto-i18n>
+      <button class="portal-version-button" type="button" data-check-portal-version aria-controls="portalVersionStatus">Comprobar versión</button>
+      <p class="portal-version-status" id="portalVersionStatus" role="status" aria-live="polite" hidden></p>
+    </div>
 <div class="rc-install-bar" data-no-auto-i18n><button class="rc-install-button" type="button" data-install-app>Descargar app</button></div>
 
     <section class="apps">

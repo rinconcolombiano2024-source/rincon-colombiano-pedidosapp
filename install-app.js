@@ -38,9 +38,58 @@
     catch {show(2);}
     finally {busy=false;button.disabled=false;}
   });
+  let renderVersionState = () => {};
+  // User-initiated only: no polling, no cache deletion and no reload while working in POS.
+  const versionButton = document.querySelector('[data-check-portal-version]');
+  const versionStatus = document.querySelector('#portalVersionStatus');
+  const currentRelease = document.documentElement.getAttribute?.('data-rc-release');
+  if (versionButton && versionStatus && currentRelease) {
+    const versionCopy = {
+      es: {check:'Comprobar versión',checking:'Consultando versión publicada...',current:'Esta pantalla está actualizada.',outdated:'Hay una versión nueva. Pulsa el botón para abrirla; no se borrarán tus datos.',open:'Abrir versión nueva',error:'No se pudo verificar la versión. Comprueba internet e inténtalo de nuevo.'},
+      pl: {check:'Sprawdź wersję',checking:'Sprawdzanie opublikowanej wersji...',current:'Ta strona jest aktualna.',outdated:'Dostępna jest nowa wersja. Kliknij, aby ją otworzyć; Twoje dane nie zostaną usunięte.',open:'Otwórz nową wersję',error:'Nie można sprawdzić wersji. Sprawdź połączenie internetowe i spróbuj ponownie.'},
+      en: {check:'Check version',checking:'Checking published version...',current:'This page is up to date.',outdated:'A new version is available. Select to open it; your data will not be deleted.',open:'Open new version',error:'Could not verify the version. Check your connection and try again.'}
+    };
+    let phase='idle', targetRelease='';
+    const strings=()=>versionCopy[document.documentElement.lang] || versionCopy.es;
+    renderVersionState=()=>{
+      const t=strings();
+      versionButton.textContent=phase==='outdated'?t.open:t.check;
+      versionStatus.hidden=phase==='idle';
+      if (phase!=='idle') versionStatus.textContent=t[phase] || t.error;
+    };
+    versionButton.addEventListener('click',async()=>{
+      if(phase==='outdated'){
+        // Explicit navigation only from the public portal; never restart restaurant checkout.
+        const next=new URL('./index.html',window.location.href);
+        next.searchParams.set('rc_release',targetRelease);
+        window.location.assign(next.toString());
+        return;
+      }
+      if(versionButton.disabled)return;
+      versionButton.disabled=true;phase='checking';renderVersionState();
+      try{
+        const marker=new URL('./rc-ordera-release.json',window.location.href);
+        marker.searchParams.set('check',String(Date.now()));
+        const response=await fetch(marker,{cache:'no-store',
+          signal:typeof AbortSignal!=='undefined'&&typeof AbortSignal.timeout==='function'?AbortSignal.timeout(10000):undefined});
+        if(!response.ok)throw new Error('RELEASE_NOT_AVAILABLE');
+        const info=await response.json();
+        if(info?.app!=='RC ORDERA'||typeof info.release!=='string'||!/^[a-zA-Z0-9._-]{1,80}$/.test(info.release))throw new Error('INVALID_RELEASE');
+        targetRelease=info.release;
+        // Ask the browser for the current worker only on user action.
+        if('serviceWorker' in navigator){
+          const registration=await navigator.serviceWorker.getRegistration();
+          if(registration)await registration.update().catch(()=>{});
+        }
+        phase=targetRelease===currentRelease?'current':'outdated';
+      }catch{phase='error';}
+      finally{versionButton.disabled=false;renderVersionState();}
+    });
+  }
   render();
+  renderVersionState();
   // Observe only language changes, never the page subtree or a timer.
-  new MutationObserver(render).observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
+  new MutationObserver(()=>{render();renderVersionState();}).observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
   if ('serviceWorker' in navigator && window.isSecureContext) {
     navigator.serviceWorker.getRegistration().then(existing=>existing || navigator.serviceWorker.register('./service-worker.js')).catch(()=>{});
   }
