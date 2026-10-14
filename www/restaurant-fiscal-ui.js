@@ -315,3 +315,147 @@
   }
   button.addEventListener("click",()=>{void compare();});
 })();
+
+/* RC ORDERA: non-destructive LOCAL menu backup and visible unpublished-menu warning.
+ * No Supabase calls, timers, menu writes or implicit publication.
+ */
+(() => {
+  "use strict";
+  const section = document.getElementById("restaurantMenuSection");
+  const publish = document.getElementById("publishCurrentMenuButton");
+  if (!section || !publish) return;
+
+  const copy = {
+    es: {
+      backup: "Descargar respaldo del menú de este equipo",
+      ready: "Respaldo local descargado. No significa que el menú esté publicado.",
+      empty: "No hay productos locales que respaldar. No se modificó el menú.",
+      failed: "No se pudo descargar el respaldo. No borres los datos de este equipo.",
+      warning: "MENÚ SIN PUBLICAR: hay cambios locales que Cliente y Caja podrían no ver. Conserva los datos de este equipo.",
+      open: "Abrir menú y publicar",
+    },
+    pl: {
+      backup: "Pobierz kopię menu z tego urządzenia",
+      ready: "Pobrano kopię lokalną. To nie oznacza publikacji menu.",
+      empty: "Brak lokalnych produktów do zapisania. Menu nie zostało zmienione.",
+      failed: "Nie można pobrać kopii. Nie usuwaj danych z tego urządzenia.",
+      warning: "NIEOPUBLIKOWANE MENU: zmiany lokalne mogą być niewidoczne dla klienta i kasy. Zachowaj dane na urządzeniu.",
+      open: "Otwórz menu i opublikuj",
+    },
+    en: {
+      backup: "Download this device's menu backup",
+      ready: "Local backup downloaded. This does not confirm menu publication.",
+      empty: "No local products to back up. The menu was not modified.",
+      failed: "Could not download the backup. Do not erase this device's data.",
+      warning: "UNPUBLISHED MENU: local changes may be missing for Customer and Cashier. Keep this device's data.",
+      open: "Open menu and publish",
+    },
+  };
+  function words() {
+    const choice = String(document.documentElement.lang || "").split("-")[0].toLowerCase();
+    return copy[choice] || copy.es;
+  }
+
+  const backup = document.createElement("button");
+  backup.id = "backupLocalRestaurantMenuButton";
+  backup.type = "button";
+  backup.textContent = words().backup;
+  backup.style.cssText = "border:1px solid #307c67;border-radius:12px;padding:11px 14px;cursor:pointer;background:#f0faf5;color:#164b3c;font-weight:700;";
+  publish.insertAdjacentElement("afterend", backup);
+
+  const feedback = document.createElement("p");
+  feedback.id = "localMenuBackupResult";
+  feedback.setAttribute("role", "status");
+  feedback.setAttribute("aria-live", "polite");
+  backup.insertAdjacentElement("afterend", feedback);
+
+  const serviceBar = document.querySelector(".restaurant-service-bar");
+  const alertBox = serviceBar ? document.createElement("section") : null;
+  let openButton = null;
+  if (alertBox) {
+    alertBox.id = "unpublishedMenuWarning";
+    alertBox.hidden = true;
+    alertBox.setAttribute("role", "status");
+    alertBox.setAttribute("aria-live", "polite");
+    alertBox.style.cssText = "background:#fff4e0;color:#674210;border:1px solid #dbb46a;border-left:5px solid #dc8619;border-radius:14px;padding:14px 16px;margin:12px 0;display:flex;flex-wrap:wrap;align-items:center;gap:12px;";
+    const label = document.createElement("strong");
+    label.id = "unpublishedMenuWarningText";
+    label.style.cssText = "flex:1 1 220px;line-height:1.45;";
+    openButton = document.createElement("button");
+    openButton.type = "button";
+    openButton.id = "unpublishedMenuOpenButton";
+    openButton.style.cssText = "border:0;border-radius:10px;padding:10px 13px;background:#205b43;color:#fff;font-weight:700;cursor:pointer;";
+    alertBox.append(label, openButton);
+    serviceBar.insertAdjacentElement("afterend", alertBox);
+    openButton.addEventListener("click", () => {
+      if (typeof openMenuEditor !== "function" ||
+          typeof showRestaurantEditSection !== "function") return;
+      openMenuEditor();
+      showRestaurantEditSection("restaurant-menu");
+    });
+  }
+
+  function refresh() {
+    backup.textContent = words().backup;
+    if (alertBox) {
+      const pending = typeof hasPendingMenu === "function" && hasPendingMenu();
+      alertBox.hidden = !pending;
+      alertBox.style.display = pending ? "flex" : "none";
+      document.getElementById("unpublishedMenuWarningText").textContent = words().warning;
+      openButton.textContent = words().open;
+    }
+  }
+
+  backup.addEventListener("click", () => {
+    // Snapshot only; never call saveMenuCatalog/saveCloudMenu or clear pending.
+    try {
+      const current = typeof menuCatalog !== "undefined" ? menuCatalog : null;
+      if (!current || typeof current !== "object" ||
+          !Object.values(current).some(products => Array.isArray(products) && products.length > 0)) {
+        feedback.textContent = words().empty;
+        return;
+      }
+      const snapshot = JSON.parse(JSON.stringify(current));
+      const payload = {
+        format: "RC_ORDERA_LOCAL_MENU_BACKUP_V1",
+        exportedAt: new Date().toISOString(),
+        publicationVerified: false,
+        menu: snapshot,
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+      const href = URL.createObjectURL(blob);
+      try {
+        const link = document.createElement("a");
+        link.download = "rc-ordera-menu-respaldo-" + payload.exportedAt.slice(0, 10) + ".json";
+        link.href = href;
+        link.style.display = "none";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        feedback.textContent = words().ready;
+      } finally {
+        // Reclaim the object URL without adding background polling.
+        window.setTimeout(() => URL.revokeObjectURL(href), 30000);
+      }
+    } catch (error) {
+      console.error("[RC ORDERA] Local menu backup failed:", error);
+      feedback.textContent = words().failed;
+    }
+  });
+
+  const cloudLabel = document.getElementById("cloudStatus");
+  const statusObserver = cloudLabel && typeof MutationObserver === "function"
+    ? new MutationObserver(refresh) : null;
+  statusObserver?.observe(cloudLabel, {childList: true, subtree: true, characterData: true});
+  const languageObserver = typeof MutationObserver === "function"
+    ? new MutationObserver(refresh) : null;
+  languageObserver?.observe(document.documentElement, {attributes: true, attributeFilter: ["lang"]});
+  document.addEventListener("visibilitychange", refresh);
+  window.addEventListener("pageshow", refresh);
+  window.addEventListener("pagehide", () => {
+    statusObserver?.disconnect();
+    languageObserver?.disconnect();
+    document.removeEventListener("visibilitychange", refresh);
+  }, {once: true});
+  refresh();
+})();
