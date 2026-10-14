@@ -1,8 +1,8 @@
 {
   "app": "RC ORDERA",
   "version": "91.0.4",
-  "release": "2026-10-14-r21",
-  "pwaCache": "rc-ordera-v91-0-4-v6-verified-20261014-pwa-safe-r21",
+  "release": "2026-10-14-r22",
+  "pwaCache": "rc-ordera-v91-0-4-v6-verified-20261014-pwa-safe-r22",
   "changes": [
     "restaurant QR/client/stations separate windows",
     "ES/PL/EN per-module PWA scopes",
@@ -12,7 +12,8 @@
     "Online checkout return never claims payment from redirect parameters; provider confirmation remains required.",
     "Gated server-selected SumUp routing and provider-specific checkout URLs; no automatic Stripe fallback.",
     "Local-only menu backup and visible unpublished-menu warning; no additional database polling.",
-    "All menu cloud writes share one authenticated single-flight across QR/editor/background; missing session never reports a successful public publication."
+    "All menu cloud writes share one authenticated single-flight across QR/editor/background; missing session never reports a successful public publication.",
+    "Staff and stations entry lives in the restaurant panel; portal language selector stays in document flow without overlapping cards."
   ],
   "issuedAt": "2026-10-14"
 }

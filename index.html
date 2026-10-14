@@ -51,10 +51,10 @@
 }
 
     .app-language-floating {
-  position: fixed;
-  top: max(18px, env(safe-area-inset-top));
-  right: max(18px, env(safe-area-inset-right));
-  z-index: 1000;
+  position: static;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 0 24px auto;
 
   display: flex;
   align-items: center;
@@ -236,6 +236,14 @@
 
 <body>
   <main class="portal">
+    <label class="app-language-floating">
+      <span>Idioma</span>
+      <select id="autoLanguageSelect">
+        <option value="es">Español</option>
+        <option value="pl">Polski</option>
+        <option value="en">English</option>
+      </select>
+    </label>
 
     <header class="brand">
       <div class="brand-mark">RC</div>
@@ -284,14 +292,6 @@
         <div class="button">
           Administrar restaurante
         </div>
-      </a>
-
-      <!-- ESTACIONES / PERSONAL -->
-      <a class="app-card" href="mesero.html" aria-label="Acceso de personal">
-        <div class="icon">👨‍🍳</div>
-        <h2>Personal y estaciones</h2>
-        <p>Pide al propietario que autorice tu correo en una estacion.</p>
-        <div class="button">Estaciones</div>
       </a>
 
       <!-- COLABORADOR -->

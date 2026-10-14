@@ -3729,9 +3729,9 @@ function closeRestaurantAuthDialog() {
 function updateRestaurantAuthHomeLinks() {
   const locale = document.querySelector("#autoLanguageSelect")?.value || "es";
   const labels = {
-    es: "← Inicio y estaciones",
-    pl: "← Strona główna i stanowiska",
-    en: "← Home and stations",
+    es: "← Inicio",
+    pl: "← Strona główna",
+    en: "← Home",
   };
   document.querySelectorAll("[data-rc-auth-home]").forEach((link) => {
     link.textContent = labels[locale] || labels.es;
