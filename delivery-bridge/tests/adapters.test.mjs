@@ -189,6 +189,8 @@ test("Uber order detail href is host, path and credential restricted (SSRF prote
     "https://api.uber.com:8443/v2/eats/order/u-9",
     "https://api.uber.com/v2/eats/order/u-9?key=secret",
     "https://api.uber.com/v2/eats/order/u-9#fragment",
+    "https://api.uber.com/v2/eats/order/another-order",
+    "https://api.uber.com/v2/eats/order/u-9%2fother",
     "https://api.uber.com/other",
     "/v2/eats/order/u-9",
     "not-a-url"
