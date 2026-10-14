@@ -389,7 +389,8 @@ calculateMaps: "Calcular con Google Maps",
     emptyCart: "Agrega productos del menu.",
     unavailable: "No disponible",
     remove: "Quitar",
-    itemNotePlaceholder: "NOTA PARA ESTE PLATO",
+    itemNoteLabel: "Observaciones para este producto",
+    itemNotePlaceholder: "Ej.: sin carne, sin azúcar, salsa aparte",
     noConnection: "No hay conexion con el restaurante.",
     addProductFirst: "Agrega al menos un producto.",
     sendingOrder: "Enviando pedido...",
@@ -726,7 +727,8 @@ kitchenNotesLabel: "Uwagi do kuchni",
     emptyCart: "Dodaj produkty z menu.",
     unavailable: "Niedostepne",
     remove: "Usun",
-    itemNotePlaceholder: "UWAGA DO TEGO DANIA",
+    itemNoteLabel: "Uwagi do tego produktu",
+    itemNotePlaceholder: "Np. bez mięsa, bez cukru, sos osobno",
     noConnection: "Brak polaczenia z restauracja.",
     addProductFirst: "Dodaj przynajmniej jeden produkt.",
     sendingOrder: "Wysyłanie zamówienia...",
@@ -1063,7 +1065,8 @@ kitchenNotesLabel: "Kitchen notes",
     emptyCart: "Add products from the menu.",
     unavailable: "Unavailable",
     remove: "Remove",
-    itemNotePlaceholder: "NOTE FOR THIS DISH",
+    itemNoteLabel: "Instructions for this item",
+    itemNotePlaceholder: "E.g. no meat, no sugar, sauce on the side",
     noConnection: "No connection with the restaurant.",
     addProductFirst: "Add at least one product.",
     sendingOrder: "Sending order...",
@@ -7017,7 +7020,8 @@ function customerRenderCart() {
               <button type="button" data-action="plus">+</button>
               <button type="button" data-action="remove">${customerEscapeHtml(customerT("remove"))}</button>
             </div>
-            <input class="customer-note-input" type="text" value="${customerEscapeHtml(
+            <label class="customer-item-note-label" for="customer-note-${customerEscapeHtml(item.id)}">${customerEscapeHtml(customerT("itemNoteLabel"))}</label>
+            <input id="customer-note-${customerEscapeHtml(item.id)}" class="customer-note-input" type="text" maxlength="250" value="${customerEscapeHtml(
               item.note
             )}" data-action="note" placeholder="${customerEscapeHtml(customerT("itemNotePlaceholder"))}" />
           </article>
