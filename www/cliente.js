@@ -1775,6 +1775,7 @@ let customerDirectoryPollingDelay = CUSTOMER_DIRECTORY_POLL_MIN_MS;
 let customerRecoveryInFlight = null;
 let customerRecoveryLastCompletedAt = 0;
 let customerDirectoryLoadPromise = null;
+let customerDirectoryLoadRegionKey = "";
 let customerMenuFetchPromise = null;
 let customerMenuFetchStoreId = "";
 let customerRestaurantFavorite = false;
@@ -3461,17 +3462,38 @@ return `
   .join("");
   customerRenderSelectedRestaurantDetails();
 }
-function customerLoadRestaurantDirectory(options = {}) {
-  if (customerDirectoryLoadPromise) return customerDirectoryLoadPromise;
-  customerDirectoryLoadPromise = customerLoadRestaurantDirectoryNow(options).finally(() => {
-    customerDirectoryLoadPromise = null;
-  });
-  return customerDirectoryLoadPromise;
+function customerDirectoryRegionKey(region = customerRegistrationRegion) {
+  // The query and the published list must refer to the same country/city/region.
+  return JSON.stringify([region.countryCode || "", region.city || "", region.region || ""]);
 }
-async function customerLoadRestaurantDirectoryNow(options = {}) {
+function customerLoadRestaurantDirectory(options = {}) {
+  const regionKey = customerDirectoryRegionKey();
+  if (customerDirectoryLoadPromise) {
+    if (regionKey === customerDirectoryLoadRegionKey) return customerDirectoryLoadPromise;
+    // Do not share an earlier region's result with a newer customer selection.
+    // Only one trailing request may run at a time; no timers or polling added.
+    return customerDirectoryLoadPromise.then(
+      () => customerLoadRestaurantDirectory(options),
+      () => customerLoadRestaurantDirectory(options)
+    );
+  }
+  customerDirectoryLoadRegionKey = regionKey;
+  const operation = customerLoadRestaurantDirectoryNow(options, regionKey);
+  const flight = Promise.resolve(operation).finally(() => {
+    if (customerDirectoryLoadPromise === flight) {
+      customerDirectoryLoadPromise = null;
+      customerDirectoryLoadRegionKey = "";
+    }
+  });
+  customerDirectoryLoadPromise = flight;
+  return flight;
+}
+async function customerLoadRestaurantDirectoryNow(options = {}, regionKey = customerDirectoryRegionKey()) {
   const { silent = false } = options;
+  const region = { ...customerRegistrationRegion };
   const client = customerEnsureClient();
   if (!client || !customerElements.restaurantList) return false;
+  const isCurrent = () => client === customerClient && regionKey === customerDirectoryRegionKey();
   if (!silent) {
     customerElements.restaurantList.innerHTML = `<div class="customer-empty">${customerEscapeHtml(
       customerT("restaurantLoading")
@@ -3479,20 +3501,23 @@ async function customerLoadRestaurantDirectoryNow(options = {}) {
   }
   customerStartDirectoryRealtime();
   let { data, error } = await client.rpc("get_public_restaurant_directory_by_region", {
-    p_country_code: customerRegistrationRegion.countryCode || "",
-    p_city: customerRegistrationRegion.city || "",
-    p_region: customerRegistrationRegion.region || "",
+    p_country_code: region.countryCode || "",
+    p_city: region.city || "",
+    p_region: region.region || "",
   });
+  // A previous region or client cannot overwrite the currently selected listing.
+  if (!isCurrent()) return false;
   if (error && customerIsMissingRpc(error)) {
     let query = client
       .from("restaurant_profiles")
       .select("user_id, business_name, logo_url, public_address, phone, description, operational_open, opening_hours, latitude, longitude, country_code, city, region, postal_code, updated_at")
       .eq("active", true)
       .is("deleted_at", null);
-    if (customerRegistrationRegion.countryCode) query = query.eq("country_code", customerRegistrationRegion.countryCode);
-    if (customerRegistrationRegion.region) query = query.ilike("region", customerRegistrationRegion.region);
+    if (region.countryCode) query = query.eq("country_code", region.countryCode);
+    if (region.region) query = query.ilike("region", region.region);
     ({ data, error } = await query.order("business_name", { ascending: true }));
   }
+  if (!isCurrent()) return false;
   if (error) {
     customerElements.restaurantList.innerHTML = `<div class="customer-empty">${customerEscapeHtml(
       customerT("restaurantLoadError")
@@ -3503,12 +3528,12 @@ async function customerLoadRestaurantDirectoryNow(options = {}) {
     .map(customerNormalizeRestaurantProfile)
     .filter(Boolean)
     .filter((restaurant) =>
-      !customerRegistrationRegion.countryCode
-      || restaurant.countryCode === customerRegistrationRegion.countryCode
+      !region.countryCode
+      || restaurant.countryCode === region.countryCode
     )
     .filter((restaurant) =>
-      !customerRegistrationRegion.region
-      || customerNormalizeSearchText(restaurant.region) === customerNormalizeSearchText(customerRegistrationRegion.region)
+      !region.region
+      || customerNormalizeSearchText(restaurant.region) === customerNormalizeSearchText(region.region)
     ));
   if (customerStoreId && !customerSelectedRestaurant()) {
     customerClearRestaurantSelection("restaurantUnavailable");
