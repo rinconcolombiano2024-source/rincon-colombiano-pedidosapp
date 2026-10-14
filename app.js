@@ -11275,6 +11275,8 @@ function syncResultMessage(successMessage, result = {}) {
 
 async function saveSettingsWhenPossible(options = {}) {
   const { silent = false } = options;
+  const initiatingClient = cloudState.client;
+  const initiatingUserId = cloudState.user?.id;
 
   const settingsPendingToken =
     currentSettingsPendingToken();
@@ -11299,6 +11301,15 @@ async function saveSettingsWhenPossible(options = {}) {
       return { synced: true };
     } catch (error) {
       console.error(error);
+      if (initiatingClient !== cloudState.client ||
+          initiatingUserId !== cloudState.user?.id) {
+        // A sign-out/account change cannot queue the former owner's edits.
+        return { pending: false, error };
+      }
+      if (error?.code === "SETTINGS_CONCURRENT_EDIT_PENDING" && hasPendingSettings()) {
+        updateCloudStatus("Ajustes pendientes de sincronización");
+        return { pending: true };
+      }
       markSettingsPending();
       updateCloudStatus();
       return { pending: shouldQueueForCloud(), error };
