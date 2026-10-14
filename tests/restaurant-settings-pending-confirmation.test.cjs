@@ -67,6 +67,17 @@ test("settings: newer edit during cloud request cannot be discarded or reported 
   assert.equal(h.status(),"Ajustes pendientes de sincronización");
 });
 
+test("settings: two confirmations of the same edition do not invent a pending edit",async()=>{
+  const h=harness();
+  const first=h.save();
+  const second=h.save();
+  h.finish();
+  const results=await Promise.all([first,second]);
+  assert.ok(results.every(result=>result.synced===true));
+  assert.equal(h.pending(),null);
+  assert.equal(h.status(),"Sincronizado");
+});
+
 test("settings: edit queued during request that started without pending token stays visible",async()=>{
   const h=harness({initialToken:null});
   const attempt=h.save();

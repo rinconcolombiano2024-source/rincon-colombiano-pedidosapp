@@ -6862,6 +6862,8 @@ if (centralSyncInProgress) {
 centralSyncInProgress = true;
 centralSyncRefreshPending = false;
 centralRefreshLastStartedAt = Date.now();
+const requestClient = cloudState.client;
+const requestUserId = cloudState.user.id;
 
   try {
     const [
@@ -6871,12 +6873,12 @@ centralRefreshLastStartedAt = Date.now();
 ] = await Promise.all([
   settings
     ? withCloudTimeout(
-        cloudState.client
+        requestClient
           .from("app_settings")
           .select(
             "menu, settings, menu_revision, settings_revision, menu_updated_at, settings_updated_at"
           )
-          .eq("user_id", cloudState.user.id)
+          .eq("user_id", requestUserId)
           .maybeSingle(),
         "Los ajustes tardaron demasiado en actualizarse.",
         8000
@@ -6888,12 +6890,12 @@ centralRefreshLastStartedAt = Date.now();
 
   profile
     ? withCloudTimeout(
-        cloudState.client
+        requestClient
           .from("restaurant_profiles")
           .select(
             "business_name, logo_url, public_address, phone, active, operational_open, operational_mode, opening_hours, latitude, longitude, country_code, city, region, postal_code, timezone, preferred_language, deleted_at"
           )
-          .eq("user_id", cloudState.user.id)
+          .eq("user_id", requestUserId)
           .maybeSingle(),
         "El perfil tardó demasiado en actualizarse.",
         8000
@@ -6905,10 +6907,10 @@ centralRefreshLastStartedAt = Date.now();
 
   orders
     ? withCloudTimeout(
-        cloudState.client
+        requestClient
           .from("orders")
           .select("order_json, revision")
-          .eq("user_id", cloudState.user.id)
+          .eq("user_id", requestUserId)
           .order("created_at", {
             ascending: false,
           })
@@ -6921,6 +6923,11 @@ centralRefreshLastStartedAt = Date.now();
         error: null,
       }),
 ]);
+
+    // Never apply a late snapshot to another restaurant or a signed-out session.
+    if (requestClient !== cloudState.client || requestUserId !== cloudState.user?.id) {
+      return false;
+    }
 
     const refreshErrors = [
       settingsResponse.error,
@@ -11248,13 +11255,9 @@ async function saveSettingsWhenPossible(options = {}) {
         "No fue posible confirmar el guardado en nube a tiempo."
       );
 
-      // Keep the later edit queued if settings changed while the first RPC
-      // was in flight. Never tell the operator that an unsent edit is synced.
-      if (settingsPendingToken && !clearSettingsPending(settingsPendingToken)) {
-        updateCloudStatus("Ajustes pendientes de sincronización");
-        return { pending: true };
-      }
-      // A new edit may have been queued after a save that started clean.
+      // Clear only the edition confirmed by this request. Another successful
+      // save may already have cleared it; only an actual queued edit is pending.
+      if (settingsPendingToken) clearSettingsPending(settingsPendingToken);
       if (hasPendingSettings()) {
         updateCloudStatus("Ajustes pendientes de sincronización");
         return { pending: true };
