@@ -118,18 +118,21 @@ test("a late result from a replaced API client cannot mutate customer UI",async(
 test("region changes during the legacy missing-RPC fallback cannot update the list",async()=>{
   const h=harness();
   let unblockFallback;
+  let fallbackStarted;
+  const fallbackReady=new Promise(resolve=>{fallbackStarted=resolve;});
   const fallback=new Promise(resolve=>{unblockFallback=resolve;});
   const filters=[];
   const chain={
     select(){return this;},eq(...args){filters.push(args);return this;},
     is(){return this;},ilike(...args){filters.push(args);return this;},
-    order(){return fallback;},
+    order(){fallbackStarted();return fallback;},
   };
   const existing=h.ctx.customerClient;
   existing.from=table=>{assert.equal(table,"restaurant_profiles");return chain;};
   const first=h.load();
   h.respond(0,null,{code:"PGRST202"});
-  await Promise.resolve();
+  // Wait until the legacy fallback is genuinely awaiting a response.
+  await fallbackReady;
   h.region({countryCode:"CO",city:"Bogotá",region:"Cundinamarca"});
   const second=h.load();
   unblockFallback({data:[restaurant("old","PL","Mazowieckie")],error:null});
