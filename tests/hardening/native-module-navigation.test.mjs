@@ -9,7 +9,7 @@ const end = source.indexOf("/* RC ORDERA: read-only menu publication audit.", st
 assert.ok(start >= 0 && end > start, "Native navigation module exists");
 const bridge = source.slice(start, end);
 
-function harness({ native = true, href = "./cliente.html", id = "openClientPageButton", defaultPrevented = false, browserAvailable = true } = {}) {
+function harness({ native = true, href = "./cliente.html", id = "openClientPageButton", defaultPrevented = false, browserAvailable = true, browserOpen } = {}) {
   let listener;
   const opened = [];
   const messages = [];
@@ -27,19 +27,22 @@ function harness({ native = true, href = "./cliente.html", id = "openClientPageB
       location: { href: "https://localhost/restaurante.html" },
       Capacitor: {
         isNativePlatform: () => native,
-        Plugins: { Browser: browserAvailable ? { open: async ({ url }) => { opened.push(url); } } : undefined }
+        Plugins: { Browser: browserAvailable ? { open: browserOpen || (async ({ url }) => { opened.push(url); }) } : undefined }
       }
     }
   };
   vm.runInNewContext(bridge, context, { timeout: 1000 });
   let prevented = false;
   const anchor = { id, getAttribute: () => href };
-  listener({
+  function click() {
+    listener({
     target: { closest: () => anchor },
     defaultPrevented,
     preventDefault() { prevented = true; }
-  });
-  return { opened, messages, get prevented() { return prevented; } };
+    });
+  }
+  click();
+  return { opened, messages, click, get prevented() { return prevented; } };
 }
 
 test("Android resolves customer module against public HTTPS origin", async () => {
@@ -93,4 +96,36 @@ test("Non-allowlisted HTTPS module path is blocked", async () => {
   assert.equal(h.prevented, true);
   assert.deepEqual(h.opened, []);
   assert.equal(h.messages.length, 1);
+});
+
+
+test("Repeated native taps do not launch duplicate modules while opening", async () => {
+  let release;
+  const opened = [];
+  const h = harness({ browserOpen: ({ url }) => {
+    opened.push(url);
+    return new Promise(resolve => { release = resolve; });
+  } });
+  h.click();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(opened.length, 1);
+  release();
+  await new Promise(resolve => setImmediate(resolve));
+  h.click();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(opened.length, 2);
+  release();
+});
+
+test("Browser launch failure is reported and a retry remains possible", async () => {
+  let calls = 0;
+  const h = harness({ browserOpen: async () => {
+    calls += 1;
+    if (calls === 1) throw new Error("Browser unavailable");
+  } });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.messages.length, 1);
+  h.click();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(calls, 2);
 });
