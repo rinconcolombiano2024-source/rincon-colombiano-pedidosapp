@@ -1,19 +1,72 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import vm from "node:vm";
 
 const source = readFileSync(new URL("../../restaurant-fiscal-ui.js", import.meta.url), "utf8");
+const start = source.indexOf("/*\n * Capacitor native module links.");
+const end = source.indexOf("/* RC ORDERA: read-only menu publication audit.", start);
+assert.ok(start >= 0 && end > start, "Native navigation module exists");
+const bridge = source.slice(start, end);
 
-test("native customer and station links use deployed HTTPS origin", () => {
-  assert.match(source, /const deployedOrigin = "https:\/\/rincon-colombiano-pedidosapp\.vercel\.app\/";/);
-  assert.match(source, /window\.Capacitor\?\.isNativePlatform\?\.\(\) \? deployedOrigin : window\.location\.href/);
-  assert.match(source, /new URL\(raw, base\)/);
+function harness({ native = true, href = "./cliente.html", id = "openClientPageButton" } = {}) {
+  let listener;
+  const opened = [];
+  const messages = [];
+  const toast = { hidden: true, set textContent(value) { messages.push(value); } };
+  const document = {
+    documentElement: { lang: "es" },
+    addEventListener(name, callback) { if (name === "click") listener = callback; },
+    getElementById() { return toast; }
+  };
+  const context = {
+    document,
+    URL,
+    Promise,
+    window: {
+      location: { href: "https://localhost/restaurante.html" },
+      Capacitor: {
+        isNativePlatform: () => native,
+        Plugins: { Browser: { open: async ({ url }) => { opened.push(url); } } }
+      }
+    }
+  };
+  vm.runInNewContext(bridge, context, { timeout: 1000 });
+  let prevented = false;
+  const anchor = { id, getAttribute: () => href };
+  listener({
+    target: { closest: () => anchor },
+    defaultPrevented: false,
+    preventDefault() { prevented = true; }
+  });
+  return { opened, messages, get prevented() { return prevented; } };
+}
+
+test("Android resolves customer module against public HTTPS origin", async () => {
+  const h = harness();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.prevented, true);
+  assert.deepEqual(h.opened, ["https://rincon-colombiano-pedidosapp.vercel.app/cliente.html"]);
 });
 
-test("module launcher retains strict destination allowlist and browser fallback", () => {
-  assert.match(source, /\["\/cliente\.html", "\/mesero\.html"\]\.includes\(url\.pathname\)/);
-  assert.match(source, /url\.protocol !== "https:"/);
-  assert.match(source, /event\.preventDefault\(\)/);
-  assert.match(source, /browser\.open\(\{ url \}\)/);
-  assert.match(source, /if \(opening\) return/);
+test("Android resolves stations against public HTTPS origin", async () => {
+  const h = harness({ href: "./mesero.html?station=kitchen", id: "restaurantKitchenLink" });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.prevented, true);
+  assert.deepEqual(h.opened, ["https://rincon-colombiano-pedidosapp.vercel.app/mesero.html?station=kitchen"]);
+});
+
+test("Web navigation remains owned by the browser", async () => {
+  const h = harness({ native: false });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.prevented, false);
+  assert.deepEqual(h.opened, []);
+});
+
+test("Disallowed module URL cannot open through native bridge", async () => {
+  const h = harness({ href: "https://evil.example/cliente.html" });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.prevented, true);
+  assert.deepEqual(h.opened, []);
+  assert.equal(h.messages.length, 1);
 });
