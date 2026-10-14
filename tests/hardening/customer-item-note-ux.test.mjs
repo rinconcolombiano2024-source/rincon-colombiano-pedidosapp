@@ -31,3 +31,14 @@ test('notes remain part of the per-item order snapshot, independent of prices', 
   assert.match(source, /total_snapshot: itemTotal,[\s\S]*?note: itemNote,/);
   assert.match(source, /const itemTotal = Math\.round\(unitPrice \* quantity \* 100\) \/ 100/);
 });
+
+test('grouped quantities can be split into independently annotated cart lines', () => {
+  assert.match(source, /item\.qty > 1 \? `<button type="button" data-action="split"/);
+  assert.match(source, /if \(action === "split" && item\.qty > 1\)/);
+  assert.match(source, /item\.qty -= 1;/);
+  assert.match(source, /customerCart\.splice\(customerCart\.indexOf\(item\) \+ 1, 0,/);
+  assert.match(source, /qty: 1,\s*note: "",/);
+  for (const text of ['Separar una unidad', 'Oddziel jedną sztukę', 'Separate one item']) {
+    assert.ok(source.includes(text), text);
+  }
+});
