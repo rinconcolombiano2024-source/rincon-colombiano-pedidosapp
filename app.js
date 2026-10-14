@@ -4834,13 +4834,13 @@ async function saveCloudSettings() {
   // A late response must never mutate a different restaurant's local state.
   const assertSaveSession = () => {
     if (saveClient !== cloudState.client || saveUserId !== cloudState.user?.id) {
-      const error = new Error("SETTINGS_SESSION_CHANGED");
+      const error = new Error();
       error.code = "SETTINGS_SESSION_CHANGED";
       throw error;
     }
   };
   const concurrentEditError = () => {
-    const error = new Error("SETTINGS_CONCURRENT_EDIT_PENDING");
+    const error = new Error();
     error.code = "SETTINGS_CONCURRENT_EDIT_PENDING";
     return error;
   };
