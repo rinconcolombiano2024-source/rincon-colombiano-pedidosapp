@@ -539,7 +539,7 @@
     ]
   },
   "service-worker.js": {
-    "sha256": "07406eb7bdc27b3e2dc6d97fa80a21a70b26bad9f9bbc3484b3e66bae0f83d69",
+    "sha256": "8f7123d2e9415063d50611763600f8473f0585114c1365168760dc160c926e4f",
     "regressionTests": "tests/hardening/frontend.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/hardening/frontend.test.mjs; tests/pwa-release-marker.test.cjs; tests/hardening/payment-return-safety.test.mjs",
     "edits": [
       {
@@ -621,6 +621,11 @@
         "before": "rc-ordera-v91-0-4-v6-verified-20261012-pwa-safe-r18",
         "after": "rc-ordera-v91-0-4-v6-verified-20261013-pwa-safe-r19",
         "afterByteOffset": 20
+      },
+      {
+        "before": "3-pwa-safe-r19",
+        "after": "4-pwa-safe-r20",
+        "afterByteOffset": 57
       }
     ]
   },
@@ -951,7 +956,7 @@
     ]
   },
   "restaurante.html": {
-    "sha256": "b3f15ef16462a4a463a2253ff7cca5cb75b27c926135bb1ef2b4e3ebe59c4299",
+    "sha256": "40fbf6df71860dd5cba62ee60e54559911e7a83a070d06657e41a62568c07a40",
     "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/hardening/frontend.test.mjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/hardening/checkout-provider-routing.test.mjs",
     "edits": [
       {
@@ -1048,6 +1053,11 @@
         "before": "<option value=\"stripe\">Stripe Connect (Polonia)</option>",
         "after": "<option value=\"stripe\">Stripe Connect (Polonia)</option>\n              <option value=\"sumup\" disabled>SumUp</option>",
         "afterByteOffset": 27156
+      },
+      {
+        "before": "2",
+        "after": "4",
+        "afterByteOffset": 49892
       }
     ]
   },
