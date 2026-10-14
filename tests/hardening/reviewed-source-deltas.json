@@ -508,7 +508,7 @@
     ]
   },
   "offline-i18n.js": {
-    "sha256": "d55bdbb59691a45fe7ef80bc352e04a024bf810537bb5035e9caaf065fc392e6",
+    "sha256": "e52ff5f785d2d15ea7a474ddc37e672a3662e63f3efee87b01fa43528b6cf1af",
     "regressionTests": "tests/hardening/frontend.test.mjs; tests/waiter-access-recovery.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs",
     "edits": [
       {
@@ -535,11 +535,16 @@
         "before": "",
         "after": "    [\"menu.verify.header\",\"Menú público de Cliente y Caja\",\"Menu publiczne dla Klienta i Kasy\",\"Public menu for Customer and Cashier\"],\n    [\"menu.verify.aria\",\"Publicación del menú\",\"Publikacja menu\",\"Menu publication\"],\n    [\"menu.verify.description\",\"Los productos editados en este equipo solo aparecerán en Cliente y Caja después de confirmar la publicación.\",\"Produkty edytowane na tym urządzeniu pojawią się u Klienta i w Kasie dopiero po potwierdzeniu publikacji.\",\"Products edited on this device appear for customers and cashiers only after publication is confirmed.\"],\n    [\"menu.verify.button\",\"Publicar y verificar menú\",\"Opublikuj i sprawdź menu\",\"Publish and verify menu\"],\n    [\"menu.verify.session\",\"La sesión no está disponible para verificar el menú.\",\"Sesja jest niedostępna. Nie można sprawdzić menu.\",\"Session unavailable. Cannot verify the menu.\"],\n    [\"menu.verify.changedSession\",\"Cambió la cuenta durante la verificación del menú. Vuelve a sincronizar.\",\"Konto zmieniło się podczas sprawdzania menu. Zsynchronizuj ponownie.\",\"The account changed during menu verification. Sync again.\"],\n    [\"menu.verify.notConfirmed\",\"La nube no confirmó el menú guardado.\",\"Chmura nie potwierdziła zapisanego menu.\",\"The cloud did not confirm the saved menu.\"],\n    [\"menu.verify.timeout\",\"No fue posible confirmar el menú para clientes en la nube a tiempo.\",\"Nie udało się na czas potwierdzić menu dla klientów w chmurze.\",\"The customer menu could not be confirmed in the cloud in time.\"],\n    [\"menu.verify.pending\",\"Menú pendiente de sincronización\",\"Menu oczekuje na synchronizację\",\"Menu awaiting synchronization\"],\n    [\"menu.verify.notPublished\",\"Guardado en este dispositivo; no se pudo confirmar la publicación para Cliente y Caja. No borres los datos: vuelve a sincronizar.\",\"Zapisano na tym urządzeniu, ale publikacja dla Klienta i Kasy nie została potwierdzona. Nie usuwaj danych; spróbuj zsynchronizować ponownie.\",\"Saved on this device, but publication for Customer and Cashier was not confirmed. Do not delete the data; sync again.\"],\n    [\"menu.verify.pendingOther\",\"Quedó pendiente de publicarse para Cliente y otros equipos.\",\"Publikacja dla Klienta i innych urządzeń nadal oczekuje.\",\"Publication for customers and other devices is still pending.\"],\n    [\"menu.verify.local\",\"Guardado solo en este equipo porque no hay sesión en nube.\",\"Zapisano tylko na tym urządzeniu: brak aktywnej sesji w chmurze.\",\"Saved only on this device because there is no active cloud session.\"],\n    [\"menu.verify.owner\",\"Inicia sesión como propietario del restaurante para publicar el menú.\",\"Zaloguj się na konto właściciela restauracji, aby opublikować menu.\",\"Sign in as the restaurant owner to publish the menu.\"],\n    [\"menu.verify.offline\",\"Sin internet. Los cambios siguen guardados en este equipo; no borres sus datos.\",\"Brak internetu. Zmiany pozostają zapisane na tym urządzeniu; nie usuwaj danych.\",\"Offline. Changes remain saved on this device; do not delete its data.\"],\n    [\"menu.verify.empty\",\"No hay productos para publicar. No se enviará un menú vacío.\",\"Nie ma produktów do opublikowania. Puste menu nie zostanie wysłane.\",\"There are no products to publish. An empty menu will not be sent.\"],\n    [\"menu.verify.checking\",\"Comprobando que Cliente y Caja reciben el menú...\",\"Sprawdzanie, czy Klient i Kasa otrzymują menu...\",\"Checking whether Customer and Cashier receive the menu...\"],\n    [\"menu.verify.completeToast\",\"Menú publicado y comprobado para clientes.\",\"Menu opublikowane i sprawdzone dla klientów.\",\"Menu published and verified for customers.\"],\n    [\"menu.verify.error\",\"No se confirmó la publicación. Los cambios siguen en este dispositivo; vuelve a intentarlo.\",\"Publikacja nie została potwierdzona. Zmiany nadal są na tym urządzeniu; spróbuj ponownie.\",\"Publication was not confirmed. Changes remain on this device; try again.\"],\n    [\"menu.verify.pendingRetry\",\"Hay cambios pendientes de sincronizar. Conserva este dispositivo y vuelve a intentarlo.\",\"Zmiany oczekują na synchronizację. Zachowaj dane na tym urządzeniu i spróbuj ponownie.\",\"Changes are pending synchronization. Keep this device and try again.\"],\n    [\"menu.verify.generalError\",\"No se pudo verificar el menú. Los productos locales se conservaron.\",\"Nie udało się sprawdzić menu. Produkty lokalne zostały zachowane.\",\"The menu could not be verified. Local products were preserved.\"],\n",
         "afterByteOffset": 149539
+      },
+      {
+        "before": "",
+        "after": "\n    [\"portal.checkVersion\", \"Comprobar versión\", \"Sprawdź wersję\", \"Check version\"],",
+        "afterByteOffset": 24224
       }
     ]
   },
   "service-worker.js": {
-    "sha256": "907e557abae920ec222a09456c254e8d0e531ace608391ed709c06dcbf16ed87",
+    "sha256": "adfd8e80290a3a6ee1d1cda777837f3b7847d936e86ee90973c3165a0b7e2d49",
     "regressionTests": "tests/hardening/frontend.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/hardening/frontend.test.mjs; tests/pwa-release-marker.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/portal-stations-entry.test.cjs",
     "edits": [
       {
@@ -636,6 +641,11 @@
         "before": "rc-ordera-v91-0-4-v6-verified-20261014-pwa-safe-r21",
         "after": "rc-ordera-v91-0-4-v6-verified-20261014-pwa-safe-r22",
         "afterByteOffset": 20
+      },
+      {
+        "before": "r22",
+        "after": "r23",
+        "afterByteOffset": 68
       }
     ]
   },
