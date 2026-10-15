@@ -142,3 +142,16 @@ test("client roles cannot call private reservation RPC directly",async()=>{
  try {await assert.rejects(reserve(),/permission denied/i);}
  finally {await db.exec("reset role");}
 });
+
+test("missing provider status cannot manufacture a paid transaction",async()=>{
+ const saleId=randomUUID(),providerId=randomUUID();
+ await db.query("insert into customer_orders(id,user_id,status,payment_method,payment_status,currency,total,updated_at) values($1,$2,'pending','Online','pending','PLN',12,now())",[saleId,merchantId]);
+ const attempt=(await db.query("select public.rc_sumup_reserve_checkout($1,$2,'MCXXXXXX') as a",[saleId,merchantId])).rows[0].a;
+ await db.query("select public.rc_sumup_commit_checkout($1,$2,$3)",[attempt.attemptId,providerId,'https://checkout.sumup.com/pay/'+providerId]);
+ for(const status of [null,'','UNKNOWN','paid']){
+  await assert.rejects(db.query("select public.rc_sumup_apply_verified_checkout($1,$2)",[providerId,status]),/SUMUP_UNKNOWN_PROVIDER_STATUS/);
+ }
+ const sale=(await db.query("select payment_status from customer_orders where id=$1",[saleId])).rows[0];
+ const payments=(await db.query("select count(*)::int as n from payment_transactions where customer_order_id=$1",[saleId])).rows[0];
+ assert.equal(sale.payment_status,'pending');assert.equal(payments.n,0);
+});

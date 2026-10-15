@@ -106,7 +106,7 @@ DECLARE a public.rc_sumup_payment_attempts%ROWTYPE; o public.customer_orders%ROW
         tx public.payment_transactions%ROWTYPE;
         order_key uuid;
 BEGIN
- IF p_provider_status NOT IN ('PENDING','PAID','FAILED','EXPIRED') THEN
+ IF p_provider_status IS NULL OR p_provider_status NOT IN ('PENDING','PAID','FAILED','EXPIRED') THEN
   RAISE EXCEPTION 'SUMUP_UNKNOWN_PROVIDER_STATUS'; END IF;
  -- The webhook must not lock ATTEMPT before ORDER: cancellation and reservation
  -- lock ORDER first, so reversing creates an AB/BA deadlock under production load.
