@@ -543,6 +543,7 @@
     ["auth.signOutFailed", "No fue posible cerrar la sesion. Revisa la conexion e intenta nuevamente.", "Nie udało się wylogować. Sprawdź połączenie i spróbuj ponownie.", "Could not sign out. Check your connection and try again."],
     ["shift.nameRequired", "Escribe el nombre de quien tomara pedidos en este turno.", "Wpisz imię osoby przyjmującej zamówienia na tej zmianie.", "Enter the name of the person taking orders during this shift."],
     ["settings.saved", "Ajustes guardados.", "Ustawienia zostały zapisane.", "Settings saved."],
+    ["settings.pending", "Ajustes pendientes de sincronización", "Ustawienia oczekują na synchronizację", "Settings awaiting synchronization"],
     ["settings.saveFailedPrefix", "No fue posible guardar los ajustes:", "Nie udało się zapisać ustawień:", "Could not save settings:"],
     ["settings.saveFailed", "No fue posible guardar los ajustes. Revisa la conexion e intenta nuevamente.", "Nie udało się zapisać ustawień. Sprawdź połączenie i spróbuj ponownie.", "Could not save settings. Check your connection and try again."],
     ["hours.saved", "Horario guardado.", "Godziny zostały zapisane.", "Schedule saved."],

@@ -9,7 +9,7 @@ test("release indicator is present and matches published files",()=>{
   const a=load("rc-ordera-release.json"),b=load("www/rc-ordera-release.json");
   assert.equal(a,b);
   const info=JSON.parse(a);
-  assert.equal(info.release,"2026-10-14-r24");
+  assert.equal(info.release,"2026-10-15-r26");
   assert.equal(info.app,"RC ORDERA");
   const sw=load("service-worker.js");
   assert.equal(sw,load("www/service-worker.js"));
