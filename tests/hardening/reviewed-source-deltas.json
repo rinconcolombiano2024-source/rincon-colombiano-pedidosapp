@@ -1,6 +1,6 @@
 {
   "cliente.js": {
-    "sha256": "7cc1298de721cd882f82ab3d2915afdafac5622b6d6b84b7ec93fae9505c4f9a",
+    "sha256": "478566bdd991bc8690311045d78a0d8142636544a3655062dc2200279abc786e",
     "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs",
     "edits": [
       {
@@ -337,6 +337,11 @@
         "before": "itemNoteLabel: \"Instructions for this item\",",
         "after": "itemNoteLabel: \"Instructions for this item\",\r\n    splitItem: \"Separate one item\",",
         "afterByteOffset": 61440
+      },
+      {
+        "before": "const existing = customerCart.find(\r\n    (item) => item.productId === productId && item.name.toLowerCase() === dish.name.toLowerCase() && !item.note\r\n  );\r\n  if (existing) {\r\n    existing.qty += 1;\r\n  } else",
+        "after": "// Each addition gets its own line, allowing independent kitchen notes.\r\n  // Existing quantities and notes remain untouched.\r\n ",
+        "afterByteOffset": 279642
       }
     ]
   },
