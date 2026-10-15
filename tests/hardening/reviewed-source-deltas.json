@@ -1,7 +1,7 @@
 {
   "cliente.js": {
-    "sha256": "7cc1298de721cd882f82ab3d2915afdafac5622b6d6b84b7ec93fae9505c4f9a",
-    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs",
+    "sha256": "478566bdd991bc8690311045d78a0d8142636544a3655062dc2200279abc786e",
+    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs; tests/hardening/customer-independent-item-notes.test.mjs",
     "edits": [
       {
         "before": "",
@@ -337,6 +337,11 @@
         "before": "itemNoteLabel: \"Instructions for this item\",",
         "after": "itemNoteLabel: \"Instructions for this item\",\r\n    splitItem: \"Separate one item\",",
         "afterByteOffset": 61440
+      },
+      {
+        "before": "  const existing = customerCart.find(\r\n    (item) => item.productId === productId && item.name.toLowerCase() === dish.name.toLowerCase() && !item.note\r\n  );\r\n  if (existing) {\r\n    existing.qty += 1;\r\n  } else {\r\n",
+        "after": "  // Each addition gets its own line, allowing independent kitchen notes.\r\n  // Existing quantities and notes remain untouched.\r\n  {\r\n",
+        "afterByteOffset": 279640
       }
     ]
   },
@@ -558,7 +563,7 @@
     ]
   },
   "offline-i18n.js": {
-    "sha256": "e52ff5f785d2d15ea7a474ddc37e672a3662e63f3efee87b01fa43528b6cf1af",
+    "sha256": "7e2f165431ddbe67c322731904af2aef67a89cb0fbd3d830d7c89b67fde60868",
     "regressionTests": "tests/hardening/frontend.test.mjs; tests/waiter-access-recovery.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs",
     "edits": [
       {
@@ -590,11 +595,16 @@
         "before": "",
         "after": "\n    [\"portal.checkVersion\", \"Comprobar versión\", \"Sprawdź wersję\", \"Check version\"],",
         "afterByteOffset": 24224
+      },
+      {
+        "before": "    [\"settings.saved\", \"Ajustes guardados.\", \"Ustawienia zostały zapisane.\", \"Settings saved.\"],\n",
+        "after": "    [\"settings.saved\", \"Ajustes guardados.\", \"Ustawienia zostały zapisane.\", \"Settings saved.\"],\n    [\"settings.pending\", \"Ajustes pendientes de sincronización\", \"Ustawienia oczekują na synchronizację\", \"Settings awaiting synchronization\"],\n",
+        "afterByteOffset": 68805
       }
     ]
   },
   "service-worker.js": {
-    "sha256": "aa555f9d529c4354ed08c3575c79e428a7f340106288a8a042f5bef2527b55c4",
+    "sha256": "7d322166e625ab5ea0c27312ff0ba6c87ca4a3f42a6845325c6ad14bc08931f5",
     "regressionTests": "tests/hardening/frontend.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/hardening/frontend.test.mjs; tests/pwa-release-marker.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/portal-stations-entry.test.cjs",
     "edits": [
       {
@@ -701,12 +711,17 @@
         "before": "rc-ordera-v91-0-4-v6-verified-20261014-pwa-safe-r23",
         "after": "rc-ordera-v91-0-4-v6-verified-20261014-sync-guard-r24",
         "afterByteOffset": 20
+      },
+      {
+        "before": "rc-ordera-v91-0-4-v6-verified-20261014-sync-guard-r24",
+        "after": "rc-ordera-v91-0-4-v6-verified-20261015-notes-settings-r26",
+        "afterByteOffset": 20
       }
     ]
   },
   "app.js": {
-    "sha256": "080ba7b114d52aa3d82c6f1d0af2e1dc4dab4e7a4b0fe728e17accbe1680a2c0",
-    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/qr-menu-rpc-throttle.test.cjs; tests/menu-save-burst-coalesce.test.cjs; tests/menu-session-publication-guard.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/menu-cloud-rpc-singleflight.test.cjs; tests/portal-stations-entry.test.cjs; tests/central-refresh-session.test.cjs",
+    "sha256": "806899cdb27868921b9c4c7a8bcf8d459785c6b678f33a6b7b569c066fbd7132",
+    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/qr-menu-rpc-throttle.test.cjs; tests/menu-save-burst-coalesce.test.cjs; tests/menu-session-publication-guard.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/menu-cloud-rpc-singleflight.test.cjs; tests/portal-stations-entry.test.cjs; tests/central-refresh-session.test.cjs; tests/restaurant-settings-pending-confirmation.test.cjs",
     "edits": [
       {
         "before": "",
@@ -1077,6 +1092,11 @@
         "before": "",
         "after": "\r\n    // Never apply a late snapshot to another restaurant or a signed-out session.\r\n    if (requestClient !== cloudState.client || requestUserId !== cloudState.user?.id) {\r\n      return false;\r\n    }\r\n",
         "afterByteOffset": 221441
+      },
+      {
+        "before": "     if (settingsPendingToken) {\r\n  clearSettingsPending(\r\n    settingsPendingToken\r\n  );\r\n}\r\n\r\n",
+        "after": "      // Clear only the edition confirmed by this request. Another successful\r\n      // save may already have cleared it; only an actual queued edit is pending.\r\n      if (settingsPendingToken) clearSettingsPending(settingsPendingToken);\r\n      if (hasPendingSettings()) {\r\n        updateCloudStatus(\"Ajustes pendientes de sincronización\");\r\n        return { pending: true };\r\n      }\r\n",
+        "afterByteOffset": 354423
       }
     ]
   },

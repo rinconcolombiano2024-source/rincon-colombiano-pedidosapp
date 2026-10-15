@@ -7045,12 +7045,9 @@ function customerAddItem(dish) {
   const productId =
     customerNormalizeProductId(dish.id || dish.productId) ||
     customerStableProductId(customerActiveCategory, dish.name, dish.description || "");
-  const existing = customerCart.find(
-    (item) => item.productId === productId && item.name.toLowerCase() === dish.name.toLowerCase() && !item.note
-  );
-  if (existing) {
-    existing.qty += 1;
-  } else {
+  // Each addition gets its own line, allowing independent kitchen notes.
+  // Existing quantities and notes remain untouched.
+  {
     customerCart.push({
       id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
       productId,

@@ -1,8 +1,8 @@
 {
   "app": "RC ORDERA",
   "version": "91.0.4",
-  "release": "2026-10-14-r24",
-  "pwaCache": "rc-ordera-v91-0-4-v6-verified-20261014-sync-guard-r24",
+  "release": "2026-10-15-r26",
+  "pwaCache": "rc-ordera-v91-0-4-v6-verified-20261015-notes-settings-r26",
   "changes": [
     "restaurant QR/client/stations separate windows",
     "ES/PL/EN per-module PWA scopes",
@@ -16,7 +16,9 @@
     "Staff and stations entry lives in the restaurant panel; portal language selector stays in document flow without overlapping cards.",
     "Manual ES/PL/EN portal version diagnostics; explicit safe update without deleting orders or menus.",
     "Late central snapshots cannot overwrite another restaurant or a signed-out session.",
-    "Public menu overload and authorization errors stop after one RPC; legacy missing-function fallback remains available."
+    "Public menu overload and authorization errors stop after one RPC; legacy missing-function fallback remains available.",
+    "Independent item notes even when identical products are added before entering instructions.",
+    "Concurrent settings confirmations retain newer pending edits and report their actual sync state."
   ],
-  "issuedAt": "2026-10-14"
+  "issuedAt": "2026-10-15"
 }

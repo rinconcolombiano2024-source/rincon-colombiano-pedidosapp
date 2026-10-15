@@ -11255,12 +11255,13 @@ async function saveSettingsWhenPossible(options = {}) {
         "No fue posible confirmar el guardado en nube a tiempo."
       );
 
-     if (settingsPendingToken) {
-  clearSettingsPending(
-    settingsPendingToken
-  );
-}
-
+      // Clear only the edition confirmed by this request. Another successful
+      // save may already have cleared it; only an actual queued edit is pending.
+      if (settingsPendingToken) clearSettingsPending(settingsPendingToken);
+      if (hasPendingSettings()) {
+        updateCloudStatus("Ajustes pendientes de sincronización");
+        return { pending: true };
+      }
       updateCloudStatus("Sincronizado");
       return { synced: true };
     } catch (error) {
