@@ -42,7 +42,8 @@ function isStripeAccountId(value: string) {
 function isSafeStripeOnboardingUrl(value: string) {
   try {
     const url = new URL(value);
-    return url.protocol === "https:" && url.hostname === "connect.stripe.com";
+    return url.protocol === "https:" && url.hostname === "connect.stripe.com"
+      && !url.username && !url.password;
   } catch {
     return false;
   }
@@ -670,6 +671,9 @@ Deno.serve(withCors(async (request) => {
     `${appBaseUrl}/`,
   ).toString();
 
+  const refreshUrl = new URL(returnUrl);
+  refreshUrl.searchParams.set("payments", "refresh");
+
   let link: any;
 
   try {
@@ -677,7 +681,7 @@ Deno.serve(withCors(async (request) => {
       "account_links",
       {
         account: accountId,
-        refresh_url: returnUrl,
+        refresh_url: refreshUrl.toString(),
         return_url: returnUrl,
         type: "account_onboarding",
       },
