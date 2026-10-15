@@ -34,3 +34,29 @@ test('identical menu products retain independent cart notes without changing pri
   assert.deepEqual(cart.map(x => x.qty), [1, 1]);
   assert.deepEqual(cart.map(x => x.productId), ['juice', 'juice']);
 });
+
+test('menu refresh preserves distinct notes and line IDs while updating menu fields', () => {
+  const source = readFileSync('cliente.js', 'utf8');
+  const start = source.indexOf('function customerFindCurrentMenuProduct(cartItem) {');
+  const end = source.indexOf('async function customerLoadMenu(', start);
+  assert.ok(start >= 0 && end > start, 'menu synchronization functions exist');
+  const cart = [
+    { id: 'line-a', productId: 'juice', name: 'Jugo', description: 'Antes', price: 15, qty: 1, note: 'Sin azúcar', station: 'bar' },
+    { id: 'line-b', productId: 'juice', name: 'Jugo', description: 'Antes', price: 15, qty: 1, note: 'Sin hielo', station: 'bar' }
+  ];
+  const context = {
+    customerCart: cart,
+    customerMenu: { Bebidas: [{ id: 'juice', name: 'Juice', description: 'Fresh', price: 16, station: 'bar' }] },
+    customerNormalizeProductId: value => String(value || ''),
+    customerNormalizeProductStation: value => value || 'bar',
+    Number, Object, String
+  };
+  vm.createContext(context);
+  vm.runInContext(source.slice(start, end), context);
+  context.customerSyncCartWithCurrentMenu();
+  assert.deepEqual(Array.from(context.customerCart, item => item.id), ['line-a', 'line-b']);
+  assert.deepEqual(Array.from(context.customerCart, item => item.note), ['Sin azúcar', 'Sin hielo']);
+  assert.deepEqual(Array.from(context.customerCart, item => item.qty), [1, 1]);
+  assert.deepEqual(Array.from(context.customerCart, item => item.price), [16, 16]);
+  assert.deepEqual(Array.from(context.customerCart, item => item.name), ['Juice', 'Juice']);
+});
