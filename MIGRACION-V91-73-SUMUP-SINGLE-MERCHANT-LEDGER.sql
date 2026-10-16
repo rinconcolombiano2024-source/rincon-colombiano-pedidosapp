@@ -90,7 +90,10 @@ BEGIN
    WHERE id=p_attempt_id AND order_id=order_key FOR UPDATE;
  IF NOT FOUND OR a.status<>'creating' OR a.checkout_id IS NOT NULL OR p_checkout_id IS NULL
  OR o.total*100 <> a.amount_minor
- OR p_hosted_url IS DISTINCT FROM 'https://checkout.sumup.com/pay/'||p_checkout_id::text THEN
+ -- Hosted page IDs are independent from checkout IDs. The service-role caller
+ -- supplies the URL returned by SumUp after verifying merchant/reference/amount.
+ OR p_hosted_url IS NULL
+ OR p_hosted_url !~* '\Ahttps://checkout[.]sumup[.]com/pay/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/?\Z' THEN
    RAISE EXCEPTION 'SUMUP_PROVIDER_CHECKOUT_MISMATCH'; END IF;
  UPDATE public.rc_sumup_payment_attempts SET checkout_id=p_checkout_id,hosted_url=p_hosted_url,
   status='pending',updated_at=now() WHERE id=a.id;
