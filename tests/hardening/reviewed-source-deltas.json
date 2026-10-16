@@ -720,7 +720,7 @@
     ]
   },
   "app.js": {
-    "sha256": "806899cdb27868921b9c4c7a8bcf8d459785c6b678f33a6b7b569c066fbd7132",
+    "sha256": "d4beeeb05be8634553516834a014d2d3110354a5ba66a999eccd4993c48015aa",
     "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/qr-menu-rpc-throttle.test.cjs; tests/menu-save-burst-coalesce.test.cjs; tests/menu-session-publication-guard.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/menu-cloud-rpc-singleflight.test.cjs; tests/portal-stations-entry.test.cjs; tests/central-refresh-session.test.cjs; tests/restaurant-settings-pending-confirmation.test.cjs",
     "edits": [
       {
@@ -1097,6 +1097,16 @@
         "before": "     if (settingsPendingToken) {\r\n  clearSettingsPending(\r\n    settingsPendingToken\r\n  );\r\n}\r\n\r\n",
         "after": "      // Clear only the edition confirmed by this request. Another successful\r\n      // save may already have cleared it; only an actual queued edit is pending.\r\n      if (settingsPendingToken) clearSettingsPending(settingsPendingToken);\r\n      if (hasPendingSettings()) {\r\n        updateCloudStatus(\"Ajustes pendientes de sincronización\");\r\n        return { pending: true };\r\n      }\r\n",
         "afterByteOffset": 354423
+      },
+      {
+        "before": "  if (!cloudState.client || !cloudState.user || !navigator.onLine) return normalized;\r\n",
+        "after": "",
+        "afterByteOffset": 332022
+      },
+      {
+        "before": "",
+        "after": "  // Never publish a catalog containing local-only image data when offline.\r\n  if (pendingImages.length && (!cloudState.client || !cloudState.user || !navigator.onLine)) {\r\n    throw new Error(appUiText(\"Necesitas conexión a internet para subir la foto.\"));\r\n  }\r\n\r\n",
+        "afterByteOffset": 332269
       }
     ]
   },
