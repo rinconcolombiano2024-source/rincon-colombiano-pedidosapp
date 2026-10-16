@@ -29,11 +29,10 @@ test('preflight remains read-only and checks dependencies', () => {
  assert.doesNotMatch(sql,/^\s*(?:CREATE|ALTER|DROP|TRUNCATE|INSERT|UPDATE|DELETE|GRANT|REVOKE)\s/mi);
 });
 
-test('compatibility migrations cannot be assumed installed merely because PR exists', t => {
+test('compatibility migrations must be integrated before release', () => {
  const missing = compat.filter(path => !existsSync(path));
  if (missing.length) {
-   t.diagnostic('Not on this branch: ' + missing.join(', ') + '. Do not enable payments.');
-   return;
+   assert.fail('SumUp compatibility migrations missing from this branch: ' + missing.join(', ') + '. Integration must not be merged or enabled until dependency chain is present.');
  }
  for (const file of compat) {
    const sql = read(file);
