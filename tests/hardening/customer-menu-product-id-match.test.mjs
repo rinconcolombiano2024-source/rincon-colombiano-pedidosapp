@@ -111,6 +111,14 @@ for (const path of ['cliente.js', 'www/cliente.js']) {
     context.customerSyncCartWithCurrentMenu();
     assert.equal(context.customerCart[0].price, 0);
     assert.equal(context.customerCart[0].note, 'Sin hielo');
+    // Invalid catalog prices must not silently make existing cart lines free.
+    for (const invalidPrice of [undefined, null, '', 'not-a-price', -4, 'Infinity']) {
+      context.customerCart = [{ id: 'line-invalid', productId: 'juice-2', name: 'Jugo', price: 18, qty: 1, note: 'Sin hielo' }];
+      context.customerMenu = { Bebidas: [{ id: 'juice-2', name: 'Jugo', price: invalidPrice, station: 'bar' }] };
+      context.customerSyncCartWithCurrentMenu();
+      assert.equal(context.customerCart[0].price, 18, 'invalid catalog price must not become zero');
+      assert.equal(context.customerCart[0].note, 'Sin hielo');
+    }
     // Product updates must never erase individual custom instructions or line identities.
     context.customerCart = [
       { id: 'line-mixed-a', productId: 'juice-2', name: 'Jugo', price: 12, qty: 1, note: '<img src=x onerror=alert(1)>' },
