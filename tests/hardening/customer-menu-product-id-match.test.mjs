@@ -93,6 +93,17 @@ for (const path of ['cliente.js', 'www/cliente.js']) {
     assert.equal(context.customerCart[0].description, 'Świeży sok');
     assert.equal(context.customerCart[0].note, 'Sin azúcar');
     assert.equal(context.customerCart[0].id, 'line-translation');
+    // A second refresh must preserve distinct notes and quantities for identical products.
+    context.customerCart = [
+      { id: 'line-repeat-a', productId: 'juice-2', name: 'Jugo', price: 12, qty: 2, note: 'Sin hielo', station: 'bar' },
+      { id: 'line-repeat-b', productId: 'juice-2', name: 'Jugo', price: 12, qty: 3, note: 'Sin azúcar', station: 'bar' }
+    ];
+    context.customerMenu = { Napoje: [{ id: 'juice-2', name: 'Sok', price: 18, station: 'bar' }] };
+    context.customerSyncCartWithCurrentMenu();
+    context.customerSyncCartWithCurrentMenu();
+    assert.deepEqual(Array.from(context.customerCart, item => item.id), ['line-repeat-a', 'line-repeat-b']);
+    assert.deepEqual(Array.from(context.customerCart, item => item.qty), [2, 3]);
+    assert.deepEqual(Array.from(context.customerCart, item => item.note), ['Sin hielo', 'Sin azúcar']);
     // Restore the original menu fixture for the legacy name-only fallback assertion.
     context.customerMenu = { Bebidas: [{ id: 'juice-2', name: 'Jugo', description: 'Other product', price: 99, station: 'bar' }] };
     // Preserve backwards compatibility for cart items created before product IDs existed.
