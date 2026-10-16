@@ -10420,14 +10420,17 @@ async function uploadRestaurantImageDataUrl(dataUrl, scope, itemId) {
 
 async function materializeMenuImagesForCloud(menu) {
   const normalized = normalizeMenuCatalog(menu);
-  if (!cloudState.client || !cloudState.user || !navigator.onLine) return normalized;
-
   const pendingImages = [];
   Object.entries(normalized).forEach(([category, products]) => {
     products.forEach((product) => {
       if (isInlineRestaurantImage(product.imageUrl)) pendingImages.push({ category, product });
     });
   });
+
+  // Never publish a catalog containing local-only image data when offline.
+  if (pendingImages.length && (!cloudState.client || !cloudState.user || !navigator.onLine)) {
+    throw new Error(appUiText("Necesitas conexión a internet para subir la foto."));
+  }
 
   for (let index = 0; index < pendingImages.length; index += 3) {
     const batch = pendingImages.slice(index, index + 3);
