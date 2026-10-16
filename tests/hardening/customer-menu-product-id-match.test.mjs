@@ -53,6 +53,17 @@ for (const path of ['cliente.js', 'www/cliente.js']) {
     assert.deepEqual(Array.from(context.customerCart, item => item.note), ['Sin azúcar', 'Sin hielo']);
     assert.deepEqual(Array.from(context.customerCart, item => item.productId), ['juice-2', 'juice-2']);
     assert.deepEqual(Array.from(context.customerCart, item => item.price), [101, 101]);
+    // During temporary offline/cache gaps, retain the cart without deleting any line or note.
+    context.customerMenu = {};
+    context.customerSyncCartWithCurrentMenu();
+    assert.deepEqual(Array.from(context.customerCart, item => item.id), ['line-pl-a', 'line-pl-b']);
+    assert.deepEqual(Array.from(context.customerCart, item => item.note), ['Sin azúcar', 'Sin hielo']);
+    assert.deepEqual(Array.from(context.customerCart, item => item.price), [101, 101]);
+    // Once the menu returns, refresh the catalog data without overwriting instructions.
+    context.customerMenu = { Drinks: [{ id: 'juice-2', name: 'Juice', price: 102, station: 'bar' }] };
+    context.customerSyncCartWithCurrentMenu();
+    assert.deepEqual(Array.from(context.customerCart, item => item.note), ['Sin azúcar', 'Sin hielo']);
+    assert.deepEqual(Array.from(context.customerCart, item => item.price), [102, 102]);
     // Restore the original menu fixture for the legacy name-only fallback assertion.
     context.customerMenu = { Bebidas: [{ id: 'juice-2', name: 'Jugo', description: 'Other product', price: 99, station: 'bar' }] };
     // Preserve backwards compatibility for cart items created before product IDs existed.
