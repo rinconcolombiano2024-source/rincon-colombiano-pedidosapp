@@ -84,6 +84,15 @@ for (const path of ['cliente.js', 'www/cliente.js']) {
     assert.equal(context.customerCart[0].productId, 'removed-id');
     assert.equal(context.customerCart[0].price, 12);
     assert.equal(context.customerCart[0].note, 'Sin hielo');
+    // A catalog refresh with a changed description must not overwrite a customer's
+    // editable instructions, even when the menu language and product title change.
+    context.customerCart = [{ id: 'line-translation', productId: 'juice-2', name: 'Jugo', qty: 1, price: 12, note: 'Sin azúcar' }];
+    context.customerMenu = { Napoje: [{ id: 'juice-2', name: 'Sok naturalny', description: 'Świeży sok', price: 18, station: 'bar' }] };
+    context.customerSyncCartWithCurrentMenu();
+    assert.equal(context.customerCart[0].name, 'Sok naturalny');
+    assert.equal(context.customerCart[0].description, 'Świeży sok');
+    assert.equal(context.customerCart[0].note, 'Sin azúcar');
+    assert.equal(context.customerCart[0].id, 'line-translation');
     // Restore the original menu fixture for the legacy name-only fallback assertion.
     context.customerMenu = { Bebidas: [{ id: 'juice-2', name: 'Jugo', description: 'Other product', price: 99, station: 'bar' }] };
     // Preserve backwards compatibility for cart items created before product IDs existed.
