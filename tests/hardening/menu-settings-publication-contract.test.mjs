@@ -45,3 +45,16 @@ test("distributed restaurant code matches root", () => {
     readFileSync(resolve("www/app.js"), "utf8"),
   );
 });
+
+for (const file of ["app.js", "www/app.js"]) {
+  test(`${file}: offline image upload must not publish inline photos`, () => {
+    const src = readFileSync(resolve(process.cwd(), file), "utf8");
+    const begin = src.indexOf("async function materializeMenuImagesForCloud(");
+    const end = src.indexOf("function menuHasInlineRestaurantImages(", begin);
+    assert.ok(begin >= 0 && end > begin);
+    const fn = src.slice(begin, end);
+    assert.match(fn, /pendingImages\.length/);
+    assert.match(fn, /!navigator\.onLine/);
+    assert.match(fn, /throw new Error\(/);
+  });
+}
