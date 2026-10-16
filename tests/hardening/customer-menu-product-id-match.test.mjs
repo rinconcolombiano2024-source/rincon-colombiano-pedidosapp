@@ -111,6 +111,18 @@ for (const path of ['cliente.js', 'www/cliente.js']) {
     context.customerSyncCartWithCurrentMenu();
     assert.equal(context.customerCart[0].price, 0);
     assert.equal(context.customerCart[0].note, 'Sin hielo');
+    // Product updates must never erase individual custom instructions or line identities.
+    context.customerCart = [
+      { id: 'line-mixed-a', productId: 'juice-2', name: 'Jugo', price: 12, qty: 1, note: '<img src=x onerror=alert(1)>' },
+      { id: 'line-mixed-b', productId: 'juice-2', name: 'Jugo', price: 12, qty: 2, note: 'Sin azúcar' }
+    ];
+    context.customerMenu = { Bebidas: [{ id: 'juice-2', name: 'Sok', price: 18, station: 'bar' }] };
+    context.customerSyncCartWithCurrentMenu();
+    assert.deepEqual(Array.from(context.customerCart, item => item.id), ['line-mixed-a', 'line-mixed-b']);
+    assert.deepEqual(Array.from(context.customerCart, item => item.note), ['<img src=x onerror=alert(1)>', 'Sin azúcar']);
+    assert.deepEqual(Array.from(context.customerCart, item => item.qty), [1, 2]);
+    assert.deepEqual(Array.from(context.customerCart, item => item.price), [18, 18]);
+    // This test covers data preservation, not HTML escaping at the rendering sink.
     // Restore the original menu fixture for the legacy name-only fallback assertion.
     context.customerMenu = { Bebidas: [{ id: 'juice-2', name: 'Jugo', description: 'Other product', price: 99, station: 'bar' }] };
     // Preserve backwards compatibility for cart items created before product IDs existed.
