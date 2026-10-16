@@ -13,8 +13,10 @@ if (process.env.RC_TEST_CONFIRM_DISPOSABLE_POSTGRES !== 'YES' ||
   throw new Error('Requires explicit disposable localhost PostgreSQL fixture on port 55432');
 }
 const env = {...process.env, PGUSER:'postgres', PGSSLMODE:'disable',
-  PGSERVICE:'', PGSERVICEFILE:'/dev/null', PGPASSFILE:'/dev/null',
+  PGSERVICEFILE:'/dev/null', PGPASSFILE:'/dev/null',
   PGOPTIONS:'-c statement_timeout=15000 -c lock_timeout=5000'};
+delete env.PGSERVICE;
+delete env.PGHOSTADDR;
 async function sql(source) {
   try {
     const {stdout} = await run('psql', ['-X', '-qAt', '-v', 'ON_ERROR_STOP=1', '-c', source],
