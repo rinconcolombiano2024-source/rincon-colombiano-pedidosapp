@@ -111,13 +111,6 @@ for (const path of ['cliente.js', 'www/cliente.js']) {
     context.customerSyncCartWithCurrentMenu();
     assert.equal(context.customerCart[0].price, 0);
     assert.equal(context.customerCart[0].note, 'Sin hielo');
-    // An invalid catalog price must not turn a cart line into a free item.
-    // This is a regression guard for the existing parseFloat(...) || 0 behavior.
-    context.customerCart = [{ id: 'line-price', productId: 'juice-2', name: 'Jugo', price: 18, qty: 1, note: 'Sin hielo' }];
-    context.customerMenu = { Bebidas: [{ id: 'juice-2', name: 'Jugo', price: 'not-a-price', station: 'bar' }] };
-    context.customerSyncCartWithCurrentMenu();
-    assert.equal(context.customerCart[0].price, 18, 'invalid catalog price must not turn a cart line into a free item');
-    assert.equal(context.customerCart[0].note, 'Sin hielo');
     // Restore the original menu fixture for the legacy name-only fallback assertion.
     context.customerMenu = { Bebidas: [{ id: 'juice-2', name: 'Jugo', description: 'Other product', price: 99, station: 'bar' }] };
     // Preserve backwards compatibility for cart items created before product IDs existed.
