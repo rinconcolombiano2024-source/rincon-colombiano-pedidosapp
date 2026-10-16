@@ -1296,5 +1296,16 @@
       }
     ],
     "regressionTests": "tests/waiter-realtime-coalesce.test.cjs; tests/waiter-access-recovery.test.cjs"
+  },
+  "integrations/src/integration-readiness.mjs": {
+    "sha256": "a6372dd5b690be2bbefa009feb4049688c6647fd149f26af56a57528410eb768",
+    "regressionTests": "tests/hardening/payment-readiness-fail-closed-regression.test.mjs; integrations/tests/live-authorization-interlocks.test.mjs",
+    "edits": [
+      {
+        "before": "    if (checks[field] !== true) {",
+        "after": "    // Only explicit own data properties from trusted backend evidence count.\n    // Inherited flags and accessor getters must not authorize readiness.\n    const descriptor = Object.getOwnPropertyDescriptor(checks, field);\n    if (!descriptor || !Object.hasOwn(descriptor, \"value\") || descriptor.value !== true) {",
+        "afterByteOffset": 2069
+      }
+    ]
   }
 }
