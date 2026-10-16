@@ -35,6 +35,13 @@ for (const path of ['cliente.js', 'www/cliente.js']) {
     assert.deepEqual(Array.from(context.customerCart, item => item.note), ['Sin azúcar', 'Sin hielo', 'Salsa aparte']);
     assert.deepEqual(Array.from(context.customerCart, item => item.productId), ['juice-2', 'juice-2', 'juice-1']);
     assert.deepEqual(Array.from(context.customerCart, item => item.price), [99, 99, 15]);
+    // A renamed product must still be resolved by its stable ID, never by stale display text.
+    context.customerCart = [{ id: 'line-renamed', productId: 'juice-2', name: 'Nombre anterior', price: 12, qty: 1, note: 'Sin cebolla', station: 'bar' }];
+    context.customerSyncCartWithCurrentMenu();
+    assert.equal(context.customerCart[0].productId, 'juice-2');
+    assert.equal(context.customerCart[0].price, 99);
+    assert.equal(context.customerCart[0].note, 'Sin cebolla');
+    assert.equal(context.customerCart[0].id, 'line-renamed');
     // Preserve backwards compatibility for cart items created before product IDs existed.
     const legacy = { name: 'Jugo' };
     assert.equal(context.customerFindCurrentMenuProduct(legacy)?.id, 'juice-2');
