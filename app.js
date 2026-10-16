@@ -4827,19 +4827,40 @@ async function readCurrentCloudSettingsRow() {
 }
 
 async function saveCloudSettings() {
-  if (!cloudState.client || !cloudState.user) {
-    return null;
-  }
+  const saveClient = cloudState.client;
+  const saveUserId = cloudState.user?.id;
+  if (!saveClient || !saveUserId) return null;
+
+  // A late response must never mutate a different restaurant's local state.
+  const assertSaveSession = () => {
+    if (saveClient !== cloudState.client || saveUserId !== cloudState.user?.id) {
+      const error = new Error();
+      error.code = "SETTINGS_SESSION_CHANGED";
+      throw error;
+    }
+  };
+  const concurrentEditError = () => {
+    const error = new Error();
+    error.code = "SETTINGS_CONCURRENT_EDIT_PENDING";
+    return error;
+  };
 
   if (
     isInlineRestaurantImage(businessLogoUrl) &&
     navigator.onLine
   ) {
-    businessLogoUrl = await uploadRestaurantImageDataUrl(
-      businessLogoUrl,
+    const originalLogo = businessLogoUrl;
+    const originalPendingToken = currentSettingsPendingToken();
+    const uploadedLogo = await uploadRestaurantImageDataUrl(
+      originalLogo,
       "profile",
       "logo"
     );
+    assertSaveSession();
+    // Do not restore an outdated logo after another edit while uploading.
+    if (originalPendingToken !== currentSettingsPendingToken() ||
+        originalLogo !== businessLogoUrl) throw concurrentEditError();
+    businessLogoUrl = uploadedLogo;
 
     localStorage.setItem(
       STORAGE_KEYS.businessLogoUrl,
@@ -4854,6 +4875,9 @@ async function saveCloudSettings() {
     applyBusinessNameToUi();
   }
 
+  assertSaveSession();
+  const submittedPendingToken = currentSettingsPendingToken();
+  const newerSettingsExist = () => currentSettingsPendingToken() !== submittedPendingToken;
   let payload = currentSettingsPayload();
   let profile = currentRestaurantRpcProfilePayload();
 
@@ -4865,7 +4889,7 @@ async function saveCloudSettings() {
   let {
     data: rpcData,
     error: rpcError,
-  } = await cloudState.client.rpc(
+  } = await saveClient.rpc(
     "save_current_restaurant_settings",
     {
       p_settings: payload,
@@ -4873,6 +4897,9 @@ async function saveCloudSettings() {
       p_expected_revision: expectedRevision,
     }
   );
+  assertSaveSession();
+  // When the server reported a conflict, never merge/retry an old snapshot.
+  if (rpcError && newerSettingsExist()) throw concurrentEditError();
 
   if (
     rpcError &&
@@ -4886,6 +4913,8 @@ async function saveCloudSettings() {
   ) {
     const latestRow =
       await readCurrentCloudSettingsRow();
+    assertSaveSession();
+    if (newerSettingsExist()) throw concurrentEditError();
 
     if (!latestRow?.settings) {
       throw rpcError;
@@ -4923,7 +4952,7 @@ async function saveCloudSettings() {
       ) || null;
 
     const retry =
-      await cloudState.client.rpc(
+      await saveClient.rpc(
         "save_current_restaurant_settings",
         {
           p_settings: payload,
@@ -4933,6 +4962,7 @@ async function saveCloudSettings() {
         }
       );
 
+    assertSaveSession();
     rpcData = retry.data;
     rpcError = retry.error;
   }
@@ -4952,13 +4982,16 @@ async function saveCloudSettings() {
       );
     }
 
-    applySettingsPayload(
-      confirmed.settings
-    );
-
-    applyPublicRestaurantProfileFallback(
-      confirmed.profile
-    );
+    // Confirm the persisted revision, but do not replace newer local edits
+    // with an earlier RPC response.
+    if (!newerSettingsExist()) {
+      applySettingsPayload(
+        confirmed.settings
+      );
+      applyPublicRestaurantProfileFallback(
+        confirmed.profile
+      );
+    }
 
     const confirmedRevision =
       confirmed.settingsRevision ??
@@ -11242,6 +11275,8 @@ function syncResultMessage(successMessage, result = {}) {
 
 async function saveSettingsWhenPossible(options = {}) {
   const { silent = false } = options;
+  const initiatingClient = cloudState.client;
+  const initiatingUserId = cloudState.user?.id;
 
   const settingsPendingToken =
     currentSettingsPendingToken();
@@ -11266,6 +11301,15 @@ async function saveSettingsWhenPossible(options = {}) {
       return { synced: true };
     } catch (error) {
       console.error(error);
+      if (initiatingClient !== cloudState.client ||
+          initiatingUserId !== cloudState.user?.id) {
+        // A sign-out/account change cannot queue the former owner's edits.
+        return { pending: false, error };
+      }
+      if (error?.code === "SETTINGS_CONCURRENT_EDIT_PENDING" && hasPendingSettings()) {
+        updateCloudStatus("Ajustes pendientes de sincronización");
+        return { pending: true };
+      }
       markSettingsPending();
       updateCloudStatus();
       return { pending: shouldQueueForCloud(), error };
