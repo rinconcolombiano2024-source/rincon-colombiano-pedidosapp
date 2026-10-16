@@ -24,6 +24,17 @@ for (const path of ['cliente.js', 'www/cliente.js']) {
     assert.equal(context.customerCart[0].price, 15);
     assert.equal(context.customerCart[0].note, 'Sin hielo');
     assert.equal(context.customerCart[0].id, 'line-a');
+    // Identical products with distinct line IDs must retain independent instructions.
+    context.customerCart = [
+      { id: 'line-b', productId: 'juice-2', name: 'Jugo', price: 12, qty: 1, note: 'Sin azúcar', station: 'bar' },
+      { id: 'line-c', productId: 'juice-2', name: 'Jugo', price: 12, qty: 1, note: 'Sin hielo', station: 'bar' },
+      { id: 'line-d', productId: 'juice-1', name: 'Jugo', price: 15, qty: 1, note: 'Salsa aparte', station: 'bar' }
+    ];
+    context.customerSyncCartWithCurrentMenu();
+    assert.deepEqual(Array.from(context.customerCart, item => item.id), ['line-b', 'line-c', 'line-d']);
+    assert.deepEqual(Array.from(context.customerCart, item => item.note), ['Sin azúcar', 'Sin hielo', 'Salsa aparte']);
+    assert.deepEqual(Array.from(context.customerCart, item => item.productId), ['juice-2', 'juice-2', 'juice-1']);
+    assert.deepEqual(Array.from(context.customerCart, item => item.price), [99, 99, 15]);
     // Preserve backwards compatibility for cart items created before product IDs existed.
     const legacy = { name: 'Jugo' };
     assert.equal(context.customerFindCurrentMenuProduct(legacy)?.id, 'juice-2');
