@@ -42,6 +42,19 @@ for (const path of ['cliente.js', 'www/cliente.js']) {
     assert.equal(context.customerCart[0].price, 99);
     assert.equal(context.customerCart[0].note, 'Sin cebolla');
     assert.equal(context.customerCart[0].id, 'line-renamed');
+    // Switching menu language or category must not erase per-line notes or select by translated name.
+    context.customerMenu = { Napoje: [{ id: 'juice-2', name: 'Sok', description: 'Bez cukru', price: 101, station: 'bar' }] };
+    context.customerCart = [
+      { id: 'line-pl-a', productId: 'juice-2', name: 'Jugo', price: 99, qty: 1, note: 'Sin azúcar', station: 'bar' },
+      { id: 'line-pl-b', productId: 'juice-2', name: 'Jugo', price: 99, qty: 1, note: 'Sin hielo', station: 'bar' }
+    ];
+    context.customerSyncCartWithCurrentMenu();
+    assert.deepEqual(Array.from(context.customerCart, item => item.id), ['line-pl-a', 'line-pl-b']);
+    assert.deepEqual(Array.from(context.customerCart, item => item.note), ['Sin azúcar', 'Sin hielo']);
+    assert.deepEqual(Array.from(context.customerCart, item => item.productId), ['juice-2', 'juice-2']);
+    assert.deepEqual(Array.from(context.customerCart, item => item.price), [101, 101]);
+    // Restore the original menu fixture for the legacy name-only fallback assertion.
+    context.customerMenu = { Bebidas: [{ id: 'juice-2', name: 'Jugo', description: 'Other product', price: 99, station: 'bar' }] };
     // Preserve backwards compatibility for cart items created before product IDs existed.
     const legacy = { name: 'Jugo' };
     assert.equal(context.customerFindCurrentMenuProduct(legacy)?.id, 'juice-2');
