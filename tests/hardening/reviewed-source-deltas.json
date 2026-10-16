@@ -604,7 +604,7 @@
     ]
   },
   "service-worker.js": {
-    "sha256": "7d322166e625ab5ea0c27312ff0ba6c87ca4a3f42a6845325c6ad14bc08931f5",
+    "sha256": "a6b7893e14b47bfec4357ea5d8019a7206d4fc2a754d4aebf4144a1e5a44732c",
     "regressionTests": "tests/hardening/frontend.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/shared/service-worker-safety.test.mjs; tests/hardening/frontend.test.mjs; tests/pwa-release-marker.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/portal-stations-entry.test.cjs",
     "edits": [
       {
@@ -715,6 +715,11 @@
       {
         "before": "rc-ordera-v91-0-4-v6-verified-20261014-sync-guard-r24",
         "after": "rc-ordera-v91-0-4-v6-verified-20261015-notes-settings-r26",
+        "afterByteOffset": 20
+      },
+      {
+        "before": "rc-ordera-v91-0-4-v6-verified-20261015-notes-settings-r26",
+        "after": "rc-ordera-v91-0-4-v6-verified-20261016-settings-session-r27",
         "afterByteOffset": 20
       }
     ]

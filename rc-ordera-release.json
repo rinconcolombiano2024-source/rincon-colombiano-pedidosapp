@@ -1,8 +1,8 @@
 {
   "app": "RC ORDERA",
   "version": "91.0.4",
-  "release": "2026-10-15-r26",
-  "pwaCache": "rc-ordera-v91-0-4-v6-verified-20261015-notes-settings-r26",
+  "release": "2026-10-16-r27",
+  "pwaCache": "rc-ordera-v91-0-4-v6-verified-20261016-settings-session-r27",
   "changes": [
     "restaurant QR/client/stations separate windows",
     "ES/PL/EN per-module PWA scopes",
@@ -18,7 +18,8 @@
     "Late central snapshots cannot overwrite another restaurant or a signed-out session.",
     "Public menu overload and authorization errors stop after one RPC; legacy missing-function fallback remains available.",
     "Independent item notes even when identical products are added before entering instructions.",
-    "Concurrent settings confirmations retain newer pending edits and report their actual sync state."
+    "Concurrent settings confirmations retain newer pending edits and report their actual sync state.",
+    "Late settings responses preserve newer local edits and cannot update a different restaurant session."
   ],
-  "issuedAt": "2026-10-15"
+  "issuedAt": "2026-10-16"
 }
