@@ -19,7 +19,7 @@ test('menu editor queues a durable local copy before attempting cloud publicatio
 });
 
 test('menu cloud publication materializes images before the revision-checked RPC', () => {
-  const source = slice('async function saveCloudMenuRequest() {', 'async function saveCloudMenu() {');
+  const source = slice('async function saveCloudMenuRequest() {', 'function persistMenuCatalogCache() {');
   assert.match(source, /materializeMenuImagesForCloud\(menuBeforeImageUpload\)/);
   assert.match(source, /assertMenuOwnerSession\(\)/);
   assert.match(source, /save_current_restaurant_menu/);
