@@ -5,6 +5,7 @@ import { readFileSync, existsSync } from 'node:fs';
 const read = path => readFileSync(path, 'utf8');
 const baseline = 'MIGRACION-V91-73-SUMUP-SINGLE-MERCHANT-LEDGER.sql';
 const preflight = 'scripts/sumup-readiness-preflight.sql';
+const stagedBaseline = 'supabase/migrations/20261013054000_sumup_single_merchant_ledger.sql';
 const compat = [
  'supabase/migrations/20261013055141_sumup_hosted_checkout_url_compat.sql',
  'supabase/migrations/20261013055623_sumup_order_provider_compat.sql',
@@ -20,6 +21,12 @@ test('baseline ledger defines the three server-only payment procedures', () => {
  assert.ok(sql.includes('CREATE TABLE IF NOT EXISTS public.rc_sumup_payment_attempts'));
  assert.ok(sql.includes('ENABLE ROW LEVEL SECURITY'));
  assert.ok(sql.includes('SUMUP_RECONCILIATION_REQUIRED'));
+});
+
+test('staged ledger migration is byte-identical to reviewed baseline', () => {
+ assert.ok(existsSync(stagedBaseline), 'staged baseline migration is required');
+ assert.equal(read(stagedBaseline), read(baseline), 'do not silently drift from reviewed ledger');
+ assert.ok(stagedBaseline < compat[0], 'baseline must sort before compatibility migrations');
 });
 
 test('preflight remains read-only and checks dependencies', () => {
