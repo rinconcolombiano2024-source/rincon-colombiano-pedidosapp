@@ -1099,7 +1099,7 @@
         "afterByteOffset": 354423
       },
       {
-        "before": "  if (!cloudState.client || !cloudState.user || !navigator.onLine) return normalized;\r\n",
+        "before": "  if (!cloudState.client || !cloudState.user || !navigator.onLine) return normalized;\r\n\r\n",
         "after": "",
         "afterByteOffset": 332022
       },
