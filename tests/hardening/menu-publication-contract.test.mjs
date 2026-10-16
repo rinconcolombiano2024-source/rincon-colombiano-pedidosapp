@@ -1,0 +1,42 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+
+// Guard the existing cloud-publication path without touching production data.
+const app = readFileSync('app.js', 'utf8');
+const slice = (start, end) => {
+  const a = app.indexOf(start);
+  const z = app.indexOf(end, a + start.length);
+  assert.ok(a >= 0 && z > a, 'menu publication contract section exists');
+  return app.slice(a, z);
+};
+
+test('menu editor queues a durable local copy before attempting cloud publication', () => {
+  const source = slice('function saveMenuCatalog() {', 'function syncResultMessage(');
+  assert.match(source, /markMenuPending\(\)/);
+  assert.match(source, /saveMenuCache\(\{ immediate: true \}\)/);
+  assert.ok(source.indexOf('markMenuPending()') < source.indexOf('saveMenuWhenPossible()'));
+});
+
+test('menu cloud publication materializes images before the revision-checked RPC', () => {
+  const source = slice('async function saveCloudMenuRequest() {', 'async function saveCloudMenu() {');
+  assert.match(source, /materializeMenuImagesForCloud\(menuBeforeImageUpload\)/);
+  assert.match(source, /assertMenuOwnerSession\(\)/);
+  assert.match(source, /save_current_restaurant_menu/);
+  assert.match(source, /p_expected_revision:/);
+  assert.ok(source.indexOf('materializeMenuImagesForCloud(') < source.indexOf('save_current_restaurant_menu'));
+});
+
+test('publication does not claim client synchronization after an unconfirmed save', () => {
+  const source = slice('async function publishCurrentRestaurantMenu() {', '// One in-flight save per restaurant');
+  assert.match(source, /result\.synced && !hasPendingMenu\(\)/);
+  assert.match(source, /No se confirmó la publicación/);
+  assert.match(source, /No hay productos para publicar/);
+});
+
+test('settings publication retains optimistic concurrency and session isolation', () => {
+  const source = slice('async function saveCloudSettings() {', 'async function saveCloudMenu() {');
+  assert.match(source, /save_current_restaurant_settings/);
+  assert.match(source, /p_expected_revision:/);
+  assert.match(source, /SETTINGS_SESSION_CHANGED/);
+});
