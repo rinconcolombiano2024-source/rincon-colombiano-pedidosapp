@@ -57,6 +57,10 @@ Deno.serve(withCors(async(request:Request)=>{
   const orderId=typeof body.orderId==="string"?body.orderId.trim():"";
   const publicToken=typeof body.publicToken==="string"?body.publicToken.trim():"";
   if(!UUID.test(orderId) || publicToken.length>512)return response(400,{error:"ORDER_INVALID"});
+  // Reject anonymous requests without a usable proof before touching the orders table.
+  // Signed-in customers may authenticate via a Bearer token instead.
+  if(publicToken.length<8 && !/^Bearer\s+\S+/i.test(request.headers.get("authorization")||""))
+    return response(400,{error:"ORDER_INVALID"});
   const admin=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
   const result=await admin.from("customer_orders")
     .select("id,user_id,customer_user_id,status,payment_status,payment_method,payment_provider,currency,order_type,tip_amount,final_delivery_fee")
