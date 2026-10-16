@@ -119,6 +119,15 @@ for (const path of ['cliente.js', 'www/cliente.js']) {
       assert.equal(context.customerCart[0].price, 18, 'invalid catalog price must not become zero');
       assert.equal(context.customerCart[0].note, 'Sin hielo');
     }
+    // Valid numeric prices supplied as strings must remain supported; whitespace-only
+    // and malformed values must never be interpreted as free promotions.
+    for (const [catalogPrice, expected] of [['18.50', 18.5], [' 0 ', 0], ['   ', 18], ['-0.01', 18], ['1e309', 18]]) {
+      context.customerCart = [{ id: 'line-price-validation', productId: 'juice-2', name: 'Jugo', price: 18, qty: 1, note: 'Sin azúcar' }];
+      context.customerMenu = { Bebidas: [{ id: 'juice-2', name: 'Jugo', price: catalogPrice, station: 'bar' }] };
+      context.customerSyncCartWithCurrentMenu();
+      assert.equal(context.customerCart[0].price, expected);
+      assert.equal(context.customerCart[0].note, 'Sin azúcar');
+    }
     // Product updates must never erase individual custom instructions or line identities.
     context.customerCart = [
       { id: 'line-mixed-a', productId: 'juice-2', name: 'Jugo', price: 12, qty: 1, note: '<img src=x onerror=alert(1)>' },
