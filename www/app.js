@@ -5077,10 +5077,10 @@ async function confirmSavedCloudMenu(confirmed, fallbackMenu, submittedMenu = nu
   } else {
     markMenuPending();
   }
+  // Confirm the customer-facing projection before advancing the local published revision.
+  await verifyPublicMenuProjection(confirmedMenu, revision);
   storeCloudRevision(STORAGE_KEYS.menuRevision, revision);
   storeConfirmedCloudMenu(confirmedMenu);
-  // Private RPC success does not prove customers can see the saved menu.
-  await verifyPublicMenuProjection(confirmedMenu, revision);
   return { ...(confirmed || {}), menu: confirmedMenu, menuRevision: revision, localChangesPending };
 }
 
