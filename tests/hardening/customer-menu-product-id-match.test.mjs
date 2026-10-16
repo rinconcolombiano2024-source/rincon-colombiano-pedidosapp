@@ -128,6 +128,20 @@ for (const path of ['cliente.js', 'www/cliente.js']) {
       assert.equal(context.customerCart[0].price, expected);
       assert.equal(context.customerCart[0].note, 'Sin azúcar');
     }
+    // Repeated refreshes must be idempotent, including when a menu temporarily
+    // contains an invalid price and later recovers to an authoritative price.
+    context.customerCart = [{ id: 'line-recovery', productId: 'juice-2', name: 'Jugo', price: 18, qty: 2, note: 'Sin hielo' }];
+    context.customerMenu = { Bebidas: [{ id: 'juice-2', name: 'Jugo', price: 'broken', station: 'bar' }] };
+    context.customerSyncCartWithCurrentMenu();
+    context.customerSyncCartWithCurrentMenu();
+    assert.equal(context.customerCart[0].price, 18);
+    assert.equal(context.customerCart[0].qty, 2);
+    assert.equal(context.customerCart[0].note, 'Sin hielo');
+    context.customerMenu.Bebidas[0].price = 21;
+    context.customerSyncCartWithCurrentMenu();
+    assert.equal(context.customerCart[0].price, 21);
+    assert.equal(context.customerCart[0].id, 'line-recovery');
+    assert.equal(context.customerCart[0].note, 'Sin hielo');
     // Product updates must never erase individual custom instructions or line identities.
     context.customerCart = [
       { id: 'line-mixed-a', productId: 'juice-2', name: 'Jugo', price: 12, qty: 1, note: '<img src=x onerror=alert(1)>' },
