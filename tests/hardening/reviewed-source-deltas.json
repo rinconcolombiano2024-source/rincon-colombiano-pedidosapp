@@ -321,7 +321,7 @@
       {
         "before": "  if (action === \"remove\") customerCart = customerCart.filter((entry) => entry.id !== item.id);",
         "after": "  if (action === \"split\" && item.qty > 1) {\r\n    item.qty -= 1;\r\n    customerCart.splice(customerCart.indexOf(item) + 1, 0, {\r\n      ...item,\r\n      id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,\r\n      qty: 1,\r\n      note: \"\",\r\n    });\r\n  }\r\n  if (action === \"remove\") customerCart = customerCart.filter((entry) => entry.id !== item.id);",
-        "afterByteOffset": 297208
+        "afterByteOffset": 297212
       },
       {
         "before": "itemNoteLabel: \"Observaciones para este producto\",",
