@@ -76,6 +76,14 @@ for (const path of ['cliente.js', 'www/cliente.js']) {
     assert.deepEqual(Array.from(context.customerCart, item => item.qty), [2, 3]);
     assert.deepEqual(Array.from(context.customerCart, item => item.note), ['Sin azúcar', 'Sin hielo']);
     assert.deepEqual(Array.from(context.customerCart, item => item.price), [103, 103]);
+    // A product removed from the current catalog must never be silently swapped
+    // for a different product merely because the translated display name matches.
+    context.customerCart = [{ id: 'line-removed', productId: 'removed-id', name: 'Jugo', qty: 1, price: 12, note: 'Sin hielo' }];
+    context.customerMenu = { Bebidas: [{ id: 'replacement-id', name: 'Jugo', price: 250, station: 'bar' }] };
+    context.customerSyncCartWithCurrentMenu();
+    assert.equal(context.customerCart[0].productId, 'removed-id');
+    assert.equal(context.customerCart[0].price, 12);
+    assert.equal(context.customerCart[0].note, 'Sin hielo');
     // Restore the original menu fixture for the legacy name-only fallback assertion.
     context.customerMenu = { Bebidas: [{ id: 'juice-2', name: 'Jugo', description: 'Other product', price: 99, station: 'bar' }] };
     // Preserve backwards compatibility for cart items created before product IDs existed.
