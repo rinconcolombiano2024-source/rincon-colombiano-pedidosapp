@@ -12,6 +12,7 @@ if (!output.startsWith(`${root}\\`) && !output.startsWith(`${root}/`)) {
 
 const runtimeFiles = [
   "index.html",
+  "privacy.html",
   "install-app.js",
   "install-app.css",
   "portal-manifest.webmanifest",
