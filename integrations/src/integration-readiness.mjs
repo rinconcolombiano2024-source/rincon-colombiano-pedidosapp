@@ -105,7 +105,10 @@ export function evaluateIntegrationReadiness({
   const missing = [];
 
   for (const field of REQUIRED[type]) {
-    if (checks[field] !== true) {
+    // Only explicit own data properties from trusted backend evidence count.
+    // Inherited flags and accessor getters must not authorize readiness.
+    const descriptor = Object.getOwnPropertyDescriptor(checks, field);
+    if (!descriptor || !Object.hasOwn(descriptor, "value") || descriptor.value !== true) {
       missing.push(field);
     }
   }
