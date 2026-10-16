@@ -7088,7 +7088,7 @@ function customerSyncCartWithCurrentMenu() {
       productId: customerNormalizeProductId(product.id || product.productId) || item.productId,
       name: product.name || item.name,
       description: product.description || "",
-      price: Number.parseFloat(product.price) || 0,
+      price: (product.price !== null && product.price !== undefined && String(product.price).trim() !== "" && Number.isFinite(Number(product.price)) && Number(product.price) >= 0) ? Number(product.price) : item.price,
       station: customerNormalizeProductStation(product.station),
     };
   });
