@@ -38,3 +38,24 @@ test('payment readiness rejects malformed check containers', () => {
     });
   }
 });
+
+test('inherited readiness flags cannot impersonate verified backend checks', () => {
+  const inherited = Object.fromEntries(required.map(key => [key, true]));
+  const checks = Object.create(inherited);
+  const result = evaluateIntegrationReadiness({ type: 'payment', checks });
+  assert.equal(result.configured, false);
+  assert.deepEqual([...result.missing], required);
+  assert.equal(result.operationAuthorized, false);
+});
+
+test('an own getter cannot fabricate a verified readiness result', () => {
+  const checks = Object.fromEntries(required.map(key => [key, true]));
+  Object.defineProperty(checks, 'webhookVerified', {
+    enumerable: true,
+    get() { return true; }
+  });
+  const result = evaluateIntegrationReadiness({ type: 'payment', checks });
+  assert.equal(result.configured, false);
+  assert.ok(result.missing.includes('webhookVerified'));
+  assert.equal(result.operationAuthorized, false);
+});
