@@ -7068,8 +7068,12 @@ function customerFindCurrentMenuProduct(cartItem) {
   Object.values(customerMenu || {}).forEach((dishes) => {
     (dishes || []).forEach((dish) => {
       const productId = customerNormalizeProductId(dish.id || dish.productId || "");
-      if (cartProductId && productId && cartProductId === productId) fallbackMatch = dish;
-      if (!fallbackMatch && cartName && String(dish.name || "").toLowerCase() === cartName) fallbackMatch = dish;
+      if (cartProductId) {
+        if (productId && cartProductId === productId) fallbackMatch = dish;
+      } else if (!fallbackMatch && cartName && String(dish.name || "").toLowerCase() === cartName) {
+        // Legacy cart entries without product IDs may still match by name.
+        fallbackMatch = dish;
+      }
     });
   });
   return fallbackMatch;
