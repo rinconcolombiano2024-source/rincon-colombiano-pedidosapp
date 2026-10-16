@@ -3,7 +3,7 @@
 -- Run with authorized database role. All queries are SELECT only.
 SELECT
  count(*) AS restaurant_settings_rows,
- count(*) FILTER (WHERE menu IS NULL OR jsonb_typeof(menu) <> 'array') AS menu_not_array,
+ count(*) FILTER (WHERE menu IS NULL OR jsonb_typeof(menu) NOT IN ('array','object')) AS invalid_menu_shape,
  count(*) FILTER (WHERE settings IS NULL OR jsonb_typeof(settings) <> 'object') AS settings_not_object,
  count(*) FILTER (WHERE menu_revision IS NULL OR menu_revision < 0) AS invalid_menu_revision,
  count(*) FILTER (WHERE settings_revision IS NULL OR settings_revision < 0) AS invalid_settings_revision,
@@ -11,7 +11,7 @@ SELECT
  count(*) FILTER (WHERE settings_updated_at IS NULL) AS missing_settings_updated_at
 FROM public.app_settings;
 
--- Inspect the shape of menu data without extracting customer or product details.
+-- Current production stores menus as JSON objects; preserve that structure.\n-- Inspect the shape of menu data without extracting customer or product details.
 SELECT jsonb_typeof(menu) AS menu_shape, count(*) AS restaurant_count
 FROM public.app_settings
 GROUP BY jsonb_typeof(menu)
