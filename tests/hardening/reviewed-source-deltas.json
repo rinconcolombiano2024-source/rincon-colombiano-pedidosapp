@@ -1,7 +1,7 @@
 {
   "cliente.js": {
-    "sha256": "478566bdd991bc8690311045d78a0d8142636544a3655062dc2200279abc786e",
-    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs; tests/hardening/customer-independent-item-notes.test.mjs",
+    "sha256": "b44458839022eefdda41d21ec3562a2782cf83b18fd7a26af0b2e7762f89fa71",
+    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs; tests/hardening/customer-independent-item-notes.test.mjs; tests/hardening/customer-menu-product-id-match.test.mjs",
     "edits": [
       {
         "before": "",
@@ -342,6 +342,11 @@
         "before": "  const existing = customerCart.find(\r\n    (item) => item.productId === productId && item.name.toLowerCase() === dish.name.toLowerCase() && !item.note\r\n  );\r\n  if (existing) {\r\n    existing.qty += 1;\r\n  } else {\r\n",
         "after": "  // Each addition gets its own line, allowing independent kitchen notes.\r\n  // Existing quantities and notes remain untouched.\r\n  {\r\n",
         "afterByteOffset": 279640
+      },
+      {
+        "before": "function customerFindCurrentMenuProduct(cartItem) {\r\n  const cartProductId = customerNormalizeProductId(cartItem?.productId || \"\");\r\n  const cartName = String(cartItem?.name || \"\").toLowerCase();\r\n  let fallbackMatch = null;\r\n  Object.values(customerMenu || {}).forEach((dishes) => {\r\n    (dishes || []).forEach((dish) => {\r\n      const productId = customerNormalizeProductId(dish.id || dish.productId || \"\");\r\n      if (cartProductId && productId && cartProductId === productId) fallbackMatch = dish;\r\n      if (!fallbackMatch && cartName && String(dish.name || \"\").toLowerCase() === cartName) fallbackMatch = dish;\r\n    });\r\n  });\r\n  return fallbackMatch;\r\n}\r\n",
+        "after": "function customerFindCurrentMenuProduct(cartItem) {\r\n  const cartProductId = customerNormalizeProductId(cartItem?.productId || \"\");\r\n  const cartName = String(cartItem?.name || \"\").toLowerCase();\r\n  let fallbackMatch = null;\r\n  Object.values(customerMenu || {}).forEach((dishes) => {\r\n    (dishes || []).forEach((dish) => {\r\n      const productId = customerNormalizeProductId(dish.id || dish.productId || \"\");\r\n      if (cartProductId) {\r\n        if (productId && cartProductId === productId) fallbackMatch = dish;\r\n      } else if (!fallbackMatch && cartName && String(dish.name || \"\").toLowerCase() === cartName) {\r\n        // Legacy cart entries without product IDs may still match by name.\r\n        fallbackMatch = dish;\r\n      }\r\n    });\r\n  });\r\n  return fallbackMatch;\r\n}\r\n",
+        "afterByteOffset": 280159
       }
     ]
   },
