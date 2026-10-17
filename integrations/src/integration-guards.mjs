@@ -218,11 +218,29 @@ export function validateExternalItem(item) {
     );
   }
 
+  // A product can occur on separate provider lines with different instructions.
+  // Keep the legacy shape when optional fields are absent. Never infer identity
+  // from note text, or spread untrusted fields over validated monetary values.
+  const details = {};
+  if (item.lineId !== undefined) {
+    details.lineId = requireIdentifier(item.lineId, "lineId", INTEGRATION_LIMITS.MAX_EXTERNAL_ID_LENGTH);
+  }
+  if (item.notes !== undefined) {
+    if (item.notes !== null && (typeof item.notes !== "string" || item.notes.length > 500 ||
+        /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(item.notes))) {
+      fail("INVALID_ITEM_NOTES", "Invalid item instructions; manual review required");
+    }
+    // Plain text only: renderers must use textContent/escaping, never innerHTML.
+    // Reject oversize input instead of truncating potentially important instructions.
+    details.notes = item.notes;
+  }
+
   return Object.freeze({
     productId,
     quantity,
     unitPriceGrosz,
     lineTotalGrosz,
+    ...details,
   });
 }
 
@@ -251,21 +269,27 @@ export function validateExternalMoney({
   }
 
   const validatedItems = [];
-  const productIds = new Set();
+  const productIds = new Map();
+  const lineIds = new Set();
 
   let itemsTotalGrosz = 0;
 
   for (const item of items) {
     const validated = validateExternalItem(item);
 
-    if (productIds.has(validated.productId)) {
+    if (validated.lineId !== undefined && lineIds.has(validated.lineId)) {
+      fail("DUPLICATE_LINE_ID", "Duplicate external line identifier");
+    }
+    if (productIds.has(validated.productId) &&
+        (!productIds.get(validated.productId) || validated.lineId === undefined)) {
       fail(
         "DUPLICATE_PRODUCT_ID",
         "Duplicate external product identifier"
       );
     }
 
-    productIds.add(validated.productId);
+    productIds.set(validated.productId, validated.lineId !== undefined);
+    if (validated.lineId !== undefined) lineIds.add(validated.lineId);
     validatedItems.push(validated);
 
     itemsTotalGrosz = addMoney(

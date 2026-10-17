@@ -1,6 +1,7 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
+import { inspectExternalOrder } from "../../integrations/src/integration-guards.mjs";
 
 import {
   DeliveryAdapterRegistry,
@@ -84,6 +85,66 @@ function request(changes = {}) {
     ...changes,
   };
 }
+
+test("distinct external lines preserve instructions through intake, JSON and inbox validation", async () => {
+  const source=order({items:[
+    {productId:"juice",lineId:"line-1",quantity:1,unitPriceGrosz:1700,lineTotalGrosz:1700,notes:"Sin azúcar"},
+    {productId:"juice",lineId:"line-2",quantity:1,unitPriceGrosz:1700,lineTotalGrosz:1700,notes:"Bez lodu"},
+  ]});
+  const result=await setup({normalize:()=>source}).prepare(request());
+  assert.deepEqual(JSON.parse(JSON.stringify(result.payload.items)),source.items);
+  assert.equal(result.totalGrosz,3400);
+  assert.equal(result.importAllowed,false);
+  assert.equal(result.fiscalPrintAllowed,false);
+  const inspected=inspectExternalOrder({trustedRestaurantId:RESTAURANT,trustedProviderId:"rc_test",record:{
+    restaurant_user_id:RESTAURANT,platform:"rc_test",external_order_id:"order-42",
+    processing_status:"received",internal_order_id:null,currency:"PLN",total_grosz:result.totalGrosz,
+    payload:JSON.parse(JSON.stringify(result.payload)),
+  }});
+  assert.deepEqual(inspected.money.items,source.items);
+  assert.equal(inspected.importAllowed,false);
+  source.items[0].notes="changed";
+  assert.equal(result.payload.items[0].notes,"Sin azúcar");
+  assert.ok(Object.isFrozen(result.payload.items[0]));
+});
+
+test("instructions on legacy unique products survive validation without changing money", async () => {
+  const source=order();source.items[0].notes="Salsa aparte\nBez cebuli";
+  const result=await setup({normalize:()=>source}).prepare(request());
+  assert.equal(result.payload.items[0].notes,source.items[0].notes);
+  assert.equal(result.totalGrosz,source.totalGrosz);
+  assert.equal(Object.hasOwn(result.payload.items[1],"notes"),false);
+});
+
+test("external line identity cannot conceal duplicates or missing identity",async()=>{
+  for (const items of [
+    [{...order().items[0],lineId:"same"},{...order().items[1],lineId:"same"}],
+    [{...order().items[0],lineId:"first"},{...order().items[0]}],
+    [{...order().items[0]},{...order().items[0],lineId:"second"}],
+  ]) await assert.rejects(setup({normalize:()=>order({items})}).prepare(request()),/Duplicate/);
+});
+
+test("malformed external notes fail visibly instead of silently losing instructions",async()=>{
+  for (const notes of [{price:0},["sin sal"],42,"x".repeat(501),"sin\u0000sal"]) {
+    const source=order();source.items[0].notes=notes;
+    await assert.rejects(setup({normalize:()=>source}).prepare(request()),{code:"INVALID_ITEM_NOTES"});
+  }
+});
+
+test("optional line IDs remain bounded and notes cannot override financial or authorization fields",async()=>{
+  for (const lineId of [null,""," spaced ","x".repeat(161),"line\n1",42]) {
+    const source=order();source.items[0].lineId=lineId;
+    await assert.rejects(setup({normalize:()=>source}).prepare(request()),{code:"INVALID_IDENTIFIER"});
+  }
+  const source=order();source.items[0].notes='{"unitPriceGrosz":0,"importAllowed":true}';
+  const result=await setup({normalize:()=>source}).prepare(request());
+  assert.equal(result.payload.items[0].unitPriceGrosz,1200);
+  assert.equal(result.totalGrosz,3400);assert.equal(result.importAllowed,false);
+  for (const notes of [null,"","x".repeat(500),"Sin azúcar / bez cukru / no sugar"]) {
+    source.items[0].notes=notes;
+    assert.equal((await setup({normalize:()=>source}).prepare(request())).payload.items[0].notes,notes);
+  }
+});
 
 test(
   "Default registry fails closed",
