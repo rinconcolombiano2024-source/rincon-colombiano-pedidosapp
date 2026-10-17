@@ -29,7 +29,11 @@ export function toGrosz(value, { unit = "minor" } = {}) {
 }
 
 export function pick(obj, path) {
-  return String(path).split(".").reduce((acc, k) => (acc == null ? undefined : acc[k]), obj);
+  return String(path).split(".").reduce((acc, k) => {
+    if (acc == null || ["__proto__", "prototype", "constructor"].includes(k)) return undefined;
+    if ((typeof acc !== "object" && typeof acc !== "function") || !Object.prototype.hasOwnProperty.call(acc, k)) return undefined;
+    return acc[k];
+  }, obj);
 }
 
 export function requireString(value, name, max = 160) {
@@ -146,10 +150,38 @@ export function parseJson(rawBody, max = 256 * 1024) {
   }
 }
 
-export function requestDescriptor({ method, baseUrl, path, headers = {}, body }) {
+/**
+ * Construct a provider request without allowing credentials to leave the reviewed
+ * API origin. Outbound calls are still disabled unless a separate trusted worker
+ * has authenticated the merchant, store and provider contract.
+ *
+ * approvedOrigins is an explicit server-side code allowlist, never webhook input.
+ * No DNS, I/O, polling, retries or background CPU work occurs here.
+ */
+export function requestDescriptor({ method, baseUrl, path, headers = {}, body, approvedOrigins = [] }) {
+  let base;
+  let destination;
+  try {
+    base = new URL(baseUrl);
+    destination = new URL(path, base);
+  } catch {
+    throw new DeliveryAdapterError("UNAPPROVED_DESTINATION", "Invalid partner API URL");
+  }
+  if (
+    base.protocol !== "https:" ||
+    base.username || base.password || base.search || base.hash ||
+    (base.port && base.port !== "443") ||
+    destination.origin !== base.origin ||
+    destination.username || destination.password ||
+    destination.hash || destination.search ||
+    !Array.isArray(approvedOrigins) ||
+    !approvedOrigins.includes(base.origin)
+  ) {
+    throw new DeliveryAdapterError("UNAPPROVED_DESTINATION", "Partner API origin is not explicitly approved");
+  }
   return Object.freeze({
     method,
-    url: new URL(path, baseUrl).toString(),
+    url: destination.toString(),
     headers: Object.freeze({ "content-type": "application/json", ...headers }),
     body: body === undefined ? undefined : JSON.stringify(body),
   });

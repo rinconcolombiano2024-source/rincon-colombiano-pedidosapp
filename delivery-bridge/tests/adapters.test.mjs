@@ -137,3 +137,62 @@ test("money units are explicit and zero values remain valid", () => {
  assert.throws(()=>toGrosz(10,{unit:"unknown"}),{code:"INVALID_MONEY"});
  assert.equal(toGrosz("1.00"),1);assert.equal(toGrosz("0.00",{unit:"major"}),0);
 });
+
+test("outbound partner destinations are strictly pinned and credentials cannot be redirected", () => {
+  const candidates = [
+    ["glovo", {apiToken:"token-test", storeId:"store-1"}, "ready", "https://api.glovoapp.com"],
+    ["wolt", {apiKey:"token-test"}, "accept", "https://pos-integration-service.wolt.com"],
+    ["ubereats", {accessToken:"token-test"}, "accept", "https://api.uber.com"],
+  ];
+  for(const [provider, creds, action, approved] of candidates) {
+    const a=reg.create(provider,creds);
+    const valid=a.buildOutbound(action,{orderId:"order-1"});
+    assert.equal(new URL(valid.url).origin,approved);
+    assert.equal(a.meta.provisional,true);
+    for(const baseUrl of [
+      approved.replace("https:","http:"),
+      "https://attacker.invalid",
+      approved+".attacker.invalid",
+      "https://user:password@attacker.invalid",
+      approved+":8443",
+      approved+"?next=https://attacker.invalid",
+      approved+"#fragment",
+      "https://localhost",
+      "https://127.0.0.1",
+    ]) {
+      const wrong=reg.create(provider,{...creds,baseUrl});
+      assert.throws(()=>wrong.buildOutbound(action,{orderId:"order-1"}), {code:"UNAPPROVED_DESTINATION"},provider+": "+baseUrl);
+    }
+  }
+});
+
+test("generic delivery request builder rejects forged absolute URLs and unapproved origins",async()=>{
+  const {requestDescriptor}=await import("../src/canonical.mjs");
+  const args={method:"POST",baseUrl:"https://api.uber.com",path:"/v1/delivery/order/test/accept_pos_order",approvedOrigins:["https://api.uber.com"]};
+  assert.match(requestDescriptor(args).url,/^https:\/\/api\.uber\.com\//);
+  for(const path of ["//attacker.invalid/path","https://attacker.invalid/receipt","/orders?token=secret","/orders#token"]) {
+    assert.throws(()=>requestDescriptor({...args,path}),{code:"UNAPPROVED_DESTINATION"});
+  }
+  assert.throws(()=>requestDescriptor({...args,approvedOrigins:["https://attacker.invalid"]}),{code:"UNAPPROVED_DESTINATION"});
+});
+
+test("Uber order detail href is host, path and credential restricted (SSRF protection)",()=>{
+  const a=reg.create("ubereats",{clientSecret:SECRET});
+  const payload=href=>JSON.stringify({event_id:"ev",event_type:"orders.notification",meta:{resource_id:"u-9",status:"pos"},resource_href:href});
+  const approved="https://api.uber.com/v2/eats/order/u-9";
+  assert.equal(a.normalize(payload(approved)).fetchHref,approved);
+  for(const href of [
+    "http://api.uber.com/v2/eats/order/u-9",
+    "https://api.uber.com.attacker.invalid/v2/eats/order/u-9",
+    "https://api.uber.com@attacker.invalid/v2/eats/order/u-9",
+    "https://127.0.0.1/v2/eats/order/u-9",
+    "https://api.uber.com:8443/v2/eats/order/u-9",
+    "https://api.uber.com/v2/eats/order/u-9?key=secret",
+    "https://api.uber.com/v2/eats/order/u-9#fragment",
+    "https://api.uber.com/v2/eats/order/another-order",
+    "https://api.uber.com/v2/eats/order/u-9%2fother",
+    "https://api.uber.com/other",
+    "/v2/eats/order/u-9",
+    "not-a-url"
+  ]) assert.equal(a.normalize(payload(href)).fetchHref,null,href);
+});
