@@ -573,8 +573,8 @@
     ]
   },
   "offline-i18n.js": {
-    "sha256": "7e2f165431ddbe67c322731904af2aef67a89cb0fbd3d830d7c89b67fde60868",
-    "regressionTests": "tests/hardening/frontend.test.mjs; tests/waiter-access-recovery.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs",
+    "sha256": "8302d499cd466f646f285156ef9a93c0c36dbce76a43232dde17690ea68c39bd",
+    "regressionTests": "tests/hardening/frontend.test.mjs; tests/waiter-access-recovery.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; qa-i18n-v87.cjs; tests/hardening/menu-publication-contract.test.mjs",
     "edits": [
       {
         "before": "",
@@ -610,6 +610,11 @@
         "before": "    [\"settings.saved\", \"Ajustes guardados.\", \"Ustawienia zostały zapisane.\", \"Settings saved.\"],\n",
         "after": "    [\"settings.saved\", \"Ajustes guardados.\", \"Ustawienia zostały zapisane.\", \"Settings saved.\"],\n    [\"settings.pending\", \"Ajustes pendientes de sincronización\", \"Ustawienia oczekują na synchronizację\", \"Settings awaiting synchronization\"],\n",
         "afterByteOffset": 68805
+      },
+      {
+        "before": "",
+        "after": "    [\"legal.privacyLink\", \"Privacidad, datos personales y cookies\", \"Prywatność, dane osobowe i pliki cookie\", \"Privacy, personal data and cookies\"],\n",
+        "afterByteOffset": 23024
       }
     ]
   },
