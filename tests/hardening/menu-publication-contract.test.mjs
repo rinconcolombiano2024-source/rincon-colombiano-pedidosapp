@@ -47,6 +47,7 @@ test('privacy notice is linked and packaged in the Android web runtime', () => {
   const privacy = readFileSync('privacy.html', 'utf8');
   const prepare = readFileSync('scripts/prepare-capacitor.mjs', 'utf8');
   assert.match(index, /href=["']privacy\.html["']/);
+  assert.match(index, /href=["']privacy\.html["'][^>]*aria-label=["']Privacidad, datos personales y cookies["']/);
   assert.match(prepare, /["']privacy\.html["']/);
   assert.match(privacy, /Jhon Jarolt Mendez/i);
 });
