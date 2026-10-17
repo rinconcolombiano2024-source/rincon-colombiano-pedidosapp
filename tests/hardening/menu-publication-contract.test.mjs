@@ -50,3 +50,14 @@ test('privacy notice is linked and packaged in the Android web runtime', () => {
   assert.match(prepare, /["']privacy\.html["']/);
   assert.match(privacy, /Jhon Jarolt Mendez/i);
 });
+
+// Detect stale Android assets that would display an older menu or lose per-item notes.
+test('Android web bundle matches the menu editor and client ordering sources', () => {
+  for (const filename of ['app.js', 'cliente.js', 'restaurante.html', 'cliente.html']) {
+    assert.equal(
+      readFileSync('www/' + filename, 'utf8'),
+      readFileSync(filename, 'utf8'),
+      filename + ' must match the Android packaged copy'
+    );
+  }
+});
