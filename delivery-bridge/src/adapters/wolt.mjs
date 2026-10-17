@@ -38,6 +38,7 @@ export function createWoltAdapter(options = {}) {
       const map = { accept: "accept", reject: "reject", ready: "ready", delivered: "delivered" };
       if (!map[action]) throw new DeliveryAdapterError("UNSUPPORTED_ACTION", "Unsupported action");
       return requestDescriptor({
+        approvedOrigins: ["https://pos-integration-service.wolt.com"],
         method: "PUT", baseUrl, path: `/orders/${encodeURIComponent(order.orderId)}/${map[action]}`,
         headers: { "wolt-api-key": apiKey },
         body: action === "reject" ? { reason: order.reason ?? "unable_to_fulfill" } : {},

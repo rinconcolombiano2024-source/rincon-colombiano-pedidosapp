@@ -37,6 +37,7 @@ export function createGlovoAdapter(options = {}) {
       const paths = { ready: "ready_for_pickup", cancel: "cancel" };
       if (!paths[action]) throw new DeliveryAdapterError("UNSUPPORTED_ACTION", "Unsupported action");
       return requestDescriptor({
+        approvedOrigins: ["https://api.glovoapp.com"],
         method: "POST", baseUrl,
         path: `/webhook/stores/${encodeURIComponent(storeId)}/orders/${encodeURIComponent(order.orderId)}/${paths[action]}`,
         headers: { authorization: apiToken },
