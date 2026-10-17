@@ -25,7 +25,11 @@ export function createGatewayClient({ url, deviceId, deviceToken, fetchImpl = gl
     if (!data || typeof data !== "object" || Array.isArray(data)) throw new GatewayError("INVALID_GATEWAY_RESPONSE", res.status);
     if (!res.ok) throw new GatewayError(data?.error ?? "GATEWAY_ERROR", res.status);
     if (payload.action === "claim") {
-      if (!Object.hasOwn(data, "operation") || (data.operation !== null &&
+      // Only the gateway's final successful claim may release work to a device.
+      // A contradictory error body must never trigger printing or masquerade as idle.
+      if (res.status !== 200 || Object.hasOwn(data, "error") ||
+        (Object.hasOwn(data, "ok") && data.ok !== true) ||
+        !Object.hasOwn(data, "operation") || (data.operation !== null &&
         (typeof data.operation !== "object" || Array.isArray(data.operation))))
         throw new GatewayError("INVALID_GATEWAY_RESPONSE", res.status);
     } else if (data.ok !== true || Object.hasOwn(data, "error")) {
@@ -41,7 +45,8 @@ export function createGatewayClient({ url, deviceId, deviceToken, fetchImpl = gl
       const { operation } = await call({ action: "claim", claimToken });
       if (operation === null) return null;
       const id = operation.operation_id ?? operation.operationId;
-      if (typeof id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id) ||
+      if ((Object.hasOwn(operation, "operation_id") && Object.hasOwn(operation, "operationId") && operation.operation_id !== operation.operationId) ||
+        typeof id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id) ||
         !operation.fiscal_payload || typeof operation.fiscal_payload !== "object" || Array.isArray(operation.fiscal_payload)) {
         throw new GatewayError("INVALID_CLAIM_OPERATION", 200);
       }

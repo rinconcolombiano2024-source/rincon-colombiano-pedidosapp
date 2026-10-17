@@ -24,3 +24,14 @@ test("SumUp order references canonicalize UUID case and forbid cross-order bindi
   assert.throws(()=>verifyRetrievedCheckout({...checkout,checkout_reference:`rc-${id}-6`},checkoutId,config,attempt));
   assert.throws(()=>verifyRetrievedCheckout({...checkout,merchant_code:"OTHER"},checkoutId,config,attempt));
 });
+
+test("SumUp retrieval rejects coerced statuses instead of passing malformed data to reconciliation",()=>{
+  for (const status of [["PAID"],["PENDING"],["FAILED"],["EXPIRED"],null,{},true,1]) {
+    assert.throws(()=>verifyRetrievedCheckout({...checkout,status},checkoutId,config,attempt),/SUMUP_CHECKOUT_UNVERIFIED/);
+  }
+  for (const status of ["PAID","PENDING","FAILED","EXPIRED"]) {
+    const result=verifyRetrievedCheckout({...checkout,status},checkoutId,config,attempt);
+    assert.equal(result.status,status);
+    assert.equal(result.paid,status==="PAID");
+  }
+});

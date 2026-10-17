@@ -82,6 +82,34 @@ test("claim: only 200 operation:null indicates an empty queue", async () => {
  assert.equal(await c.claim("claim-token"),null);
 });
 
+test("claim: contradictory error envelopes cannot authorize printing or hide errors as idle", async () => {
+ const operation={operation_id:OP,fiscal_payload:{restaurantId:OP,orderId:OP,currency:"PLN",items:[{name:"Test",quantityMilli:1000,grossTotalGrosz:100,taxCode:"8"}],totalGrosz:100}};
+ for (const body of [{operation,error:"CLAIM_FAILED"},{operation:null,error:"CLAIM_FAILED"},{operation,ok:false},{operation:null,ok:false}]) {
+  let printed=0, sending=0;
+  const client=createGatewayClient({...config,fetchImpl:async(url,init)=>{
+   if(JSON.parse(init.body).action==="claim")return response(body);
+   sending++;return response({ok:true});
+  }});
+  const journal=new MemoryJournal();
+  const agent=new FiscalAgent({client,journal,driver:{printReceipt:async()=>{printed++;return {operationId:OP,status:"confirmed"};}}});
+  await assert.rejects(()=>agent.runOnce(),{code:"INVALID_GATEWAY_RESPONSE"});
+  assert.equal(printed,0);assert.equal(sending,0);assert.deepEqual(await journal.list(),[]);
+ }
+});
+
+test("claim: a non-final HTTP success cannot release an operation", async () => {
+ for (const status of [201,202,206]) {
+  const client=createGatewayClient({...config,fetchImpl:async()=>({...response({operation:null}),status})});
+  await assert.rejects(()=>client.claim("claim-token"),{code:"INVALID_GATEWAY_RESPONSE"});
+ }
+});
+
+test("claim: conflicting operation aliases are rejected before sending", async () => {
+ const operation={operation_id:OP,operationId:"22222222-2222-4222-8222-222222222222",fiscal_payload:{restaurantId:OP}};
+ const client=createGatewayClient({...config,fetchImpl:async()=>response({operation})});
+ await assert.rejects(()=>client.claim("claim-token"),{code:"INVALID_CLAIM_OPERATION"});
+});
+
 test("claim: malformed operation envelopes fail closed before local printing", async () => {
  const bad=[
   {},{operationId:"not-an-id",fiscal_payload:{}},
