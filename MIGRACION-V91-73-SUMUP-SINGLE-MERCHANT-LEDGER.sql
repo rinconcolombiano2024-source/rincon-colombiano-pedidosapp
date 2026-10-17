@@ -94,7 +94,7 @@ BEGIN
  -- Only accept the exact HTTPS SumUp hosted-payment URL shape; the service-role
  -- caller must independently verify merchant, checkout reference and amount.
  OR p_hosted_url IS NULL
- OR p_hosted_url !~* '\\Ahttps://checkout[.]sumup[.]com/pay/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/?\\Z' THEN
+ OR p_hosted_url !~* '^https://checkout[.]sumup[.]com/pay/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/?$' THEN
    RAISE EXCEPTION 'SUMUP_PROVIDER_CHECKOUT_MISMATCH'; END IF;
  UPDATE public.rc_sumup_payment_attempts SET checkout_id=p_checkout_id,hosted_url=p_hosted_url,
   status='pending',updated_at=now() WHERE id=a.id;
