@@ -62,3 +62,16 @@ test('Android web bundle matches the menu editor and client ordering sources', (
     );
   }
 });
+
+// The customer must be able to understand and edit per-product instructions in all supported languages.
+test('individual product note controls retain Spanish Polish and English labels', () => {
+  const source = readFileSync('cliente.js', 'utf8');
+  for (const key of ['itemNoteLabel', 'itemNotePlaceholder', 'splitItem']) {
+    assert.equal((source.match(new RegExp('\\b' + key + ':', 'g')) || []).length, 3,
+      key + ' must have an ES/PL/EN translation');
+  }
+  assert.match(source, /Observaciones para este producto/);
+  assert.match(source, /Uwagi do tego produktu/);
+  assert.match(source, /Instructions for this item/);
+  assert.equal(readFileSync('www/cliente.js', 'utf8'), source);
+});
