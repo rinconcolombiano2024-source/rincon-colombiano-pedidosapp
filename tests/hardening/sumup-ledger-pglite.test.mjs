@@ -4,6 +4,7 @@ import {readFileSync} from "node:fs";
 import {randomUUID} from "node:crypto";
 import {PGlite} from "@electric-sql/pglite";
 import {pgcrypto} from "@electric-sql/pglite/contrib/pgcrypto";
+import {verifyHostedCheckout} from "../../supabase/functions/_shared/sumup-hosted.ts";
 
 const db = new PGlite({extensions:{pgcrypto}});
 const merchantId=randomUUID(),otherId=randomUUID(),orderId=randomUUID();
@@ -154,4 +155,50 @@ test("missing provider status cannot manufacture a paid transaction",async()=>{
  const sale=(await db.query("select payment_status from customer_orders where id=$1",[saleId])).rows[0];
  const payments=(await db.query("select count(*)::int as n from payment_transactions where customer_order_id=$1",[saleId])).rows[0];
  assert.equal(sale.payment_status,'pending');assert.equal(payments.n,0);
+});
+
+test("provider-verified hosted page UUID may differ from checkout UUID",async()=>{
+ const saleId=randomUUID(),providerId=randomUUID(),pageId=randomUUID();
+ await db.query("insert into customer_orders(id,user_id,status,payment_method,payment_status,currency,total,updated_at) values($1,$2,'pending','Online','pending','PLN',17.25,now())",[saleId,merchantId]);
+ const attempt=(await db.query("select public.rc_sumup_reserve_checkout($1,$2,'MCXXXXXX') as a",[saleId,merchantId])).rows[0].a;
+ const hostedUrl='https://checkout.sumup.com/pay/'+pageId;
+ const verified=verifyHostedCheckout({id:providerId,merchant_code:'MCXXXXXX',checkout_reference:'rc-'+saleId+'-1',amount:17.25,currency:'PLN',status:'PENDING',hosted_checkout_url:hostedUrl},
+  {apiKey:'test-only',merchantCode:'MCXXXXXX',appOrigin:'https://rincon-colombiano-pedidosapp.vercel.app'},
+  {orderId:saleId,attemptNumber:1,amountMinor:1725,currency:'PLN'});
+ assert.equal(verified.id,providerId);assert.equal(verified.hostedUrl,hostedUrl);
+ await db.query("select public.rc_sumup_commit_checkout($1,$2,$3)",[attempt.attemptId,providerId,hostedUrl]);
+ const saved=(await db.query("select checkout_id,hosted_url,status from rc_sumup_payment_attempts where id=$1",[attempt.attemptId])).rows[0];
+ assert.deepEqual(saved,{checkout_id:providerId,hosted_url:hostedUrl,status:'pending'});
+ const reused=(await db.query("select public.rc_sumup_reserve_checkout($1,$2,'MCXXXXXX') as a",[saleId,merchantId])).rows[0].a;
+ assert.equal(reused.creationAllowed,false);assert.equal(reused.url,hostedUrl);
+ const paid=(await db.query("select public.rc_sumup_apply_verified_checkout($1,'PAID') as a",[providerId])).rows[0].a;
+ assert.equal(paid.status,'paid');
+ const sale=(await db.query("select payment_status,payment_amount,provider_reference from customer_orders where id=$1",[saleId])).rows[0];
+ assert.equal(sale.payment_status,'paid');assert.equal(Number(sale.payment_amount),17.25);assert.equal(sale.provider_reference,providerId);
+});
+
+test("invalid hosted URLs leave the reservation unchanged",async()=>{
+ const saleId=randomUUID(),providerId=randomUUID();
+ await db.query("insert into customer_orders(id,user_id,status,payment_method,payment_status,currency,total,updated_at) values($1,$2,'pending','Online','pending','PLN',18,now())",[saleId,merchantId]);
+ const attempt=(await db.query("select public.rc_sumup_reserve_checkout($1,$2,'MCXXXXXX') as a",[saleId,merchantId])).rows[0].a;
+ const base='https://checkout.sumup.com/pay/'+providerId;
+ for(const url of [null,'',base+'?x=1',base+'#x',base+'//',base+'\n',base.replace('https:','http:'),base.replace('sumup.com','sumup.com.evil.invalid'),base.replace('checkout.sumup.com','user@checkout.sumup.com'),base.replace('sumup.com/','sumup.com:443/'),'https://checkout.sumup.com/pay/not-a-uuid']){
+  await assert.rejects(db.query("select public.rc_sumup_commit_checkout($1,$2,$3)",[attempt.attemptId,providerId,url]),/SUMUP_PROVIDER_CHECKOUT_MISMATCH/);
+ }
+ const saved=(await db.query("select checkout_id,hosted_url,status from rc_sumup_payment_attempts where id=$1",[attempt.attemptId])).rows[0];
+ assert.deepEqual(saved,{checkout_id:null,hosted_url:'',status:'creating'});
+});
+
+test("anonymous and authenticated clients cannot read or mutate the financial ledger",async()=>{
+ for(const role of ['anon','authenticated']){
+  await db.exec('set role '+role);
+  try {
+   for(const query of [
+    'select * from public.rc_sumup_payment_attempts',
+    "select public.rc_sumup_reserve_checkout(null,null,'MCXXXXXX')",
+    "select public.rc_sumup_commit_checkout(null,null,null)",
+    "select public.rc_sumup_apply_verified_checkout(null,'PAID')"
+   ]) await assert.rejects(db.query(query),/permission denied/i,role+': '+query);
+  } finally {await db.exec('reset role');}
+ }
 });
