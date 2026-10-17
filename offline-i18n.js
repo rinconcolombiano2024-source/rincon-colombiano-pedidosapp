@@ -183,6 +183,7 @@
     ["auth.provinceRegion", "Provincia / region", "Województwo / region", "Province / region"],
     ["auth.restaurantPhone", "Telefono del restaurante", "Telefon restauracji", "Restaurant phone"],
     ["auth.responsible", "Responsable", "Osoba odpowiedzialna", "Person responsible"],
+    ["legal.privacyLink", "Privacidad, datos personales y cookies", "Prywatność, dane osobowe i pliki cookie", "Privacy, personal data and cookies"],
     ["auth.consent", "Confirmo que puedo administrar este restaurante y acepto usar la app guardando datos de pedidos, clientes y cookies/localStorage necesarios para operar.", "Potwierdzam, że mam prawo zarządzać tą restauracją i akceptuję zapisywanie przez aplikację danych zamówień, klientów oraz niezbędnych plików cookie/localStorage.", "I confirm that I am authorized to manage this restaurant and accept the app storing order and customer data and the cookies/localStorage required for operation."],
     ["auth.registerRestaurant", "Registrar restaurante", "Zarejestruj restaurację", "Register restaurant"],
     ["restaurant.orderSystem", "Sistema de pedidos", "System zamówień", "Ordering system"],
