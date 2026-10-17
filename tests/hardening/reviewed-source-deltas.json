@@ -1337,5 +1337,36 @@
         "afterByteOffset": 2069
       }
     ]
+  },
+  "integrations/src/integration-guards.mjs": {
+    "sha256": "01a15eb6389f0bef6e00f2d5b63d23b49a06cd8220a3b8408f0a6751539e4fcb",
+    "regressionTests": "delivery-bridge/tests/verified-intake.test.mjs; tests/integration-guards.test.cjs",
+    "edits": [
+      {
+        "before": "",
+        "after": "  // A product can occur on separate provider lines with different instructions.\n  // Keep the legacy shape when optional fields are absent. Never infer identity\n  // from note text, or spread untrusted fields over validated monetary values.\n  const details = {};\n  if (item.lineId !== undefined) {\n    details.lineId = requireIdentifier(item.lineId, \"lineId\", INTEGRATION_LIMITS.MAX_EXTERNAL_ID_LENGTH);\n  }\n  if (item.notes !== undefined) {\n    if (item.notes !== null && (typeof item.notes !== \"string\" || item.notes.length > 500 ||\n        /[\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f]/u.test(item.notes))) {\n      fail(\"INVALID_ITEM_NOTES\", \"Invalid item instructions; manual review required\");\n    }\n    // Plain text only: renderers must use textContent/escaping, never innerHTML.\n    // Reject oversize input instead of truncating potentially important instructions.\n    details.notes = item.notes;\n  }\n\n",
+        "afterByteOffset": 4139
+      },
+      {
+        "before": "",
+        "after": "    ...details,\n",
+        "afterByteOffset": 5147
+      },
+      {
+        "before": "  const productIds = new Set();\n",
+        "after": "  const productIds = new Map();\n  const lineIds = new Set();\n",
+        "afterByteOffset": 5668
+      },
+      {
+        "before": "    if (productIds.has(validated.productId)) {\n",
+        "after": "    if (validated.lineId !== undefined && lineIds.has(validated.lineId)) {\n      fail(\"DUPLICATE_LINE_ID\", \"Duplicate external line identifier\");\n    }\n    if (productIds.has(validated.productId) &&\n        (!productIds.get(validated.productId) || validated.lineId === undefined)) {\n",
+        "afterByteOffset": 5839
+      },
+      {
+        "before": "    productIds.add(validated.productId);\n",
+        "after": "    productIds.set(validated.productId, validated.lineId !== undefined);\n    if (validated.lineId !== undefined) lineIds.add(validated.lineId);\n",
+        "afterByteOffset": 6230
+      }
+    ]
   }
 }
