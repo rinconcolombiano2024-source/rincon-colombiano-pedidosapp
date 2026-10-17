@@ -75,3 +75,15 @@ test('individual product note controls retain Spanish Polish and English labels'
   assert.match(source, /Instructions for this item/);
   assert.equal(readFileSync('www/cliente.js', 'utf8'), source);
 });
+
+// A slow image upload must not overwrite a newer restaurant profile edit.
+test('settings logo upload rejects late results after edits or account changes', () => {
+  const source = slice('async function saveCloudSettings() {', 'async function saveCloudMenu() {');
+  assert.match(source, /const originalLogo = businessLogoUrl/);
+  assert.match(source, /const originalPendingToken = currentSettingsPendingToken\(\)/);
+  assert.match(source, /await uploadRestaurantImageDataUrl\(/);
+  assert.match(source, /assertSaveSession\(\)/);
+  assert.match(source, /originalPendingToken !== currentSettingsPendingToken\(\)/);
+  assert.match(source, /originalLogo !== businessLogoUrl/);
+  assert.ok(source.indexOf('originalLogo !== businessLogoUrl') < source.indexOf('businessLogoUrl = uploadedLogo'));
+});
