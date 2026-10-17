@@ -72,6 +72,6 @@ test('individual product note controls retain Spanish Polish and English labels'
   }
   assert.match(source, /Observaciones para este producto/);
   assert.match(source, /Uwagi do tego produktu/);
-  assert.match(source, /Notes for this product/);
+  assert.match(source, /Instructions for this item/);
   assert.equal(readFileSync('www/cliente.js', 'utf8'), source);
 });
