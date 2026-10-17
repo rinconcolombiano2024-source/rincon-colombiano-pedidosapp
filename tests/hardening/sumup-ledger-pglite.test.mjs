@@ -155,3 +155,17 @@ test("missing provider status cannot manufacture a paid transaction",async()=>{
  const payments=(await db.query("select count(*)::int as n from payment_transactions where customer_order_id=$1",[saleId])).rows[0];
  assert.equal(sale.payment_status,'pending');assert.equal(payments.n,0);
 });
+
+// Provider checkout identifiers and hosted-page identifiers are distinct objects.
+test("SumUp accepts a distinct hosted-page UUID and rejects unsafe URLs", async () => {
+ const saleId=randomUUID(),checkout=randomUUID(),page=randomUUID();
+ const hosted='https://checkout.sumup.com/pay/'+page;
+ await db.query("insert into customer_orders(id,user_id,status,payment_method,payment_status,currency,total,updated_at) values($1,$2,'pending','Online','pending','PLN',12,now())",[saleId,merchantId]);
+ const attempt=(await db.query("select public.rc_sumup_reserve_checkout($1,$2,'MCXXXXXX') as a",[saleId,merchantId])).rows[0].a;
+ for(const invalid of [null,'',hosted+'?redirect=evil',hosted+'#fragment',hosted.replace('https:','http:'),hosted.replace('sumup.com','sumup.com.evil.invalid'),'https://checkout.sumup.com/pay/not-a-uuid']) {
+  await assert.rejects(db.query("select public.rc_sumup_commit_checkout($1,$2,$3)",[attempt.attemptId,checkout,invalid]),/SUMUP_PROVIDER_CHECKOUT_MISMATCH/);
+ }
+ await db.query("select public.rc_sumup_commit_checkout($1,$2,$3)",[attempt.attemptId,checkout,hosted]);
+ const saved=(await db.query("select checkout_id,hosted_url,status from rc_sumup_payment_attempts where id=$1",[attempt.attemptId])).rows[0];
+ assert.deepEqual(saved,{checkout_id:checkout,hosted_url:hosted,status:'pending'});
+});
