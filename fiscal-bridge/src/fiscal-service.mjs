@@ -170,7 +170,21 @@ export class FiscalService {
     this.#busy = true;
 
     try {
-      return await this.#driver.getStatus();
+      const result = await this.#driver.getStatus();
+      // A driver must explicitly confirm connectivity. Never trust a
+      // malformed or contradictory hardware status as a valid reading.
+      if (
+        !result ||
+        typeof result !== "object" ||
+        Array.isArray(result) ||
+        typeof result.connected !== "boolean"
+      ) {
+        throw new FiscalError(
+          "INVALID_DEVICE_STATUS",
+          "Driver returned an invalid connection status"
+        );
+      }
+      return result;
     } finally {
       this.#busy = false;
     }
