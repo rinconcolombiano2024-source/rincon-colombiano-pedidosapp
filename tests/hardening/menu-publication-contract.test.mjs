@@ -87,3 +87,26 @@ test('settings logo upload rejects late results after edits or account changes',
   assert.match(source, /originalLogo !== businessLogoUrl/);
   assert.ok(source.indexOf('originalLogo !== businessLogoUrl') < source.indexOf('businessLogoUrl = uploadedLogo'));
 });
+
+// Saving restaurant hours must use the versioned cloud settings RPC, not only local storage.
+test('opening hours persist through versioned settings and confirmed cloud response', () => {
+  const source = slice('async function saveCloudSettings() {', 'async function saveCloudMenu() {');
+  assert.match(source, /currentSettingsPayload\(\)/);
+  assert.match(source, /currentRestaurantRpcProfilePayload\(\)/);
+  assert.match(source, /save_current_restaurant_settings/);
+  assert.match(source, /p_expected_revision:/);
+  assert.match(source, /confirmed\?\.settings/);
+  assert.match(source, /confirmed\?\.profile/);
+  assert.match(source, /newerSettingsExist\(\)/);
+});
+
+// Uploading menu photos must not silently discard a more recent local edit.
+test('menu photo uploads retain newer local edits and require a server revision', () => {
+  const source = slice('async function saveCloudMenuRequest() {', 'async function saveRestaurantPublicProfile() {');
+  assert.match(source, /materializeMenuImagesForCloud\(menuBeforeImageUpload\)/);
+  assert.match(source, /assertMenuOwnerSession\(\)/);
+  assert.match(source, /menuCatalogsMatch\(menuCatalog, menuBeforeImageUpload\)/);
+  assert.match(source, /p_expected_revision:/);
+  assert.match(source, /confirmSavedCloudMenu\(/);
+  assert.match(source, /markMenuPending\(\)/);
+});
