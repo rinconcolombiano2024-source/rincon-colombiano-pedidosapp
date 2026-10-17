@@ -40,3 +40,13 @@ test('settings publication retains optimistic concurrency and session isolation'
   assert.match(source, /p_expected_revision:/);
   assert.match(source, /SETTINGS_SESSION_CHANGED/);
 });
+
+// Regression: Android packaging must not silently omit the public privacy notice.
+test('privacy notice is linked and packaged in the Android web runtime', () => {
+  const index = readFileSync('index.html', 'utf8');
+  const privacy = readFileSync('privacy.html', 'utf8');
+  const prepare = readFileSync('scripts/prepare-capacitor.mjs', 'utf8');
+  assert.match(index, /href=["']privacy\.html["']/);
+  assert.match(prepare, /["']privacy\.html["']/);
+  assert.match(privacy, /Jhon Jarolt Mendez/i);
+});
