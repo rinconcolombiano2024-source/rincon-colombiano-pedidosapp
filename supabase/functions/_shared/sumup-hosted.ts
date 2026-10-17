@@ -140,7 +140,8 @@ function verifyCore(
     typeof body["amount"] !== "number" ||
     !Number.isFinite(body["amount"]) ||
     exactProviderMinorAmount(body["amount"]) !== attempt.amountMinor ||
-    !["PENDING", "PAID", "FAILED", "EXPIRED"].includes(String(status))
+    typeof status !== "string" ||
+    !["PENDING", "PAID", "FAILED", "EXPIRED"].includes(status)
   ) {
     fail();
   }
