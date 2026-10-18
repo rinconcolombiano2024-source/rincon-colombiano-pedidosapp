@@ -740,8 +740,8 @@
     ]
   },
   "app.js": {
-    "sha256": "67eb79b39a6f9e52b5c7f3874462bed8c5d156a6df191623d190a0537ff01c60",
-    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/qr-menu-rpc-throttle.test.cjs; tests/menu-save-burst-coalesce.test.cjs; tests/menu-session-publication-guard.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/menu-cloud-rpc-singleflight.test.cjs; tests/portal-stations-entry.test.cjs; tests/central-refresh-session.test.cjs; tests/restaurant-settings-pending-confirmation.test.cjs; tests/settings-stale-response-tenant-guard.test.cjs; tests/hardening/menu-photo-session-isolation.test.mjs",
+    "sha256": "a29f8cb5187ae7b9577f93fe5c27efd98a7fc640ac70b4b0a977b56d8a8abeb5",
+    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/qr-menu-rpc-throttle.test.cjs; tests/menu-save-burst-coalesce.test.cjs; tests/menu-session-publication-guard.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/menu-cloud-rpc-singleflight.test.cjs; tests/portal-stations-entry.test.cjs; tests/central-refresh-session.test.cjs; tests/restaurant-settings-pending-confirmation.test.cjs; tests/settings-stale-response-tenant-guard.test.cjs; tests/hardening/menu-photo-session-isolation.test.mjs; tests/menu-publication-verified-save.test.cjs",
     "edits": [
       {
         "before": "",
@@ -1187,6 +1187,31 @@
         "before": "",
         "after": "    assertImageSession();\r\n",
         "afterByteOffset": 335723
+      },
+      {
+        "before": "  const revision = Number.parseInt(expectedRevision, 10);\r\n  const publicRevision = Number.parseInt(data.menu_revision, 10);\r\n  if (Number.isFinite(revision) && revision > 0 && publicRevision !== revision) {",
+        "after": "  const revision = validatedMenuRevision(expectedRevision);\r\n  const publicRevision = validatedMenuRevision(data.menu_revision);\r\n  if (publicRevision !== revision) {",
+        "afterByteOffset": 161454
+      },
+      {
+        "before": "async function confirmSavedCloudMenu(confirmed, fallbackMenu, submittedMenu = null) {",
+        "after": "function validatedMenuRevision(value) {\r\n  // PostgreSQL bigint may be serialized as a number or a decimal string.\r\n  const numeric = typeof value === \"number\" ||\r\n    (typeof value === \"string\" && /^[1-9][0-9]*$/.test(value)) ? Number(value) : NaN;\r\n  if (!Number.isSafeInteger(numeric) || numeric < 1) {\r\n    const error = new Error(appUiText(\"La version del menu para clientes no coincide con la version guardada.\"));\r\n    error.code = \"PUBLIC_MENU_REVISION_INVALID\";\r\n    throw error;\r\n  }\r\n  return numeric;\r\n}\r\n\r\nasync function confirmSavedCloudMenu(confirmed, fallbackMenu, submittedMenu = null) {",
+        "afterByteOffset": 161862
+      },
+      {
+        "before": "  const revision = confirmed?.menuRevision ?? confirmed?.menu_revision;\r\n  const submitted",
+        "after": "  const revision = validatedMenuRevision(confirmed?.menuRevision ?? confirmed?.menu_revision);\r\n  const submitted",
+        "afterByteOffset": 162672
+      },
+      {
+        "before": "  const localChangesPending = !menuCatalogsMatch(menuCatalog, submitted);",
+        "after": "  let localChangesPending = !menuCatalogsMatch(menuCatalog, submitted);",
+        "afterByteOffset": 162930
+      },
+      {
+        "before": "  await verifyPublicMenuProjection(confirmedMenu, revision);\r\n  return { ...(confirmed || {}), menu: confirmedMenu, menuRevision: revision, localChangesPending };",
+        "after": "  await verifyPublicMenuProjection(confirmedMenu, revision);\r\n  // An edit can arrive while the public projection read is in flight.\r\n  if (!menuCatalogsMatch(menuCatalog, confirmedMenu)) {\r\n    localChangesPending = true;\r\n    markMenuPending();\r\n  }\r\n  return { ...(confirmed || {}), menu: confirmedMenu, menuRevision: revision, localChangesPending };",
+        "afterByteOffset": 163309
       }
     ]
   },

@@ -110,3 +110,36 @@ test("a failed public publication leaves the local pending token and shows a war
  assert.ok(operations.includes("pending"));
  assert.ok(!operations.includes("Sincronizado"));
 });
+
+for (const invalid of [undefined, null, 0, -1, 41.5, '41oops', true, [41], {}, Number.MAX_SAFE_INTEGER + 1]) {
+ test(`invalid saved revision ${JSON.stringify(invalid)} cannot confirm or mutate menu`, async () => {
+  const h=harness();
+  await assert.rejects(h.ctx.confirmSavedCloudMenu({menu:h.state.current,menuRevision:invalid},null,h.state.current), error => error.code === 'PUBLIC_MENU_REVISION_INVALID');
+  assert.deepEqual(h.calls, [], 'invalid confirmation must not update cache or confirmed revision');
+ });
+}
+
+test('malformed public revision cannot pass by parseInt prefix coercion', async () => {
+ const h=harness(); h.state.expectedRevision='41corrupt';
+ await assert.rejects(h.ctx.confirmSavedCloudMenu({menu:h.state.current,menuRevision:41},null,h.state.current));
+});
+
+test('decimal string revisions remain compatible with bigint serialization', async () => {
+ const h=harness(); h.state.expectedRevision='41';
+ const result=await h.ctx.confirmSavedCloudMenu({menu:h.state.current,menuRevision:'41'},null,h.state.current);
+ assert.equal(result.localChangesPending,false);
+});
+
+test('edits during public verification remain pending in the returned save result', async () => {
+ const h=harness(); let release;
+ const pending=new Promise(resolve=>{release=resolve});
+ h.client.from=()=>({select:()=>({eq:()=>({maybeSingle:()=>pending})})});
+ const saving=h.ctx.confirmSavedCloudMenu({menu:h.state.current,menuRevision:41},null,h.state.current);
+ const newer={Platos:[{id:'one',name:'Sancocho',description:'Nueva descripción',price:45}]};
+ h.ctx.menuCatalog=structuredClone(newer);
+ release({data:{menu:h.state.current,menu_revision:41},error:null});
+ const result=await saving;
+ assert.equal(result.localChangesPending,true);
+ assert.deepEqual(JSON.parse(JSON.stringify(h.ctx.menuCatalog)),newer);
+ assert.ok(h.calls.some(x=>x[0]==='pending'));
+});

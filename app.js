@@ -5054,9 +5054,9 @@ async function verifyPublicMenuProjection(expectedMenu, expectedRevision = null)
     projectionError.code = "PUBLIC_MENU_PROJECTION_MISMATCH";
     throw projectionError;
   }
-  const revision = Number.parseInt(expectedRevision, 10);
-  const publicRevision = Number.parseInt(data.menu_revision, 10);
-  if (Number.isFinite(revision) && revision > 0 && publicRevision !== revision) {
+  const revision = validatedMenuRevision(expectedRevision);
+  const publicRevision = validatedMenuRevision(data.menu_revision);
+  if (publicRevision !== revision) {
     const projectionError = new Error(appUiText("La version del menu para clientes no coincide con la version guardada."));
     projectionError.code = "PUBLIC_MENU_REVISION_MISMATCH";
     throw projectionError;
@@ -5064,13 +5064,25 @@ async function verifyPublicMenuProjection(expectedMenu, expectedRevision = null)
   return data;
 }
 
+function validatedMenuRevision(value) {
+  // PostgreSQL bigint may be serialized as a number or a decimal string.
+  const numeric = typeof value === "number" ||
+    (typeof value === "string" && /^[1-9][0-9]*$/.test(value)) ? Number(value) : NaN;
+  if (!Number.isSafeInteger(numeric) || numeric < 1) {
+    const error = new Error(appUiText("La version del menu para clientes no coincide con la version guardada."));
+    error.code = "PUBLIC_MENU_REVISION_INVALID";
+    throw error;
+  }
+  return numeric;
+}
+
 async function confirmSavedCloudMenu(confirmed, fallbackMenu, submittedMenu = null) {
   const confirmedMenu = normalizeMenuCatalog(confirmed?.menu || fallbackMenu || EMPTY_MENU_CATALOG);
   if (!confirmed?.menu && !fallbackMenu) throw new Error("La nube no confirmó el menú guardado.");
-  const revision = confirmed?.menuRevision ?? confirmed?.menu_revision;
+  const revision = validatedMenuRevision(confirmed?.menuRevision ?? confirmed?.menu_revision);
   const submitted = normalizeMenuCatalog(submittedMenu || confirmedMenu);
   // Never overwrite product descriptions edited while a previous save was in flight.
-  const localChangesPending = !menuCatalogsMatch(menuCatalog, submitted);
+  let localChangesPending = !menuCatalogsMatch(menuCatalog, submitted);
   if (!localChangesPending) {
     menuCatalog = confirmedMenu;
     saveMenuCache();
@@ -5081,6 +5093,11 @@ async function confirmSavedCloudMenu(confirmed, fallbackMenu, submittedMenu = nu
   storeConfirmedCloudMenu(confirmedMenu);
   // Private RPC success does not prove customers can see the saved menu.
   await verifyPublicMenuProjection(confirmedMenu, revision);
+  // An edit can arrive while the public projection read is in flight.
+  if (!menuCatalogsMatch(menuCatalog, confirmedMenu)) {
+    localChangesPending = true;
+    markMenuPending();
+  }
   return { ...(confirmed || {}), menu: confirmedMenu, menuRevision: revision, localChangesPending };
 }
 
