@@ -34,7 +34,7 @@ export class MemoryOutboxStore {
   }
   async recover(now) { for (const e of this.#m.values()) if(e.state==='processing' && e.leaseUntil<=now) { e.state='unknown'; e.lastError='worker_lost'; this.events.push({id:e.id,type:'unknown'}); } }
   async resolve(id,state,evidence) {
-    if (!['sent','dead'].includes(state)||!evidence?.trim()) throw new Error('RECONCILIATION_EVIDENCE_REQUIRED');
+    if (!['sent','dead'].includes(state)||typeof evidence!=='string'||!evidence.trim()) throw new Error('RECONCILIATION_EVIDENCE_REQUIRED');
     const e=this.#m.get(id);if(e?.state!=='unknown')throw new Error('NOT_UNKNOWN');
     e.state=state;e.reconciliationEvidence=evidence;this.events.push({id,type:'reconciled'});
   }
