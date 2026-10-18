@@ -124,3 +124,42 @@ test("claim: malformed operation envelopes fail closed before local printing", a
  const valid=createGatewayClient({...config,fetchImpl:async()=>response({operation:{operation_id:OP,fiscal_payload:{restaurantId:OP}}})});
  assert.equal((await valid.claim("claim-token")).operation_id,OP);
 });
+
+test("sending and result reject non-final HTTP success even with ok:true", async () => {
+ for (const status of [201,202,206,207]) {
+  const client=createGatewayClient({...config,fetchImpl:async()=>({...response({ok:true}),status})});
+  await assert.rejects(()=>client.sending(OP,"claim"),{code:"INVALID_GATEWAY_ACK",status});
+  await assert.rejects(()=>client.result(OP,"claim","confirmed",{}),{code:"INVALID_GATEWAY_ACK",status});
+ }
+});
+
+test("accepted sending response cannot start printing", async () => {
+ let printed=0;
+ const operation={operation_id:OP,fiscal_payload:{restaurantId:OP,orderId:OP,currency:"PLN",items:[{name:"Test",quantityMilli:1000,grossTotalGrosz:100,taxCode:"8"}],totalGrosz:100}};
+ const client=createGatewayClient({...config,fetchImpl:async(url,init)=>JSON.parse(init.body).action==="claim"?response({operation}):({...response({ok:true}),status:202})});
+ const journal=new MemoryJournal();
+ const agent=new FiscalAgent({client,journal,driver:{printReceipt:async()=>{printed++;return {operationId:OP,status:"confirmed"};}}});
+ assert.equal((await agent.runOnce()).printed,false);
+ assert.equal(printed,0);
+ assert.equal((await journal.list())[0].phase,"unknown");
+});
+
+test("accepted result retains evidence until final ACK and never reprints", async () => {
+ let final=false,printed=0,reports=0;
+ const operation={operation_id:OP,fiscal_payload:{restaurantId:OP,orderId:OP,currency:"PLN",items:[{name:"Test",quantityMilli:1000,grossTotalGrosz:100,taxCode:"8"}],totalGrosz:100}};
+ const client=createGatewayClient({...config,fetchImpl:async(url,init)=>{
+  const action=JSON.parse(init.body).action;
+  if(action==="claim")return response({operation});
+  if(action==="result"){reports++;return {...response({ok:true}),status:final?200:202};}
+  return response({ok:true});
+ }});
+ const journal=new MemoryJournal();
+ const agent=new FiscalAgent({client,journal,driver:{printReceipt:async()=>{printed++;return {operationId:OP,status:"confirmed",simulated:true,fiscal:false};}}});
+ await agent.runOnce();
+ assert.equal((await journal.list()).length,1);
+ await assert.rejects(()=>agent.runOnce(),{code:"JOURNAL_OPERATION_PENDING"});
+ assert.equal(printed,1);
+ final=true;await agent.recover();
+ assert.deepEqual(await journal.list(),[]);
+ assert.equal(reports,3);assert.equal(printed,1);
+});
