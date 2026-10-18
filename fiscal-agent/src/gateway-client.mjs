@@ -32,7 +32,7 @@ export function createGatewayClient({ url, deviceId, deviceToken, fetchImpl = gl
         !Object.hasOwn(data, "operation") || (data.operation !== null &&
         (typeof data.operation !== "object" || Array.isArray(data.operation))))
         throw new GatewayError("INVALID_GATEWAY_RESPONSE", res.status);
-    } else if (data.ok !== true || Object.hasOwn(data, "error")) {
+    } else if (res.status !== 200 || data.ok !== true || Object.hasOwn(data, "error")) {
       throw new GatewayError("INVALID_GATEWAY_ACK", res.status);
     }
     return data;
