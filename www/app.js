@@ -10294,11 +10294,22 @@ async function uploadRestaurantImageDataUrl(dataUrl, scope, itemId) {
     throw new Error(appUiText("Necesitas conexión a internet para subir la foto."));
   }
 
+  const uploadClient = cloudState.client;
+  const uploadOwnerId = cloudState.user?.id;
+  const assertUploadSession = () => {
+    if (uploadClient !== cloudState.client || uploadOwnerId !== cloudState.user?.id) {
+      const changed = new Error(appUiText("La sesión cambió durante el guardado del menú. Conserva los cambios de este dispositivo."));
+      changed.code = "RC_ORDERA_MENU_SESSION_CHANGED";
+      throw changed;
+    }
+  };
+
   // Refrescar usuario real antes de subir.
   const {
     data: authData,
     error: authError
-  } = await cloudState.client.auth.getUser();
+  } = await uploadClient.auth.getUser();
+  assertUploadSession();
 
   if (authError) {
     console.error("RC ORDERA AUTH ERROR", authError);
@@ -10309,6 +10320,12 @@ async function uploadRestaurantImageDataUrl(dataUrl, scope, itemId) {
 
   if (!authenticatedUser?.id) {
     throw new Error(appUiText("La sesión no está disponible. Inicia sesión nuevamente."));
+  }
+
+  if (authenticatedUser.id !== uploadOwnerId) {
+    const changed = new Error(appUiText("La sesión cambió durante el guardado del menú. Conserva los cambios de este dispositivo."));
+    changed.code = "RC_ORDERA_MENU_SESSION_CHANGED";
+    throw changed;
   }
 
   // Mantener cloudState sincronizado.
@@ -10360,7 +10377,7 @@ async function uploadRestaurantImageDataUrl(dataUrl, scope, itemId) {
 
   try {
     uploadResult = await withCloudTimeout(
-      cloudState.client.storage
+      uploadClient.storage
         .from(RESTAURANT_MEDIA_BUCKET)
         .upload(path, blob, {
           cacheControl: "31536000",
@@ -10383,6 +10400,7 @@ async function uploadRestaurantImageDataUrl(dataUrl, scope, itemId) {
     throw error;
   }
 
+  assertUploadSession();
   const { data: uploadData, error: uploadError } =
     uploadResult || {};
 
@@ -10418,7 +10436,7 @@ async function uploadRestaurantImageDataUrl(dataUrl, scope, itemId) {
   );
 
   const { data: publicData } =
-    cloudState.client.storage
+    uploadClient.storage
       .from(RESTAURANT_MEDIA_BUCKET)
       .getPublicUrl(path);
 
@@ -10452,6 +10470,15 @@ async function uploadRestaurantImageDataUrl(dataUrl, scope, itemId) {
 }
 
 async function materializeMenuImagesForCloud(menu) {
+  const imageClient = cloudState.client;
+  const imageOwnerId = cloudState.user?.id;
+  const assertImageSession = () => {
+    if (imageClient !== cloudState.client || imageOwnerId !== cloudState.user?.id) {
+      const changed = new Error(appUiText("La sesión cambió durante el guardado del menú. Conserva los cambios de este dispositivo."));
+      changed.code = "RC_ORDERA_MENU_SESSION_CHANGED";
+      throw changed;
+    }
+  };
   const normalized = normalizeMenuCatalog(menu);
   const pendingImages = [];
   Object.entries(normalized).forEach(([category, products]) => {
@@ -10466,14 +10493,17 @@ async function materializeMenuImagesForCloud(menu) {
   }
 
   for (let index = 0; index < pendingImages.length; index += 3) {
+    assertImageSession();
     const batch = pendingImages.slice(index, index + 3);
     await Promise.all(batch.map(async ({ category, product }) => {
+      assertImageSession();
       product.imageUrl = await uploadRestaurantImageDataUrl(
         product.imageUrl,
         "products",
         product.id || stableProductId(category, product.name, product.description)
       );
     }));
+    assertImageSession();
   }
   return normalized;
 }

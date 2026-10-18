@@ -740,8 +740,8 @@
     ]
   },
   "app.js": {
-    "sha256": "a2ddbdd8f62719a5b9f67723eaed3fa6d4818724b8aa271b25e4350eaa25f543",
-    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/qr-menu-rpc-throttle.test.cjs; tests/menu-save-burst-coalesce.test.cjs; tests/menu-session-publication-guard.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/menu-cloud-rpc-singleflight.test.cjs; tests/portal-stations-entry.test.cjs; tests/central-refresh-session.test.cjs; tests/restaurant-settings-pending-confirmation.test.cjs; tests/settings-stale-response-tenant-guard.test.cjs",
+    "sha256": "67eb79b39a6f9e52b5c7f3874462bed8c5d156a6df191623d190a0537ff01c60",
+    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/qr-menu-rpc-throttle.test.cjs; tests/menu-save-burst-coalesce.test.cjs; tests/menu-session-publication-guard.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/menu-cloud-rpc-singleflight.test.cjs; tests/portal-stations-entry.test.cjs; tests/central-refresh-session.test.cjs; tests/restaurant-settings-pending-confirmation.test.cjs; tests/settings-stale-response-tenant-guard.test.cjs; tests/hardening/menu-photo-session-isolation.test.mjs",
     "edits": [
       {
         "before": "",
@@ -1137,6 +1137,56 @@
         "before": "async function saveSettingsWhenPossible(options = {}) {\r\n  const { silent = false } = options;\r\n\r\n  const settingsPendingToken =\r\n    currentSettingsPendingToken();\r\n\r\n  if (cloudState.user && navigator.onLine) {\r\n    try {\r\n      if (!silent) updateCloudStatus(\"Guardando nube...\");\r\n\r\n      await withCloudTimeout(\r\n        saveCloudSettings(),\r\n        \"No fue posible confirmar el guardado en nube a tiempo.\"\r\n      );\r\n\r\n      // Clear only the edition confirmed by this request. Another successful\r\n      // save may already have cleared it; only an actual queued edit is pending.\r\n      if (settingsPendingToken) clearSettingsPending(settingsPendingToken);\r\n      if (hasPendingSettings()) {\r\n        updateCloudStatus(\"Ajustes pendientes de sincronización\");\r\n        return { pending: true };\r\n      }\r\n      updateCloudStatus(\"Sincronizado\");\r\n      return { synced: true };\r\n    } catch (error) {\r\n      console.error(error);\r\n      markSettingsPending();\r\n      updateCloudStatus();\r\n      return { pending: shouldQueueForCloud(), error };\r\n    }\r\n  } else if (shouldQueueForCloud()) {\r\n    markSettingsPending();\r\n    updateCloudStatus();\r\n    return { pending: true };\r\n  }\r\n  updateCloudStatus();\r\n  return { localOnly: true };\r\n}\r\n\r\n",
         "after": "async function saveSettingsWhenPossible(options = {}) {\r\n  const { silent = false } = options;\r\n  const initiatingClient = cloudState.client;\r\n  const initiatingUserId = cloudState.user?.id;\r\n\r\n  const settingsPendingToken =\r\n    currentSettingsPendingToken();\r\n\r\n  if (cloudState.user && navigator.onLine) {\r\n    try {\r\n      if (!silent) updateCloudStatus(\"Guardando nube...\");\r\n\r\n      await withCloudTimeout(\r\n        saveCloudSettings(),\r\n        \"No fue posible confirmar el guardado en nube a tiempo.\"\r\n      );\r\n\r\n      // Clear only the edition confirmed by this request. Another successful\r\n      // save may already have cleared it; only an actual queued edit is pending.\r\n      if (settingsPendingToken) clearSettingsPending(settingsPendingToken);\r\n      if (hasPendingSettings()) {\r\n        updateCloudStatus(\"Ajustes pendientes de sincronización\");\r\n        return { pending: true };\r\n      }\r\n      updateCloudStatus(\"Sincronizado\");\r\n      return { synced: true };\r\n    } catch (error) {\r\n      console.error(error);\r\n      if (initiatingClient !== cloudState.client ||\r\n          initiatingUserId !== cloudState.user?.id) {\r\n        // A sign-out/account change cannot queue the former owner's edits.\r\n        return { pending: false, error };\r\n      }\r\n      if (error?.code === \"SETTINGS_CONCURRENT_EDIT_PENDING\" && hasPendingSettings()) {\r\n        updateCloudStatus(\"Ajustes pendientes de sincronización\");\r\n        return { pending: true };\r\n      }\r\n      markSettingsPending();\r\n      updateCloudStatus();\r\n      return { pending: shouldQueueForCloud(), error };\r\n    }\r\n  } else if (shouldQueueForCloud()) {\r\n    markSettingsPending();\r\n    updateCloudStatus();\r\n    return { pending: true };\r\n  }\r\n  updateCloudStatus();\r\n  return { localOnly: true };\r\n}\r\n\r\n",
         "afterByteOffset": 355703
+      },
+      {
+        "before": "",
+        "after": "  const uploadClient = cloudState.client;\r\n  const uploadOwnerId = cloudState.user?.id;\r\n  const assertUploadSession = () => {\r\n    if (uploadClient !== cloudState.client || uploadOwnerId !== cloudState.user?.id) {\r\n      const changed = new Error(appUiText(\"La sesión cambió durante el guardado del menú. Conserva los cambios de este dispositivo.\"));\r\n      changed.code = \"RC_ORDERA_MENU_SESSION_CHANGED\";\r\n      throw changed;\r\n    }\r\n  };\r\n\r\n",
+        "afterByteOffset": 330047
+      },
+      {
+        "before": "  } = await cloudState.client.auth.getUser();\r\n",
+        "after": "  } = await uploadClient.auth.getUser();\r\n  assertUploadSession();\r\n",
+        "afterByteOffset": 330595
+      },
+      {
+        "before": "",
+        "after": "  }\r\n\r\n  if (authenticatedUser.id !== uploadOwnerId) {\r\n    const changed = new Error(appUiText(\"La sesión cambió durante el guardado del menú. Conserva los cambios de este dispositivo.\"));\r\n    changed.code = \"RC_ORDERA_MENU_SESSION_CHANGED\";\r\n    throw changed;\r\n",
+        "afterByteOffset": 330944
+      },
+      {
+        "before": "      cloudState.client.storage\r\n",
+        "after": "      uploadClient.storage\r\n",
+        "afterByteOffset": 332295
+      },
+      {
+        "before": "",
+        "after": "  assertUploadSession();\r\n",
+        "afterByteOffset": 332803
+      },
+      {
+        "before": "    cloudState.client.storage\r\n",
+        "after": "    uploadClient.storage\r\n",
+        "afterByteOffset": 333568
+      },
+      {
+        "before": "",
+        "after": "  const imageClient = cloudState.client;\r\n  const imageOwnerId = cloudState.user?.id;\r\n  const assertImageSession = () => {\r\n    if (imageClient !== cloudState.client || imageOwnerId !== cloudState.user?.id) {\r\n      const changed = new Error(appUiText(\"La sesión cambió durante el guardado del menú. Conserva los cambios de este dispositivo.\"));\r\n      changed.code = \"RC_ORDERA_MENU_SESSION_CHANGED\";\r\n      throw changed;\r\n    }\r\n  };\r\n",
+        "afterByteOffset": 334254
+      },
+      {
+        "before": "",
+        "after": "    assertImageSession();\r\n",
+        "afterByteOffset": 335327
+      },
+      {
+        "before": "",
+        "after": "      assertImageSession();\r\n",
+        "afterByteOffset": 335480
+      },
+      {
+        "before": "",
+        "after": "    assertImageSession();\r\n",
+        "afterByteOffset": 335723
       }
     ]
   },
@@ -1366,6 +1416,17 @@
         "before": "    productIds.add(validated.productId);\n",
         "after": "    productIds.set(validated.productId, validated.lineId !== undefined);\n    if (validated.lineId !== undefined) lineIds.add(validated.lineId);\n",
         "afterByteOffset": 6230
+      }
+    ]
+  },
+  "fiscal-bridge/src/fiscal-service.mjs": {
+    "sha256": "70a833e66205ebc71b0b79935d0e9220d0b3a0fdd3f7edc34c3fa79e08aa28ae",
+    "regressionTests": "fiscal-bridge/tests/fiscal-status-validation.test.mjs; fiscal-bridge/tests/fiscal-status-race.test.mjs",
+    "edits": [
+      {
+        "before": "      return await this.#driver.getStatus();\n",
+        "after": "      const result = await this.#driver.getStatus();\n      // A driver must explicitly confirm connectivity. Never trust a\n      // malformed or contradictory hardware status as a valid reading.\n      if (\n        !result ||\n        typeof result !== \"object\" ||\n        Array.isArray(result) ||\n        typeof result.connected !== \"boolean\"\n      ) {\n        throw new FiscalError(\n          \"INVALID_DEVICE_STATUS\",\n          \"Driver returned an invalid connection status\"\n        );\n      }\n      return result;\n",
+        "afterByteOffset": 3626
       }
     ]
   }
