@@ -1421,11 +1421,11 @@
   },
   "fiscal-bridge/src/fiscal-service.mjs": {
     "sha256": "70a833e66205ebc71b0b79935d0e9220d0b3a0fdd3f7edc34c3fa79e08aa28ae",
-    "regressionTests": "fiscal-bridge/tests/fiscal-status-validation.test.mjs; fiscal-bridge/tests/fiscal-status-race.test.mjs",
+    "regressionTests": "fiscal-bridge/tests/fiscal-status-validation.test.mjs",
     "edits": [
       {
-        "before": "      return await this.#driver.getStatus();\n",
-        "after": "      const result = await this.#driver.getStatus();\n      // A driver must explicitly confirm connectivity. Never trust a\n      // malformed or contradictory hardware status as a valid reading.\n      if (\n        !result ||\n        typeof result !== \"object\" ||\n        Array.isArray(result) ||\n        typeof result.connected !== \"boolean\"\n      ) {\n        throw new FiscalError(\n          \"INVALID_DEVICE_STATUS\",\n          \"Driver returned an invalid connection status\"\n        );\n      }\n      return result;\n",
+        "before": "      return await this.#driver.getStatus();",
+        "after": "      const result = await this.#driver.getStatus();\n      // A driver must explicitly confirm connectivity. Never trust a\n      // malformed or contradictory hardware status as a valid reading.\n      if (\n        !result ||\n        typeof result !== \"object\" ||\n        Array.isArray(result) ||\n        typeof result.connected !== \"boolean\"\n      ) {\n        throw new FiscalError(\n          \"INVALID_DEVICE_STATUS\",\n          \"Driver returned an invalid connection status\"\n        );\n      }\n      return result;",
         "afterByteOffset": 3626
       }
     ]
