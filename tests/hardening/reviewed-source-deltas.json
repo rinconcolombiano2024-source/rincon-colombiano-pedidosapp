@@ -740,8 +740,8 @@
     ]
   },
   "app.js": {
-    "sha256": "a29f8cb5187ae7b9577f93fe5c27efd98a7fc640ac70b4b0a977b56d8a8abeb5",
-    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/qr-menu-rpc-throttle.test.cjs; tests/menu-save-burst-coalesce.test.cjs; tests/menu-session-publication-guard.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/menu-cloud-rpc-singleflight.test.cjs; tests/portal-stations-entry.test.cjs; tests/central-refresh-session.test.cjs; tests/restaurant-settings-pending-confirmation.test.cjs; tests/settings-stale-response-tenant-guard.test.cjs; tests/hardening/menu-photo-session-isolation.test.mjs; tests/menu-publication-verified-save.test.cjs",
+    "sha256": "964809935acbd8dd03853523542c636ed55da894cb0c35a5db22bda19a0c101e",
+    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/qr-menu-rpc-throttle.test.cjs; tests/menu-save-burst-coalesce.test.cjs; tests/menu-session-publication-guard.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/menu-cloud-rpc-singleflight.test.cjs; tests/portal-stations-entry.test.cjs; tests/central-refresh-session.test.cjs; tests/restaurant-settings-pending-confirmation.test.cjs; tests/settings-stale-response-tenant-guard.test.cjs; tests/hardening/menu-photo-session-isolation.test.mjs; tests/menu-publication-verified-save.test.cjs; tests/menu-save-session-isolation.test.cjs",
     "edits": [
       {
         "before": "",
@@ -1212,6 +1212,26 @@
         "before": "  await verifyPublicMenuProjection(confirmedMenu, revision);\r\n  return { ...(confirmed || {}), menu: confirmedMenu, menuRevision: revision, localChangesPending };",
         "after": "  await verifyPublicMenuProjection(confirmedMenu, revision);\r\n  // An edit can arrive while the public projection read is in flight.\r\n  if (!menuCatalogsMatch(menuCatalog, confirmedMenu)) {\r\n    localChangesPending = true;\r\n    markMenuPending();\r\n  }\r\n  return { ...(confirmed || {}), menu: confirmedMenu, menuRevision: revision, localChangesPending };",
         "afterByteOffset": 163309
+      },
+      {
+        "before": "async function saveMenuWhenPossibleNow(options = {}) {\r\n  const { silent = false } = options;",
+        "after": "async function saveMenuWhenPossibleNow(options = {}) {\r\n  const { silent = false } = options;\r\n  const initiatingClient = cloudState.client;\r\n  const initiatingUserId = cloudState.user?.id;\r\n  const isCurrentMenuSession = () => initiatingClient === cloudState.client &&\r\n    initiatingUserId === cloudState.user?.id;",
+        "afterByteOffset": 359457
+      },
+      {
+        "before": "      if (confirmedSave?.localChangesPending ||",
+        "after": "      // A late completion belongs only to the session that started this save.\r\n      if (!isCurrentMenuSession()) return { pending: false };\r\n      if (confirmedSave?.localChangesPending ||",
+        "afterByteOffset": 360127
+      },
+      {
+        "before": "    } catch (error) {\r\n      console.error(error);\r\n      markMenuPending();",
+        "after": "    } catch (error) {\r\n      console.error(error);\r\n      if (!isCurrentMenuSession()) return { pending: false, error };\r\n      markMenuPending();",
+        "afterByteOffset": 360575
+      },
+      {
+        "before": "  const run = async () => {\r\n    let result = await saveMenuWhenPossibleNow(options);",
+        "after": "  const run = async () => {\r\n    // The queue may settle after logout or after another restaurant signs in.\r\n    if (cloudState.client !== context.client ||\r\n        cloudState.user?.id !== context.userId) return { pending: false };\r\n    let result = await saveMenuWhenPossibleNow(options);",
+        "afterByteOffset": 363541
       }
     ]
   },
