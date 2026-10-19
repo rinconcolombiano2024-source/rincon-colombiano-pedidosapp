@@ -207,8 +207,10 @@ export function verifyRetrievedCheckout(
   return { id: verified.id, status: verified.status, paid: verified.status === "PAID" };
 }
 
-async function responseJson(response: Response): Promise<unknown> {
-  if (!response.ok) {
+async function responseJson(response: Response, expectedStatus = 200): Promise<unknown> {
+  // Only the endpoint's documented final response can confirm provider state.
+  // In particular, HTTP 202 is not proof of a completed payment lookup.
+  if (response.status !== expectedStatus) {
     throw new Error("SUMUP_API_UNAVAILABLE");
   }
   try {
@@ -250,7 +252,7 @@ export async function createSumUpHostedCheckout(
       hosted_checkout: { enabled: true },
     }),
   });
-  return verifyHostedCheckout(await responseJson(response), config, attempt);
+  return verifyHostedCheckout(await responseJson(response, 201), config, attempt);
 }
 
 export async function retrieveSumUpCheckout(
