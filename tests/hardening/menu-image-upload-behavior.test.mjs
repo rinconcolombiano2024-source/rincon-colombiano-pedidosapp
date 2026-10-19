@@ -50,3 +50,27 @@ for (const file of ["app.js", "www/app.js"]) {
     assert.equal(h.count(), 0);
   });
 }
+
+for (const file of ["app.js", "www/app.js"]) {
+  test(`${file}: failed photo upload does not mutate the editable menu`, async () => {
+    const source = readFileSync(file, "utf8");
+    const begin = source.indexOf("async function materializeMenuImagesForCloud(");
+    const end = source.indexOf("function menuHasInlineRestaurantImages(", begin);
+    assert.ok(begin >= 0 && end > begin);
+    const context = {
+      navigator: { onLine: true },
+      cloudState: { client: {}, user: { id: "owner" } },
+      normalizeMenuCatalog: (menu) => structuredClone(menu),
+      isInlineRestaurantImage: (url) => String(url).startsWith("data:"),
+      uploadRestaurantImageDataUrl: async () => { throw new Error("STORAGE_UPLOAD_FAILED"); },
+      stableProductId: () => "stable-id",
+      appUiText: (message) => message,
+    };
+    vm.createContext(context);
+    vm.runInContext(source.slice(begin, end), context);
+    const original = { Comidas: [{ id: "a", name: "Arepa", price: 20, imageUrl: "data:image/png;base64,AA==" }] };
+    const snapshot = structuredClone(original);
+    await assert.rejects(context.materializeMenuImagesForCloud(original), /STORAGE_UPLOAD_FAILED/);
+    assert.deepEqual(original, snapshot, "failed cloud upload must not mutate menu, photo, or price");
+  });
+}
