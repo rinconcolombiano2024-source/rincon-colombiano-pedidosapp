@@ -15,7 +15,7 @@ for (const file of ["cliente.js", "www/cliente.js"]) {
     vm.runInContext(source.slice(start, end), ctx);
     const attack = '" autofocus onfocus="alert(1)<script>&\'';
     const escaped = ctx.customerEscapeHtml(attack);
-    assert.equal(escaped, "&quot; autofocus onfocus=&quot;alert(1)&quot;&lt;script&gt;&amp;&#039;");
+    assert.equal(escaped, "&quot; autofocus onfocus=&quot;alert(1)&lt;script&gt;&amp;&#039;");
     assert.equal(escaped.includes("<script>"), false);
     assert.equal(escaped.includes('"'), false);
     const render = source.slice(source.indexOf("function customerRenderCart() {"));
