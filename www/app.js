@@ -11375,6 +11375,10 @@ async function saveSettingsWhenPossible(options = {}) {
 
 async function saveMenuWhenPossibleNow(options = {}) {
   const { silent = false } = options;
+  const initiatingClient = cloudState.client;
+  const initiatingUserId = cloudState.user?.id;
+  const isCurrentMenuSession = () => initiatingClient === cloudState.client &&
+    initiatingUserId === cloudState.user?.id;
 
   const menuPendingToken =
     currentMenuPendingToken();
@@ -11387,6 +11391,8 @@ async function saveMenuWhenPossibleNow(options = {}) {
         saveCloudMenu(),
         "No fue posible confirmar el menú para clientes en la nube a tiempo."
       );
+      // A late completion belongs only to the session that started this save.
+      if (!isCurrentMenuSession()) return { pending: false };
       if (confirmedSave?.localChangesPending ||
           (menuPendingToken && !clearMenuPending(menuPendingToken))) {
         updateCloudStatus("Menú pendiente de sincronización");
@@ -11396,6 +11402,7 @@ async function saveMenuWhenPossibleNow(options = {}) {
       return { synced: true };
     } catch (error) {
       console.error(error);
+      if (!isCurrentMenuSession()) return { pending: false, error };
       markMenuPending();
       updateCloudStatus();
       return { pending: shouldQueueForCloud(), error };
@@ -11469,6 +11476,9 @@ function saveMenuWhenPossible(options = {}) {
 
   const context = { client: cloudState.client, userId: cloudState.user?.id };
   const run = async () => {
+    // The queue may settle after logout or after another restaurant signs in.
+    if (cloudState.client !== context.client ||
+        cloudState.user?.id !== context.userId) return { pending: false };
     let result = await saveMenuWhenPossibleNow(options);
     // A burst of editing can update the local menu during the first RPC.
     // Run exactly one follow-up if a newer pending revision exists; a failed
