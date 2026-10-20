@@ -5,7 +5,10 @@ export function inventoryQuantity(value) {
   if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > MAX_SAFE_QUANTITY) {
     throw new RangeError("INVALID_INVENTORY_QUANTITY");
   }
-  return Math.round((value + Number.EPSILON) * 1000);
+  const scaled = value * 1000;
+  const rounded = Math.round(scaled);
+  if (Math.abs(scaled - rounded) > 1e-7) throw new RangeError("INVALID_INVENTORY_PRECISION");
+  return rounded;
 }
 export function inventoryMovement(input) {
   if (!input || typeof input !== "object") throw new TypeError("INVALID_INVENTORY_MOVEMENT");
@@ -48,7 +51,9 @@ export function calculateInventoryBalance(restaurantId, productId, movements) {
     seen.set(item.movementId, item);
     const sign = ["receipt", "adjustment_in", "return"].includes(item.type) ? 1 : -1;
     milliBalance += sign * item.milliQuantity;
-    if (!Number.isSafeInteger(milliBalance)) throw new RangeError("INVENTORY_BALANCE_OVERFLOW");
+    if (!Number.isSafeInteger(milliBalance) || Math.abs(milliBalance) > MAX_SAFE_QUANTITY * 1000) {
+      throw new RangeError("INVENTORY_BALANCE_OVERFLOW");
+    }
   }
   return Object.freeze({ restaurantId, productId, quantity: milliBalance / 1000, negativeStock: milliBalance < 0, movementCount: seen.size });
 }

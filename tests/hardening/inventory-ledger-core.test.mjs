@@ -51,3 +51,16 @@ test("inventory: whitespace-only movement IDs and invalid balance IDs fail close
   assert.throws(() => inventoryMovement({ ...base, movementId: "   " }), /INVALID_INVENTORY_ID/);
   assert.throws(() => calculateInventoryBalance("  ", "coffee", [base]), /INVALID_INVENTORY_ID/);
 });
+
+test("inventory: reject sub-milliquantity instead of silently rounding stock", () => {
+  for (const quantity of [0.0001, 0.0009, 1.0001, 1.0009]) {
+    assert.throws(() => inventoryQuantity(quantity), /INVALID_INVENTORY_PRECISION/);
+  }
+  assert.equal(inventoryQuantity(1.125), 1125);
+});
+test("inventory: reject cumulative balance outside supported quantity bounds", () => {
+  const entries = Array.from({ length: 2 }, (_, index) => ({
+    ...base, movementId: "large-" + index, quantity: 1_000_000_000,
+  }));
+  assert.throws(() => calculateInventoryBalance("restaurant-A", "coffee", entries), /INVENTORY_BALANCE_OVERFLOW/);
+});
