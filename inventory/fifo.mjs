@@ -23,7 +23,12 @@ export function fifoIssue({restaurantId,warehouseId,ingredientId,lots,quantity})
   if(!originalMilli||availableMilli>originalMilli)throw new RangeError("INVALID_LOT");
   return {lotId,receivedAt:l.receivedAt,receivedEpoch:Date.parse(l.receivedAt),availableMilli,totalCostMinor,originalMilli};
  }).sort((a,b)=>a.receivedEpoch-b.receivedEpoch||a.lotId.localeCompare(b.lotId));
- if(ordered.reduce((s,l)=>s+l.availableMilli,0)<demand)throw new RangeError("INSUFFICIENT_STOCK");
+ let availableTotal=0;
+ for(const lot of ordered){
+  availableTotal+=lot.availableMilli;
+  if(!Number.isSafeInteger(availableTotal))throw new RangeError("STOCK_OVERFLOW");
+ }
+ if(availableTotal<demand)throw new RangeError("INSUFFICIENT_STOCK");
  let remaining=demand,totalCostMinor=0;
  const allocations=[];
  for(const l of ordered){
@@ -54,7 +59,9 @@ export function reorderAlert({onHandMilli,averageDailyMilli,leadDays,safetyMilli
  if(!Number.isSafeInteger(leadDays)||leadDays<0||leadDays>365)throw new RangeError("INVALID_LEAD_TIME");
  const reorderPointMilli=daily*leadDays+safety;
  if(!Number.isSafeInteger(reorderPointMilli))throw new RangeError("REORDER_OVERFLOW");
- return Object.freeze({reorderPointMilli,reorder:onHand<=reorderPointMilli,suggestedPurchaseMilli:Math.max(0,reorderPointMilli+daily-onHand)});
+ const suggestedPurchaseMilli=Math.max(0,reorderPointMilli+daily-onHand);
+ if(!Number.isSafeInteger(suggestedPurchaseMilli))throw new RangeError("REORDER_OVERFLOW");
+ return Object.freeze({reorderPointMilli,reorder:onHand<=reorderPointMilli,suggestedPurchaseMilli});
 }
 export const WASTE_REASONS=Object.freeze(["desperdicio","rotura","consumo_personal","error_cocina"]);
 export function wasteRecord({reason,quantity}) {
