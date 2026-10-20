@@ -69,6 +69,10 @@ begin
   then raise exception 'IDEMPOTENCY_CONFLICT'; end if;
   return v_existing.cost;
  end if;
+ if exists(select 1 from public.rc_inventory_movements where restaurant_id=p_restaurant and idempotency_key=p_idempotency_key)
+ then raise exception 'IDEMPOTENCY_CONFLICT'; end if;
+ -- Serialize FIFO issues for the same ingredient and warehouse to prevent phantom reads.
+ perform pg_advisory_xact_lock(hashtextextended(p_restaurant::text||':'||p_warehouse::text||':'||p_ingredient::text,1));
  v_remaining:=p_quantity_milli;
  -- Lock all matching lots in stable FIFO order; updates and movements are one transaction.
  for v_lot in select * from public.rc_inventory_lots
