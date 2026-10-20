@@ -1362,7 +1362,7 @@
     ]
   },
   "mesero.js": {
-    "sha256": "f323cc63568d0ee4381bcd115dc51ba28162a041b4a546195f1aa51349f183ab",
+    "sha256": "98f472a45d48c697f93d108dcae5249dd7afc23cf9382ef9647597c7fa230e25",
     "edits": [
       {
         "before": "let waiterMenuLoadInFlight = null;\r\n",
@@ -1418,9 +1418,19 @@
         "before": "",
         "after": "switchAccountButton?.addEventListener(\"click\", waiterSwitchAccount);\r\nwaiterElements.",
         "afterByteOffset": 77066
+      },
+      {
+        "before": "    const cursorStart =\r\n      target.selectionStart;\r\n\r\n    const cursorEnd =\r\n      target.selectionEnd;\r\n\r\n\r\n    item.note =\r\n      String(target.value || \"\")\r\n        .toUpperCase();\r\n\r\n\r\n    if (target.value !== item.note) {\r\n      target.value = item.note;\r\n    }\r\n\r\n\r\n    try {\r\n\r\n      if (\r\n        Number.isInteger(cursorStart) &&\r\n        Number.isInteger(cursorEnd)\r\n      ) {\r\n\r\n        target.setSelectionRange(\r\n          cursorStart,\r\n          cursorEnd\r\n        );\r\n\r\n      }\r\n\r\n    } catch {\r\n      // Algunos navegadores móviles no permiten\r\n      // restaurar la posición del cursor.\r\n    }\r\n\r\n\r\n",
+        "after": "    // Do not replace the textarea value or selection while the waiter types.\n    // Uppercasing on every keystroke breaks mobile IME, dictation and accents.\n    // The order payload normalizes the note on submission.\n    item.note = String(target.value || \"\").slice(0, 500);\n\n",
+        "afterByteOffset": 81733
+      },
+      {
+        "before": "waiterElements.notes.addEventListener(\"input\", () => {\r\n  const start = waiterElements.notes.selectionStart;\r\n  waiterElements.notes.value = waiterElements.notes.value.toUpperCase();\r\n  waiterElements.notes.setSelectionRange(start, start);\r\n  waiterSaveDraft();\r\n});",
+        "after": "waiterElements.notes.addEventListener(\"input\", () => {\n  // Preserve native input/composition behavior on phones and tablets.\n  waiterSaveDraft();\n});",
+        "afterByteOffset": 82045
       }
     ],
-    "regressionTests": "tests/waiter-realtime-coalesce.test.cjs; tests/waiter-access-recovery.test.cjs"
+    "regressionTests": "tests/waiter-realtime-coalesce.test.cjs; tests/waiter-access-recovery.test.cjs; tests/hardening/waiter-notes-mobile-input.test.mjs"
   },
   "integrations/src/integration-readiness.mjs": {
     "sha256": "a6372dd5b690be2bbefa009feb4049688c6647fd149f26af56a57528410eb768",
