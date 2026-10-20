@@ -6,6 +6,7 @@ const MAX_INTERNAL_SECRET_HEADER_LENGTH = 1_024;
 const STRIPE_REQUEST_TIMEOUT_MS = 15_000;
 const MAX_JOBS_PER_RUN = 25;
 const MAX_AUTOMATIC_ATTEMPTS = 6;
+const MAX_REVERSAL_HISTORY_PAGES = 5;
 const MAX_ERROR_MESSAGE_LENGTH = 1_000;
 
 type ReversalJob = {
@@ -333,6 +334,15 @@ async function stripeRequest(
     };
   }
 
+  // These Stripe v1 transfer endpoints return 200 on completion. A partial
+  // or merely accepted response is not evidence that money moved.
+  if (result.status !== 200) {
+    return {
+      ok: false, status: result.status, data: {}, retryable: false,
+      uncertain: true, error: "Stripe returned a nonfinal response",
+    };
+  }
+
   return {
     ok: true,
     status: result.status,
@@ -365,18 +375,46 @@ async function listStripeTransferReversals(
   stripeKey: string,
   transferId: string,
 ) {
-  return await stripeRequest(
-    `https://api.stripe.com/v1/transfers/${encodeURIComponent(
-      transferId,
-    )}/reversals?limit=100`,
-    {
-      method: "GET",
-      headers: {
-        Authorization:
-          `Bearer ${stripeKey}`,
+  const entries: any[] = [];
+  const seen = new Set<string>();
+  let cursor = "";
+  const invalidHistory = (error: string) => ({
+    ok: false, status: 200, data: {}, retryable: false, uncertain: true, error,
+  });
+  for (let page = 0; page < MAX_REVERSAL_HISTORY_PAGES; page += 1) {
+    const result = await stripeRequest(
+      `https://api.stripe.com/v1/transfers/${encodeURIComponent(
+        transferId,
+      )}/reversals?limit=100${cursor ? `&starting_after=${encodeURIComponent(cursor)}` : ""}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization:
+            `Bearer ${stripeKey}`,
+        },
       },
-    },
-  );
+    );
+    if (!result.ok) return result;
+    const history = result.data;
+    if (!history || history.object !== "list" || !Array.isArray(history.data) ||
+        typeof history.has_more !== "boolean" || history.data.length > 100 ||
+        (history.has_more && history.data.length === 0)) {
+      return invalidHistory("Stripe reversal history is malformed");
+    }
+    for (const entry of history.data) {
+      if (!entry || entry.object !== "transfer_reversal" ||
+          typeof entry.id !== "string" || !isTransferReversalId(entry.id) ||
+          entry.transfer !== transferId || seen.has(entry.id)) {
+        return invalidHistory("Stripe reversal history contains invalid or repeated entries");
+      }
+      seen.add(entry.id);
+      entries.push(entry);
+    }
+    if (!history.has_more) return { ...result, data: { object: "list", data: entries, has_more: false } };
+    cursor = history.data[history.data.length - 1].id;
+  }
+  // Never infer absence from a truncated history or launch unbounded requests.
+  return invalidHistory("Stripe reversal history exceeds the automatic reconciliation limit");
 }
 
 async function createStripeTransferReversal(
@@ -467,7 +505,10 @@ function validateTransfer(
       expectedAmountMinor &&
     normalizeCurrency(
       transfer?.currency,
-    ) === expectedCurrency
+    ) === expectedCurrency &&
+    Number.isSafeInteger(transfer?.amount_reversed) &&
+    transfer.amount_reversed >= 0 &&
+    transfer.amount_reversed <= expectedAmountMinor
   );
 }
 
