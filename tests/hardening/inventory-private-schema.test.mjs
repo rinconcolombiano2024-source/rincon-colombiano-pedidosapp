@@ -5,3 +5,5 @@ test("new inventory tables deny direct browser access by default",()=>{for(const
 test("inventory migration is additive and avoids changes to payment or order data",()=>{assert.doesNotMatch(sql,/\b(drop|truncate|delete|update)\s+(table|from|public\.)/i);assert.doesNotMatch(sql,/\b(sumup|stripe|pedidos|payments)\b/i)});
 
 test("blind physical count schema stores independent count lines with guarded status",()=>{assert.match(sql,/create table if not exists public\.rc_inventory_counts/);assert.match(sql,/create table if not exists public\.rc_inventory_count_lines/);assert.match(sql,/unique\(restaurant_id,count_id,ingredient_id\)/);assert.match(sql,/status in \('draft','submitted','approved','cancelled'\)/);for(const t of ['counts','count_lines'])assert.match(sql,new RegExp('alter table public\\.rc_inventory_'+t+' enable row level security'));});
+
+test("movement cannot point to a lot from another warehouse or ingredient",()=>{assert.match(sql,/unique\(restaurant_id,warehouse_id,ingredient_id,id\)/);assert.match(sql,/foreign key\(restaurant_id,warehouse_id,ingredient_id,lot_id\) references public\.rc_inventory_lots\(restaurant_id,warehouse_id,ingredient_id,id\)/)});
