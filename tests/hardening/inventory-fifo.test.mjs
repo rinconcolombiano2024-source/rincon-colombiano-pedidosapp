@@ -10,3 +10,10 @@ test("unit conversion is integer precise and fails closed",()=>{assert.equal(pur
 test("blind count reports stock and financial variance, without mutating stock",()=>{const a=physicalCount({theoreticalMilli:10000,countedMilli:9000,bookValueMinor:20000});assert.equal(a.differenceMilli,-1000);assert.equal(a.deviationPercent,-10);assert.equal(a.valueDifferenceMinor,-2000);assert.equal(a.requiresApproval,true)});
 test("reorder uses daily demand and lead time",()=>{assert.deepEqual(reorderAlert({onHandMilli:4000,averageDailyMilli:2000,leadDays:2,safetyMilli:1000}),{reorderPointMilli:5000,reorder:true,suggestedPurchaseMilli:3000})});
 test("waste categories reject unknown reasons",()=>{assert.equal(wasteRecord({reason:"rotura",quantity:0.5}).milli,500);assert.throws(()=>wasteRecord({reason:"sale",quantity:1}))});
+
+test("FIFO orders by absolute receipt instant, not timezone text",()=>{
+ const newer={...lots[0],lotId:"newer",receivedAt:"2026-10-01T10:00:00+02:00"};
+ const older={...lots[1],lotId:"older",receivedAt:"2026-10-01T07:30:00Z"};
+ const result=fifoIssue({...base,lots:[newer,older],quantity:1});
+ assert.deepEqual(result.allocations.map(x=>x.lotId),["older"]);
+});
