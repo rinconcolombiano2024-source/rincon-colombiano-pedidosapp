@@ -1,0 +1,5 @@
+import test from "node:test";import assert from "node:assert/strict";import {readFileSync} from "node:fs";
+const sql=readFileSync("MIGRACION-V91-75-INVENTORY-PRIVATE-SCHEMA.sql","utf8");
+test("inventory schema isolates each warehouse, ingredient, lot and movement by restaurant",()=>{for(const t of ["warehouses","ingredients","lots","movements"])assert.match(sql,new RegExp("create table if not exists public\\.rc_inventory_"+t));assert.match(sql,/unique\\(restaurant_id,idempotency_key\\)/);assert.match(sql,/rc_inventory_lots_fifo_idx/)});
+test("new inventory tables deny direct browser access by default",()=>{for(const t of ["warehouses","ingredients","lots","movements"])assert.match(sql,new RegExp("alter table public\\.rc_inventory_"+t+" enable row level security"));assert.match(sql,/revoke all on[\\s\\S]+from anon,authenticated/);assert.doesNotMatch(sql,/create policy/i)});
+test("inventory migration is additive and avoids changes to payment or order data",()=>{assert.doesNotMatch(sql,/\\b(drop|truncate|delete|update)\\s+(table|from|public\\.)/i);assert.doesNotMatch(sql,/\\b(sumup|stripe|pedidos|payments)\\b/i)});
