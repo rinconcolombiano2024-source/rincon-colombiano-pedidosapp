@@ -2913,6 +2913,13 @@ function customerSetStatus(message, type = "") {
   customerElements.status.removeAttribute("data-i18n");
   customerElements.status.textContent = message;
   customerElements.status.dataset.type = type;
+  const customerCheckoutStatus = document.querySelector("#customerCheckoutStatus");
+  if (customerCheckoutStatus) {
+    customerCheckoutStatus.textContent = message;
+    customerCheckoutStatus.dataset.type = type;
+    customerCheckoutStatus.style.display = message && type === "error" ? "block" : "none";
+    customerCheckoutStatus.setAttribute("role", type === "error" ? "alert" : "status");
+  }
 }
 function customerSetTrackingStatus(message, type = "") {
   if (!customerElements.trackingStatus) return;
