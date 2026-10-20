@@ -12,3 +12,26 @@ document.getElementById("stockCalculator").addEventListener("submit",event=>{
   result.textContent="Datos no válidos: comprueba cantidades (3 decimales) y precios (2 decimales).";
  }
 });
+
+const addButton=document.getElementById("showProductForm");
+const productForm=document.getElementById("newProductForm");
+if(addButton&&productForm){
+ addButton.addEventListener("click",()=>{
+  productForm.hidden=!productForm.hidden;
+  addButton.setAttribute("aria-expanded",String(!productForm.hidden));
+  if(!productForm.hidden)productForm.querySelector("input")?.focus();
+ });
+ productForm.addEventListener("submit",event=>{
+  event.preventDefault();
+  const values=new FormData(productForm);
+  const result=document.getElementById("productResult");
+  const factor=Number(values.get("factor")),minimum=Number(values.get("minimum"));
+  const validText=["name","supplier","purchaseUnit"].every(key=>{
+   const value=values.get(key);return typeof value==="string"&&value.trim().length>0&&value.trim().length<=160;
+  });
+  if(!validText||!Number.isSafeInteger(factor)||factor<1||!Number.isFinite(minimum)||minimum<0||minimum>1000000000||Math.round(minimum*1000)!==minimum*1000){
+   result.textContent="Comprueba los datos y las conversiones antes de continuar.";return;
+  }
+  result.textContent="✓ Datos válidos. Registro todavía no disponible: no se ha guardado el producto.";
+ });
+}
