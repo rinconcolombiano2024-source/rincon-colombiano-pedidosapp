@@ -10,7 +10,8 @@ begin
  if p_restaurant is null or p_warehouse is null or p_ingredient is null
  or p_quantity_milli is null or p_quantity_milli<=0
  or p_cost_minor is null or p_cost_minor<0 or p_currency is null or p_currency not in ('PLN','COP')
- or p_idempotency_key is null or length(btrim(p_idempotency_key)) not between 1 and 128
+ or p_idempotency_key is null or length(btrim(p_idempotency_key)) not between 1 and 110
+ or position(':' in p_idempotency_key)>0
  then raise exception 'INVALID_RECEIPT'; end if;
  -- Serializes retries for this restaurant/key, even if concurrent requests arrive.
  perform pg_advisory_xact_lock(hashtextextended(p_restaurant::text||':'||p_idempotency_key,0));
@@ -32,6 +33,8 @@ begin
  or not exists(select 1 from public.rc_inventory_ingredients
    where restaurant_id=p_restaurant and id=p_ingredient and active)
  then raise exception 'INACTIVE_OR_UNKNOWN_SCOPE'; end if;
+ -- Serialize receipts against FIFO issues in the same restaurant/warehouse/ingredient.
+ perform pg_advisory_xact_lock(hashtextextended(p_restaurant::text||':'||p_warehouse::text||':'||p_ingredient::text,1));
  insert into public.rc_inventory_lots
  (restaurant_id,warehouse_id,ingredient_id,original_milli,available_milli,original_cost_minor,currency)
  values(p_restaurant,p_warehouse,p_ingredient,p_quantity_milli,p_quantity_milli,p_cost_minor,p_currency)
@@ -51,6 +54,7 @@ begin
  if p_restaurant is null or p_warehouse is null or p_ingredient is null
  or p_quantity_milli is null or p_quantity_milli<=0
  or p_idempotency_key is null or length(btrim(p_idempotency_key)) not between 1 and 110
+ or position(':' in p_idempotency_key)>0
  or (p_reason is not null and p_reason not in ('desperdicio','rotura','consumo_personal','error_cocina'))
  then raise exception 'INVALID_ISSUE'; end if;
  perform pg_advisory_xact_lock(hashtextextended(p_restaurant::text||':'||p_idempotency_key,0));
