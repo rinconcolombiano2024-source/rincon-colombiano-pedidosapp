@@ -60,7 +60,7 @@ begin
  min(waste_reason) as reason
  into v_existing from public.rc_inventory_movements
  where restaurant_id=p_restaurant and
- idempotency_key like replace(replace(p_idempotency_key,'\\','\\\\'),'%','\\%')||':%' escape '\\';
+ left(idempotency_key,length(p_idempotency_key)+1)=p_idempotency_key||':'
  if v_existing.quantity is not null then
   if v_existing.quantity<>p_quantity_milli or v_existing.warehouse<>p_warehouse
   or v_existing.ingredient<>p_ingredient
