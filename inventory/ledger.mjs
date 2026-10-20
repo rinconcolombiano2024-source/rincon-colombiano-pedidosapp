@@ -31,6 +31,8 @@ export function calculateInventoryBalance(restaurantId, productId, movements) {
     throw new TypeError("INVALID_INVENTORY_ID");
   }
   if (!Array.isArray(movements)) throw new TypeError("INVALID_INVENTORY_MOVEMENTS");
+  restaurantId = restaurantId.trim();
+  productId = productId.trim();
   let milliBalance = 0;
   const seen = new Map();
   for (const raw of movements) {
