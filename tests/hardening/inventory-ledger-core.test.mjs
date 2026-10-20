@@ -38,3 +38,16 @@ test("inventory: invalid quantities, ids and types fail closed", () => {
   assert.throws(() => inventoryMovement({ ...base, restaurantId: "" }));
   assert.throws(() => inventoryMovement({ ...base, quantity: 0 }));
 });
+
+test("inventory: whitespace-normalized identifiers preserve restaurant and product isolation", () => {
+  const movement = { ...base, restaurantId: " restaurant-A ", productId: " coffee ", movementId: " receipt-1 " };
+  const result = calculateInventoryBalance(" restaurant-A ", " coffee ", [movement]);
+  assert.equal(result.restaurantId, "restaurant-A");
+  assert.equal(result.productId, "coffee");
+  assert.equal(result.quantity, 10);
+  assert.throws(() => calculateInventoryBalance("restaurant-B", "coffee", [movement]), /CROSS_RESTAURANT/);
+});
+test("inventory: whitespace-only movement IDs and invalid balance IDs fail closed", () => {
+  assert.throws(() => inventoryMovement({ ...base, movementId: "   " }), /INVALID_INVENTORY_ID/);
+  assert.throws(() => calculateInventoryBalance("  ", "coffee", [base]), /INVALID_INVENTORY_ID/);
+});
