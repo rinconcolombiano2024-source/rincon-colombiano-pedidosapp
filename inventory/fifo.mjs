@@ -18,7 +18,7 @@ export function fifoIssue({restaurantId,warehouseId,ingredientId,lots,quantity})
   const lotId=id(l.lotId);
   if(seen.has(lotId))throw new Error("DUPLICATE_LOT");
   seen.add(lotId);
-  if(typeof l.receivedAt!=="string"||!/^\\d{4}-\\d\\d-\\d\\dT/.test(l.receivedAt)||!Number.isFinite(Date.parse(l.receivedAt)))throw new TypeError("INVALID_RECEIPT_DATE");
+  if(typeof l.receivedAt!=="string"||!/^\d{4}-\d\d-\d\dT/.test(l.receivedAt)||!Number.isFinite(Date.parse(l.receivedAt)))throw new TypeError("INVALID_RECEIPT_DATE");
   const availableMilli=integer(l.availableMilli),totalCostMinor=integer(l.totalCostMinor),originalMilli=integer(l.originalMilli);
   if(!originalMilli||availableMilli>originalMilli)throw new RangeError("INVALID_LOT");
   return {lotId,receivedAt:l.receivedAt,availableMilli,totalCostMinor,originalMilli};
