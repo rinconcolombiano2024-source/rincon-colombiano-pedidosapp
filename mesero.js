@@ -2307,51 +2307,17 @@ waiterElements.cart.addEventListener(
     if (!item) return;
 
 
-    const cursorStart =
-      target.selectionStart;
-
-    const cursorEnd =
-      target.selectionEnd;
-
-
-    item.note =
-      String(target.value || "")
-        .toUpperCase();
-
-
-    if (target.value !== item.note) {
-      target.value = item.note;
-    }
-
-
-    try {
-
-      if (
-        Number.isInteger(cursorStart) &&
-        Number.isInteger(cursorEnd)
-      ) {
-
-        target.setSelectionRange(
-          cursorStart,
-          cursorEnd
-        );
-
-      }
-
-    } catch {
-      // Algunos navegadores móviles no permiten
-      // restaurar la posición del cursor.
-    }
-
+    // Do not replace the textarea value or selection while the waiter types.
+    // Uppercasing on every keystroke breaks mobile IME, dictation and accents.
+    // The order payload normalizes the note on submission.
+    item.note = String(target.value || "").slice(0, 500);
 
     waiterSaveDraft();
 
   }
 );
 waiterElements.notes.addEventListener("input", () => {
-  const start = waiterElements.notes.selectionStart;
-  waiterElements.notes.value = waiterElements.notes.value.toUpperCase();
-  waiterElements.notes.setSelectionRange(start, start);
+  // Preserve native input/composition behavior on phones and tablets.
   waiterSaveDraft();
 });
 [waiterElements.tableInput, waiterElements.customerInput, waiterElements.orderType, waiterElements.paymentMethod].forEach((element) => element.addEventListener("input", waiterSaveDraft));
