@@ -17,3 +17,13 @@ test("FIFO orders by absolute receipt instant, not timezone text",()=>{
  const result=fifoIssue({...base,lots:[newer,older],quantity:1});
  assert.deepEqual(result.allocations.map(x=>x.lotId),["older"]);
 });
+
+test("FIFO refuses unsafe sum of individually safe lots",()=>{
+ const huge=Number.MAX_SAFE_INTEGER;
+ const a={...lots[0],lotId:"huge",originalMilli:huge,availableMilli:huge,totalCostMinor:1};
+ const b={...lots[1],lotId:"extra",originalMilli:1000,availableMilli:1000,totalCostMinor:1};
+ assert.throws(()=>fifoIssue({...base,lots:[a,b],quantity:1}),/STOCK_OVERFLOW/);
+});
+test("reorder rejects overflow in suggested purchase calculation",()=>{
+ assert.throws(()=>reorderAlert({onHandMilli:0,averageDailyMilli:Number.MAX_SAFE_INTEGER,leadDays:1}),/REORDER_OVERFLOW/);
+});
