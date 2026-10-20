@@ -85,6 +85,8 @@ begin
   order by received_at,id for update
  loop
   exit when v_remaining=0;
+  -- Another authorized writer may have depleted a lot while this row lock was pending.
+  if v_lot.available_milli<=0 then continue; end if;
   v_take:=least(v_remaining,v_lot.available_milli);
   v_previous:=v_lot.original_milli-v_lot.available_milli;
   v_cost:=round(((v_previous+v_take)::numeric*v_lot.original_cost_minor)/v_lot.original_milli)
