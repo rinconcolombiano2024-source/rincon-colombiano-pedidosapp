@@ -6,8 +6,8 @@ const js = readFileSync(new URL('../../mesero.js', import.meta.url), 'utf8');
 
 test('waiter customer and table fields are present and connected', () => {
   for (const id of ['waiterTableInput', 'waiterCustomerInput']) {
-    assert.match(html, new RegExp('id=["\\']' + id + '["\\']'));
-    assert.match(js, new RegExp('querySelector\\(["\\']#' + id + '["\\']\\)'));
+    assert.match(html, new RegExp(`id=["']${id}["']`));
+    assert.match(js, new RegExp(`querySelector\\(["']#${id}["']\\)`));
   }
 });
 test('waiter draft saves and restores both fields', () => {
