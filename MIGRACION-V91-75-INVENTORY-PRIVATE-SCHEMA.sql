@@ -67,6 +67,35 @@ alter table public.rc_inventory_warehouses enable row level security;
 alter table public.rc_inventory_ingredients enable row level security;
 alter table public.rc_inventory_lots enable row level security;
 alter table public.rc_inventory_movements enable row level security;
+create table if not exists public.rc_inventory_counts (
+ id uuid primary key default gen_random_uuid(),
+ restaurant_id uuid not null,
+ warehouse_id uuid not null,
+ status text not null default 'draft' check(status in ('draft','submitted','approved','cancelled')),
+ started_at timestamptz not null default now(),
+ submitted_at timestamptz,
+ approved_at timestamptz,
+ unique(restaurant_id,id),
+ foreign key(restaurant_id,warehouse_id) references public.rc_inventory_warehouses(restaurant_id,id)
+);
+create table if not exists public.rc_inventory_count_lines (
+ id uuid primary key default gen_random_uuid(),
+ restaurant_id uuid not null,
+ count_id uuid not null,
+ ingredient_id uuid not null,
+ counted_milli bigint not null check(counted_milli>=0),
+ theoretical_milli bigint check(theoretical_milli>=0),
+ theoretical_value_minor bigint check(theoretical_value_minor>=0),
+ variance_value_minor bigint,
+ created_at timestamptz not null default now(),
+ unique(restaurant_id,count_id,ingredient_id),
+ foreign key(restaurant_id,count_id) references public.rc_inventory_counts(restaurant_id,id),
+ foreign key(restaurant_id,ingredient_id) references public.rc_inventory_ingredients(restaurant_id,id)
+);
+create index if not exists rc_inventory_counts_status_idx on public.rc_inventory_counts(restaurant_id,warehouse_id,status);
+alter table public.rc_inventory_counts enable row level security;
+alter table public.rc_inventory_count_lines enable row level security;
+revoke all on public.rc_inventory_counts,public.rc_inventory_count_lines from anon,authenticated;
 -- Explicitly revoke direct access. No policies are created in this migration.
 revoke all on public.rc_inventory_warehouses,public.rc_inventory_ingredients,public.rc_inventory_lots,public.rc_inventory_movements from anon,authenticated;
 commit;
