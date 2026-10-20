@@ -40,6 +40,7 @@ create table if not exists public.rc_inventory_lots (
  created_at timestamptz not null default now(),
  check(available_milli<=original_milli),
  unique(restaurant_id,id),
+ unique(restaurant_id,warehouse_id,ingredient_id,id),
  foreign key(restaurant_id,warehouse_id) references public.rc_inventory_warehouses(restaurant_id,id),
  foreign key(restaurant_id,ingredient_id) references public.rc_inventory_ingredients(restaurant_id,id)
 );
@@ -59,7 +60,7 @@ create table if not exists public.rc_inventory_movements (
  unique(restaurant_id,idempotency_key),
  foreign key(restaurant_id,warehouse_id) references public.rc_inventory_warehouses(restaurant_id,id),
  foreign key(restaurant_id,ingredient_id) references public.rc_inventory_ingredients(restaurant_id,id),
- foreign key(restaurant_id,lot_id) references public.rc_inventory_lots(restaurant_id,id)
+ foreign key(restaurant_id,warehouse_id,ingredient_id,lot_id) references public.rc_inventory_lots(restaurant_id,warehouse_id,ingredient_id,id)
 );
 create index if not exists rc_inventory_lots_fifo_idx on public.rc_inventory_lots(restaurant_id,warehouse_id,ingredient_id,received_at,id) where available_milli>0;
 create index if not exists rc_inventory_movements_history_idx on public.rc_inventory_movements(restaurant_id,ingredient_id,created_at);
