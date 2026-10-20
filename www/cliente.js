@@ -5112,7 +5112,24 @@ destinationRegion:
         destinationLng: customerLocationCoords?.lng ?? null,
       },
     });
-    if (error) throw error;
+    if (error) {
+      const httpStatus = Number(error.context?.status) || 0;
+      let publicReason = "";
+      try {
+        const body = await error.context?.json?.();
+        const allowed = new Set([
+          "Delivery calculation is not configured",
+          "Restaurant, address, and country are required",
+          "Delivery address could not be verified precisely",
+          "No valid delivery route was found",
+          "Route provider rejected the request",
+          "Could not save delivery quote",
+          "Delivery quote was not created",
+        ]);
+        if (allowed.has(body?.error)) publicReason = body.error;
+      } catch { /* Server response may not contain JSON. */ }
+      throw new Error(publicReason || (httpStatus ? `Error de cálculo de domicilio (HTTP ${httpStatus})` : customerT("mapsFallback")));
+    }
     if (!data?.quoteId || !data?.quoteToken || !(Number(data?.distanceKm) > 0)) {
       throw new Error(customerT("mapsRouteError", { status: "sin ruta" }));
     }
