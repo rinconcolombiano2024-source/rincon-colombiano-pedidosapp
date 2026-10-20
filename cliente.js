@@ -5296,7 +5296,10 @@ customerMapDistance = {
     customerRenderCart();
   } catch (error) {
     customerMapDistance = null;
-    customerSetMapResult(customerT("mapsManual", { error: customerT("mapsFallback") }), "error");
+    const safeReason = String(error?.message || "").replace(/[<>\\r\\n]/g, " ").slice(0, 180);
+    customerSetMapResult(customerT("mapsManual", {
+      error: safeReason || customerT("mapsFallback"),
+    }), "error");
   } finally {
     customerElements.calculateDistanceButton.disabled = false;
   }
