@@ -17,5 +17,5 @@ test("waiter payload retains each item note and normalizes only when submitting"
  assert.match(source,/p_items:\s*waiterCart\.map\(\(item\)\s*=>/);
  assert.match(source,/note:\s*String\(item\.note \|\| ""\)\.trim\(\)\.toUpperCase\(\)/);
  assert.match(source,/data-action="note"/);
- assert.match(source,/maxlength="500"/);
+ assert.match(source,/\.slice\(0, 500\)/);
 });
