@@ -12,12 +12,4 @@
 <label>Moneda<select name="currency"><option>PLN</option><option>COP</option></select></label>
 <button type="submit">Calcular estado</button></form><output id="result" aria-live="polite"></output>
 <p>El registro permanente, los permisos por restaurante y la sincronización con ventas deben habilitarse antes de utilizar este módulo para controlar existencias reales.</p>
-</section></main><script>
-document.getElementById("stockCalculator").addEventListener("submit",event=>{
- event.preventDefault();const form=event.currentTarget;const data=new FormData(form);
- const quantity=Number(data.get("quantity")),minimum=Number(data.get("minimum")),price=Number(data.get("price"));
- const result=document.getElementById("result");
- if(![quantity,minimum,price].every(Number.isFinite)||quantity<0||minimum<0||price<0){result.textContent="Datos no válidos";return;}
- result.textContent=(quantity<=minimum?"⚠️ Existencias bajas":"✓ Existencias sobre el mínimo")+" · Valor estimado: "+(quantity*price).toFixed(2)+" "+data.get("currency");
-});
-</script></body></html>
+</section></main><script src="./inventario.js" defer></script></body></html>
