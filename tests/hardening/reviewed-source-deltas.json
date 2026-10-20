@@ -1,7 +1,7 @@
 {
   "cliente.js": {
-    "sha256": "cc8ad0646601da15472e703e79c8653b4403df51dd241ae8bf293a10be7a1e54",
-    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs; tests/hardening/customer-independent-item-notes.test.mjs; tests/hardening/customer-menu-product-id-match.test.mjs",
+    "sha256": "25b3109155bb6867154e078307ef4006a3e3da097d77f508dfbfd38d107d1c09",
+    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs; tests/hardening/customer-independent-item-notes.test.mjs; tests/hardening/customer-menu-product-id-match.test.mjs; tests/hardening/customer-visible-checkout-status.test.mjs",
     "edits": [
       {
         "before": "",
