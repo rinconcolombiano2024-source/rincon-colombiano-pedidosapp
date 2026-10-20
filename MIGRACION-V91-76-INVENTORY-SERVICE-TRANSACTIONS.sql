@@ -9,7 +9,7 @@ declare v_lot uuid; v_existing uuid;
 begin
  if p_restaurant is null or p_warehouse is null or p_ingredient is null
  or p_quantity_milli is null or p_quantity_milli<=0
- or p_cost_minor is null or p_cost_minor<0 or p_currency not in ('PLN','COP')
+ or p_cost_minor is null or p_cost_minor<0 or p_currency is null or p_currency not in ('PLN','COP')
  or p_idempotency_key is null or length(btrim(p_idempotency_key)) not between 1 and 128
  then raise exception 'INVALID_RECEIPT'; end if;
  -- Serializes retries for this restaurant/key, even if concurrent requests arrive.
@@ -60,7 +60,7 @@ begin
  min(waste_reason) as reason
  into v_existing from public.rc_inventory_movements
  where restaurant_id=p_restaurant and
- left(idempotency_key,length(p_idempotency_key)+1)=p_idempotency_key||':'
+ left(idempotency_key,length(p_idempotency_key)+1)=p_idempotency_key||':';
  if v_existing.quantity is not null then
   if v_existing.quantity<>p_quantity_milli or v_existing.warehouse<>p_warehouse
   or v_existing.ingredient<>p_ingredient
