@@ -24,6 +24,9 @@ const runtimeFiles = [
   "centro-integraciones-status.js",
   "restaurant-fiscal-ui.js",
   "restaurante.html",
+  "inventario.html",
+  "inventario.js",
+  "inventory/preview.mjs",
   "cliente.html",
   "colaborador.html",
   "mesero.html",
@@ -77,7 +80,10 @@ for (const file of runtimeFiles) {
 
 rmSync(output, { recursive: true, force: true });
 mkdirSync(output, { recursive: true });
-for (const file of runtimeFiles) cpSync(join(root, file), join(output, file));
+for (const file of runtimeFiles) {
+  mkdirSync(dirname(join(output, file)), { recursive: true });
+  cpSync(join(root, file), join(output, file));
+}
 for (const file of runtimeFiles) {
   const source = readFileSync(join(root, file));
   const generated = readFileSync(join(output, file));
