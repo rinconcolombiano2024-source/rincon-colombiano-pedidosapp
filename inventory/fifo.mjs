@@ -21,8 +21,8 @@ export function fifoIssue({restaurantId,warehouseId,ingredientId,lots,quantity})
   if(typeof l.receivedAt!=="string"||!/^\d{4}-\d\d-\d\dT/.test(l.receivedAt)||!Number.isFinite(Date.parse(l.receivedAt)))throw new TypeError("INVALID_RECEIPT_DATE");
   const availableMilli=integer(l.availableMilli),totalCostMinor=integer(l.totalCostMinor),originalMilli=integer(l.originalMilli);
   if(!originalMilli||availableMilli>originalMilli)throw new RangeError("INVALID_LOT");
-  return {lotId,receivedAt:l.receivedAt,availableMilli,totalCostMinor,originalMilli};
- }).sort((a,b)=>a.receivedAt.localeCompare(b.receivedAt)||a.lotId.localeCompare(b.lotId));
+  return {lotId,receivedAt:l.receivedAt,receivedEpoch:Date.parse(l.receivedAt),availableMilli,totalCostMinor,originalMilli};
+ }).sort((a,b)=>a.receivedEpoch-b.receivedEpoch||a.lotId.localeCompare(b.lotId));
  if(ordered.reduce((s,l)=>s+l.availableMilli,0)<demand)throw new RangeError("INSUFFICIENT_STOCK");
  let remaining=demand,totalCostMinor=0;
  const allocations=[];
