@@ -1733,6 +1733,8 @@ let customerSettings = {
   onlinePaymentNote: "",
 };
 let customerMapDistance = null;
+// Prevent a delayed Maps response from replacing a newer destination quote.
+let customerDeliveryQuoteGeneration = 0;
 let googleMapsScriptPromise = null;
 let customerGoogleMapsAuthFailed = false;
 const customerPlaceAutocompletes = new Map();
@@ -5109,6 +5111,16 @@ async function customerCalculateDistanceWithMaps() {
     return;
   }
   customerSetMapResult(customerT("mapsCalculating"), "");
+  const quoteVersion = ++customerDeliveryQuoteGeneration;
+  const quoteRestaurant = customerStoreId;
+  const quoteDestination = customerDeliveryDestination();
+  const quoteCoords = JSON.stringify(customerLocationCoords);
+  const isCurrentQuoteRequest = () =>
+    quoteVersion === customerDeliveryQuoteGeneration &&
+    quoteRestaurant === customerStoreId &&
+    quoteDestination === customerDeliveryDestination() &&
+    quoteCoords === JSON.stringify(customerLocationCoords) &&
+    customerElements.orderType.value === "Domicilio";
   customerElements.calculateDistanceButton.disabled = true;
   try {
 const selectedRestaurant =
@@ -5137,6 +5149,8 @@ destinationRegion:
         destinationLng: customerLocationCoords?.lng ?? null,
       },
     });
+    // Ignore stale Maps results: the user may have edited the street, GPS or restaurant.
+    if (!isCurrentQuoteRequest()) return;
     if (error) throw error;
     if (!data?.quoteId || !data?.quoteToken || !(Number(data?.distanceKm) > 0)) {
       throw new Error(customerT("mapsRouteError", { status: "sin ruta" }));
@@ -5322,10 +5336,14 @@ customerMapDistance = {
     );
     customerRenderCart();
   } catch (error) {
+    // A failed older request must not erase a newer valid delivery quote.
+    if (!isCurrentQuoteRequest()) return;
     customerMapDistance = null;
     customerSetMapResult(customerT("mapsManual", { error: customerT("mapsFallback") }), "error");
   } finally {
-    customerElements.calculateDistanceButton.disabled = false;
+    if (quoteVersion === customerDeliveryQuoteGeneration) {
+      customerElements.calculateDistanceButton.disabled = false;
+    }
   }
 }
 function customerDeliveryFee() {
@@ -7826,8 +7844,11 @@ customerElements.viewButtons.forEach((button) => {
   customerElements.neighborhoodInput,
 ].forEach((input) => {
   input?.addEventListener("input", () => {
+    // A past quote can never be restored by typing a previous address again.
+    customerDeliveryQuoteGeneration += 1;
     customerMapDistance = null;
     customerLocationCoords = null;
+    customerElements.calculateDistanceButton.disabled = false;
     if (customerElements.distanceInput) customerElements.distanceInput.value = "";
     customerRenderLocationSummary();
     customerRenderProfileDetails();

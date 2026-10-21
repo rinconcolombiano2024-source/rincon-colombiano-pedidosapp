@@ -1,7 +1,7 @@
 {
   "cliente.js": {
-    "sha256": "4cfdf8d7282cbd44bab73604f16a864013d671d4d78207c8cef8c38dae2f1078",
-    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs; tests/hardening/customer-independent-item-notes.test.mjs; tests/hardening/customer-menu-product-id-match.test.mjs; tests/hardening/customer-visible-checkout-status.test.mjs; tests/e2e/checkout-feedback.spec.js; tests/hardening/customer-verified-gps-null.test.mjs; tests/hardening/google-maps-auth-gps-fallback.test.mjs",
+    "sha256": "ae5270694dfeb88bce598cc1e0e3ddf575ab834aa7133278f10d0bff09265058",
+    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs; tests/hardening/customer-independent-item-notes.test.mjs; tests/hardening/customer-menu-product-id-match.test.mjs; tests/hardening/customer-visible-checkout-status.test.mjs; tests/e2e/checkout-feedback.spec.js; tests/hardening/customer-verified-gps-null.test.mjs; tests/hardening/google-maps-auth-gps-fallback.test.mjs; tests/hardening/customer-delivery-quote-stale.test.mjs",
     "edits": [
       {
         "before": "",
@@ -397,6 +397,31 @@
         "before": "      customerT(\"mapLocationError\"),\r\n      \"error\"\r\n    );\r\n  } finally {\r\n    customerElements.chooseMapLocationButton.disabled = false;",
         "after": "      customerT(customerGoogleMapsAuthFailed ? \"mapsAuthUnavailable\" : \"mapLocationError\"),\r\n      \"error\"\r\n    );\r\n  } finally {\r\n    customerElements.chooseMapLocationButton.disabled = false;",
         "afterByteOffset": 209008
+      },
+      {
+        "before": "let customerMapDistance = null;\r\n",
+        "after": "let customerMapDistance = null;\r\n// Prevent a delayed Maps response from replacing a newer destination quote.\r\nlet customerDeliveryQuoteGeneration = 0;\r\n",
+        "afterByteOffset": 93888
+      },
+      {
+        "before": "  customerSetMapResult(customerT(\"mapsCalculating\"), \"\");\r\n  customerElements.calculateDistanceButton.disabled = true;\r\n  try {\r\n",
+        "after": "  customerSetMapResult(customerT(\"mapsCalculating\"), \"\");\r\n  const quoteVersion = ++customerDeliveryQuoteGeneration;\r\n  const quoteRestaurant = customerStoreId;\r\n  const quoteDestination = customerDeliveryDestination();\r\n  const quoteCoords = JSON.stringify(customerLocationCoords);\r\n  const isCurrentQuoteRequest = () =>\r\n    quoteVersion === customerDeliveryQuoteGeneration &&\r\n    quoteRestaurant === customerStoreId &&\r\n    quoteDestination === customerDeliveryDestination() &&\r\n    quoteCoords === JSON.stringify(customerLocationCoords) &&\r\n    customerElements.orderType.value === \"Domicilio\";\r\n  customerElements.calculateDistanceButton.disabled = true;\r\n  try {\r\n",
+        "afterByteOffset": 212512
+      },
+      {
+        "before": "    if (error) throw error;\r\n    if (!data?.quoteId || !data?.quoteToken || !(Number(data?.distanceKm) > 0)) {\r\n",
+        "after": "    // Ignore stale Maps results: the user may have edited the street, GPS or restaurant.\r\n    if (!isCurrentQuoteRequest()) return;\r\n    if (error) throw error;\r\n    if (!data?.quoteId || !data?.quoteToken || !(Number(data?.distanceKm) > 0)) {\r\n",
+        "afterByteOffset": 213921
+      },
+      {
+        "before": "  } catch (error) {\r\n    customerMapDistance = null;\r\n    customerSetMapResult(customerT(\"mapsManual\", { error: customerT(\"mapsFallback\") }), \"error\");\r\n  } finally {\r\n    customerElements.calculateDistanceButton.disabled = false;\r\n  }\r\n}\r\nfunction customerDeliveryFee() {\r\n",
+        "after": "  } catch (error) {\r\n    // A failed older request must not erase a newer valid delivery quote.\r\n    if (!isCurrentQuoteRequest()) return;\r\n    customerMapDistance = null;\r\n    customerSetMapResult(customerT(\"mapsManual\", { error: customerT(\"mapsFallback\") }), \"error\");\r\n  } finally {\r\n    if (quoteVersion === customerDeliveryQuoteGeneration) {\r\n      customerElements.calculateDistanceButton.disabled = false;\r\n    }\r\n  }\r\n}\r\nfunction customerDeliveryFee() {\r\n",
+        "afterByteOffset": 218113
+      },
+      {
+        "before": "  input?.addEventListener(\"input\", () => {\r\n    customerMapDistance = null;\r\n    customerLocationCoords = null;\r\n",
+        "after": "  input?.addEventListener(\"input\", () => {\r\n    // A past quote can never be restored by typing a previous address again.\r\n    customerDeliveryQuoteGeneration += 1;\r\n    customerMapDistance = null;\r\n    customerLocationCoords = null;\r\n    customerElements.calculateDistanceButton.disabled = false;\r\n",
+        "afterByteOffset": 313473
       }
     ]
   },
