@@ -15317,7 +15317,7 @@ elements.closeDayInput.addEventListener("change", async () => {
 elements.printDailyCloseButton.addEventListener("click", () => {
   printDailyClose().catch((error) => {
     console.error(error);
-    alert("No fue posible confirmar el cierre diario.");
+    alert(`No fue posible confirmar el cierre diario.\n${error?.message || "Comprueba la conexión y los pedidos pendientes."}`);
   });
 });
 
