@@ -3498,11 +3498,30 @@ async function customerLoadRestaurantDirectoryNow(options = {}) {
     )}</div>`;
   }
   customerStartDirectoryRealtime();
-  let { data, error } = await client.rpc("get_public_restaurant_directory_by_region", {
-    p_country_code: customerRegistrationRegion.countryCode || "",
-    p_city: customerRegistrationRegion.city || "",
-    p_region: customerRegistrationRegion.region || "",
-  });
+  // Never leave the restaurant selector showing a permanent loading placeholder.
+  // The RPC is read-only; this timeout does not retry or create extra DB traffic.
+  let directoryTimer;
+  let directoryResult;
+  try {
+    directoryResult = await Promise.race([
+      client.rpc("get_public_restaurant_directory_by_region", {
+        p_country_code: customerRegistrationRegion.countryCode || "",
+        p_city: customerRegistrationRegion.city || "",
+        p_region: customerRegistrationRegion.region || "",
+      }),
+      new Promise((resolve) => {
+        directoryTimer = setTimeout(() => resolve({
+          data: null,
+          error: { message: "Restaurant directory request timed out", code: "DIRECTORY_TIMEOUT" },
+        }), 12000);
+      }),
+    ]);
+  } catch (directoryError) {
+    directoryResult = { data: null, error: directoryError };
+  } finally {
+    clearTimeout(directoryTimer);
+  }
+  let { data, error } = directoryResult;
   if (error && customerIsMissingRpc(error)) {
     let query = client
       .from("restaurant_profiles")
