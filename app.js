@@ -10532,7 +10532,7 @@ function menuHasInlineRestaurantImages(menu) {
 }
 
 function normalizeProductDescription(value) {
-  return String(value || "").trim().replace(/\s+/g, " ").slice(0, 260);
+  return String(value || "").trim().replace(/\s+/g, " ");
 }
 
 function hashText(value) {
@@ -12849,7 +12849,12 @@ async function saveProduct() {
   const descriptionEn = elements.productDescriptionEnInput
     ? normalizeProductDescription(elements.productDescriptionEnInput.value)
     : "";
-  const price = Number.parseFloat(elements.productPriceInput.value) || 0;
+  const priceInput = String(elements.productPriceInput.value ?? "").trim();
+  const price = Number(priceInput);
+  if (!priceInput || !Number.isFinite(price) || price < 0) {
+    alert((window.RC_ORDERA_OFFLINE_I18N?.translate("Introduce un precio válido mayor o igual a cero antes de guardar el producto.", currentAppLanguage()) || "Introduce un precio válido mayor o igual a cero antes de guardar el producto."));
+    return;
+  }
   let imageUrl = normalizeProductImageUrl(elements.productImageUrlInput.value);
   const available = elements.productAvailableInput.checked;
   const station = normalizeProductStation(elements.productStationSelect?.value);
@@ -14547,6 +14552,11 @@ async function printDailyClose() {
   const day = elements.closeDayInput.value || todayKey;
   await prepareCloudPeriodClosure("day", day);
   const report = renderDailyClose(day);
+  const paymentGroups = report.paymentMethods || [];
+  const paymentTickets = paymentGroups.reduce((sum, group) => sum + Number(group.tickets || 0), 0);
+  if (paymentTickets !== report.tickets || paymentGroups.some((group) => !group.label || /^(no indicado|sin especificar|unknown|unspecified|brak danych)$/i.test(String(group.label).trim()))) {
+    throw new Error("No se puede cerrar el día: todos los pedidos deben tener un método de pago registrado y el reporte debe estar completo.");
+  }
   if (!report.tickets) {
     alert("No hay pedidos guardados para imprimir en ese dia.");
     return;

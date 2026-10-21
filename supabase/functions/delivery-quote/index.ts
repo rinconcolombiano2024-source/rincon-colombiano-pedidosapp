@@ -82,8 +82,15 @@ Deno.serve(withCors(async (request) => {
   const destinationRegion = String(payload.destinationRegion || "").trim().slice(0, 160);
   const destinationLat = finiteCoordinate(payload.destinationLat, -90, 90);
   const destinationLng = finiteCoordinate(payload.destinationLng, -180, 180);
+  // A single GPS coordinate must never silently fall back to address-based pricing.
+  const hasDestinationLat = payload.destinationLat !== undefined && payload.destinationLat !== null;
+  const hasDestinationLng = payload.destinationLng !== undefined && payload.destinationLng !== null;
+  if (hasDestinationLat !== hasDestinationLng ||
+      ((hasDestinationLat || hasDestinationLng) && (destinationLat === null || destinationLng === null))) {
+    return response(400, { error: "Both valid GPS coordinates are required" });
+  }
   if (!/^[0-9a-f-]{36}$/i.test(restaurantUserId)
-      || destinationAddress.length < 5
+      || (destinationAddress.length < 5 && (destinationLat === null || destinationLng === null))
       || !["PL", "CO"].includes(countryCode)) {
     return response(400, { error: "Restaurant, address, and country are required" });
   }
@@ -131,7 +138,12 @@ Deno.serve(withCors(async (request) => {
     geocodeParams.set("address", destinationAddress);
     geocodeParams.set("components", `country:${countryCode}`);
   }
-  const geocodeResponse = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?${geocodeParams.toString()}`);
+  let geocodeResponse: Response;
+  try {
+    geocodeResponse = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?${geocodeParams.toString()}`, { signal: AbortSignal.timeout(8000) });
+  } catch {
+    return response(503, { error: "Google Maps geocoding is temporarily unavailable" });
+  }
   const geocodeBody = await geocodeResponse.json().catch(() => ({}));
   const geocodeResult = geocodeBody?.results?.[0];
  if (
@@ -245,15 +257,21 @@ const routeRequest = {
     languageCode: countryCode === "PL" ? "pl-PL" : "es-CO",
     units: "METRIC",
   };
-  const routeResponse = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
+  let routeResponse: Response;
+  try {
+    routeResponse = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
     method: "POST",
+    signal: AbortSignal.timeout(8000),
     headers: {
       "content-type": "application/json; charset=utf-8",
       "X-Goog-Api-Key": routesKey,
       "X-Goog-FieldMask": "routes.distanceMeters,routes.duration",
     },
     body: JSON.stringify(routeRequest),
-  });
+    });
+  } catch {
+    return response(503, { error: "Google Maps routing is temporarily unavailable" });
+  }
   const routeBody = await routeResponse.json().catch(() => ({}));
   if (!routeResponse.ok) return response(502, { error: "Route provider rejected the request" });
 

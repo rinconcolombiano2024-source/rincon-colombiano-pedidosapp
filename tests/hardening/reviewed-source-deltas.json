@@ -1,7 +1,7 @@
 {
   "cliente.js": {
-    "sha256": "f7b8089c93f66a2feab6a0a5ef74af71e49f65c323a2d8bf963d1b6bf666ab94",
-    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs; tests/hardening/customer-independent-item-notes.test.mjs; tests/hardening/customer-menu-product-id-match.test.mjs; tests/hardening/customer-visible-checkout-status.test.mjs; tests/e2e/checkout-feedback.spec.js",
+    "sha256": "e5ca6424f091ca2edb795e0fc1330a053595d98a02166ac7f5481ef0c66270e4",
+    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs; tests/hardening/customer-independent-item-notes.test.mjs; tests/hardening/customer-menu-product-id-match.test.mjs; tests/hardening/customer-visible-checkout-status.test.mjs; tests/e2e/checkout-feedback.spec.js; tests/hardening/customer-verified-gps-null.test.mjs",
     "edits": [
       {
         "before": "",
@@ -357,6 +357,16 @@
         "before": "function customerSetStatus(message, type = \"\") {\r\n  customerElements.status.removeAttribute(\"data-i18n\");\r\n  customerElements.status.textContent = message;\r\n  customerElements.status.dataset.type = type;\r\n}\r\n",
         "after": "function customerSetStatus(message, type = \"\") {\r\n  customerElements.status.removeAttribute(\"data-i18n\");\r\n  customerElements.status.textContent = message;\r\n  customerElements.status.dataset.type = type;\r\n  const customerCheckoutStatus = document.querySelector(\"#customerCheckoutStatus\");\r\n  if (customerCheckoutStatus) {\r\n    customerCheckoutStatus.textContent = message;\r\n    customerCheckoutStatus.dataset.type = type;\r\n    customerCheckoutStatus.style.display = message && type === \"error\" ? \"block\" : \"none\";\r\n    customerCheckoutStatus.setAttribute(\"role\", type === \"error\" ? \"alert\" : \"status\");\r\n    if (message && type === \"error\" && document.querySelector(\"#customerCartModal\")?.hidden === false) {\r\n      customerCheckoutStatus.scrollIntoView({ block: \"nearest\" });\r\n    }\r\n  }\r\n}\r\n",
         "afterByteOffset": 141664
+      },
+      {
+        "before": "  Number(data.verifiedLat);\r\n",
+        "after": "  data.verifiedLat == null || String(data.verifiedLat).trim() === \"\"\r\n    ? NaN : Number(data.verifiedLat);\r\n",
+        "afterByteOffset": 212271
+      },
+      {
+        "before": "  Number(data.verifiedLng);\r\n",
+        "after": "  data.verifiedLng == null || String(data.verifiedLng).trim() === \"\"\r\n    ? NaN : Number(data.verifiedLng);\r\n",
+        "afterByteOffset": 212403
       }
     ]
   },
@@ -578,8 +588,8 @@
     ]
   },
   "offline-i18n.js": {
-    "sha256": "8302d499cd466f646f285156ef9a93c0c36dbce76a43232dde17690ea68c39bd",
-    "regressionTests": "tests/hardening/frontend.test.mjs; tests/waiter-access-recovery.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; qa-i18n-v87.cjs; tests/hardening/menu-publication-contract.test.mjs",
+    "sha256": "7d418abc3b17c5c3110bb63d3d4a5c25f2d6471c3e4b89a1b26fcd5f776ce42a",
+    "regressionTests": "tests/hardening/frontend.test.mjs; tests/waiter-access-recovery.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; qa-i18n-v87.cjs; tests/hardening/menu-publication-contract.test.mjs; tests/hardening/daily-close-payment-completeness.test.mjs",
     "edits": [
       {
         "before": "",
@@ -620,6 +630,11 @@
         "before": "",
         "after": "    [\"legal.privacyLink\", \"Privacidad, datos personales y cookies\", \"Prywatność, dane osobowe i pliki cookie\", \"Privacy, personal data and cookies\"],\n",
         "afterByteOffset": 23024
+      },
+      {
+        "before": "",
+        "after": "    [\"closure.payment.required\", \"No se puede cerrar el día: todos los pedidos deben tener un método de pago registrado y el reporte debe estar completo.\", \"Nie można zamknąć dnia: każde zamówienie musi mieć przypisaną metodę płatności, a raport musi być kompletny.\", \"Cannot close the day: every order must have a recorded payment method and the report must be complete.\"],\n",
+        "afterByteOffset": 32
       }
     ]
   },
@@ -745,8 +760,8 @@
     ]
   },
   "app.js": {
-    "sha256": "964809935acbd8dd03853523542c636ed55da894cb0c35a5db22bda19a0c101e",
-    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/qr-menu-rpc-throttle.test.cjs; tests/menu-save-burst-coalesce.test.cjs; tests/menu-session-publication-guard.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/menu-cloud-rpc-singleflight.test.cjs; tests/portal-stations-entry.test.cjs; tests/central-refresh-session.test.cjs; tests/restaurant-settings-pending-confirmation.test.cjs; tests/settings-stale-response-tenant-guard.test.cjs; tests/hardening/menu-photo-session-isolation.test.mjs; tests/menu-publication-verified-save.test.cjs; tests/menu-save-session-isolation.test.cjs",
+    "sha256": "90a7a7c37e5d653296a189696102d106ed1ae43227082d8eae870c42697dfe85",
+    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/qr-menu-rpc-throttle.test.cjs; tests/menu-save-burst-coalesce.test.cjs; tests/menu-session-publication-guard.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/menu-cloud-rpc-singleflight.test.cjs; tests/portal-stations-entry.test.cjs; tests/central-refresh-session.test.cjs; tests/restaurant-settings-pending-confirmation.test.cjs; tests/settings-stale-response-tenant-guard.test.cjs; tests/hardening/menu-photo-session-isolation.test.mjs; tests/menu-publication-verified-save.test.cjs; tests/menu-save-session-isolation.test.cjs; tests/hardening/menu-description-no-truncation.test.mjs; tests/hardening/menu-price-save-validation.test.mjs; tests/hardening/daily-close-payment-completeness.test.mjs",
     "edits": [
       {
         "before": "",
@@ -1237,6 +1252,21 @@
         "before": "  const run = async () => {\r\n    let result = await saveMenuWhenPossibleNow(options);",
         "after": "  const run = async () => {\r\n    // The queue may settle after logout or after another restaurant signs in.\r\n    if (cloudState.client !== context.client ||\r\n        cloudState.user?.id !== context.userId) return { pending: false };\r\n    let result = await saveMenuWhenPossibleNow(options);",
         "afterByteOffset": 363541
+      },
+      {
+        "before": "  return String(value || \"\").trim().replace(/\\s+/g, \" \").slice(0, 260);\r\n",
+        "after": "  return String(value || \"\").trim().replace(/\\s+/g, \" \");\r\n",
+        "afterByteOffset": 336724
+      },
+      {
+        "before": "  const price = Number.parseFloat(elements.productPriceInput.value) || 0;\r\n",
+        "after": "  const priceInput = String(elements.productPriceInput.value ?? \"\").trim();\r\n  const price = Number(priceInput);\r\n  if (!priceInput || !Number.isFinite(price) || price < 0) {\r\n    alert((window.RC_ORDERA_OFFLINE_I18N?.translate(\"Introduce un precio válido mayor o igual a cero antes de guardar el producto.\", currentAppLanguage()) || \"Introduce un precio válido mayor o igual a cero antes de guardar el producto.\"));\r\n    return;\r\n  }\r\n",
+        "afterByteOffset": 419556
+      },
+      {
+        "before": "",
+        "after": "  const paymentGroups = report.paymentMethods || [];\r\n  const paymentTickets = paymentGroups.reduce((sum, group) => sum + Number(group.tickets || 0), 0);\r\n  if (paymentTickets !== report.tickets || paymentGroups.some((group) => !group.label || /^(no indicado|sin especificar|unknown|unspecified|brak danych)$/i.test(String(group.label).trim()))) {\r\n    throw new Error(\"No se puede cerrar el día: todos los pedidos deben tener un método de pago registrado y el reporte debe estar completo.\");\r\n  }\r\n",
+        "afterByteOffset": 480763
       }
     ]
   },
