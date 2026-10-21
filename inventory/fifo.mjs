@@ -37,7 +37,10 @@ export function fifoIssue({restaurantId,warehouseId,ingredientId,lots,quantity})
   if(!usedMilli)continue;
   // Cumulative allocation avoids per-issue rounding drift for partial lots.
   const before=l.originalMilli-l.availableMilli;
-  const cost=Math.round((before+usedMilli)*l.totalCostMinor/l.originalMilli)-Math.round(before*l.totalCostMinor/l.originalMilli);
+  const roundCost=(units)=>{const numerator=BigInt(units)*BigInt(l.totalCostMinor),denominator=BigInt(l.originalMilli);return (numerator*2n+denominator)/(2n*denominator);};
+  const exactCost=roundCost(before+usedMilli)-roundCost(before);
+  if(exactCost>BigInt(Number.MAX_SAFE_INTEGER))throw new RangeError("COST_OVERFLOW");
+  const cost=Number(exactCost);
   if(!Number.isSafeInteger(cost)||!Number.isSafeInteger(totalCostMinor+cost))throw new RangeError("COST_OVERFLOW");
   totalCostMinor+=cost;remaining-=usedMilli;
   allocations.push(Object.freeze({lotId:l.lotId,usedMilli,costMinor:cost}));
