@@ -92,8 +92,9 @@ test("unlinked customer order with pending payment blocks and local Warsaw date 
  await db.query("insert into customer_orders(id,user_id,created_at,status,canonical_status,station_status,payment_status,payment_method) values($1,$2,'2026-10-21T10:00:00Z','delivered','delivered','completed','pending','Efectivo')",[unlinked,owner]);
  await assert.rejects(()=>close(),/RC_ORDERA_CLOSE_UNLINKED_CUSTOMER_UNPAID/);
  await db.query("update customer_orders set payment_status='paid' where id=$1",[unlinked]);
- await assert.doesNotReject(()=>close());
+ await assert.rejects(()=>close(),/RC_ORDERA_CLOSE_UNLINKED_CUSTOMER_NOT_RECONCILED/);
  await db.query("delete from customer_orders where id=$1",[unlinked]);
+ await assert.doesNotReject(()=>close());
 });
 test("cancelled ticket and rejected customer do not require collection",async()=>{
  const bad=randomUUID(),discard=randomUUID();
@@ -115,6 +116,12 @@ test("missing totals, ticket mismatch, fraudulent group, or partial allocation b
  ]){
   await assert.rejects(()=>close({report_snapshot:report}),/RC_ORDERA_CLOSE_REPORT_/);
  }
+});
+test("sum of groups alone is insufficient: tender allocation must match POS payments",async()=>{
+  await assert.rejects(()=>close({report_snapshot:snapshot({
+    payment_methods:[{payment_method:"Datafono",orders:1,total:60}]
+  })}),/RC_ORDERA_CLOSE_TENDER_RECONCILIATION_FAILED/);
+  await assert.doesNotReject(()=>close());
 });
 test("another restaurant's unpaid orders and stations do not block this owner",async()=>{
  const strangerOrder=randomUUID(),strangerCustomer=randomUUID();
