@@ -2728,6 +2728,28 @@ function mergeConcurrentMenuChanges(baseMenu, localMenu, remoteMenu) {
     if (!baseEntries.has(productId)) changedLocalIds.add(productId);
   });
 
+  // A concurrent change to the same product must never silently discard remote edits.
+  const conflictingProductIds = [];
+  baseEntries.forEach((baseEntry, productId) => {
+    const localEntry = localEntries.get(productId);
+    const remoteEntry = remoteEntries.get(productId);
+    const localChanged = !localEntry || !menuProductEntryMatches(baseEntry, localEntry);
+    const remoteChanged = !remoteEntry || !menuProductEntryMatches(baseEntry, remoteEntry);
+    const converged = (!localEntry && !remoteEntry)
+      || (localEntry && remoteEntry && menuProductEntryMatches(localEntry, remoteEntry));
+    if (localChanged && remoteChanged && !converged) conflictingProductIds.push(productId);
+  });
+  localEntries.forEach((localEntry, productId) => {
+    if (!baseEntries.has(productId) && remoteEntries.has(productId)
+        && !menuProductEntryMatches(localEntry, remoteEntries.get(productId))) {
+      conflictingProductIds.push(productId);
+    }
+  });
+  if (conflictingProductIds.length) {
+    const conflict = new Error(appUiText("El mismo producto cambió en otro equipo. Actualiza el menú y vuelve a editar para evitar perder cambios."));
+    conflict.code = "MENU_CONFLICT_REQUIRES_REFRESH";
+    throw conflict;
+  }
   const mergedEntries = new Map(remoteEntries);
   deletedLocalIds.forEach((productId) => mergedEntries.delete(productId));
   changedLocalIds.forEach((productId) => {
