@@ -50,5 +50,5 @@ test("identical concurrent edits converge safely",()=>{
  assert.equal(copy(merge(base,change,change)).Comida[0].description,"Mismo cambio");
 });
 test("independent product deletions remain mergeable",()=>{
- assert.equal(copy(merge(base,{Comida:[b(12)]},{Comida:[a("Receta original")]})).Comida.length,0);
+ assert.equal(copy(merge(base,{Comida:[b(12)]},{Comida:[a("Receta original")]})).Comida,undefined);
 });
