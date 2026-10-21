@@ -10532,7 +10532,7 @@ function menuHasInlineRestaurantImages(menu) {
 }
 
 function normalizeProductDescription(value) {
-  return String(value || "").trim().replace(/\s+/g, " ").slice(0, 260);
+  return String(value || "").trim().replace(/\s+/g, " ");
 }
 
 function hashText(value) {
