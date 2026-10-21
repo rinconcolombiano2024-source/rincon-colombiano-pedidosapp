@@ -30,7 +30,8 @@ async function quoteWithLateReverseGeocode(mutate) {
   vm.createContext(context);
   const reverse=vm.runInContext(functionSource+"\ncustomerReverseGeocodeLocation",context);
   const promise=reverse(initial);
-  await Promise.resolve();
+  // Allow the nested async script-loader continuation to schedule the callback.
+  for (let i=0; i<5 && typeof callback!=="function"; i++) await new Promise(resolve=>setImmediate(resolve));
   assert.equal(typeof callback,"function","geocoding callback registered");
   mutate(context);
   callback([{formatted_address:"Old street, Warsaw"}],"OK");
