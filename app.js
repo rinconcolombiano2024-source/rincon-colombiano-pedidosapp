@@ -10554,7 +10554,7 @@ function menuHasInlineRestaurantImages(menu) {
 }
 
 function normalizeProductDescription(value) {
-  return String(value || "").trim().replace(/\s+/g, " ");
+  return String(value ?? "").replace(/\r\n?/g, "\n").trim();
 }
 
 function hashText(value) {
