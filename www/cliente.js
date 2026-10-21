@@ -2913,6 +2913,16 @@ function customerSetStatus(message, type = "") {
   customerElements.status.removeAttribute("data-i18n");
   customerElements.status.textContent = message;
   customerElements.status.dataset.type = type;
+  const customerCheckoutStatus = document.querySelector("#customerCheckoutStatus");
+  if (customerCheckoutStatus) {
+    customerCheckoutStatus.textContent = message;
+    customerCheckoutStatus.dataset.type = type;
+    customerCheckoutStatus.style.display = message && type === "error" ? "block" : "none";
+    customerCheckoutStatus.setAttribute("role", type === "error" ? "alert" : "status");
+    if (message && type === "error" && document.querySelector("#customerCartModal")?.hidden === false) {
+      customerCheckoutStatus.scrollIntoView({ block: "nearest" });
+    }
+  }
 }
 function customerSetTrackingStatus(message, type = "") {
   if (!customerElements.trackingStatus) return;
