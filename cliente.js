@@ -2919,6 +2919,9 @@ function customerSetStatus(message, type = "") {
     customerCheckoutStatus.dataset.type = type;
     customerCheckoutStatus.style.display = message && type === "error" ? "block" : "none";
     customerCheckoutStatus.setAttribute("role", type === "error" ? "alert" : "status");
+    if (message && type === "error" && document.querySelector("#customerCartModal")?.hidden === false) {
+      customerCheckoutStatus.scrollIntoView({ block: "nearest" });
+    }
   }
 }
 function customerSetTrackingStatus(message, type = "") {
