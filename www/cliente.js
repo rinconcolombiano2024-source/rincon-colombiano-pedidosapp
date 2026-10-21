@@ -5127,10 +5127,12 @@ destinationRegion:
       throw new Error(customerT("mapsRouteError", { status: "sin ruta" }));
     }
    const verifiedLat =
-  Number(data.verifiedLat);
+  data.verifiedLat == null || String(data.verifiedLat).trim() === ""
+    ? NaN : Number(data.verifiedLat);
 
 const verifiedLng =
-  Number(data.verifiedLng);
+  data.verifiedLng == null || String(data.verifiedLng).trim() === ""
+    ? NaN : Number(data.verifiedLng);
 
 const hasVerifiedCoords =
   Number.isFinite(verifiedLat)

@@ -1,7 +1,7 @@
 {
   "cliente.js": {
-    "sha256": "f7b8089c93f66a2feab6a0a5ef74af71e49f65c323a2d8bf963d1b6bf666ab94",
-    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs; tests/hardening/customer-independent-item-notes.test.mjs; tests/hardening/customer-menu-product-id-match.test.mjs; tests/hardening/customer-visible-checkout-status.test.mjs; tests/e2e/checkout-feedback.spec.js",
+    "sha256": "e5ca6424f091ca2edb795e0fc1330a053595d98a02166ac7f5481ef0c66270e4",
+    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs; tests/hardening/customer-independent-item-notes.test.mjs; tests/hardening/customer-menu-product-id-match.test.mjs; tests/hardening/customer-visible-checkout-status.test.mjs; tests/e2e/checkout-feedback.spec.js; tests/hardening/customer-verified-gps-null.test.mjs",
     "edits": [
       {
         "before": "",
@@ -357,6 +357,16 @@
         "before": "function customerSetStatus(message, type = \"\") {\r\n  customerElements.status.removeAttribute(\"data-i18n\");\r\n  customerElements.status.textContent = message;\r\n  customerElements.status.dataset.type = type;\r\n}\r\n",
         "after": "function customerSetStatus(message, type = \"\") {\r\n  customerElements.status.removeAttribute(\"data-i18n\");\r\n  customerElements.status.textContent = message;\r\n  customerElements.status.dataset.type = type;\r\n  const customerCheckoutStatus = document.querySelector(\"#customerCheckoutStatus\");\r\n  if (customerCheckoutStatus) {\r\n    customerCheckoutStatus.textContent = message;\r\n    customerCheckoutStatus.dataset.type = type;\r\n    customerCheckoutStatus.style.display = message && type === \"error\" ? \"block\" : \"none\";\r\n    customerCheckoutStatus.setAttribute(\"role\", type === \"error\" ? \"alert\" : \"status\");\r\n    if (message && type === \"error\" && document.querySelector(\"#customerCartModal\")?.hidden === false) {\r\n      customerCheckoutStatus.scrollIntoView({ block: \"nearest\" });\r\n    }\r\n  }\r\n}\r\n",
         "afterByteOffset": 141664
+      },
+      {
+        "before": "  Number(data.verifiedLat);\r\n",
+        "after": "  data.verifiedLat == null || String(data.verifiedLat).trim() === \"\"\r\n    ? NaN : Number(data.verifiedLat);\r\n",
+        "afterByteOffset": 212271
+      },
+      {
+        "before": "  Number(data.verifiedLng);\r\n",
+        "after": "  data.verifiedLng == null || String(data.verifiedLng).trim() === \"\"\r\n    ? NaN : Number(data.verifiedLng);\r\n",
+        "afterByteOffset": 212403
       }
     ]
   },
