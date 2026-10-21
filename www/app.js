@@ -14127,6 +14127,15 @@ async function updateTicketPaymentStatus(orderId, status) {
   const index = savedOrders.findIndex((order) => order.id === orderId);
   if (index < 0) return;
   const nextStatus = normalizePaymentStatus(status, "pending");
+  const paymentMethod = normalizePaymentMethod(savedOrders[index].paymentMethod);
+  // A pay-at-counter placeholder is not a verified cash/card/transfer tender.
+  // Online payments must be confirmed by the provider, never a manual POS toggle.
+  if (nextStatus === "paid" && (paymentMethod === "Pago en caja" || paymentMethod === "Online")) {
+    alert(paymentMethod === "Online"
+      ? "Los pagos en línea solo se confirman mediante la pasarela y conciliación."
+      : "Antes de marcar cobrado: abre el ticket, elige Efectivo, Datafono o Transferencia y guarda el cambio.");
+    return;
+  }
   savedOrders[index].paymentStatus = nextStatus;
   savedOrders[index].updatedAt = new Date().toISOString();
   savedOrders[index].syncStatus = shouldQueueForCloud()
