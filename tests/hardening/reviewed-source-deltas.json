@@ -1292,6 +1292,11 @@
         "before": "",
         "after": "  // A concurrent change to the same product must never silently discard remote edits.\r\n  const conflictingProductIds = [];\r\n  baseEntries.forEach((baseEntry, productId) => {\r\n    const localEntry = localEntries.get(productId);\r\n    const remoteEntry = remoteEntries.get(productId);\r\n    const localChanged = !localEntry || !menuProductEntryMatches(baseEntry, localEntry);\r\n    const remoteChanged = !remoteEntry || !menuProductEntryMatches(baseEntry, remoteEntry);\r\n    const converged = (!localEntry && !remoteEntry)\r\n      || (localEntry && remoteEntry && menuProductEntryMatches(localEntry, remoteEntry));\r\n    if (localChanged && remoteChanged && !converged) conflictingProductIds.push(productId);\r\n  });\r\n  localEntries.forEach((localEntry, productId) => {\r\n    if (!baseEntries.has(productId) && remoteEntries.has(productId)\r\n        && !menuProductEntryMatches(localEntry, remoteEntries.get(productId))) {\r\n      conflictingProductIds.push(productId);\r\n    }\r\n  });\r\n  if (conflictingProductIds.length) {\r\n    const conflict = new Error(appUiText(\"El mismo producto cambió en otro equipo. Actualiza el menú y vuelve a editar para evitar perder cambios.\"));\r\n    conflict.code = \"MENU_CONFLICT_REQUIRES_REFRESH\";\r\n    throw conflict;\r\n  }\r\n",
         "afterByteOffset": 87121
+      },
+      {
+        "before": "return String(value || \"\").trim().replace(/\\s+/g, \" \");",
+        "after": "return String(value ?? \"\").replace(/\\r\\n?/g, \"\\n\").trim();",
+        "afterByteOffset": 337975
       }
     ]
   },
