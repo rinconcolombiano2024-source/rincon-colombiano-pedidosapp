@@ -13,3 +13,9 @@ test("closure payment guard is additive, scoped by tenant and business dates",()
  assert.match(sql,/v91_25_single_report/);
  assert.doesNotMatch(sql,/drop\s+(table|function)|truncate\s+|delete\s+from/i);
 });
+
+test("closure excludes pay-at-counter placeholder and unsettled orders",()=>{
+ assert.match(sql,/'pago en caja','pay at counter','pay at restaurant'/);
+ assert.match(sql,/o\.order_json->>'paymentStatus'/);
+ assert.match(sql,/not in \('paid','refunded','partially_refunded'\)/);
+});

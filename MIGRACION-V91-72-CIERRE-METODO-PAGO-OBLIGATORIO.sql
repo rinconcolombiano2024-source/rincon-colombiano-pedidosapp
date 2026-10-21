@@ -14,7 +14,9 @@ declare
       and lower(trim(coalesce(nullif(o.canonical_status, ''), nullif(o.status, ''), o.order_json->>'canonicalStatus', o.order_json->>'status', 'completed'))) not in ('cancelled','rejected')
       and (
         nullif(trim(coalesce(o.order_json->>'paymentMethod', o.order_json->>'payment_method', '')), '') is null
-        or lower(trim(coalesce(o.order_json->>'paymentMethod', o.order_json->>'payment_method', ''))) in ('unknown','unspecified','no indicado','sin especificar','brak danych','none','null')
+        or lower(trim(coalesce(o.order_json->>'paymentMethod', o.order_json->>'payment_method', ''))) in ('unknown','unspecified','no indicado','sin especificar','brak danych','none','null','pago en caja','pay at counter','pay at restaurant')
+        -- A tender name without a settled payment still leaves the register unbalanced.
+        or lower(trim(coalesce(o.order_json->>'paymentStatus', o.order_json->>'payment_status', ''))) not in ('paid','refunded','partially_refunded')
       )
   ) then
     raise exception 'RC_ORDERA_CLOSURE_PAYMENT_METHOD_REQUIRED' using errcode = 'P0001';
@@ -33,7 +35,7 @@ declare
        select 1 from jsonb_array_elements(v_report->'payment_methods') pm
        where nullif(trim(coalesce(pm->>'payment_method', '')), '') is null
           or lower(trim(pm->>'payment_method')) in
-            ('unknown','unspecified','no indicado','sin especificar','brak danych','none','null')
+            ('unknown','unspecified','no indicado','sin especificar','brak danych','none','null','pago en caja','pay at counter','pay at restaurant')
      )
   then
     raise exception 'RC_ORDERA_CLOSURE_REPORT_INCOMPLETE' using errcode = 'P0001';
