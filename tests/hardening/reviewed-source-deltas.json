@@ -1,7 +1,7 @@
 {
   "cliente.js": {
-    "sha256": "e5ca6424f091ca2edb795e0fc1330a053595d98a02166ac7f5481ef0c66270e4",
-    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs; tests/hardening/customer-independent-item-notes.test.mjs; tests/hardening/customer-menu-product-id-match.test.mjs; tests/hardening/customer-visible-checkout-status.test.mjs; tests/e2e/checkout-feedback.spec.js; tests/hardening/customer-verified-gps-null.test.mjs",
+    "sha256": "4cfdf8d7282cbd44bab73604f16a864013d671d4d78207c8cef8c38dae2f1078",
+    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs; tests/hardening/customer-independent-item-notes.test.mjs; tests/hardening/customer-menu-product-id-match.test.mjs; tests/hardening/customer-visible-checkout-status.test.mjs; tests/e2e/checkout-feedback.spec.js; tests/hardening/customer-verified-gps-null.test.mjs; tests/hardening/google-maps-auth-gps-fallback.test.mjs",
     "edits": [
       {
         "before": "",
@@ -367,6 +367,36 @@
         "before": "  Number(data.verifiedLng);\r\n",
         "after": "  data.verifiedLng == null || String(data.verifiedLng).trim() === \"\"\r\n    ? NaN : Number(data.verifiedLng);\r\n",
         "afterByteOffset": 212403
+      },
+      {
+        "before": "    mapsLoadError: \"No se pudo cargar Google Maps.\",\r\n",
+        "after": "    mapsLoadError: \"No se pudo cargar Google Maps.\",\r\n    mapsAuthUnavailable: \"Google Maps no está autorizado para mostrar el mapa. Usa «Usar mi ubicación» para intentar calcular el domicilio sin abrir el mapa.\",\r\n",
+        "afterByteOffset": 26533
+      },
+      {
+        "before": "    mapsLoadError: \"Nie udalo sie zaladowac Google Maps.\",\r\n",
+        "after": "    mapsLoadError: \"Nie udalo sie zaladowac Google Maps.\",\r\n    mapsAuthUnavailable: \"Mapa Google Maps nie jest autoryzowana. Wybierz „Użyj mojej lokalizacji”, aby spróbować obliczyć dostawę bez mapy.\",\r\n",
+        "afterByteOffset": 46317
+      },
+      {
+        "before": "    mapsLoadError: \"Could not load Google Maps.\",\r\n",
+        "after": "    mapsLoadError: \"Could not load Google Maps.\",\r\n    mapsAuthUnavailable: \"Google Maps is not authorized to display the map. Choose Use my location to try calculating delivery without opening the map.\",\r\n",
+        "afterByteOffset": 65674
+      },
+      {
+        "before": "let googleMapsScriptPromise = null;\r\n",
+        "after": "let googleMapsScriptPromise = null;\r\nlet customerGoogleMapsAuthFailed = false;\r\n",
+        "afterByteOffset": 93921
+      },
+      {
+        "before": "function customerLoadGoogleMaps() {\r\n  if (window.google?.maps?.DistanceMatrixService && window.google?.maps?.places?.Autocomplete) return Promise.resolve();\r\n  if (!customerSettings.googleMapsApiKey) return Promise.reject(new Error(customerT(\"mapsNeedKey\")));\r\n  if (googleMapsScriptPromise) return googleMapsScriptPromise;\r\n  googleMapsScriptPromise = new Promise((resolve, reject) => {\r\n    const callbackName = `rinconGoogleMapsReady_${Date.now()}`;\r\n    const script = document.createElement(\"script\");\r\n    window[callbackName] = () => {\r\n      delete window[callbackName];\r\n      resolve();\r\n    };\r\n    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(customerSettings.googleMapsApiKey)}&libraries=places&loading=async&callback=${callbackName}`;\r\n    script.async = true;\r\n    script.defer = true;\r\n    script.addEventListener(\"error\", () => {\r\n      delete window[callbackName];\r\n      googleMapsScriptPromise = null;\r\n      reject(new Error(customerT(\"mapsLoadError\")));\r\n    });\r\n    document.head.appendChild(script);\r\n  });\r\n  return googleMapsScriptPromise;\r\n}\r\n",
+        "after": "function customerLoadGoogleMaps() {\r\n  if (customerGoogleMapsAuthFailed) return Promise.reject(new Error(customerT(\"mapsAuthUnavailable\")));\r\n  if (window.google?.maps?.DistanceMatrixService && window.google?.maps?.places?.Autocomplete) return Promise.resolve();\r\n  if (!customerSettings.googleMapsApiKey) return Promise.reject(new Error(customerT(\"mapsNeedKey\")));\r\n  if (googleMapsScriptPromise) return googleMapsScriptPromise;\r\n  googleMapsScriptPromise = new Promise((resolve, reject) => {\r\n    const callbackName = `rinconGoogleMapsReady_${Date.now()}`;\r\n    const script = document.createElement(\"script\");\r\n    const previousGoogleAuthFailure = window.gm_authFailure;\r\n    window.gm_authFailure = () => {\r\n      customerGoogleMapsAuthFailed = true;\r\n      googleMapsScriptPromise = null;\r\n      delete window[callbackName];\r\n      if (customerElements.deliveryMap) customerElements.deliveryMap.hidden = true;\r\n      customerSetMapResult(customerT(\"mapsAuthUnavailable\"), \"error\");\r\n      reject(new Error(customerT(\"mapsAuthUnavailable\")));\r\n      if (typeof previousGoogleAuthFailure === \"function\") previousGoogleAuthFailure();\r\n    };\r\n    window[callbackName] = () => {\r\n      delete window[callbackName];\r\n      resolve();\r\n    };\r\n    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(customerSettings.googleMapsApiKey)}&libraries=places&loading=async&callback=${callbackName}`;\r\n    script.async = true;\r\n    script.defer = true;\r\n    script.addEventListener(\"error\", () => {\r\n      delete window[callbackName];\r\n      googleMapsScriptPromise = null;\r\n      reject(new Error(customerT(\"mapsLoadError\")));\r\n    });\r\n    document.head.appendChild(script);\r\n  });\r\n  return googleMapsScriptPromise;\r\n}\r\n",
+        "afterByteOffset": 183850
+      },
+      {
+        "before": "      customerT(\"mapLocationError\"),\r\n      \"error\"\r\n    );\r\n  } finally {\r\n    customerElements.chooseMapLocationButton.disabled = false;",
+        "after": "      customerT(customerGoogleMapsAuthFailed ? \"mapsAuthUnavailable\" : \"mapLocationError\"),\r\n      \"error\"\r\n    );\r\n  } finally {\r\n    customerElements.chooseMapLocationButton.disabled = false;",
+        "afterByteOffset": 209008
       }
     ]
   },
