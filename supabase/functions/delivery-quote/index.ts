@@ -139,8 +139,12 @@ Deno.serve(withCors(async (request) => {
   || geocodeBody?.status !== "OK"
   || !geocodeResult
 ) {
-  return response(422, {
-    error: "Delivery address could not be verified",
+  // Provider configuration failures are operational outages, not invalid customer addresses.
+  // Keep pricing fail-closed; expose a stable diagnostic without leaking API credentials.
+  const googleStatus = String(geocodeBody?.status || "UNKNOWN");
+  const googleConfigFailure = ["REQUEST_DENIED", "OVER_DAILY_LIMIT", "OVER_QUERY_LIMIT"].includes(googleStatus);
+  return response(googleConfigFailure ? 503 : 422, {
+    error: googleConfigFailure ? "Google Maps provider configuration or quota unavailable" : "Delivery address could not be verified",
     provider: "google_geocoding",
     providerStatus:
       String(
