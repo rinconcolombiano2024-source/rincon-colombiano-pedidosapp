@@ -131,6 +131,17 @@ BEGIN
              'bank_transfer','online','stripe','sumup','blik'))
   ) THEN RAISE EXCEPTION 'RC_ORDERA_CLOSE_UNLINKED_CUSTOMER_UNPAID'; END IF;
 
+  -- A delivered and paid customer order is still unaccounted for until linked
+  -- to its POS ticket. Every order in the period must be present in the close.
+  IF EXISTS (
+    SELECT 1 FROM public.customer_orders c
+    LEFT JOIN public.orders o ON o.id = c.restaurant_order_id
+      AND o.user_id = NEW.restaurant_user_id
+    WHERE c.user_id = NEW.restaurant_user_id AND o.id IS NULL
+      AND c.created_at >= v_start_at AND c.created_at < v_end_at
+      AND lower(trim(coalesce(c.canonical_status,c.status,''))) NOT IN ('cancelled','rejected')
+  ) THEN RAISE EXCEPTION 'RC_ORDERA_CLOSE_UNLINKED_CUSTOMER_NOT_RECONCILED'; END IF;
+
   -- A plausible-looking report is not enough: reconcile to the actual POS rows.
   IF NEW.report_snapshot IS NULL OR jsonb_typeof(NEW.report_snapshot) <> 'object'
      OR jsonb_typeof(NEW.report_snapshot->'order_count') <> 'number'
@@ -168,6 +179,32 @@ BEGIN
      OR abs(v_payment_total - v_gross) > 0.01 THEN
     RAISE EXCEPTION 'RC_ORDERA_CLOSE_REPORT_NOT_RECONCILED';
   END IF;
+
+  -- Reconcile each physical tender separately, not just the grand total.
+  -- Two methods can sum to the same amount while hiding a drawer imbalance.
+  IF EXISTS (
+    WITH actual AS (
+      SELECT lower(trim(coalesce(nullif(o.order_json->>'paymentMethod',''),
+                                 o.order_json->>'payment_method',''))) AS tender,
+             count(*)::numeric AS tickets,round(sum(o.total),2) AS gross
+      FROM public.orders o
+      WHERE o.user_id = NEW.restaurant_user_id
+        AND o.business_date BETWEEN NEW.period_start AND NEW.period_end
+        AND lower(trim(coalesce(nullif(o.canonical_status,''),nullif(o.status,''),
+          o.order_json->>'canonicalStatus',o.order_json->>'status','')))
+            NOT IN ('cancelled','rejected')
+      GROUP BY 1
+    ), reported AS (
+      SELECT lower(trim(pm->>'payment_method')) AS tender,
+             sum((pm->>'orders')::numeric) AS tickets,
+             round(sum((pm->>'total')::numeric),2) AS gross
+      FROM jsonb_array_elements(NEW.report_snapshot->'payment_methods') pm
+      GROUP BY 1
+    )
+    SELECT 1 FROM actual a FULL JOIN reported r ON r.tender=a.tender
+    WHERE a.tender IS NULL OR r.tender IS NULL
+       OR a.tickets <> r.tickets OR abs(a.gross-r.gross) > 0.01
+  ) THEN RAISE EXCEPTION 'RC_ORDERA_CLOSE_TENDER_RECONCILIATION_FAILED'; END IF;
   RETURN NEW;
 END;
 $guard$;
