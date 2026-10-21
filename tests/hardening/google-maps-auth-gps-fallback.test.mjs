@@ -1,0 +1,27 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+import vm from "node:vm";
+const src=readFileSync("cliente.js","utf8");
+const mirror=readFileSync("www/cliente.js","utf8");
+test("Google Maps browser authentication failure disables broken map without changing server quote",async()=>{
+ assert.equal(mirror,src);
+ const start=src.indexOf("function customerLoadGoogleMaps() {");
+ const end=src.indexOf("function customerGetGoogleMapsDistance(",start);
+ assert.ok(start>=0&&end>start);
+ const source=src.slice(start,end);
+ const rendered=[];
+ const map={hidden:false};
+ const ctx={googleMapsScriptPromise:null,customerGoogleMapsAuthFailed:false,customerSettings:{googleMapsApiKey:"test-not-a-real-key"},customerElements:{deliveryMap:map},customerT:key=>key,customerSetMapResult:(message,kind)=>rendered.push({message,kind}),window:{},document:{createElement:()=>({addEventListener(){}}),head:{appendChild(){}}}};
+ vm.createContext(ctx);
+ vm.runInContext(source,ctx);
+ const pending=vm.runInContext("customerLoadGoogleMaps()",ctx);
+ assert.equal(typeof ctx.window.gm_authFailure,"function");
+ ctx.window.gm_authFailure();
+ await assert.rejects(pending,/mapsAuthUnavailable/);
+ assert.equal(map.hidden,true);
+ assert.equal(rendered.at(-1).message,"mapsAuthUnavailable");
+ await assert.rejects(vm.runInContext("customerLoadGoogleMaps()",ctx),/mapsAuthUnavailable/);
+ assert.match(src,/customerClient\.functions\.invoke\("delivery-quote"/);
+ for(const language of ["mapsAuthUnavailable: \"Google","mapsAuthUnavailable: \"Mapa","mapsAuthUnavailable: \"Google Maps is"])assert.ok(src.includes(language),language);
+});
