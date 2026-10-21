@@ -6,7 +6,7 @@ const source=readFileSync("supabase/functions/delivery-quote/index.ts","utf8");
 const start=source.indexOf("  if (!/^[0-9a-f-]{36}$/i.test(restaurantUserId)");
 const end=source.indexOf("\n  const admin =",start);
 assert.ok(start>=0&&end>start);
-const expression=source.slice(start,end).replace(/return response\(400, \{ error: "Restaurant, address, and country are required" \} \);/,'throw new Error("INVALID");');
+const expression=source.slice(start,end).replace(/return response\(400,\s*\{\s*error:\s*"Restaurant, address, and country are required"\s*\}\);/,'throw new Error("INVALID");');
 const restaurantUserId="123e4567-e89b-12d3-a456-426614174000";
 function accepts(destinationAddress,destinationLat,destinationLng,countryCode="PL"){
  const ctx=vm.createContext({restaurantUserId,destinationAddress,destinationLat,destinationLng,countryCode});
