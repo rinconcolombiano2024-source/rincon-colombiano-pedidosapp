@@ -1,7 +1,7 @@
 {
   "cliente.js": {
-    "sha256": "aad9e7b760ef41e030811cdf653d30968010bf1001a582164c75717ad1c22621",
-    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs; tests/hardening/customer-independent-item-notes.test.mjs; tests/hardening/customer-menu-product-id-match.test.mjs; tests/hardening/customer-visible-checkout-status.test.mjs; tests/e2e/checkout-feedback.spec.js; tests/hardening/customer-verified-gps-null.test.mjs; tests/hardening/google-maps-auth-gps-fallback.test.mjs; tests/hardening/customer-delivery-quote-stale.test.mjs; tests/hardening/customer-gps-async-revision.test.mjs",
+    "sha256": "2ed87e2e13ed61ea0b2f12e20393399b47f1b8530363605b101e9bf756959fcd",
+    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs; tests/hardening/customer-independent-item-notes.test.mjs; tests/hardening/customer-menu-product-id-match.test.mjs; tests/hardening/customer-visible-checkout-status.test.mjs; tests/e2e/checkout-feedback.spec.js; tests/hardening/customer-verified-gps-null.test.mjs; tests/hardening/google-maps-auth-gps-fallback.test.mjs; tests/hardening/customer-delivery-quote-stale.test.mjs; tests/hardening/customer-gps-async-revision.test.mjs; tests/hardening/maps-distance-invalid-quote.test.mjs",
     "edits": [
       {
         "before": "",
@@ -437,6 +437,11 @@
         "before": "  navigator.geolocation.getCurrentPosition(\r\n    async (position) => {\r\n      customerLocationCoords = {",
         "after": "  // A permission prompt may resolve after the customer has edited the address.\r\n  const requestedQuoteGeneration = customerDeliveryQuoteGeneration;\r\n  const requestedRestaurant = customerStoreId;\r\n  const requestedDestination = customerDeliveryDestination();\r\n  const previousCoordinates = JSON.stringify(customerLocationCoords);\r\n  navigator.geolocation.getCurrentPosition(\r\n    async (position) => {\r\n      if (requestedQuoteGeneration !== customerDeliveryQuoteGeneration ||\r\n          requestedRestaurant !== customerStoreId ||\r\n          requestedDestination !== customerDeliveryDestination() ||\r\n          previousCoordinates !== JSON.stringify(customerLocationCoords) ||\r\n          customerElements.orderType.value !== \"Domicilio\") {\r\n        customerElements.useLocationButton.disabled = false;\r\n        return;\r\n      }\r\n      customerLocationCoords = {",
         "afterByteOffset": 210546
+      },
+      {
+        "before": "        resolve({\r\n          distanceKm: Math.round((element.distance.value / 1000) * 10) / 10,",
+        "after": "        // Never accept an invalid or zero-length Google route as a delivery quote.\r\n        // A missing distance must not silently become a free delivery.\r\n        const meters = Number(element.distance?.value);\r\n        if (!Number.isFinite(meters) || meters <= 0) {\r\n          reject(new Error(customerT(\"mapsRouteError\", { status: \"DISTANCE_INVALID\" })));\r\n          return;\r\n        }\r\n        resolve({\r\n          distanceKm: Math.round((meters / 1000) * 10) / 10,",
+        "afterByteOffset": 186522
       }
     ]
   },

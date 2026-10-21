@@ -4069,8 +4069,15 @@ function customerGetGoogleMapsDistance(origin, destination) {
           reject(new Error(customerT("mapsRouteError", { status: element?.status || "sin resultado" })));
           return;
         }
+        // Never accept an invalid or zero-length Google route as a delivery quote.
+        // A missing distance must not silently become a free delivery.
+        const meters = Number(element.distance?.value);
+        if (!Number.isFinite(meters) || meters <= 0) {
+          reject(new Error(customerT("mapsRouteError", { status: "DISTANCE_INVALID" })));
+          return;
+        }
         resolve({
-          distanceKm: Math.round((element.distance.value / 1000) * 10) / 10,
+          distanceKm: Math.round((meters / 1000) * 10) / 10,
           distanceText: element.distance.text,
           durationText: element.duration?.text || "",
           origin,
