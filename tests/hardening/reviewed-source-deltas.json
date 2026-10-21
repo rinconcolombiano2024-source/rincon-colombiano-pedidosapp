@@ -810,8 +810,8 @@
     ]
   },
   "app.js": {
-    "sha256": "5c01efa8a49afaa7607d99e68750517c26b48ca78563b821f52a939e102e8893",
-    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/qr-menu-rpc-throttle.test.cjs; tests/menu-save-burst-coalesce.test.cjs; tests/menu-session-publication-guard.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/menu-cloud-rpc-singleflight.test.cjs; tests/portal-stations-entry.test.cjs; tests/central-refresh-session.test.cjs; tests/restaurant-settings-pending-confirmation.test.cjs; tests/settings-stale-response-tenant-guard.test.cjs; tests/hardening/menu-photo-session-isolation.test.mjs; tests/menu-publication-verified-save.test.cjs; tests/menu-save-session-isolation.test.cjs; tests/hardening/menu-description-no-truncation.test.mjs; tests/hardening/menu-price-save-validation.test.mjs; tests/hardening/pos-confirmed-payment-tender.test.mjs",
+    "sha256": "e912a750d970971df8968884b4dd58b016173e58a1288760c7f79ce3b59c6c88",
+    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/qr-menu-rpc-throttle.test.cjs; tests/menu-save-burst-coalesce.test.cjs; tests/menu-session-publication-guard.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/menu-cloud-rpc-singleflight.test.cjs; tests/portal-stations-entry.test.cjs; tests/central-refresh-session.test.cjs; tests/restaurant-settings-pending-confirmation.test.cjs; tests/settings-stale-response-tenant-guard.test.cjs; tests/hardening/menu-photo-session-isolation.test.mjs; tests/menu-publication-verified-save.test.cjs; tests/menu-save-session-isolation.test.cjs; tests/hardening/menu-description-no-truncation.test.mjs; tests/hardening/menu-price-save-validation.test.mjs; tests/hardening/pos-confirmed-payment-tender.test.mjs; tests/hardening/menu-save-content-confirmation.test.mjs",
     "edits": [
       {
         "before": "",
@@ -1327,6 +1327,11 @@
         "before": "  const nextStatus = normalizePaymentStatus(status, \"pending\");\r\n  savedOrders[index].paymentStatus = nextStatus;",
         "after": "  const nextStatus = normalizePaymentStatus(status, \"pending\");\r\n  const paymentMethod = normalizePaymentMethod(savedOrders[index].paymentMethod);\r\n  // A pay-at-counter placeholder is not a verified cash/card/transfer tender.\r\n  // Online payments must be confirmed by the provider, never a manual POS toggle.\r\n  if (nextStatus === \"paid\" && (paymentMethod === \"Pago en caja\" || paymentMethod === \"Online\")) {\r\n    alert(paymentMethod === \"Online\"\r\n      ? \"Los pagos en línea solo se confirman mediante la pasarela y conciliación.\"\r\n      : \"Antes de marcar cobrado: abre el ticket, elige Efectivo, Datafono o Transferencia y guarda el cambio.\");\r\n    return;\r\n  }\r\n  savedOrders[index].paymentStatus = nextStatus;",
         "afterByteOffset": 464629
+      },
+      {
+        "before": "",
+        "after": "  // A successful RPC must acknowledge the complete submitted catalog before\r\n  // changing local state, revisions, or the confirmed recovery snapshot.\r\n  if (!menuCatalogsMatch(confirmedMenu, submitted)) {\r\n    const error = new Error(appUiText(\"No se pudo confirmar la publicacion del menu. Intenta nuevamente.\"));\r\n    error.code = \"MENU_SAVE_CONTENT_MISMATCH\";\r\n    throw error;\r\n  }\r\n",
+        "afterByteOffset": 164092
       }
     ]
   },

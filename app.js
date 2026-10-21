@@ -5103,6 +5103,13 @@ async function confirmSavedCloudMenu(confirmed, fallbackMenu, submittedMenu = nu
   if (!confirmed?.menu && !fallbackMenu) throw new Error("La nube no confirmó el menú guardado.");
   const revision = validatedMenuRevision(confirmed?.menuRevision ?? confirmed?.menu_revision);
   const submitted = normalizeMenuCatalog(submittedMenu || confirmedMenu);
+  // A successful RPC must acknowledge the complete submitted catalog before
+  // changing local state, revisions, or the confirmed recovery snapshot.
+  if (!menuCatalogsMatch(confirmedMenu, submitted)) {
+    const error = new Error(appUiText("No se pudo confirmar la publicacion del menu. Intenta nuevamente."));
+    error.code = "MENU_SAVE_CONTENT_MISMATCH";
+    throw error;
+  }
   // Never overwrite product descriptions edited while a previous save was in flight.
   let localChangesPending = !menuCatalogsMatch(menuCatalog, submitted);
   if (!localChangesPending) {
