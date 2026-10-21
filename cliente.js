@@ -4509,6 +4509,7 @@ async function customerReverseGeocodeLocation(
 
   const preserveManual =
     options.preserveManual === true;
+  const requestedRestaurant = customerStoreId;
 
   return new Promise((resolve) => {
     const geocoder =
@@ -4521,6 +4522,19 @@ async function customerReverseGeocodeLocation(
           status !== "OK" ||
           !results?.length
         ) {
+          resolve(false);
+          return;
+        }
+
+        // Reject a late GPS/geocoding result after an address edit, new map pin,
+        // restaurant change, or switch away from home delivery.
+        if (!preserveManual && (
+          requestedRestaurant !== customerStoreId ||
+          customerElements.orderType?.value !== "Domicilio" ||
+          !customerLocationCoords ||
+          Number(customerLocationCoords.lat) !== Number(coords.lat) ||
+          Number(customerLocationCoords.lng) !== Number(coords.lng)
+        )) {
           resolve(false);
           return;
         }
@@ -5040,8 +5054,21 @@ async function customerUseLocation() {
   }
   customerElements.useLocationButton.disabled = true;
   customerSetMapResult(customerT("locationRequest"), "");
+  // A permission prompt may resolve after the customer has edited the address.
+  const requestedQuoteGeneration = customerDeliveryQuoteGeneration;
+  const requestedRestaurant = customerStoreId;
+  const requestedDestination = customerDeliveryDestination();
+  const previousCoordinates = JSON.stringify(customerLocationCoords);
   navigator.geolocation.getCurrentPosition(
     async (position) => {
+      if (requestedQuoteGeneration !== customerDeliveryQuoteGeneration ||
+          requestedRestaurant !== customerStoreId ||
+          requestedDestination !== customerDeliveryDestination() ||
+          previousCoordinates !== JSON.stringify(customerLocationCoords) ||
+          customerElements.orderType.value !== "Domicilio") {
+        customerElements.useLocationButton.disabled = false;
+        return;
+      }
       customerLocationCoords = {
         lat: position.coords.latitude,
         lng: position.coords.longitude,

@@ -1,7 +1,7 @@
 {
   "cliente.js": {
-    "sha256": "ae5270694dfeb88bce598cc1e0e3ddf575ab834aa7133278f10d0bff09265058",
-    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs; tests/hardening/customer-independent-item-notes.test.mjs; tests/hardening/customer-menu-product-id-match.test.mjs; tests/hardening/customer-visible-checkout-status.test.mjs; tests/e2e/checkout-feedback.spec.js; tests/hardening/customer-verified-gps-null.test.mjs; tests/hardening/google-maps-auth-gps-fallback.test.mjs; tests/hardening/customer-delivery-quote-stale.test.mjs",
+    "sha256": "aad9e7b760ef41e030811cdf653d30968010bf1001a582164c75717ad1c22621",
+    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs; tests/hardening/customer-independent-item-notes.test.mjs; tests/hardening/customer-menu-product-id-match.test.mjs; tests/hardening/customer-visible-checkout-status.test.mjs; tests/e2e/checkout-feedback.spec.js; tests/hardening/customer-verified-gps-null.test.mjs; tests/hardening/google-maps-auth-gps-fallback.test.mjs; tests/hardening/customer-delivery-quote-stale.test.mjs; tests/hardening/customer-gps-async-revision.test.mjs",
     "edits": [
       {
         "before": "",
@@ -422,6 +422,21 @@
         "before": "  input?.addEventListener(\"input\", () => {\r\n    customerMapDistance = null;\r\n    customerLocationCoords = null;\r\n",
         "after": "  input?.addEventListener(\"input\", () => {\r\n    // A past quote can never be restored by typing a previous address again.\r\n    customerDeliveryQuoteGeneration += 1;\r\n    customerMapDistance = null;\r\n    customerLocationCoords = null;\r\n    customerElements.calculateDistanceButton.disabled = false;\r\n",
         "afterByteOffset": 313473
+      },
+      {
+        "before": "  const preserveManual =\r\n    options.preserveManual === true;",
+        "after": "  const preserveManual =\r\n    options.preserveManual === true;\r\n  const requestedRestaurant = customerStoreId;",
+        "afterByteOffset": 196976
+      },
+      {
+        "before": "        const result = results[0];\r\n\r\n        const countryCode = String(",
+        "after": "        // Reject a late GPS/geocoding result after an address edit, new map pin,\r\n        // restaurant change, or switch away from home delivery.\r\n        if (!preserveManual && (\r\n          requestedRestaurant !== customerStoreId ||\r\n          customerElements.orderType?.value !== \"Domicilio\" ||\r\n          !customerLocationCoords ||\r\n          Number(customerLocationCoords.lat) !== Number(coords.lat) ||\r\n          Number(customerLocationCoords.lng) !== Number(coords.lng)\r\n        )) {\r\n          resolve(false);\r\n          return;\r\n        }\r\n\r\n        const result = results[0];\r\n\r\n        const countryCode = String(",
+        "afterByteOffset": 197412
+      },
+      {
+        "before": "  navigator.geolocation.getCurrentPosition(\r\n    async (position) => {\r\n      customerLocationCoords = {",
+        "after": "  // A permission prompt may resolve after the customer has edited the address.\r\n  const requestedQuoteGeneration = customerDeliveryQuoteGeneration;\r\n  const requestedRestaurant = customerStoreId;\r\n  const requestedDestination = customerDeliveryDestination();\r\n  const previousCoordinates = JSON.stringify(customerLocationCoords);\r\n  navigator.geolocation.getCurrentPosition(\r\n    async (position) => {\r\n      if (requestedQuoteGeneration !== customerDeliveryQuoteGeneration ||\r\n          requestedRestaurant !== customerStoreId ||\r\n          requestedDestination !== customerDeliveryDestination() ||\r\n          previousCoordinates !== JSON.stringify(customerLocationCoords) ||\r\n          customerElements.orderType.value !== \"Domicilio\") {\r\n        customerElements.useLocationButton.disabled = false;\r\n        return;\r\n      }\r\n      customerLocationCoords = {",
+        "afterByteOffset": 210546
       }
     ]
   },
