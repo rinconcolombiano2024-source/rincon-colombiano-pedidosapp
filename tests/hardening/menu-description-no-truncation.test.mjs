@@ -1,0 +1,11 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+import vm from "node:vm";
+const source=readFileSync("app.js","utf8");
+const match=source.match(/function normalizeProductDescription\(value\) \{[\s\S]*?\n\}/);
+assert.ok(match,"menu description normalizer exists");
+const normalize=vm.runInNewContext(match[0]+"\nnormalizeProductDescription");
+test("menu descriptions are not silently truncated beyond 260 characters",()=>{const input="Descripción extensa ".repeat(120);assert.equal(normalize(input),input.trim());});
+test("menu description retains unicode and punctuation in ES PL EN",()=>{for(const text of ["Café con ñ y á. ".repeat(40),"Żurek, łosoś i śmietana. ".repeat(40),"Tender beef & sauce. ".repeat(40)])assert.equal(normalize(text),text.trim());});
+test("menu description inputs have no HTML maxlength",()=>{const html=readFileSync("restaurante.html","utf8");for(const id of ["productDescriptionInput","productDescriptionPlInput","productDescriptionEnInput"]){const tag=html.match(new RegExp("<textarea\\s+[^>]*id=\\\""+id+"\\\"[^>]*>","i"));assert.ok(tag,id);assert.doesNotMatch(tag[0],/maxlength\s*=/i);}});
