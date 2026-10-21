@@ -439,6 +439,7 @@ calculateMaps: "Calcular con Google Maps",
     manualDistanceNotice: "Distancia manual orientativa. No modifica la tarifa validada del domicilio.",
     profileSaveChanges: "Guardar cambios",
     mapsLoadError: "No se pudo cargar Google Maps.",
+    mapsAuthUnavailable: "Google Maps no está autorizado para mostrar el mapa. Usa «Usar mi ubicación» para intentar calcular el domicilio sin abrir el mapa.",
     mapsResponseError: "Google Maps respondio: {status}",
     mapsRouteError: "No se pudo calcular ruta: {status}",
     paymentTitle: "Pago del pedido",
@@ -778,6 +779,7 @@ kitchenNotesLabel: "Uwagi do kuchni",
     manualDistanceNotice: "Ręcznie wpisana odległość jest orientacyjna. Nie zmienia potwierdzonej opłaty za dostawę.",
     profileSaveChanges: "Zapisz zmiany",
     mapsLoadError: "Nie udalo sie zaladowac Google Maps.",
+    mapsAuthUnavailable: "Mapa Google Maps nie jest autoryzowana. Wybierz „Użyj mojej lokalizacji”, aby spróbować obliczyć dostawę bez mapy.",
     mapsResponseError: "Google Maps odpowiedzial: {status}",
     mapsRouteError: "Nie udalo sie obliczyc trasy: {status}",
     paymentTitle: "Platnosc za zamowienie",
@@ -1117,6 +1119,7 @@ kitchenNotesLabel: "Kitchen notes",
     manualDistanceNotice: "The manual distance is an estimate. It does not change the validated delivery fee.",
     profileSaveChanges: "Save changes",
     mapsLoadError: "Could not load Google Maps.",
+    mapsAuthUnavailable: "Google Maps is not authorized to display the map. Choose Use my location to try calculating delivery without opening the map.",
     mapsResponseError: "Google Maps responded: {status}",
     mapsRouteError: "Could not calculate route: {status}",
     paymentTitle: "Order payment",
@@ -1731,6 +1734,7 @@ let customerSettings = {
 };
 let customerMapDistance = null;
 let googleMapsScriptPromise = null;
+let customerGoogleMapsAuthFailed = false;
 const customerPlaceAutocompletes = new Map();
 let customerLocationCoords = null;
 
@@ -4010,12 +4014,23 @@ function customerCanUseGoogleMaps() {
   return Boolean(customerSettings.googleMapsApiKey && customerSettings.restaurantAddress && window.navigator.onLine);
 }
 function customerLoadGoogleMaps() {
+  if (customerGoogleMapsAuthFailed) return Promise.reject(new Error(customerT("mapsAuthUnavailable")));
   if (window.google?.maps?.DistanceMatrixService && window.google?.maps?.places?.Autocomplete) return Promise.resolve();
   if (!customerSettings.googleMapsApiKey) return Promise.reject(new Error(customerT("mapsNeedKey")));
   if (googleMapsScriptPromise) return googleMapsScriptPromise;
   googleMapsScriptPromise = new Promise((resolve, reject) => {
     const callbackName = `rinconGoogleMapsReady_${Date.now()}`;
     const script = document.createElement("script");
+    const previousGoogleAuthFailure = window.gm_authFailure;
+    window.gm_authFailure = () => {
+      customerGoogleMapsAuthFailed = true;
+      googleMapsScriptPromise = null;
+      delete window[callbackName];
+      if (customerElements.deliveryMap) customerElements.deliveryMap.hidden = true;
+      customerSetMapResult(customerT("mapsAuthUnavailable"), "error");
+      reject(new Error(customerT("mapsAuthUnavailable")));
+      if (typeof previousGoogleAuthFailure === "function") previousGoogleAuthFailure();
+    };
     window[callbackName] = () => {
       delete window[callbackName];
       resolve();
@@ -5001,7 +5016,7 @@ if (!center && customerSettings.restaurantAddress) {
     );
 
     customerSetMapResult(
-      customerT("mapLocationError"),
+      customerT(customerGoogleMapsAuthFailed ? "mapsAuthUnavailable" : "mapLocationError"),
       "error"
     );
   } finally {
