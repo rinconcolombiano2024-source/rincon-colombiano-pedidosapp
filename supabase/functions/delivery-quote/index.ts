@@ -90,7 +90,7 @@ Deno.serve(withCors(async (request) => {
     return response(400, { error: "Both valid GPS coordinates are required" });
   }
   if (!/^[0-9a-f-]{36}$/i.test(restaurantUserId)
-      || destinationAddress.length < 5
+      || (destinationAddress.length < 5 && (destinationLat === null || destinationLng === null))
       || !["PL", "CO"].includes(countryCode)) {
     return response(400, { error: "Restaurant, address, and country are required" });
   }
