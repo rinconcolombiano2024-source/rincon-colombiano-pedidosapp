@@ -1,5 +1,6 @@
 (function () {
   const rows = [
+    ["closure.payment.required", "No se puede cerrar el día: todos los pedidos deben tener un método de pago registrado y el reporte debe estar completo.", "Nie można zamknąć dnia: każde zamówienie musi mieć przypisaną metodę płatności, a raport musi być kompletny.", "Cannot close the day: every order must have a recorded payment method and the report must be complete."],
     ["integration.a11y.summary", "Resumen de preparación", "Podsumowanie gotowości", "Readiness summary"],
     ["integration.a11y.categories", "Categorías", "Kategorie", "Categories"],
     ["integration.a11y.diagnostics", "Diagnóstico de integraciones", "Diagnostyka integracji", "Integration diagnostics"],
