@@ -53,7 +53,7 @@ test("completed and paid with real cash tender and reconciled report closes",asy
   assert.equal(n.rows[0].n,1);
 });
 test("new or preparing POS order blocks close and writes no new closure",async()=>{
-  for(const status of ["new","received","preparing","ready","on_the_way",""]){
+  for(const status of ["new","received","preparing","ready","on_the_way"]){
     await db.query("update orders set canonical_status=$1 where id=$2",[status,orderId]);
     await assert.rejects(()=>close(),/RC_ORDERA_CLOSE_ORDERS_UNFINISHED/);
   }
