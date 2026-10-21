@@ -82,6 +82,13 @@ Deno.serve(withCors(async (request) => {
   const destinationRegion = String(payload.destinationRegion || "").trim().slice(0, 160);
   const destinationLat = finiteCoordinate(payload.destinationLat, -90, 90);
   const destinationLng = finiteCoordinate(payload.destinationLng, -180, 180);
+  // A single GPS coordinate must never silently fall back to address-based pricing.
+  const hasDestinationLat = payload.destinationLat !== undefined && payload.destinationLat !== null;
+  const hasDestinationLng = payload.destinationLng !== undefined && payload.destinationLng !== null;
+  if (hasDestinationLat !== hasDestinationLng ||
+      ((hasDestinationLat || hasDestinationLng) && (destinationLat === null || destinationLng === null))) {
+    return response(400, { error: "Both valid GPS coordinates are required" });
+  }
   if (!/^[0-9a-f-]{36}$/i.test(restaurantUserId)
       || destinationAddress.length < 5
       || !["PL", "CO"].includes(countryCode)) {
