@@ -785,7 +785,7 @@
     ]
   },
   "app.js": {
-    "sha256": "bcd35600d5a847ebf876a2248a8d232a36819562ae1e53320bef531d753e8067",
+    "sha256": "414a8dada3df2b4c866993132da749a10b3dccb933df57b4d09f7128fb1dc9a0",
     "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/qr-menu-rpc-throttle.test.cjs; tests/menu-save-burst-coalesce.test.cjs; tests/menu-session-publication-guard.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/menu-cloud-rpc-singleflight.test.cjs; tests/portal-stations-entry.test.cjs; tests/central-refresh-session.test.cjs; tests/restaurant-settings-pending-confirmation.test.cjs; tests/settings-stale-response-tenant-guard.test.cjs; tests/hardening/menu-photo-session-isolation.test.mjs; tests/menu-publication-verified-save.test.cjs; tests/menu-save-session-isolation.test.cjs; tests/hardening/menu-description-no-truncation.test.mjs; tests/hardening/menu-price-save-validation.test.mjs",
     "edits": [
       {
@@ -1287,6 +1287,11 @@
         "before": "  const price = Number.parseFloat(elements.productPriceInput.value) || 0;\r\n",
         "after": "  const priceInput = String(elements.productPriceInput.value ?? \"\").trim();\r\n  const price = Number(priceInput);\r\n  if (!priceInput || !Number.isFinite(price) || price < 0) {\r\n    alert((window.RC_ORDERA_OFFLINE_I18N?.translate(\"Introduce un precio válido mayor o igual a cero antes de guardar el producto.\", currentAppLanguage()) || \"Introduce un precio válido mayor o igual a cero antes de guardar el producto.\"));\r\n    return;\r\n  }\r\n",
         "afterByteOffset": 419556
+      },
+      {
+        "before": "",
+        "after": "  // A concurrent change to the same product must never silently discard remote edits.\r\n  const conflictingProductIds = [];\r\n  baseEntries.forEach((baseEntry, productId) => {\r\n    const localEntry = localEntries.get(productId);\r\n    const remoteEntry = remoteEntries.get(productId);\r\n    const localChanged = !localEntry || !menuProductEntryMatches(baseEntry, localEntry);\r\n    const remoteChanged = !remoteEntry || !menuProductEntryMatches(baseEntry, remoteEntry);\r\n    const converged = (!localEntry && !remoteEntry)\r\n      || (localEntry && remoteEntry && menuProductEntryMatches(localEntry, remoteEntry));\r\n    if (localChanged && remoteChanged && !converged) conflictingProductIds.push(productId);\r\n  });\r\n  localEntries.forEach((localEntry, productId) => {\r\n    if (!baseEntries.has(productId) && remoteEntries.has(productId)\r\n        && !menuProductEntryMatches(localEntry, remoteEntries.get(productId))) {\r\n      conflictingProductIds.push(productId);\r\n    }\r\n  });\r\n  if (conflictingProductIds.length) {\r\n    const conflict = new Error(appUiText(\"El mismo producto cambió en otro equipo. Actualiza el menú y vuelve a editar para evitar perder cambios.\"));\r\n    conflict.code = \"MENU_CONFLICT_REQUIRES_REFRESH\";\r\n    throw conflict;\r\n  }\r\n",
+        "afterByteOffset": 87121
       }
     ]
   },
