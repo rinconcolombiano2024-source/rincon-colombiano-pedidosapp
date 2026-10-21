@@ -7,6 +7,9 @@ test("closure payment guard is additive, scoped by tenant and business dates",()
  assert.match(sql,/o\.user_id = v_owner_id/);
  assert.match(sql,/o\.business_date >= v_start_date and o\.business_date < v_end_date/);
  assert.match(sql,/RC_ORDERA_CLOSURE_PAYMENT_METHOD_REQUIRED/);
+ assert.match(sql,/RC_ORDERA_CLOSURE_REPORT_INCOMPLETE/);
+ assert.match(sql,/jsonb_array_elements\(v_report->\x27payment_methods\x27\)/);
+ assert.match(sql,/\(v_report->>\x27order_count\x27\)::integer/);
  assert.match(sql,/v91_25_single_report/);
  assert.doesNotMatch(sql,/drop\s+(table|function)|truncate\s+|delete\s+from/i);
 });

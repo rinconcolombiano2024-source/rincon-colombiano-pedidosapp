@@ -20,6 +20,25 @@ declare
     raise exception 'RC_ORDERA_CLOSURE_PAYMENT_METHOD_REQUIRED' using errcode = 'P0001';
   end if;
 
+  -- Validate report completeness in the same SECURITY DEFINER transaction.
+  -- The grouped payment ticket count must reconcile with the sale ticket count.
+  if v_report is null
+     or v_report->>'order_count' is null
+     or jsonb_typeof(v_report->'payment_methods') is distinct from 'array'
+     or coalesce((
+       select sum((pm->>'orders')::integer)
+       from jsonb_array_elements(v_report->'payment_methods') pm
+     ), 0) <> (v_report->>'order_count')::integer
+     or exists (
+       select 1 from jsonb_array_elements(v_report->'payment_methods') pm
+       where nullif(trim(coalesce(pm->>'payment_method', '')), '') is null
+          or lower(trim(pm->>'payment_method')) in
+            ('unknown','unspecified','no indicado','sin especificar','brak danych','none','null')
+     )
+  then
+    raise exception 'RC_ORDERA_CLOSURE_REPORT_INCOMPLETE' using errcode = 'P0001';
+  end if;
+
 $guard$;
 begin
   select pg_get_functiondef('public.close_current_restaurant_period(text,date)'::regprocedure) into v_definition;
