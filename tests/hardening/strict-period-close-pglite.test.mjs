@@ -29,6 +29,10 @@ await db.query("insert into restaurant_profiles(user_id,timezone,country_code) v
 await db.query("insert into orders(id,user_id,business_date,status,canonical_status,order_json,total) values($1,$2,'2026-10-21','completed','completed',$3,60)",[orderId,owner,{paymentStatus:"paid",paymentMethod:"Efectivo",status:"completed"}]);
 await db.query("insert into customer_orders(id,user_id,restaurant_order_id,created_at,status,canonical_status,station_status,payment_status,payment_method) values($1,$2,$3,'2026-10-21T10:00:00Z','delivered','delivered','completed','pending','')",[clientId,owner,orderId]);
 await db.exec(readFileSync("MIGRACION-V91-78-STRICT-PAID-AND-COMPLETED-CLOSURE.sql","utf8"));
+const requiredFieldsMigration=readFileSync("supabase/migrations/20261021141254_strict_close_required_report_fields.sql","utf8");
+await db.exec(requiredFieldsMigration);
+// Reapplying must preserve the guard and all existing behavior.
+await db.exec(requiredFieldsMigration);
 
 const snapshot=(overrides={})=>({
   order_count:1,sales_total:60,
@@ -137,4 +141,20 @@ test("blocked UPDATE leaves prior closure snapshot unchanged",async()=>{
  const after=await db.query("select report_snapshot from restaurant_period_closures where id=$1",[id]);
  assert.deepEqual(after.rows[0].report_snapshot,before.rows[0].report_snapshot);
  await db.query("update orders set order_json=jsonb_set(order_json,'{paymentStatus}','\"paid\"'::jsonb) where id=$1",[orderId]);
+});
+
+for (const field of ["order_count", "sales_total", "payment_methods"]) {
+ test(`missing ${field} is rejected before a closure can be written`,async()=>{
+  const report=snapshot();delete report[field];
+  const before=await db.query("select count(*)::int as n from restaurant_period_closures");
+  await assert.rejects(()=>close({report_snapshot:report}),/RC_ORDERA_CLOSE_REPORT_INCOMPLETE/);
+  const after=await db.query("select count(*)::int as n from restaurant_period_closures");
+  assert.deepEqual(after.rows,before.rows);
+ });
+}
+test("empty report on a day with no orders is rejected",async()=>{
+ await assert.rejects(()=>close({period_start:"2026-10-22",period_end:"2026-10-22",report_snapshot:{}}),/RC_ORDERA_CLOSE_REPORT_INCOMPLETE/);
+});
+test("complete zero-sales report remains valid",async()=>{
+ await assert.doesNotReject(()=>close({period_start:"2026-10-22",period_end:"2026-10-22",report_snapshot:snapshot({order_count:0,sales_total:0,payment_methods:[]})}));
 });
