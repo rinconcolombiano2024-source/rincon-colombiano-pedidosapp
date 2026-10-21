@@ -15321,10 +15321,56 @@ elements.closeDayInput.addEventListener("change", async () => {
   renderDailyClose(day);
 });
 
+// A rejected financial close must explain the corrective action without disclosing SQL details.
+// Never print a daily close when the cloud financial guard rejects it.
+function periodCloseFailureMessage(error) {
+  const detail = [error?.message, error?.details, error?.hint, error?.code].filter(Boolean).join(" ");
+  const locale = String(appUiLocale() || "es").toLowerCase();
+  const lang = locale.startsWith("pl") ? "pl" : locale.startsWith("en") ? "en" : "es";
+  const messages = {
+    unfinished: {
+      es: "Cierre bloqueado: hay pedidos nuevos, en preparación o sin finalizar. Termina o cancela correctamente los pedidos antes de cerrar.",
+      pl: "Zamknięcie zablokowane: są nowe, przygotowywane lub niezakończone zamówienia. Zakończ je albo prawidłowo anuluj.",
+      en: "Closure blocked: new, preparing, or unfinished orders remain. Complete or properly cancel them first."
+    },
+    payment: {
+      es: "Cierre bloqueado: hay pedidos sin cobro confirmado. Verifica y registra el pago real de cada pedido.",
+      pl: "Zamknięcie zablokowane: nie wszystkie zamówienia mają potwierdzoną płatność. Zweryfikuj i zapisz każdą płatność.",
+      en: "Closure blocked: some orders have no confirmed payment. Verify and record the actual payment for each order."
+    },
+    method: {
+      es: "Cierre bloqueado: uno o más tickets tienen «Pago en caja» o un método sin identificar. Abre el ticket y guarda Efectivo, Datáfono, Transferencia o pago online verificado.",
+      pl: "Zamknięcie zablokowane: co najmniej jeden paragon ma „Płatność w kasie” lub brak metody. Otwórz go i zapisz gotówkę, terminal, przelew lub zweryfikowaną płatność online.",
+      en: "Closure blocked: tickets still show “Pay at counter” or no real tender. Open each ticket and save cash, card terminal, transfer, or verified online payment."
+    },
+    reconcile: {
+      es: "Cierre bloqueado: hay pedidos de clientes sin conciliar con la caja. Sincroniza los pedidos y comprueba los tickets antes de cerrar.",
+      pl: "Zamknięcie zablokowane: zamówienia klientów nie są uzgodnione z kasą. Zsynchronizuj je i sprawdź paragony.",
+      en: "Closure blocked: customer orders are not reconciled with POS tickets. Synchronize orders and verify the tickets first."
+    },
+    report: {
+      es: "Cierre bloqueado: el informe no está completo o los totales no coinciden con los cobros. Revisa tickets, métodos de pago y cantidades.",
+      pl: "Zamknięcie zablokowane: raport jest niekompletny albo sumy nie zgadzają się z płatnościami. Sprawdź paragony i metody płatności.",
+      en: "Closure blocked: the report is incomplete or totals do not reconcile. Review tickets, payment methods, and amounts."
+    },
+    general: {
+      es: "No se confirmó el cierre en la nube. No se imprimió ningún cierre. Revisa la conexión y los pedidos e intenta nuevamente.",
+      pl: "Nie potwierdzono zamknięcia w chmurze. Nie wydrukowano raportu zamknięcia. Sprawdź połączenie i zamówienia.",
+      en: "Cloud closure was not confirmed. No closure was printed. Check the connection and orders before retrying."
+    }
+  };
+  const reason = /RC_ORDERA_CLOSE_(?:ORDERS_UNFINISHED|CLIENT_ORDER_IN_PROGRESS|STATION_IN_PREPARATION)/.test(detail) ? "unfinished"
+    : /RC_ORDERA_CLOSE_(?:PAYMENT_NOT_CONFIRMED|UNLINKED_CUSTOMER_UNPAID)/.test(detail) ? "payment"
+    : /RC_ORDERA_CLOSE_PAYMENT_METHOD_REQUIRED/.test(detail) ? "method"
+    : /RC_ORDERA_CLOSE_UNLINKED_CUSTOMER_NOT_RECONCILED/.test(detail) ? "reconcile"
+    : /RC_ORDERA_CLOSE_(?:REPORT_|TENDER_RECONCILIATION_FAILED)/.test(detail) ? "report" : "general";
+  return messages[reason][lang];
+}
+
 elements.printDailyCloseButton.addEventListener("click", () => {
   printDailyClose().catch((error) => {
     console.error(error);
-    alert("No fue posible confirmar el cierre diario.");
+    alert(periodCloseFailureMessage(error));
   });
 });
 
