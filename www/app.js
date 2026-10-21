@@ -14552,6 +14552,11 @@ async function printDailyClose() {
   const day = elements.closeDayInput.value || todayKey;
   await prepareCloudPeriodClosure("day", day);
   const report = renderDailyClose(day);
+  const paymentGroups = report.paymentMethods || [];
+  const paymentTickets = paymentGroups.reduce((sum, group) => sum + Number(group.tickets || 0), 0);
+  if (paymentTickets !== report.tickets || paymentGroups.some((group) => !group.label || /^(no indicado|sin especificar|unknown|unspecified|brak danych)$/i.test(String(group.label).trim()))) {
+    throw new Error("No se puede cerrar el día: todos los pedidos deben tener un método de pago registrado y el reporte debe estar completo.");
+  }
   if (!report.tickets) {
     alert("No hay pedidos guardados para imprimir en ese dia.");
     return;
