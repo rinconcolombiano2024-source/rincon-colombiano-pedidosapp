@@ -21,3 +21,12 @@ test("restaurant cloud save checks confirmed menu and avoids overwriting in-flig
  assert.match(js,/saveCloudMenuRequest/);
  for(const id of fields)assert.ok(js.includes(id));
 });
+
+test("long multilingual descriptions remain strings throughout menu save serialization",()=>{
+ const descriptions={description:"ES: "+"Descripción extensa con ñ, á y emojis 🍲 ".repeat(1200),descriptionPl:"PL: "+"Długi opis żółć i ąęł ".repeat(1200),descriptionEn:"EN: "+"Long description with details ".repeat(1200)};
+ const saved=JSON.parse(JSON.stringify({products:[descriptions]})).products[0];
+ for(const key of ["description","descriptionPl","descriptionEn"]){
+   assert.equal(saved[key],descriptions[key]);
+   assert.ok(saved[key].length>10000);
+ }
+});
