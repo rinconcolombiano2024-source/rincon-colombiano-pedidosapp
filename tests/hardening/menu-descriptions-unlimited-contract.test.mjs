@@ -9,8 +9,8 @@ for(const file of ["restaurante.html","www/restaurante.html"]){
     for(const id of fields){
       const match=html.match(new RegExp("<textarea\\b([^>]*)>","gi"))?.find(tag=>tag.includes(`id="${id}"`));
       assert.ok(match,`Missing textarea ${id}`);
-      assert.doesNotMatch(match,/\\bmaxlength\\s*=/i,`Unexpected length limit on ${id}`);
-      assert.doesNotMatch(match,/\\breadonly\\b|\\bdisabled\\b/i);
+      assert.doesNotMatch(match,/\bmaxlength\s*=/i,`Unexpected length limit on ${id}`);
+      assert.doesNotMatch(match,/\breadonly\b|\bdisabled\b/i);
     }
   });
 }
