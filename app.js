@@ -12907,12 +12907,50 @@ async function saveProduct() {
   const previousProduct = editingProduct ? (menuCatalog[editingProduct.category] || [])[editingProduct.index] : null;
   const productId = normalizeProductId(previousProduct?.id || previousProduct?.productId) || createProductId();
   const menuBeforeSave = normalizeMenuCatalog(menuCatalog);
+  // Image upload is asynchronous: retain the original owner and every editable field.
+  // A delayed image response must not publish an outdated product or cross restaurants.
+  const editorMenu = menuCatalog;
+  const editorClient = cloudState.client;
+  const editorOwner = cloudState.user?.id || null;
+  const originalEditingProduct = editingProduct ? { ...editingProduct } : null;
+  const editorSignature = () => JSON.stringify([
+    elements.productCategorySelect.value,
+    elements.productNameInput.value,
+    elements.productDescriptionInput.value,
+    elements.productNamePlInput?.value,
+    elements.productDescriptionPlInput?.value,
+    elements.productNameEnInput?.value,
+    elements.productDescriptionEnInput?.value,
+    elements.productPriceInput.value,
+    elements.productImageUrlInput.value,
+    elements.productAvailableInput.checked,
+    elements.productStationSelect?.value,
+    elements.productVatSelect?.value,
+  ]);
+  const submittedSignature = editorSignature();
+  let menuWasModified = false;
   elements.saveProductButton.disabled = true;
 
   try {
     if (isInlineRestaurantImage(imageUrl) && cloudState.user && navigator.onLine) {
       updateCloudStatus("Subiendo foto...");
-      imageUrl = await uploadRestaurantImageDataUrl(imageUrl, "products", productId);
+      const uploadedImageUrl = await uploadRestaurantImageDataUrl(imageUrl, "products", productId);
+      const originalEditStillSelected = originalEditingProduct
+        ? editingProduct?.category === originalEditingProduct.category &&
+          editingProduct?.index === originalEditingProduct.index &&
+          (menuCatalog[originalEditingProduct.category] || [])[originalEditingProduct.index] === previousProduct
+        : !editingProduct;
+      if (cloudState.client !== editorClient ||
+          (cloudState.user?.id || null) !== editorOwner ||
+          menuCatalog !== editorMenu ||
+          !originalEditStillSelected ||
+          editorSignature() !== submittedSignature) {
+        // Keep the most recent form and catalog untouched; operator can retry.
+        updateCloudStatus();
+        showToast(appUiText("El formulario o restaurante cambió mientras se subía la foto. Se conservaron los cambios; revisa el producto y guarda otra vez."));
+        return;
+      }
+      imageUrl = uploadedImageUrl;
       elements.productImageUrlInput.value = imageUrl;
     }
 
@@ -12933,6 +12971,7 @@ async function saveProduct() {
       ...(vatRate ? { vatRate } : {}),
     };
 
+    menuWasModified = true;
     if (editingProduct) {
       const oldList = menuCatalog[editingProduct.category] || [];
       oldList.splice(editingProduct.index, 1);
@@ -12945,10 +12984,15 @@ async function saveProduct() {
     showToast(syncResultMessage("Producto guardado.", result));
   } catch (error) {
     console.error("No fue posible guardar el producto:", error);
-    menuCatalog = menuBeforeSave;
-    renderCategories();
-    renderMenu();
-    renderMenuEditor();
+    // Upload errors happen before any catalog mutation. Do not roll back
+    // unrelated product edits or another restaurant's active menu.
+    if (menuWasModified && cloudState.client === editorClient &&
+        (cloudState.user?.id || null) === editorOwner) {
+      menuCatalog = menuBeforeSave;
+      renderCategories();
+      renderMenu();
+      renderMenuEditor();
+    }
     updateCloudStatus();
     const message = String(error?.message || "");
     alert(/almacenamiento de fotos|foto|imagen|direccion final/i.test(message)
