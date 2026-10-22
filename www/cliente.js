@@ -4077,7 +4077,7 @@ function customerGetGoogleMapsDistance(origin, destination) {
           return;
         }
         resolve({
-          distanceKm: Math.round((meters / 1000) * 10) / 10,
+          distanceKm: Math.max(0.1, Math.round((meters / 1000) * 10) / 10),
           distanceText: element.distance.text,
           durationText: element.duration?.text || "",
           origin,
