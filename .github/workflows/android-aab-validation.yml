@@ -1,0 +1,52 @@
+name: Android AAB build validation (unsigned)
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "capacitor.config.json"
+      - "package.json"
+      - "package-lock.json"
+      - "scripts/prepare-capacitor.mjs"
+      - ".github/workflows/android-aab-validation.yml"
+jobs:
+  validate-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: android-actions/setup-android@v3
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Prepare native Android project and web assets
+        run: npm run android:add
+      - name: Check package ID and Android manifest
+        shell: bash
+        run: |
+          test -f android/app/build.gradle
+          test -f android/app/src/main/AndroidManifest.xml
+          grep -q 'com.rcordera.app' capacitor.config.json
+      - name: Compile unsigned release AAB (validation only)
+        working-directory: android
+        run: bash ./gradlew --no-daemon bundleRelease
+      - name: Confirm unsigned bundle exists
+        shell: bash
+        run: |
+          test -s android/app/build/outputs/bundle/release/app-release.aab
+          echo "Unsigned AAB compiled; do not upload to Play Store without signing and device QA."
+      - name: Upload unsigned validation bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc-ordera-unsigned-android-aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 3
