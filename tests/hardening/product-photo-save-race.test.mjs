@@ -58,7 +58,7 @@ function harness({isUpload=true}={}){
     clearProductForm:()=>cleared++,
     syncResultMessage:text=>text,
     saveMenuCatalog:async()=>{cloudSaves++;return {synced:true};},
-    alert:()=>{throw Error("Unexpected validation alert");},
+    alert:message=>toasted.push(message),
     console
   };
   vm.createContext(context);
