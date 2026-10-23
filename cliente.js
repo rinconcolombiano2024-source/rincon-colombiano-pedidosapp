@@ -1414,7 +1414,7 @@ function customerSyncRegistrationRegionFromInputs(base = customerRegistrationReg
     ...base,
     countryCode,
     country: customerCountryName(countryCode) || base.country || "",
-    region: customerInputValue(customerElements.registerRegionInput) || base.region || "",
+    region: customerCanonicalDirectoryRegion(countryCode, customerInputValue(customerElements.registerRegionInput) || base.region || ""),
     city: customerInputValue(customerElements.registerCityInput) || base.city || "",
     postalCode: customerInputValue(customerElements.registerPostalCodeInput) || base.postalCode || "",
     timezone: countryCode === "PL" ? "Europe/Warsaw" : countryCode === "CO" ? "America/Bogota" : base.timezone || "",
@@ -2157,7 +2157,7 @@ function customerApplyProfileFields(
     country: address.country || customerRegistrationRegion.country,
     countryCode: address.countryCode || customerRegistrationRegion.countryCode,
     city: address.city || address.neighborhood || customerRegistrationRegion.city,
-    region: address.region || customerRegistrationRegion.region,
+    region: customerCanonicalDirectoryRegion(address.countryCode || customerRegistrationRegion.countryCode, address.region || customerRegistrationRegion.region),
     postalCode: address.postalCode || customerRegistrationRegion.postalCode,
     latitude: Number.isFinite(Number(address.latitude)) ? Number(address.latitude) : customerRegistrationRegion.latitude,
     longitude: Number.isFinite(Number(address.longitude)) ? Number(address.longitude) : customerRegistrationRegion.longitude,
@@ -3485,6 +3485,18 @@ return `
   customerRenderSelectedRestaurantDetails();
 }
 // A read for the old region must never publish into the new restaurant selector.
+// Geocoding/profile providers may describe Mazowieckie using English or
+// regional aliases; canonicalize only known equivalents, never other regions.
+function customerCanonicalDirectoryRegion(countryCode, region) {
+  const raw = String(region || "").trim();
+  if (String(countryCode || "").trim().toUpperCase() !== "PL" || !raw) return raw;
+  const normalized = customerNormalizeSearchText(raw);
+  if (["mazovia", "masovia", "masovian voivodeship", "mazovian voivodeship",
+       "wojewodztwo mazowieckie", "mazowieckie voivodeship"].includes(normalized)) {
+    return "Mazowieckie";
+  }
+  return raw;
+}
 function customerDirectoryScopeKey() {
   return JSON.stringify([
     customerRegistrationRegion.countryCode || "",
@@ -3538,7 +3550,7 @@ async function customerLoadRestaurantDirectoryNow(options = {}) {
   const requestedScope = customerDirectoryScopeKey();
   const requestedCountry = customerRegistrationRegion.countryCode || "";
   const requestedCity = customerRegistrationRegion.city || "";
-  const requestedRegion = customerRegistrationRegion.region || "";
+  const requestedRegion = customerCanonicalDirectoryRegion(requestedCountry, customerRegistrationRegion.region || "");
   if (!silent) {
     customerElements.restaurantList.innerHTML = `<div class="customer-empty">${customerEscapeHtml(
       customerT("restaurantLoading")
@@ -7402,7 +7414,7 @@ async function customerSendOrderRequest() {
   if (
     selectedRestaurant?.region
     && customerRegistrationRegion.region
-    && customerNormalizeSearchText(selectedRestaurant.region) !== customerNormalizeSearchText(customerRegistrationRegion.region)
+    && customerNormalizeSearchText(customerCanonicalDirectoryRegion(selectedRestaurant.countryCode, selectedRestaurant.region)) !== customerNormalizeSearchText(customerCanonicalDirectoryRegion(customerRegistrationRegion.countryCode, customerRegistrationRegion.region))
   ) {
     customerSetStatus(customerT("restaurantRegionMismatch"), "error");
     await customerLoadRestaurantDirectory({ silent: true });
