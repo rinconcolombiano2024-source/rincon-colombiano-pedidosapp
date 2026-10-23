@@ -7499,7 +7499,14 @@ let insertedOrder;
 
 try {
   if (customerUser) {
-    await customerSaveProfile();
+    try {
+      await customerSaveProfile();
+    } catch (profileError) {
+      // Optional profile synchronization is not the order authorization.
+      // The Edge gateway still validates identity, the restaurant and quote.
+      // A transient profile/Auth metadata write must not block the sale.
+      console.warn("No se pudo sincronizar el perfil antes de pedir; se conservarán los datos del pedido.", profileError);
+    }
   }
 
   if (checkoutContext !== JSON.stringify([customerStoreId, customerUser?.id || null])) {
