@@ -1,7 +1,7 @@
 {
   "cliente.js": {
-    "sha256": "26c2ca963a7322252fe32d97a3d67bc6c139afc69667fd49b44a660b881cd110",
-    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs; tests/hardening/customer-independent-item-notes.test.mjs; tests/hardening/customer-menu-product-id-match.test.mjs; tests/hardening/customer-visible-checkout-status.test.mjs; tests/e2e/checkout-feedback.spec.js; tests/hardening/customer-verified-gps-null.test.mjs; tests/hardening/google-maps-auth-gps-fallback.test.mjs; tests/hardening/customer-delivery-quote-stale.test.mjs; tests/hardening/customer-gps-async-revision.test.mjs; tests/hardening/maps-distance-invalid-quote.test.mjs; tests/customer-directory-recovery.test.cjs; tests/customer-directory-cancellation.test.cjs",
+    "sha256": "f3ea93c19e98a8b42ebeb7df4cf76b85d84405ebe2e7e1968f1c96b53ef20e21",
+    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs; tests/hardening/customer-independent-item-notes.test.mjs; tests/hardening/customer-menu-product-id-match.test.mjs; tests/hardening/customer-visible-checkout-status.test.mjs; tests/e2e/checkout-feedback.spec.js; tests/hardening/customer-verified-gps-null.test.mjs; tests/hardening/google-maps-auth-gps-fallback.test.mjs; tests/hardening/customer-delivery-quote-stale.test.mjs; tests/hardening/customer-gps-async-revision.test.mjs; tests/hardening/maps-distance-invalid-quote.test.mjs; tests/customer-directory-recovery.test.cjs; tests/customer-directory-cancellation.test.cjs; tests/customer-checkout-profile-failure.test.cjs",
     "edits": [
       {
         "before": "",
@@ -502,6 +502,11 @@
         "before": "    ({ data, error } = await customerReadDirectoryWithTimeout(() => query.order(\"business_name\", { ascending: true })));\r\n",
         "after": "    ({ data, error } = await customerReadDirectoryWithTimeout((signal) => {\r\n      const request = query.order(\"business_name\", { ascending: true });\r\n      return signal && typeof request?.abortSignal === \"function\"\r\n        ? request.abortSignal(signal)\r\n        : request;\r\n    }));\r\n",
         "afterByteOffset": 168676
+      },
+      {
+        "before": "  if (customerUser) {\r\n    await customerSaveProfile();\r\n  }\r\n\r\n  if (checkoutContext !== JSON.stringify([customerStoreId, customerUser?.id || null])) {",
+        "after": "  if (customerUser) {\r\n    try {\r\n      await customerSaveProfile();\r\n    } catch (profileError) {\r\n      // Optional profile synchronization is not the order authorization.\r\n      // The Edge gateway still validates identity, the restaurant and quote.\r\n      // A transient profile/Auth metadata write must not block the sale.\r\n      console.warn(\"No se pudo sincronizar el perfil antes de pedir; se conservarán los datos del pedido.\", profileError);\r\n    }\r\n  }\r\n\r\n  if (checkoutContext !== JSON.stringify([customerStoreId, customerUser?.id || null])) {",
+        "afterByteOffset": 300568
       }
     ]
   },
