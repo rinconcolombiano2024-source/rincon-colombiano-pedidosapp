@@ -1,7 +1,7 @@
 {
   "cliente.js": {
-    "sha256": "7cda744ddf583f90bcb7b1d59fab1c5df42d91404ac26e660ecaa9d94cccbb69",
-    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs; tests/hardening/customer-independent-item-notes.test.mjs; tests/hardening/customer-menu-product-id-match.test.mjs; tests/hardening/customer-visible-checkout-status.test.mjs; tests/e2e/checkout-feedback.spec.js; tests/hardening/customer-verified-gps-null.test.mjs; tests/hardening/google-maps-auth-gps-fallback.test.mjs; tests/hardening/customer-delivery-quote-stale.test.mjs; tests/hardening/customer-gps-async-revision.test.mjs; tests/hardening/maps-distance-invalid-quote.test.mjs; tests/customer-directory-recovery.test.cjs",
+    "sha256": "26c2ca963a7322252fe32d97a3d67bc6c139afc69667fd49b44a660b881cd110",
+    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs; tests/hardening/customer-independent-item-notes.test.mjs; tests/hardening/customer-menu-product-id-match.test.mjs; tests/hardening/customer-visible-checkout-status.test.mjs; tests/e2e/checkout-feedback.spec.js; tests/hardening/customer-verified-gps-null.test.mjs; tests/hardening/google-maps-auth-gps-fallback.test.mjs; tests/hardening/customer-delivery-quote-stale.test.mjs; tests/hardening/customer-gps-async-revision.test.mjs; tests/hardening/maps-distance-invalid-quote.test.mjs; tests/customer-directory-recovery.test.cjs; tests/customer-directory-cancellation.test.cjs",
     "edits": [
       {
         "before": "",
@@ -487,6 +487,21 @@
         "before": "customerNormalizeSearchText(selectedRestaurant.region) !== customerNormalizeSearchText(customerRegistrationRegion.region)",
         "after": "customerNormalizeSearchText(customerCanonicalDirectoryRegion(selectedRestaurant.countryCode, selectedRestaurant.region)) !== customerNormalizeSearchText(customerCanonicalDirectoryRegion(customerRegistrationRegion.countryCode, customerRegistrationRegion.region))",
         "afterByteOffset": 297161
+      },
+      {
+        "before": "// Bound both read-only routes. A stalled network cannot leave \"Loading restaurants\" forever.\r\nasync function customerReadDirectoryWithTimeout(requestFactory) {\r\n  let timer;\r\n  try {\r\n    return await Promise.race([\r\n      Promise.resolve().then(requestFactory),\r\n      new Promise((resolve) => {\r\n        timer = setTimeout(() => resolve({\r\n          data: null,\r\n          error: { code: \"DIRECTORY_TIMEOUT\", message: \"Restaurant directory timed out\" },\r\n        }), 12000);\r\n      }),\r\n    ]);\r\n  } catch (error) {\r\n    return { data: null, error };\r\n  } finally {\r\n    clearTimeout(timer);\r\n  }\r\n}\r\n",
+        "after": "// A visible timeout must also abort its in-flight Supabase request, or timed-out\r\n// reads keep occupying the backend while later directory refreshes start.\r\nasync function customerReadDirectoryWithTimeout(requestFactory) {\r\n  const controller = typeof AbortController === \"function\" ? new AbortController() : null;\r\n  let timer;\r\n  try {\r\n    return await Promise.race([\r\n      Promise.resolve().then(() => requestFactory(controller?.signal)),\r\n      new Promise((resolve) => {\r\n        timer = setTimeout(() => {\r\n          // Settle the existing timeout result before the abort rejection.\r\n          resolve({\r\n            data: null,\r\n            error: { code: \"DIRECTORY_TIMEOUT\", message: \"Restaurant directory timed out\" },\r\n          });\r\n          controller?.abort();\r\n        }, 12000);\r\n      }),\r\n    ]);\r\n  } catch (error) {\r\n    return { data: null, error };\r\n  } finally {\r\n    clearTimeout(timer);\r\n  }\r\n}\r\n",
+        "afterByteOffset": 165644
+      },
+      {
+        "before": "  let { data, error } = await customerReadDirectoryWithTimeout(() => client.rpc(\"get_public_restaurant_directory_by_region\", {\r\n    p_country_code: requestedCountry,\r\n    p_city: requestedCity,\r\n    p_region: requestedRegion,\r\n  }));\r\n",
+        "after": "  let { data, error } = await customerReadDirectoryWithTimeout((signal) => {\r\n    const request = client.rpc(\"get_public_restaurant_directory_by_region\", {\r\n      p_country_code: requestedCountry,\r\n      p_city: requestedCity,\r\n      p_region: requestedRegion,\r\n    });\r\n    // Older test mocks may return a Promise; the production PostgREST builder\r\n    // exposes abortSignal() and cancels the HTTP request when timed out.\r\n    return signal && typeof request?.abortSignal === \"function\"\r\n      ? request.abortSignal(signal)\r\n      : request;\r\n  });\r\n",
+        "afterByteOffset": 167512
+      },
+      {
+        "before": "    ({ data, error } = await customerReadDirectoryWithTimeout(() => query.order(\"business_name\", { ascending: true })));\r\n",
+        "after": "    ({ data, error } = await customerReadDirectoryWithTimeout((signal) => {\r\n      const request = query.order(\"business_name\", { ascending: true });\r\n      return signal && typeof request?.abortSignal === \"function\"\r\n        ? request.abortSignal(signal)\r\n        : request;\r\n    }));\r\n",
+        "afterByteOffset": 168676
       }
     ]
   },
