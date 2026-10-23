@@ -25,7 +25,9 @@ for (const path of paths) {
       assert.match(save, new RegExp("normalizeProductDescription\\(elements\\." + field + "\\.value\\)"));
     }
     assert.match(save, /await saveMenuCatalog\(\)/);
-    assert.match(save, /menuCatalog = menuBeforeSave/);
+    assert.doesNotMatch(save, /menuCatalog = menuBeforeSave/, "A failed cloud save must not erase edits");
+    assert.match(save, /markMenuPending\(\)/);
+    assert.match(save, /saveMenuCache\(\{ immediate: true \}\)/);
     assert.match(save, /translations\.es = \{ name, description \}/);
     assert.match(save, /translations\.pl = \{ name: namePl, description: descriptionPl \}/);
     assert.match(save, /translations\.en = \{ name: nameEn, description: descriptionEn \}/);
