@@ -1,7 +1,7 @@
 {
   "cliente.js": {
-    "sha256": "494c8b29cf577ad033f3ae1c7d0dac6f28235b147f1c1f213881ed50c7b7b24b",
-    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs; tests/hardening/customer-independent-item-notes.test.mjs; tests/hardening/customer-menu-product-id-match.test.mjs; tests/hardening/customer-visible-checkout-status.test.mjs; tests/e2e/checkout-feedback.spec.js; tests/hardening/customer-verified-gps-null.test.mjs; tests/hardening/google-maps-auth-gps-fallback.test.mjs; tests/hardening/customer-delivery-quote-stale.test.mjs; tests/hardening/customer-gps-async-revision.test.mjs; tests/hardening/maps-distance-invalid-quote.test.mjs",
+    "sha256": "7cda744ddf583f90bcb7b1d59fab1c5df42d91404ac26e660ecaa9d94cccbb69",
+    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs; tests/hardening/customer-independent-item-notes.test.mjs; tests/hardening/customer-menu-product-id-match.test.mjs; tests/hardening/customer-visible-checkout-status.test.mjs; tests/e2e/checkout-feedback.spec.js; tests/hardening/customer-verified-gps-null.test.mjs; tests/hardening/google-maps-auth-gps-fallback.test.mjs; tests/hardening/customer-delivery-quote-stale.test.mjs; tests/hardening/customer-gps-async-revision.test.mjs; tests/hardening/maps-distance-invalid-quote.test.mjs; tests/customer-directory-recovery.test.cjs",
     "edits": [
       {
         "before": "",
@@ -462,6 +462,31 @@
         "before": "      !customerRegistrationRegion.countryCode\r\n      || restaurant.countryCode === customerRegistrationRegion.countryCode\r\n    )\r\n    .filter((restaurant) =>\r\n      !customerRegistrationRegion.region\r\n      || customerNormalizeSearchText(restaurant.region) === customerNormalizeSearchText(customerRegistrationRegion.region)\r\n    ));",
         "after": "      !requestedCountry\r\n      || restaurant.countryCode === requestedCountry\r\n    )\r\n    .filter((restaurant) =>\r\n      !requestedRegion\r\n      || customerNormalizeSearchText(restaurant.region) === customerNormalizeSearchText(requestedRegion)\r\n    ));",
         "afterByteOffset": 167844
+      },
+      {
+        "before": "region: customerInputValue(customerElements.registerRegionInput) || base.region || \"\",",
+        "after": "region: customerCanonicalDirectoryRegion(countryCode, customerInputValue(customerElements.registerRegionInput) || base.region || \"\"),",
+        "afterByteOffset": 80144
+      },
+      {
+        "before": "region: address.region || customerRegistrationRegion.region,",
+        "after": "region: customerCanonicalDirectoryRegion(address.countryCode || customerRegistrationRegion.countryCode, address.region || customerRegistrationRegion.region),",
+        "afterByteOffset": 113440
+      },
+      {
+        "before": "function customerDirectoryScopeKey() {",
+        "after": "// Geocoding/profile providers may describe Mazowieckie using English or\n// regional aliases; canonicalize only known equivalents, never other regions.\nfunction customerCanonicalDirectoryRegion(countryCode, region) {\n  const raw = String(region || \"\").trim();\n  if (String(countryCode || \"\").trim().toUpperCase() !== \"PL\" || !raw) return raw;\n  const normalized = customerNormalizeSearchText(raw);\n  if ([\"mazovia\", \"masovia\", \"masovian voivodeship\", \"mazovian voivodeship\",\n       \"wojewodztwo mazowieckie\", \"mazowieckie voivodeship\"].includes(normalized)) {\n    return \"Mazowieckie\";\n  }\n  return raw;\n}\nfunction customerDirectoryScopeKey() {",
+        "afterByteOffset": 164058
+      },
+      {
+        "before": "const requestedRegion = customerRegistrationRegion.region || \"\";",
+        "after": "const requestedRegion = customerCanonicalDirectoryRegion(requestedCountry, customerRegistrationRegion.region || \"\");",
+        "afterByteOffset": 166657
+      },
+      {
+        "before": "customerNormalizeSearchText(selectedRestaurant.region) !== customerNormalizeSearchText(customerRegistrationRegion.region)",
+        "after": "customerNormalizeSearchText(customerCanonicalDirectoryRegion(selectedRestaurant.countryCode, selectedRestaurant.region)) !== customerNormalizeSearchText(customerCanonicalDirectoryRegion(customerRegistrationRegion.countryCode, customerRegistrationRegion.region))",
+        "afterByteOffset": 297161
       }
     ]
   },
