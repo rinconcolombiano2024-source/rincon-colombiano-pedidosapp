@@ -1,6 +1,11 @@
 name: Android signed Play bundle (manual, no publishing)
 on:
   workflow_dispatch:
+    inputs:
+      version_code:
+        description: "Unused Play versionCode, greater than every previously uploaded version"
+        required: true
+        type: string
 jobs:
   signed-aab:
     runs-on: ubuntu-latest
@@ -33,6 +38,10 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Prepare Android
         run: npm run android:add
+      - name: Set Play release version
+        env:
+          ANDROID_VERSION_CODE: ${{ inputs.version_code }}
+        run: node scripts/android-release-version.mjs
       - name: Compile release AAB
         working-directory: android
         run: bash ./gradlew --no-daemon bundleRelease
@@ -54,8 +63,8 @@ jobs:
           signed="android/app/build/outputs/bundle/release/rc-ordera-play-upload.aab"
           test -s "$unsigned"
           cp "$unsigned" "$signed"
-          jarsigner -keystore "$keyfile" -storepass:env KEYSTORE_PASSWORD -keypass:env KEY_PASSWORD -sigalg SHA256withRSA -digestalg SHA-256 "$signed" "$KEY_ALIAS"
-          jarsigner -verify -strict -certs "$signed"
+          jarsigner -keystore "$keyfile" -storepass:env KEYSTORE_PASSWORD -keypass:env KEY_PASSWORD -digestalg SHA-256 "$signed" "$KEY_ALIAS"
+          jarsigner -verify -strict -certs -keystore "$keyfile" -storepass:env KEYSTORE_PASSWORD "$signed" "$KEY_ALIAS"
           test -s "$signed"
       - name: Upload signed AAB for manual Play Console review
         uses: actions/upload-artifact@v4
