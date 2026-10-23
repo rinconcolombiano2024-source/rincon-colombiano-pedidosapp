@@ -37,7 +37,7 @@ test("delivery quote bounds every Supabase request without modifying inputs", as
   const h = harness();
   const payload = { method: "POST", headers: { apikey: "fixture" }, body: "{}" };
   assert.deepEqual(await h.bounded("https://example.invalid/rest/v1/rpc", payload), { ok: true });
-  assert.deepEqual(h.timeoutRequests, [8000]);
+  assert.deepEqual(h.timeoutRequests, [7000]);
   assert.equal(h.calls.length, 1);
   assert.equal(h.calls[0].input, "https://example.invalid/rest/v1/rpc");
   assert.equal(h.calls[0].init.method, "POST");
@@ -50,7 +50,7 @@ test("delivery backend deadline preserves an existing abort signal", async () =>
   const h = harness();
   const callerSignal = { source: "caller" };
   await h.bounded("https://example.invalid/auth/v1/user", { signal: callerSignal });
-  assert.deepEqual(h.timeoutRequests, [8000]);
+  assert.deepEqual(h.timeoutRequests, [7000]);
   const s = h.calls[0].init.signal;
   assert.equal(s.source, "combined");
   assert.equal(s.signals[0], callerSignal);
