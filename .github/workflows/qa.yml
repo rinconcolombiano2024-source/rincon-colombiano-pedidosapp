@@ -68,7 +68,9 @@ jobs:
           git diff --exit-code -- www/
 
       - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
+        # Ubuntu GitHub-hosted runners already provide Chromium system libraries.
+        # Avoid apt mirror downloads that previously exceeded the 8-minute CI limit.
+        run: npx playwright install chromium
         timeout-minutes: 8
 
       - name: Run E2E smoke tests
