@@ -58,7 +58,7 @@ function makeHarness(options = {}) {
     customerNormalizeSearchText: (value) => String(value || "").toLowerCase(),
     customerDeduplicateRestaurants: (items) => items,
     customerSelectedRestaurant: () => null,
-    customerRenderRestaurantDirectory: () => { rendered.push(ctx.customerRestaurants.map((r) => r.userId)); },
+    customerRenderRestaurantDirectory: () => { rendered.push(Array.from(ctx.customerRestaurants, (r) => r.userId)); },
     customerClearRestaurantSelection: () => { throw new Error("Stale directory may not clear selection"); },
     customerRestaurants: [],
     customerStoreId: "",
