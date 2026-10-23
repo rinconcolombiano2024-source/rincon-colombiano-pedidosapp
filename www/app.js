@@ -12906,7 +12906,6 @@ async function saveProduct() {
 
   const previousProduct = editingProduct ? (menuCatalog[editingProduct.category] || [])[editingProduct.index] : null;
   const productId = normalizeProductId(previousProduct?.id || previousProduct?.productId) || createProductId();
-  const menuBeforeSave = normalizeMenuCatalog(menuCatalog);
   // Image upload is asynchronous: retain the original owner and every editable field.
   // A delayed image response must not publish an outdated product or cross restaurants.
   const editorMenu = menuCatalog;
@@ -12984,20 +12983,26 @@ async function saveProduct() {
     showToast(syncResultMessage("Producto guardado.", result));
   } catch (error) {
     console.error("No fue posible guardar el producto:", error);
-    // Upload errors happen before any catalog mutation. Do not roll back
-    // unrelated product edits or another restaurant's active menu.
-    if (menuWasModified && cloudState.client === editorClient &&
-        (cloudState.user?.id || null) === editorOwner) {
-      menuCatalog = menuBeforeSave;
+    // A save can fail after the product has already entered the local catalog.
+    // Restoring a pre-save snapshot here would delete that edit and any later
+    // edits made while an asynchronous cloud operation was in flight.
+    const currentOwnerStillEditing = cloudState.client === editorClient &&
+      (cloudState.user?.id || null) === editorOwner;
+    const savedLocally = menuWasModified && currentOwnerStillEditing;
+    if (savedLocally) {
+      markMenuPending();
+      saveMenuCache({ immediate: true });
       renderCategories();
       renderMenu();
       renderMenuEditor();
     }
     updateCloudStatus();
     const message = String(error?.message || "");
-    alert(/almacenamiento de fotos|foto|imagen|direccion final/i.test(message)
-      ? message
-      : "No fue posible guardar el producto. Los datos del formulario se conservaron para reintentar.");
+    alert(savedLocally
+      ? "Producto conservado en este dispositivo. La publicación está pendiente; no lo agregues otra vez. Revisa el menú y usa Publicar."
+      : /almacenamiento de fotos|foto|imagen|direccion final/i.test(message)
+        ? message
+        : "No fue posible guardar el producto. Los datos del formulario se conservaron para reintentar.");
   } finally {
     elements.saveProductButton.disabled = false;
   }
