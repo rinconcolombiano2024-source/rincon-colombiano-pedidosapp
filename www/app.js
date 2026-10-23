@@ -5411,11 +5411,21 @@ async function verifyRestaurantOperationalOpenInCloud(expectedOpen, expectedMode
 
 async function persistRestaurantOperationalOpenInCloud(nextOpen) {
   const expectedOpen = Boolean(nextOpen);
-  const { error } = await cloudState.client.rpc("set_current_restaurant_operational_open", {
+  // The authenticated RPC returns the committed row. Verify that response directly:
+  // an extra profile SELECT can fail or lag even after a successful update.
+  const { data, error } = await cloudState.client.rpc("set_current_restaurant_operational_open", {
     p_open: expectedOpen,
   });
   if (error) throw error;
-  return verifyRestaurantOperationalOpenInCloud(expectedOpen, "manual");
+  const result = Array.isArray(data) && data.length === 1 ? data[0] : null;
+  if (
+    !result ||
+    result.restaurant_user_id !== cloudState.user?.id ||
+    result.operational_open !== expectedOpen
+  ) {
+    throw new Error("La nube no confirmo el estado operativo del restaurante.");
+  }
+  return result;
 }
 
 function setRestaurantStatusControlsDisabled(disabled) {
