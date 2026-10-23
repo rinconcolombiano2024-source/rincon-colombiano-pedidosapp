@@ -1,0 +1,75 @@
+name: Android signed Play bundle (manual, no publishing)
+on:
+  workflow_dispatch:
+    inputs:
+      version_code:
+        description: "Unused Play versionCode, greater than every previously uploaded version"
+        required: true
+        type: string
+jobs:
+  signed-aab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Check signing configuration
+        env:
+          KEYSTORE_B64: ${{ secrets.RC_ANDROID_UPLOAD_KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.RC_ANDROID_UPLOAD_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.RC_ANDROID_UPLOAD_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.RC_ANDROID_UPLOAD_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          test -n "$KEYSTORE_B64" || { echo "Missing upload keystore secret"; exit 1; }
+          test -n "$KEYSTORE_PASSWORD" || { echo "Missing store password secret"; exit 1; }
+          test -n "$KEY_ALIAS" || { echo "Missing key alias secret"; exit 1; }
+          test -n "$KEY_PASSWORD" || { echo "Missing key password secret"; exit 1; }
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Prepare Android
+        run: npm run android:add
+      - name: Set Play release version
+        env:
+          ANDROID_VERSION_CODE: ${{ inputs.version_code }}
+        run: node scripts/android-release-version.mjs
+      - name: Compile release AAB
+        working-directory: android
+        run: bash ./gradlew --no-daemon bundleRelease
+      - name: Sign AAB using upload key
+        env:
+          KEYSTORE_B64: ${{ secrets.RC_ANDROID_UPLOAD_KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.RC_ANDROID_UPLOAD_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.RC_ANDROID_UPLOAD_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.RC_ANDROID_UPLOAD_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          keyfile="$(mktemp)"
+          trap 'rm -f "$keyfile"' EXIT
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$keyfile"
+          test -s "$keyfile"
+          unsigned="android/app/build/outputs/bundle/release/app-release.aab"
+          signed="android/app/build/outputs/bundle/release/rc-ordera-play-upload.aab"
+          test -s "$unsigned"
+          cp "$unsigned" "$signed"
+          jarsigner -keystore "$keyfile" -storepass:env KEYSTORE_PASSWORD -keypass:env KEY_PASSWORD -digestalg SHA-256 "$signed" "$KEY_ALIAS"
+          jarsigner -verify -strict -certs -keystore "$keyfile" -storepass:env KEYSTORE_PASSWORD "$signed" "$KEY_ALIAS"
+          test -s "$signed"
+      - name: Upload signed AAB for manual Play Console review
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc-ordera-signed-play-upload-aab
+          path: android/app/build/outputs/bundle/release/rc-ordera-play-upload.aab
+          if-no-files-found: error
+          retention-days: 3
