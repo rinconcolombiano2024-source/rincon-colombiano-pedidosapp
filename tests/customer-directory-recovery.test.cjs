@@ -55,7 +55,7 @@ function makeHarness(options = {}) {
     },
     customerIsMissingRpc: (error) => error?.code === "PGRST202",
     customerNormalizeRestaurantProfile: (item) => item,
-    customerNormalizeSearchText: (value) => String(value || "").toLowerCase(),
+    customerNormalizeSearchText: (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(),
     customerDeduplicateRestaurants: (items) => items,
     customerSelectedRestaurant: () => null,
     customerRenderRestaurantDirectory: () => { rendered.push(Array.from(ctx.customerRestaurants, (r) => r.userId)); },
@@ -129,4 +129,39 @@ test("a thrown public directory transport error visibly settles the request", as
   assert.equal(await h.ctx.customerLoadRestaurantDirectory(), false);
   assert.match(h.list.innerHTML, /restaurantLoadError/);
   assert.equal(h.timeouts.size, 0);
+});
+
+test("canonicalized Polish region aliases reveal the existing Warsaw restaurant", async () => {
+  for (const region of ["Mazovia", "Masovia", "Masovian Voivodeship", "Mazovian Voivodeship", "Województwo mazowieckie"]) {
+    const h = makeHarness({ rpc: (_name, params) => {
+      assert.equal(params.p_country_code, "PL");
+      assert.equal(params.p_region, "Mazowieckie", region);
+      return Promise.resolve({ data: [
+        { userId: "warsaw-restaurant", name: "Rincon", countryCode: "PL", region: "Mazowieckie" },
+      ], error: null });
+    } });
+    h.region(region);
+    assert.equal(await h.ctx.customerLoadRestaurantDirectory(), true);
+    assert.deepEqual(h.rendered, [["warsaw-restaurant"]]);
+    assert.equal(h.calls.length, 1, "No additional directory query needed");
+  }
+});
+
+test("regional normalization must preserve other provinces and countries", async () => {
+  const h = makeHarness({ rpc: (_name, params) =>
+    Promise.resolve({ data: [{ userId: "other-region", name: "Other", countryCode: "PL", region: params.p_region }], error: null }) });
+  h.region("Małopolskie");
+  assert.equal(await h.ctx.customerLoadRestaurantDirectory(), true);
+  assert.equal(h.calls[0][1].p_region, "Małopolskie");
+  assert.deepEqual(h.rendered, [["other-region"]]);
+  assert.equal(h.ctx.customerCanonicalDirectoryRegion("CO", "Mazovia"), "Mazovia");
+  assert.equal(h.ctx.customerCanonicalDirectoryRegion("PL", "Podlaskie"), "Podlaskie");
+});
+
+test("checkout and customer profile use the same canonical region without bypassing region checks", () => {
+  assert.match(original, /customerCanonicalDirectoryRegion\(address\.countryCode \|\| customerRegistrationRegion\.countryCode,/);
+  assert.match(original, /customerCanonicalDirectoryRegion\(countryCode, customerInputValue\(customerElements\.registerRegionInput\)/);
+  assert.match(original, /customerCanonicalDirectoryRegion\(selectedRestaurant\.countryCode, selectedRestaurant\.region\)/);
+  assert.match(original, /customerCanonicalDirectoryRegion\(customerRegistrationRegion\.countryCode, customerRegistrationRegion\.region\)/);
+  assert.match(original, /customerT\("restaurantRegionMismatch"\)/);
 });
