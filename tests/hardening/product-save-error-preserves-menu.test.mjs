@@ -8,8 +8,10 @@ assert.equal(source, readFileSync("www/app.js","utf8"), "Android and web must us
 const begin = source.indexOf("async function saveProduct() {");
 const end = source.indexOf("function editProduct(", begin);
 assert.ok(begin > 0 && end > begin);
-const normalize = source.match(/function normalizeProductDescription\\(value\\) \\{[\\s\\S]*?\\n\\}/)?.[0];
-assert.ok(normalize);
+const normalizeStart = source.indexOf("function normalizeProductDescription(value)");
+const normalizeEnd = source.indexOf("\nfunction hashText(", normalizeStart);
+assert.ok(normalizeStart >= 0 && normalizeEnd > normalizeStart);
+const normalize = source.slice(normalizeStart, normalizeEnd);
 function harness() {
   let finish, reject, marked = 0, cached = 0, cleared = 0;
   const saved = [];
