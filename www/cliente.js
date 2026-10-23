@@ -1787,6 +1787,7 @@ let customerDirectoryPollingDelay = CUSTOMER_DIRECTORY_POLL_MIN_MS;
 let customerRecoveryInFlight = null;
 let customerRecoveryLastCompletedAt = 0;
 let customerDirectoryLoadPromise = null;
+let customerDirectoryLoadScope = "";
 let customerMenuFetchPromise = null;
 let customerMenuFetchStoreId = "";
 let customerRestaurantFavorite = false;
@@ -3483,37 +3484,88 @@ return `
   .join("");
   customerRenderSelectedRestaurantDetails();
 }
+// A read for the old region must never publish into the new restaurant selector.
+function customerDirectoryScopeKey() {
+  return JSON.stringify([
+    customerRegistrationRegion.countryCode || "",
+    customerRegistrationRegion.region || "",
+    customerRegistrationRegion.city || "",
+  ]);
+}
 function customerLoadRestaurantDirectory(options = {}) {
-  if (customerDirectoryLoadPromise) return customerDirectoryLoadPromise;
-  customerDirectoryLoadPromise = customerLoadRestaurantDirectoryNow(options).finally(() => {
-    customerDirectoryLoadPromise = null;
+  const scope = customerDirectoryScopeKey();
+  if (customerDirectoryLoadPromise) {
+    if (scope === customerDirectoryLoadScope) return customerDirectoryLoadPromise;
+    return customerDirectoryLoadPromise.then(
+      () => customerLoadRestaurantDirectory(options),
+      () => customerLoadRestaurantDirectory(options)
+    );
+  }
+  customerDirectoryLoadScope = scope;
+  const operation = customerLoadRestaurantDirectoryNow(options);
+  const pending = operation.finally(() => {
+    if (customerDirectoryLoadPromise === pending) {
+      customerDirectoryLoadPromise = null;
+      customerDirectoryLoadScope = "";
+    }
   });
-  return customerDirectoryLoadPromise;
+  customerDirectoryLoadPromise = pending;
+  return pending;
+}
+// Bound both read-only routes. A stalled network cannot leave "Loading restaurants" forever.
+async function customerReadDirectoryWithTimeout(requestFactory) {
+  let timer;
+  try {
+    return await Promise.race([
+      Promise.resolve().then(requestFactory),
+      new Promise((resolve) => {
+        timer = setTimeout(() => resolve({
+          data: null,
+          error: { code: "DIRECTORY_TIMEOUT", message: "Restaurant directory timed out" },
+        }), 12000);
+      }),
+    ]);
+  } catch (error) {
+    return { data: null, error };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 async function customerLoadRestaurantDirectoryNow(options = {}) {
   const { silent = false } = options;
   const client = customerEnsureClient();
   if (!client || !customerElements.restaurantList) return false;
+  const requestedScope = customerDirectoryScopeKey();
+  const requestedCountry = customerRegistrationRegion.countryCode || "";
+  const requestedCity = customerRegistrationRegion.city || "";
+  const requestedRegion = customerRegistrationRegion.region || "";
   if (!silent) {
     customerElements.restaurantList.innerHTML = `<div class="customer-empty">${customerEscapeHtml(
       customerT("restaurantLoading")
     )}</div>`;
   }
-  customerStartDirectoryRealtime();
-  let { data, error } = await client.rpc("get_public_restaurant_directory_by_region", {
-    p_country_code: customerRegistrationRegion.countryCode || "",
-    p_city: customerRegistrationRegion.city || "",
-    p_region: customerRegistrationRegion.region || "",
-  });
+  // Realtime improves freshness; an offline subscription must not block the catalog read.
+  try {
+    customerStartDirectoryRealtime();
+  } catch (error) {
+    console.warn("Restaurant directory realtime unavailable:", error);
+  }
+  let { data, error } = await customerReadDirectoryWithTimeout(() => client.rpc("get_public_restaurant_directory_by_region", {
+    p_country_code: requestedCountry,
+    p_city: requestedCity,
+    p_region: requestedRegion,
+  }));
+  if (requestedScope !== customerDirectoryScopeKey() || client !== customerClient) return false;
   if (error && customerIsMissingRpc(error)) {
     let query = client
       .from("restaurant_profiles")
       .select("user_id, business_name, logo_url, public_address, phone, description, operational_open, opening_hours, latitude, longitude, country_code, city, region, postal_code, updated_at")
       .eq("active", true)
       .is("deleted_at", null);
-    if (customerRegistrationRegion.countryCode) query = query.eq("country_code", customerRegistrationRegion.countryCode);
-    if (customerRegistrationRegion.region) query = query.ilike("region", customerRegistrationRegion.region);
-    ({ data, error } = await query.order("business_name", { ascending: true }));
+    if (requestedCountry) query = query.eq("country_code", requestedCountry);
+    if (requestedRegion) query = query.ilike("region", requestedRegion);
+    ({ data, error } = await customerReadDirectoryWithTimeout(() => query.order("business_name", { ascending: true })));
+    if (requestedScope !== customerDirectoryScopeKey() || client !== customerClient) return false;
   }
   if (error) {
     customerElements.restaurantList.innerHTML = `<div class="customer-empty">${customerEscapeHtml(
@@ -3525,12 +3577,12 @@ async function customerLoadRestaurantDirectoryNow(options = {}) {
     .map(customerNormalizeRestaurantProfile)
     .filter(Boolean)
     .filter((restaurant) =>
-      !customerRegistrationRegion.countryCode
-      || restaurant.countryCode === customerRegistrationRegion.countryCode
+      !requestedCountry
+      || restaurant.countryCode === requestedCountry
     )
     .filter((restaurant) =>
-      !customerRegistrationRegion.region
-      || customerNormalizeSearchText(restaurant.region) === customerNormalizeSearchText(customerRegistrationRegion.region)
+      !requestedRegion
+      || customerNormalizeSearchText(restaurant.region) === customerNormalizeSearchText(requestedRegion)
     ));
   if (customerStoreId && !customerSelectedRestaurant()) {
     customerClearRestaurantSelection("restaurantUnavailable");
