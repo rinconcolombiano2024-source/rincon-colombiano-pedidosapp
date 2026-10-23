@@ -7,6 +7,15 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+// Bound Supabase Auth/PostgREST calls independently of Google Routes' 8s
+// deadlines. During backend stalls, fail closed instead of occupying an Edge
+// worker until the 150s platform limit. Preserve caller cancellation.
+const boundedSupabaseFetch: typeof fetch = (input, init) => {
+  const deadline = AbortSignal.timeout(7000);
+  const signal = init?.signal ? AbortSignal.any([init.signal, deadline]) : deadline;
+  return fetch(input, { ...init, signal });
+};
+
 function response(status: number, body: Record<string, unknown>) {
   return new Response(JSON.stringify(body), {
     status,
@@ -95,7 +104,7 @@ Deno.serve(withCors(async (request) => {
     return response(400, { error: "Restaurant, address, and country are required" });
   }
 
-  const admin = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
+  const admin = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false }, global: { fetch: boundedSupabaseFetch } });
   const accessToken = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
   const { data: userData } = accessToken ? await admin.auth.getUser(accessToken) : { data: { user: null } };
   const customerUserId = userData?.user?.id || null;
