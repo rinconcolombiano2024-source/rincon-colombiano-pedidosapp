@@ -11,7 +11,7 @@ const corsHeaders = {
 // deadlines. During backend stalls, fail closed instead of occupying an Edge
 // worker until the 150s platform limit. Preserve caller cancellation.
 const boundedSupabaseFetch: typeof fetch = (input, init) => {
-  const deadline = AbortSignal.timeout(8000);
+  const deadline = AbortSignal.timeout(7000);
   const signal = init?.signal ? AbortSignal.any([init.signal, deadline]) : deadline;
   return fetch(input, { ...init, signal });
 };
