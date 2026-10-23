@@ -3524,17 +3524,23 @@ function customerLoadRestaurantDirectory(options = {}) {
   customerDirectoryLoadPromise = pending;
   return pending;
 }
-// Bound both read-only routes. A stalled network cannot leave "Loading restaurants" forever.
+// A visible timeout must also abort its in-flight Supabase request, or timed-out
+// reads keep occupying the backend while later directory refreshes start.
 async function customerReadDirectoryWithTimeout(requestFactory) {
+  const controller = typeof AbortController === "function" ? new AbortController() : null;
   let timer;
   try {
     return await Promise.race([
-      Promise.resolve().then(requestFactory),
+      Promise.resolve().then(() => requestFactory(controller?.signal)),
       new Promise((resolve) => {
-        timer = setTimeout(() => resolve({
-          data: null,
-          error: { code: "DIRECTORY_TIMEOUT", message: "Restaurant directory timed out" },
-        }), 12000);
+        timer = setTimeout(() => {
+          // Settle the existing timeout result before the abort rejection.
+          resolve({
+            data: null,
+            error: { code: "DIRECTORY_TIMEOUT", message: "Restaurant directory timed out" },
+          });
+          controller?.abort();
+        }, 12000);
       }),
     ]);
   } catch (error) {
@@ -3562,11 +3568,18 @@ async function customerLoadRestaurantDirectoryNow(options = {}) {
   } catch (error) {
     console.warn("Restaurant directory realtime unavailable:", error);
   }
-  let { data, error } = await customerReadDirectoryWithTimeout(() => client.rpc("get_public_restaurant_directory_by_region", {
-    p_country_code: requestedCountry,
-    p_city: requestedCity,
-    p_region: requestedRegion,
-  }));
+  let { data, error } = await customerReadDirectoryWithTimeout((signal) => {
+    const request = client.rpc("get_public_restaurant_directory_by_region", {
+      p_country_code: requestedCountry,
+      p_city: requestedCity,
+      p_region: requestedRegion,
+    });
+    // Older test mocks may return a Promise; the production PostgREST builder
+    // exposes abortSignal() and cancels the HTTP request when timed out.
+    return signal && typeof request?.abortSignal === "function"
+      ? request.abortSignal(signal)
+      : request;
+  });
   if (requestedScope !== customerDirectoryScopeKey() || client !== customerClient) return false;
   if (error && customerIsMissingRpc(error)) {
     let query = client
@@ -3576,7 +3589,12 @@ async function customerLoadRestaurantDirectoryNow(options = {}) {
       .is("deleted_at", null);
     if (requestedCountry) query = query.eq("country_code", requestedCountry);
     if (requestedRegion) query = query.ilike("region", requestedRegion);
-    ({ data, error } = await customerReadDirectoryWithTimeout(() => query.order("business_name", { ascending: true })));
+    ({ data, error } = await customerReadDirectoryWithTimeout((signal) => {
+      const request = query.order("business_name", { ascending: true });
+      return signal && typeof request?.abortSignal === "function"
+        ? request.abortSignal(signal)
+        : request;
+    }));
     if (requestedScope !== customerDirectoryScopeKey() || client !== customerClient) return false;
   }
   if (error) {
