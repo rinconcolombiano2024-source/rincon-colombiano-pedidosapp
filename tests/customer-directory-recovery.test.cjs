@@ -9,7 +9,7 @@ const root = path.resolve(__dirname, "..");
 const original = fs.readFileSync(path.join(root, "cliente.js"), "utf8");
 const served = fs.readFileSync(path.join(root, "www/cliente.js"), "utf8");
 assert.equal(original, served, "The production www script must exactly mirror its source.");
-const start = original.indexOf("function customerDirectoryScopeKey()");
+const start = original.indexOf("function customerCanonicalDirectoryRegion(");
 const end = original.indexOf("async function customerSelectRestaurant(", start);
 assert.ok(start > 0 && end > start, "Directory loader must be present.");
 const snippet = original.slice(start, end);
