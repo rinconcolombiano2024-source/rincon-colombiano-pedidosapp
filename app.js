@@ -655,6 +655,7 @@ let clientOrdersRealtimeReconnectDelay =
 let clientOrdersRealtimeNeedsCatchup = false;
 let clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;
 let clientOrdersPollGeneration = 0;
+let clientOrdersPollInFlightGeneration = null;
 let clientOrdersRefreshInFlight = null;
 let clientOrdersRefreshPending = false;
 let clientOrdersRefreshRetryNotBefore = 0;
@@ -6555,7 +6556,10 @@ function stopClientAlarm() {
 }
 
 function startClientOrdersPolling(options = {}) {
-  const { immediate = false } = options;
+  const { immediate = false, preserveExisting = false } = options;
+  // Reconnecting Realtime must not postpone or duplicate the fallback poll.
+  if (preserveExisting && (clientOrdersTimer ||
+      clientOrdersPollInFlightGeneration === clientOrdersPollGeneration)) return;
   stopClientOrdersPolling();
 
   // Realtime es la ruta principal. El polling solo actua como respaldo
@@ -6587,6 +6591,7 @@ function startClientOrdersPolling(options = {}) {
       return;
     }
 
+    clientOrdersPollInFlightGeneration = generation;
     try {
       await refreshClientOrders({ silent: true, reconcileAfterInFlight: false });
       if (generation !== clientOrdersPollGeneration) return;
@@ -6598,6 +6603,10 @@ function startClientOrdersPolling(options = {}) {
         clientOrdersPollingDelay * 2,
         CLIENT_ORDERS_POLL_MAX_MS
       );
+    } finally {
+      if (clientOrdersPollInFlightGeneration === generation) {
+        clientOrdersPollInFlightGeneration = null;
+      }
     }
 
     if (
@@ -7595,13 +7604,14 @@ clientOrdersRealtimeStableTimer = setTimeout(() => {
        clientOrdersRealtimeNeedsCatchup = true;
   stopClientOrdersRealtime();
   startClientOrdersPolling({
-    immediate: clientOrdersPollingDelay === CLIENT_ORDERS_POLL_MIN_MS
+    immediate: clientOrdersPollingDelay === CLIENT_ORDERS_POLL_MIN_MS,
+    preserveExisting: true
   });
 
   scheduleClientOrdersRealtimeReconnect();
 }
     });
-  startClientOrdersPolling();
+  startClientOrdersPolling({ preserveExisting: true });
 }
 
 // Bound repeated courier-tracking reads during UI/Reconnection bursts.

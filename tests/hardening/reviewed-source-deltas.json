@@ -895,8 +895,8 @@
     ]
   },
   "app.js": {
-    "sha256": "9e74fb651ab06fa296434105d7334070cdef50a67768de15a5979feb1a1ad3ce",
-    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/qr-menu-rpc-throttle.test.cjs; tests/menu-save-burst-coalesce.test.cjs; tests/menu-session-publication-guard.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/menu-cloud-rpc-singleflight.test.cjs; tests/portal-stations-entry.test.cjs; tests/central-refresh-session.test.cjs; tests/restaurant-settings-pending-confirmation.test.cjs; tests/settings-stale-response-tenant-guard.test.cjs; tests/hardening/menu-photo-session-isolation.test.mjs; tests/menu-publication-verified-save.test.cjs; tests/menu-save-session-isolation.test.cjs; tests/hardening/menu-description-no-truncation.test.mjs; tests/hardening/menu-price-save-validation.test.mjs; tests/hardening/pos-confirmed-payment-tender.test.mjs; tests/hardening/menu-save-content-confirmation.test.mjs; tests/hardening/period-close-feedback.test.mjs; tests/hardening/product-photo-save-race.test.mjs; tests/hardening/product-save-error-preserves-menu.test.mjs; tests/restaurant-operational-rpc-confirmation.test.cjs",
+    "sha256": "124d42de2d6698f8928aec22bb6947645aa1a580d7eed1700d5f0111c209ffa6",
+    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/qr-menu-rpc-throttle.test.cjs; tests/menu-save-burst-coalesce.test.cjs; tests/menu-session-publication-guard.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/menu-cloud-rpc-singleflight.test.cjs; tests/portal-stations-entry.test.cjs; tests/central-refresh-session.test.cjs; tests/restaurant-settings-pending-confirmation.test.cjs; tests/settings-stale-response-tenant-guard.test.cjs; tests/hardening/menu-photo-session-isolation.test.mjs; tests/menu-publication-verified-save.test.cjs; tests/menu-save-session-isolation.test.cjs; tests/hardening/menu-description-no-truncation.test.mjs; tests/hardening/menu-price-save-validation.test.mjs; tests/hardening/pos-confirmed-payment-tender.test.mjs; tests/hardening/menu-save-content-confirmation.test.mjs; tests/hardening/period-close-feedback.test.mjs; tests/hardening/product-photo-save-race.test.mjs; tests/hardening/product-save-error-preserves-menu.test.mjs; tests/restaurant-operational-rpc-confirmation.test.cjs; tests/order-poll-reconnect.test.cjs",
     "edits": [
       {
         "before": "",
@@ -1457,6 +1457,36 @@
         "before": "async function persistRestaurantOperationalOpenInCloud(nextOpen) {\r\n  const expectedOpen = Boolean(nextOpen);\r\n  const { error } = await cloudState.client.rpc(\"set_current_restaurant_operational_open\", {\r\n    p_open: expectedOpen,\r\n  });\r\n  if (error) throw error;\r\n  return verifyRestaurantOperationalOpenInCloud(expectedOpen, \"manual\");\r\n}",
         "after": "async function persistRestaurantOperationalOpenInCloud(nextOpen) {\r\n  const expectedOpen = Boolean(nextOpen);\r\n  // The authenticated RPC already returns the row committed by PostgreSQL.\r\n  // A second SELECT can fail after success and falsely tell the restaurant it is closed.\r\n  const initiatingClient = cloudState.client;\r\n  const initiatingOwnerId = cloudState.user?.id;\r\n  const { data, error } = await initiatingClient.rpc(\"set_current_restaurant_operational_open\", {\r\n    p_open: expectedOpen,\r\n  });\r\n  if (error) throw error;\r\n  const result = Array.isArray(data) && data.length === 1 ? data[0] : null;\r\n  if (initiatingClient !== cloudState.client || initiatingOwnerId !== cloudState.user?.id ||\r\n      !result || result.restaurant_user_id !== initiatingOwnerId ||\r\n      result.operational_open !== expectedOpen) {\r\n    throw new Error(\"La nube no confirmo el estado operativo del restaurante.\");\r\n  }\r\n  return result;\r\n}",
         "afterByteOffset": 177000
+      },
+      {
+        "before": "let clientOrdersPollGeneration = 0;",
+        "after": "let clientOrdersPollGeneration = 0;\r\nlet clientOrdersPollInFlightGeneration = null;",
+        "afterByteOffset": 31499
+      },
+      {
+        "before": "  const { immediate = false } = options;\r\n  stopClientOrdersPolling();",
+        "after": "  const { immediate = false, preserveExisting = false } = options;\r\n  // Reconnecting Realtime must not postpone or duplicate the fallback poll.\r\n  if (preserveExisting && (clientOrdersTimer ||\r\n      clientOrdersPollInFlightGeneration === clientOrdersPollGeneration)) return;\r\n  stopClientOrdersPolling();",
+        "afterByteOffset": 211923
+      },
+      {
+        "before": "    try {\r\n      await refreshClientOrders({ silent: true, reconcileAfterInFlight: false });",
+        "after": "    clientOrdersPollInFlightGeneration = generation;\r\n    try {\r\n      await refreshClientOrders({ silent: true, reconcileAfterInFlight: false });",
+        "afterByteOffset": 213115
+      },
+      {
+        "before": "        clientOrdersPollingDelay * 2,\r\n        CLIENT_ORDERS_POLL_MAX_MS\r\n      );\r\n    }",
+        "after": "        clientOrdersPollingDelay * 2,\r\n        CLIENT_ORDERS_POLL_MAX_MS\r\n      );\r\n    } finally {\r\n      if (clientOrdersPollInFlightGeneration === generation) {\r\n        clientOrdersPollInFlightGeneration = null;\r\n      }\r\n    }",
+        "afterByteOffset": 213616
+      },
+      {
+        "before": "    immediate: clientOrdersPollingDelay === CLIENT_ORDERS_POLL_MIN_MS\r\n",
+        "after": "    immediate: clientOrdersPollingDelay === CLIENT_ORDERS_POLL_MIN_MS,\r\n    preserveExisting: true\r\n",
+        "afterByteOffset": 239224
+      },
+      {
+        "before": "  startClientOrdersPolling();\r\n}\r\n\r\n// Bound repeated courier-tracking reads",
+        "after": "  startClientOrdersPolling({ preserveExisting: true });\r\n}\r\n\r\n// Bound repeated courier-tracking reads",
+        "afterByteOffset": 239389
       }
     ]
   },
