@@ -910,8 +910,8 @@
     ]
   },
   "app.js": {
-    "sha256": "1ce1d6534cc528e6050338ddc8caafed8ccc167d2952fb945024bf96397aa745",
-    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/qr-menu-rpc-throttle.test.cjs; tests/menu-save-burst-coalesce.test.cjs; tests/menu-session-publication-guard.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/menu-cloud-rpc-singleflight.test.cjs; tests/portal-stations-entry.test.cjs; tests/central-refresh-session.test.cjs; tests/restaurant-settings-pending-confirmation.test.cjs; tests/settings-stale-response-tenant-guard.test.cjs; tests/hardening/menu-photo-session-isolation.test.mjs; tests/menu-publication-verified-save.test.cjs; tests/menu-save-session-isolation.test.cjs; tests/hardening/menu-description-no-truncation.test.mjs; tests/hardening/menu-price-save-validation.test.mjs; tests/hardening/pos-confirmed-payment-tender.test.mjs; tests/hardening/menu-save-content-confirmation.test.mjs; tests/hardening/period-close-feedback.test.mjs; tests/hardening/product-photo-save-race.test.mjs; tests/hardening/product-save-error-preserves-menu.test.mjs; tests/restaurant-operational-rpc-confirmation.test.cjs; tests/order-poll-reconnect.test.cjs; tests/order-poll-reconnect.test.cjs",
+    "sha256": "96ebdeda0467aa2ca0b0480daa9bc2860575e481101c28fbad1d8ef1bfa4228a",
+    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/qr-menu-rpc-throttle.test.cjs; tests/menu-save-burst-coalesce.test.cjs; tests/menu-session-publication-guard.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/menu-cloud-rpc-singleflight.test.cjs; tests/portal-stations-entry.test.cjs; tests/central-refresh-session.test.cjs; tests/restaurant-settings-pending-confirmation.test.cjs; tests/settings-stale-response-tenant-guard.test.cjs; tests/hardening/menu-photo-session-isolation.test.mjs; tests/menu-publication-verified-save.test.cjs; tests/menu-save-session-isolation.test.cjs; tests/hardening/menu-description-no-truncation.test.mjs; tests/hardening/menu-price-save-validation.test.mjs; tests/hardening/pos-confirmed-payment-tender.test.mjs; tests/hardening/menu-save-content-confirmation.test.mjs; tests/hardening/period-close-feedback.test.mjs; tests/hardening/product-photo-save-race.test.mjs; tests/hardening/product-save-error-preserves-menu.test.mjs; tests/restaurant-operational-rpc-confirmation.test.cjs; tests/order-poll-reconnect.test.cjs; tests/order-poll-reconnect.test.cjs; tests/order-offline-snapshot.test.cjs",
     "edits": [
       {
         "before": "",
@@ -1547,6 +1547,11 @@
         "before": "        clientOrdersRealtimeNeedsCatchup = false;\r\n        clientOrdersPollingDelay",
         "after": "        if (clientOrdersRealtimeStatus === \"SUBSCRIBED\") clientOrdersRealtimeNeedsCatchup = false;\r\n        clientOrdersPollingDelay",
         "afterByteOffset": 213455
+      },
+      {
+        "before": "return;",
+        "after": "return false;",
+        "afterByteOffset": 246781
       }
     ]
   },
