@@ -910,8 +910,8 @@
     ]
   },
   "app.js": {
-    "sha256": "96ebdeda0467aa2ca0b0480daa9bc2860575e481101c28fbad1d8ef1bfa4228a",
-    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/qr-menu-rpc-throttle.test.cjs; tests/menu-save-burst-coalesce.test.cjs; tests/menu-session-publication-guard.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/menu-cloud-rpc-singleflight.test.cjs; tests/portal-stations-entry.test.cjs; tests/central-refresh-session.test.cjs; tests/restaurant-settings-pending-confirmation.test.cjs; tests/settings-stale-response-tenant-guard.test.cjs; tests/hardening/menu-photo-session-isolation.test.mjs; tests/menu-publication-verified-save.test.cjs; tests/menu-save-session-isolation.test.cjs; tests/hardening/menu-description-no-truncation.test.mjs; tests/hardening/menu-price-save-validation.test.mjs; tests/hardening/pos-confirmed-payment-tender.test.mjs; tests/hardening/menu-save-content-confirmation.test.mjs; tests/hardening/period-close-feedback.test.mjs; tests/hardening/product-photo-save-race.test.mjs; tests/hardening/product-save-error-preserves-menu.test.mjs; tests/restaurant-operational-rpc-confirmation.test.cjs; tests/order-poll-reconnect.test.cjs; tests/order-poll-reconnect.test.cjs; tests/order-offline-snapshot.test.cjs",
+    "sha256": "77813eb8c11dd15497d6c5221373a9dc9fb053c6fe26b20f34ffcb5ead6584eb",
+    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/qr-menu-rpc-throttle.test.cjs; tests/menu-save-burst-coalesce.test.cjs; tests/menu-session-publication-guard.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/menu-cloud-rpc-singleflight.test.cjs; tests/portal-stations-entry.test.cjs; tests/central-refresh-session.test.cjs; tests/restaurant-settings-pending-confirmation.test.cjs; tests/settings-stale-response-tenant-guard.test.cjs; tests/hardening/menu-photo-session-isolation.test.mjs; tests/menu-publication-verified-save.test.cjs; tests/menu-save-session-isolation.test.cjs; tests/hardening/menu-description-no-truncation.test.mjs; tests/hardening/menu-price-save-validation.test.mjs; tests/hardening/pos-confirmed-payment-tender.test.mjs; tests/hardening/menu-save-content-confirmation.test.mjs; tests/hardening/period-close-feedback.test.mjs; tests/hardening/product-photo-save-race.test.mjs; tests/hardening/product-save-error-preserves-menu.test.mjs; tests/restaurant-operational-rpc-confirmation.test.cjs; tests/order-poll-reconnect.test.cjs; tests/order-poll-reconnect.test.cjs; tests/order-offline-snapshot.test.cjs; tests/menu-jsonb-key-order.test.cjs",
     "edits": [
       {
         "before": "",
@@ -1552,6 +1552,16 @@
         "before": "return;",
         "after": "return false;",
         "afterByteOffset": 246781
+      },
+      {
+        "before": "function menuCatalogsMatch(first, second) {\r\n  return JSON.stringify(normalizeMenuCatalog(first)) === JSON.stringify(normalizeMenuCatalog(second));\r\n}",
+        "after": "// PostgreSQL jsonb reorders object keys (including translation locales).\r\n// Compare equivalent saved content without changing product array ordering.\r\nfunction canonicalMenuContent(value) {\r\n  if (Array.isArray(value)) return value.map(canonicalMenuContent);\r\n  if (value && typeof value === \"object\") {\r\n    return Object.fromEntries(\r\n      Object.keys(value).sort().map((key) => [key, canonicalMenuContent(value[key])])\r\n    );\r\n  }\r\n  return value;\r\n}\r\n\r\nfunction menuContentSignature(value) {\r\n  return JSON.stringify(canonicalMenuContent(value));\r\n}\r\n\r\nfunction menuCatalogsMatch(first, second) {\r\n  return menuContentSignature(normalizeMenuCatalog(first)) ===\r\n    menuContentSignature(normalizeMenuCatalog(second));\r\n}",
+        "afterByteOffset": 82251
+      },
+      {
+        "before": "    && JSON.stringify(first.product) === JSON.stringify(second.product);",
+        "after": "    && menuContentSignature(first.product) === menuContentSignature(second.product);",
+        "afterByteOffset": 86827
       }
     ]
   },
