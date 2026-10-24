@@ -2528,8 +2528,25 @@ function menuProductCount(menu = menuCatalog) {
   return Object.values(normalized).reduce((total, products) => total + (Array.isArray(products) ? products.length : 0), 0);
 }
 
+// PostgreSQL jsonb reorders object keys (including translation locales).
+// Compare equivalent saved content without changing product array ordering.
+function canonicalMenuContent(value) {
+  if (Array.isArray(value)) return value.map(canonicalMenuContent);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.keys(value).sort().map((key) => [key, canonicalMenuContent(value[key])])
+    );
+  }
+  return value;
+}
+
+function menuContentSignature(value) {
+  return JSON.stringify(canonicalMenuContent(value));
+}
+
 function menuCatalogsMatch(first, second) {
-  return JSON.stringify(normalizeMenuCatalog(first)) === JSON.stringify(normalizeMenuCatalog(second));
+  return menuContentSignature(normalizeMenuCatalog(first)) ===
+    menuContentSignature(normalizeMenuCatalog(second));
 }
 
 function readConfirmedCloudMenu() {
@@ -2707,7 +2724,7 @@ function mergeConcurrentSettingsChanges(
 function menuProductEntryMatches(first, second) {
   if (!first || !second) return first === second;
   return first.category === second.category
-    && JSON.stringify(first.product) === JSON.stringify(second.product);
+    && menuContentSignature(first.product) === menuContentSignature(second.product);
 }
 
 function mergeConcurrentMenuChanges(baseMenu, localMenu, remoteMenu) {
