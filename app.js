@@ -7812,7 +7812,7 @@ async function performClientOrdersRefresh(options = {}) {
     if (!silent || elements.clientOrdersDialog.open) {
       elements.clientOrdersList.innerHTML = `<div class="monthly-empty">Sin internet. Los pedidos recibidos necesitan conexion.</div>`;
     }
-    return;
+    return false;
   }
 
   const previousById = new Map(pendingClientOrders.map((order) => [String(order.id), order]));
