@@ -12,7 +12,7 @@ test('Vercel serves only the reviewed frontend distribution, never the repositor
   const walk=dir=>readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(join(dir,e.name)):[join(dir,e.name)]);
   for(const file of walk(config.outputDirectory)) {
     assert.match(file,/\.(?:html|js|mjs|css|webmanifest|svg|png|txt|json)$/);
-    if(file.endsWith('.mjs'))assert.equal(file,'www/inventory/preview.mjs','deny unknown ESM assets: '+file);
+    if(file.endsWith('.mjs'))assert.ok(['www/inventory/preview.mjs','www/inventory/persistence.mjs'].includes(file),'deny unknown ESM assets: '+file);
     if(file.endsWith('.txt'))assert.match(file,/vendor\/(?:QRCODE|SUPABASE)-LICENSE\.txt$/);
     if(file.endsWith('.json'))assert.ok(['www/BUILD-METADATA.json','www/rc-ordera-release.json'].includes(file), 'deny unknown JSON assets: '+file);
     assert.doesNotMatch(file,/(?:^|\/)(?:supabase|tests|scripts|docs|accounting|fiscal-agent|delivery-bridge|\.env)(?:\/|$)/);

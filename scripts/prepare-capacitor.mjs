@@ -27,6 +27,7 @@ const runtimeFiles = [
   "inventario.html",
   "inventario.js",
   "inventory/preview.mjs",
+  "inventory/persistence.mjs",
   "cliente.html",
   "colaborador.html",
   "mesero.html",
