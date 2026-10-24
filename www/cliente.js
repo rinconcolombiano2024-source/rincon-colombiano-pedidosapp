@@ -5210,7 +5210,16 @@ async function customerUseLocation() {
       }
     },
     (error) => {
-      customerLocationCoords = null;
+      // A delayed GPS denial must not erase a newer address or selected map pin.
+      if (requestedQuoteGeneration !== customerDeliveryQuoteGeneration ||
+          requestedRestaurant !== customerStoreId ||
+          requestedDestination !== customerDeliveryDestination() ||
+          previousCoordinates !== JSON.stringify(customerLocationCoords) ||
+          customerElements.orderType.value !== "Domicilio") {
+        customerElements.useLocationButton.disabled = false;
+        return;
+      }
+      // A GPS permission error must not erase coordinates selected manually.
       customerElements.useLocationButton.disabled = false;
       const key = error?.code === 1
         ? "locationPermissionDenied"

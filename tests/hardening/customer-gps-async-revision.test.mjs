@@ -57,3 +57,57 @@ test("a late browser GPS permission response cannot overwrite manually edited ad
   assert.match(body,/previousCoordinates !== JSON.stringify\(customerLocationCoords\)/);
   assert.ok(body.indexOf("requestedQuoteGeneration !== customerDeliveryQuoteGeneration")<body.indexOf("customerLocationCoords = {"));
 });
+
+function gpsPermissionErrorHarness() {
+  const pending = {};
+  const state = {
+    customerStoreId: "restaurant-A",
+    customerDeliveryQuoteGeneration: 4,
+    destination: "Czapelska 33",
+    customerLocationCoords: { lat: 52.24, lng: 21.08 },
+    customerMapDistance: { quoteId: "old-verified", finalFee: 16 },
+    customerElements: {
+      orderType: { value: "Domicilio" },
+      useLocationButton: { disabled: false },
+    },
+    messages: [],
+    window: { isSecureContext: true, location: { hostname: "shop.example" } },
+  };
+  state.customerDeliveryDestination = () => state.destination;
+  state.customerSetMapResult = (message, level) => state.messages.push({ message, level });
+  state.customerT = key => key;
+  state.navigator = {
+    geolocation: {
+      getCurrentPosition: (_success, fail) => { pending.fail = fail; },
+    },
+  };
+  const begin = source.indexOf("async function customerUseLocation()");
+  const end = source.indexOf("async function customerCalculateDistanceWithMaps()", begin);
+  assert.ok(begin >= 0 && end > begin);
+  vm.createContext(state);
+  vm.runInContext(source.slice(begin, end) + "\nthis.requestGps = customerUseLocation;", state);
+  return { state, pending };
+}
+
+test("outdated GPS permission error cannot clear a newer pin or quote", async () => {
+  const { state, pending } = gpsPermissionErrorHarness();
+  await state.requestGps();
+  state.customerDeliveryQuoteGeneration += 1;
+  state.customerLocationCoords = { lat: 52.25, lng: 21.09 };
+  state.customerMapDistance = { quoteId: "new-verified", finalFee: 18 };
+  pending.fail({ code: 1 });
+  assert.equal(state.customerLocationCoords.lat, 52.25);
+  assert.equal(state.customerMapDistance.quoteId, "new-verified");
+  assert.equal(state.messages.some(item => item.message === "locationPermissionDenied"), false);
+  assert.equal(state.customerElements.useLocationButton.disabled, false);
+});
+
+test("current GPS denial preserves an existing manually chosen pin", async () => {
+  const { state, pending } = gpsPermissionErrorHarness();
+  await state.requestGps();
+  pending.fail({ code: 1 });
+  assert.equal(state.customerLocationCoords.lat, 52.24);
+  assert.equal(state.customerMapDistance.quoteId, "old-verified");
+  assert.equal(state.messages.at(-1).message, "locationPermissionDenied");
+  assert.equal(state.customerElements.useLocationButton.disabled, false);
+});
