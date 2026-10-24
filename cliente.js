@@ -1530,10 +1530,16 @@ function customerLocalizedDishField(dish, field) {
   if (customerHasSavedDishTranslation(dish, field)) {
     const localized = dish.translations[customerLanguage][field];
     return field === "description"
-      ? customerNormalizeProductDescription(localized)
+      ? customerNormalizePublishedDescription(localized)
       : localized.trim().slice(0, 180);
   }
   const source = field === "description" ? dish?.description : dish?.name;
+  if (field === "description") {
+    const published = customerNormalizePublishedDescription(source);
+    // For long text without a saved translation, show the full source rather
+    // than silently displaying only the first 260 translated characters.
+    if (published.length > 260) return published;
+  }
   return customerMenuTextDisplay(source);
 }
 function customerDescriptionDisplay(dish) {
@@ -3887,7 +3893,13 @@ function customerProductAvailable(product) {
   return product?.available !== false;
 }
 function customerNormalizeProductDescription(value) {
+  // Keep the existing 260-character limit for automatic translation requests.
   return String(value || "").trim().replace(/\s+/g, " ").slice(0, 260);
+}
+// Published product descriptions and merchant-provided ES/PL/EN translations
+// must not inherit the translation-provider limit.
+function customerNormalizePublishedDescription(value) {
+  return String(value ?? "").trim().replace(/\s+/g, " ");
 }
 function customerHashText(value) {
   let hash = 0;
@@ -3919,10 +3931,12 @@ function customerNormalizeMenu(menu) {
         const name = String(dish?.name || "").trim();
         const price = Number.parseFloat(dish?.price) || 0;
         const imageUrl = String(dish?.imageUrl || dish?.image || dish?.photo || "").trim();
-        const description = customerNormalizeProductDescription(dish?.description || dish?.descripcion || dish?.details || "");
+        const description = customerNormalizePublishedDescription(dish?.description || dish?.descripcion || dish?.details || "");
         if (name) {
           normalized[finalCategory].push({
-            id: customerNormalizeProductId(dish?.id || dish?.productId) || customerStableProductId(finalCategory, name, description),
+            // Preserve legacy fallback IDs for dishes without a persistent ID:
+            // historical IDs were hashed using only the first 260 characters.
+            id: customerNormalizeProductId(dish?.id || dish?.productId) || customerStableProductId(finalCategory, name, customerNormalizeProductDescription(description)),
             name,
             price,
             available: dish?.available === false ? false : true,

@@ -1,7 +1,7 @@
 {
   "cliente.js": {
-    "sha256": "f3ea93c19e98a8b42ebeb7df4cf76b85d84405ebe2e7e1968f1c96b53ef20e21",
-    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs; tests/hardening/customer-independent-item-notes.test.mjs; tests/hardening/customer-menu-product-id-match.test.mjs; tests/hardening/customer-visible-checkout-status.test.mjs; tests/e2e/checkout-feedback.spec.js; tests/hardening/customer-verified-gps-null.test.mjs; tests/hardening/google-maps-auth-gps-fallback.test.mjs; tests/hardening/customer-delivery-quote-stale.test.mjs; tests/hardening/customer-gps-async-revision.test.mjs; tests/hardening/maps-distance-invalid-quote.test.mjs; tests/customer-directory-recovery.test.cjs; tests/customer-directory-cancellation.test.cjs; tests/customer-checkout-profile-failure.test.cjs",
+    "sha256": "70e324f5ef9b076a3575f98b4d5fd0186e3b854a1a142be90a478f0e9c7b1d13",
+    "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs; tests/hardening/customer-independent-item-notes.test.mjs; tests/hardening/customer-menu-product-id-match.test.mjs; tests/hardening/customer-visible-checkout-status.test.mjs; tests/e2e/checkout-feedback.spec.js; tests/hardening/customer-verified-gps-null.test.mjs; tests/hardening/google-maps-auth-gps-fallback.test.mjs; tests/hardening/customer-delivery-quote-stale.test.mjs; tests/hardening/customer-gps-async-revision.test.mjs; tests/hardening/maps-distance-invalid-quote.test.mjs; tests/customer-directory-recovery.test.cjs; tests/customer-directory-cancellation.test.cjs; tests/customer-checkout-profile-failure.test.cjs; tests/customer-full-menu-descriptions.test.cjs",
     "edits": [
       {
         "before": "",
@@ -507,6 +507,21 @@
         "before": "  if (customerUser) {\r\n    await customerSaveProfile();\r\n  }\r\n\r\n  if (checkoutContext !== JSON.stringify([customerStoreId, customerUser?.id || null])) {",
         "after": "  if (customerUser) {\r\n    try {\r\n      await customerSaveProfile();\r\n    } catch (profileError) {\r\n      // Optional profile synchronization is not the order authorization.\r\n      // The Edge gateway still validates identity, the restaurant and quote.\r\n      // A transient profile/Auth metadata write must not block the sale.\r\n      console.warn(\"No se pudo sincronizar el perfil antes de pedir; se conservarán los datos del pedido.\", profileError);\r\n    }\r\n  }\r\n\r\n  if (checkoutContext !== JSON.stringify([customerStoreId, customerUser?.id || null])) {",
         "afterByteOffset": 300568
+      },
+      {
+        "before": "    return field === \"description\"\r\n      ? customerNormalizeProductDescription(localized)\r\n      : localized.trim().slice(0, 180);\r\n  }\r\n  const source = field === \"description\" ? dish?.description : dish?.name;\r\n  return customerMenuTextDisplay(source);",
+        "after": "    return field === \"description\"\r\n      ? customerNormalizePublishedDescription(localized)\r\n      : localized.trim().slice(0, 180);\r\n  }\r\n  const source = field === \"description\" ? dish?.description : dish?.name;\r\n  if (field === \"description\") {\r\n    const published = customerNormalizePublishedDescription(source);\r\n    // For long text without a saved translation, show the full source rather\r\n    // than silently displaying only the first 260 translated characters.\r\n    if (published.length > 260) return published;\r\n  }\r\n  return customerMenuTextDisplay(source);",
+        "afterByteOffset": 85603
+      },
+      {
+        "before": "function customerNormalizeProductDescription(value) {\r\n  return String(value || \"\").trim().replace(/\\s+/g, \" \").slice(0, 260);\r\n}\r\n",
+        "after": "function customerNormalizeProductDescription(value) {\r\n  // Keep the existing 260-character limit for automatic translation requests.\r\n  return String(value || \"\").trim().replace(/\\s+/g, \" \").slice(0, 260);\r\n}\r\n// Published product descriptions and merchant-provided ES/PL/EN translations\r\n// must not inherit the translation-provider limit.\r\nfunction customerNormalizePublishedDescription(value) {\r\n  return String(value ?? \"\").trim().replace(/\\s+/g, \" \");\r\n}\r\n",
+        "afterByteOffset": 179596
+      },
+      {
+        "before": "        const description = customerNormalizeProductDescription(dish?.description || dish?.descripcion || dish?.details || \"\");\r\n        if (name) {\r\n          normalized[finalCategory].push({\r\n            id: customerNormalizeProductId(dish?.id || dish?.productId) || customerStableProductId(finalCategory, name, description),",
+        "after": "        const description = customerNormalizePublishedDescription(dish?.description || dish?.descripcion || dish?.details || \"\");\r\n        if (name) {\r\n          normalized[finalCategory].push({\r\n            // Preserve legacy fallback IDs for dishes without a persistent ID:\r\n            // historical IDs were hashed using only the first 260 characters.\r\n            id: customerNormalizeProductId(dish?.id || dish?.productId) || customerStableProductId(finalCategory, name, customerNormalizeProductDescription(description)),",
+        "afterByteOffset": 181505
       }
     ]
   },

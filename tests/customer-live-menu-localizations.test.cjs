@@ -43,6 +43,12 @@ function runMenuHarness(file) {
     customerMenuSearchEntries: () => [],
     customerT: key => key,
   });
+  // Load the real published-description helper alongside the isolated menu renderer.
+  // The bounded automatic-translation stub above intentionally remains unchanged.
+  vm.runInContext(
+    extract("function customerNormalizePublishedDescription(", "function customerHashText("),
+    context, { filename: file }
+  );
   vm.runInContext([
     extract("function customerHasSavedDishTranslation(", "function customerScheduleDescriptionRender("),
     extract("function customerQueueDescriptionTranslation(", "function customerRenderGreeting("),
