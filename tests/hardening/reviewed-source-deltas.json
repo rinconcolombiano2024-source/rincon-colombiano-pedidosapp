@@ -509,14 +509,14 @@
         "afterByteOffset": 300568
       },
       {
-        "before": "function customerNormalizeProductDescription(value) {\r\n  return String(value || \"\").trim().replace(/\\s+/g, \" \").slice(0, 260);\r\n}\r\n",
-        "after": "function customerNormalizeProductDescription(value) {\r\n  // Keep the existing 260-character limit for automatic translation requests.\r\n  return String(value || \"\").trim().replace(/\\s+/g, \" \").slice(0, 260);\r\n}\r\n// Published product descriptions and merchant-provided ES/PL/EN translations\r\n// must not inherit the translation-provider limit.\r\nfunction customerNormalizePublishedDescription(value) {\r\n  return String(value ?? \"\").trim().replace(/\\s+/g, \" \");\r\n}\r\n",
-        "afterByteOffset": 179596
-      },
-      {
         "before": "    return field === \"description\"\r\n      ? customerNormalizeProductDescription(localized)\r\n      : localized.trim().slice(0, 180);\r\n  }\r\n  const source = field === \"description\" ? dish?.description : dish?.name;\r\n  return customerMenuTextDisplay(source);",
         "after": "    return field === \"description\"\r\n      ? customerNormalizePublishedDescription(localized)\r\n      : localized.trim().slice(0, 180);\r\n  }\r\n  const source = field === \"description\" ? dish?.description : dish?.name;\r\n  if (field === \"description\") {\r\n    const published = customerNormalizePublishedDescription(source);\r\n    // For long text without a saved translation, show the full source rather\r\n    // than silently displaying only the first 260 translated characters.\r\n    if (published.length > 260) return published;\r\n  }\r\n  return customerMenuTextDisplay(source);",
         "afterByteOffset": 85603
+      },
+      {
+        "before": "function customerNormalizeProductDescription(value) {\r\n  return String(value || \"\").trim().replace(/\\s+/g, \" \").slice(0, 260);\r\n}\r\n",
+        "after": "function customerNormalizeProductDescription(value) {\r\n  // Keep the existing 260-character limit for automatic translation requests.\r\n  return String(value || \"\").trim().replace(/\\s+/g, \" \").slice(0, 260);\r\n}\r\n// Published product descriptions and merchant-provided ES/PL/EN translations\r\n// must not inherit the translation-provider limit.\r\nfunction customerNormalizePublishedDescription(value) {\r\n  return String(value ?? \"\").trim().replace(/\\s+/g, \" \");\r\n}\r\n",
+        "afterByteOffset": 179596
       },
       {
         "before": "        const description = customerNormalizeProductDescription(dish?.description || dish?.descripcion || dish?.details || \"\");\r\n        if (name) {\r\n          normalized[finalCategory].push({\r\n            id: customerNormalizeProductId(dish?.id || dish?.productId) || customerStableProductId(finalCategory, name, description),",
