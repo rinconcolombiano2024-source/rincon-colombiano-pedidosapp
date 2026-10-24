@@ -910,8 +910,8 @@
     ]
   },
   "app.js": {
-    "sha256": "124d42de2d6698f8928aec22bb6947645aa1a580d7eed1700d5f0111c209ffa6",
-    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/qr-menu-rpc-throttle.test.cjs; tests/menu-save-burst-coalesce.test.cjs; tests/menu-session-publication-guard.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/menu-cloud-rpc-singleflight.test.cjs; tests/portal-stations-entry.test.cjs; tests/central-refresh-session.test.cjs; tests/restaurant-settings-pending-confirmation.test.cjs; tests/settings-stale-response-tenant-guard.test.cjs; tests/hardening/menu-photo-session-isolation.test.mjs; tests/menu-publication-verified-save.test.cjs; tests/menu-save-session-isolation.test.cjs; tests/hardening/menu-description-no-truncation.test.mjs; tests/hardening/menu-price-save-validation.test.mjs; tests/hardening/pos-confirmed-payment-tender.test.mjs; tests/hardening/menu-save-content-confirmation.test.mjs; tests/hardening/period-close-feedback.test.mjs; tests/hardening/product-photo-save-race.test.mjs; tests/hardening/product-save-error-preserves-menu.test.mjs; tests/restaurant-operational-rpc-confirmation.test.cjs; tests/order-poll-reconnect.test.cjs",
+    "sha256": "1ce1d6534cc528e6050338ddc8caafed8ccc167d2952fb945024bf96397aa745",
+    "regressionTests": "tests/e2e/menu-vat.spec.js; tests/hardening/orders.test.mjs; tests/restaurant-navigation-fiscal.test.cjs; tests/cpu-order-sync.test.cjs; tests/delivery-tracking-demand.test.cjs; tests/owner-role-idempotence.test.cjs; tests/menu-coldstart-single-read.test.cjs; tests/owner-profile-write-idempotent.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/restaurant-native-module-links.test.cjs; tests/restaurant-delivery-tracking-cache.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-verified-save.test.cjs; tests/menu-publication-status-ui.test.cjs; tests/restaurant-auth-home-recovery.test.cjs; tests/qr-menu-rpc-throttle.test.cjs; tests/menu-save-burst-coalesce.test.cjs; tests/menu-session-publication-guard.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/menu-cloud-rpc-singleflight.test.cjs; tests/portal-stations-entry.test.cjs; tests/central-refresh-session.test.cjs; tests/restaurant-settings-pending-confirmation.test.cjs; tests/settings-stale-response-tenant-guard.test.cjs; tests/hardening/menu-photo-session-isolation.test.mjs; tests/menu-publication-verified-save.test.cjs; tests/menu-save-session-isolation.test.cjs; tests/hardening/menu-description-no-truncation.test.mjs; tests/hardening/menu-price-save-validation.test.mjs; tests/hardening/pos-confirmed-payment-tender.test.mjs; tests/hardening/menu-save-content-confirmation.test.mjs; tests/hardening/period-close-feedback.test.mjs; tests/hardening/product-photo-save-race.test.mjs; tests/hardening/product-save-error-preserves-menu.test.mjs; tests/restaurant-operational-rpc-confirmation.test.cjs; tests/order-poll-reconnect.test.cjs; tests/order-poll-reconnect.test.cjs",
     "edits": [
       {
         "before": "",
@@ -1502,6 +1502,51 @@
         "before": "  startClientOrdersPolling();\r\n}\r\n\r\n// Bound repeated courier-tracking reads",
         "after": "  startClientOrdersPolling({ preserveExisting: true });\r\n}\r\n\r\n// Bound repeated courier-tracking reads",
         "afterByteOffset": 239389
+      },
+      {
+        "before": "    clientOrdersRealtimeStatus === \"SUBSCRIBED\" ||\r\n",
+        "after": "    (clientOrdersRealtimeStatus === \"SUBSCRIBED\" && !clientOrdersRealtimeNeedsCatchup) ||\r\n",
+        "afterByteOffset": 212419
+      },
+      {
+        "before": "      clientOrdersRealtimeStatus === \"SUBSCRIBED\" ||\r\n",
+        "after": "      (clientOrdersRealtimeStatus === \"SUBSCRIBED\" && !clientOrdersRealtimeNeedsCatchup) ||\r\n",
+        "afterByteOffset": 212993
+      },
+      {
+        "before": "      await refreshClientOrders({ silent: true, reconcileAfterInFlight: false });\r\n",
+        "after": "      const recovered = await refreshClientOrders({ silent: true, reconcileAfterInFlight: false });\r\n",
+        "afterByteOffset": 213258
+      },
+      {
+        "before": "      clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;\r\n",
+        "after": "      if (recovered !== false) {\r\n        clientOrdersRealtimeNeedsCatchup = false;\r\n        clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;\r\n      }\r\n",
+        "afterByteOffset": 213421
+      },
+      {
+        "before": "      clientOrdersRealtimeStatus !== \"SUBSCRIBED\" &&\r\n",
+        "after": "      (clientOrdersRealtimeStatus !== \"SUBSCRIBED\" || clientOrdersRealtimeNeedsCatchup) &&\r\n",
+        "afterByteOffset": 214138
+      },
+      {
+        "before": "    .then(() => {\r\n",
+        "after": "    .then((recovered) => {\r\n",
+        "afterByteOffset": 238873
+      },
+      {
+        "before": "",
+        "after": "        recovered !== false &&\r\n",
+        "afterByteOffset": 238913
+      },
+      {
+        "before": "",
+        "after": "    }).finally(() => {\r\n      // A live socket cannot recover events missed before its subscription.\r\n      // Keep one bounded fallback until the snapshot is confirmed.\r\n      if (channel === clientOrdersChannel && clientOrdersRealtimeNeedsCatchup) {\r\n        startClientOrdersPolling({ preserveExisting: true });\r\n      }\r\n",
+        "afterByteOffset": 239270
+      },
+      {
+        "before": "        clientOrdersRealtimeNeedsCatchup = false;\r\n        clientOrdersPollingDelay",
+        "after": "        if (clientOrdersRealtimeStatus === \"SUBSCRIBED\") clientOrdersRealtimeNeedsCatchup = false;\r\n        clientOrdersPollingDelay",
+        "afterByteOffset": 213455
       }
     ]
   },
