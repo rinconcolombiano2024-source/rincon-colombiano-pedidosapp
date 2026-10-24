@@ -6566,7 +6566,7 @@ function startClientOrdersPolling(options = {}) {
   // cuando la app esta visible, conectada y Realtime no esta suscrito.
   if (
     !canUseCustomerModule() ||
-    clientOrdersRealtimeStatus === "SUBSCRIBED" ||
+    (clientOrdersRealtimeStatus === "SUBSCRIBED" && !clientOrdersRealtimeNeedsCatchup) ||
     document.visibilityState !== "visible" ||
     !navigator.onLine
   ) {
@@ -6584,7 +6584,7 @@ function startClientOrdersPolling(options = {}) {
 
     if (
       !canUseCustomerModule() ||
-      clientOrdersRealtimeStatus === "SUBSCRIBED" ||
+      (clientOrdersRealtimeStatus === "SUBSCRIBED" && !clientOrdersRealtimeNeedsCatchup) ||
       document.visibilityState !== "visible" ||
       !navigator.onLine
     ) {
@@ -6593,9 +6593,12 @@ function startClientOrdersPolling(options = {}) {
 
     clientOrdersPollInFlightGeneration = generation;
     try {
-      await refreshClientOrders({ silent: true, reconcileAfterInFlight: false });
+      const recovered = await refreshClientOrders({ silent: true, reconcileAfterInFlight: false });
       if (generation !== clientOrdersPollGeneration) return;
-      clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;
+      if (recovered !== false) {
+        if (clientOrdersRealtimeStatus === "SUBSCRIBED") clientOrdersRealtimeNeedsCatchup = false;
+        clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;
+      }
     } catch (error) {
       if (generation !== clientOrdersPollGeneration) return;
       console.error("No fue posible actualizar los pedidos mediante el respaldo temporal.", error);
@@ -6612,7 +6615,7 @@ function startClientOrdersPolling(options = {}) {
     if (
       generation === clientOrdersPollGeneration &&
       canUseCustomerModule() &&
-      clientOrdersRealtimeStatus !== "SUBSCRIBED" &&
+      (clientOrdersRealtimeStatus !== "SUBSCRIBED" || clientOrdersRealtimeNeedsCatchup) &&
       document.visibilityState === "visible" &&
       navigator.onLine
     ) {
@@ -7581,8 +7584,9 @@ clientOrdersRealtimeStableTimer = setTimeout(() => {
   clientOrdersPollingDelay = CLIENT_ORDERS_POLL_MIN_MS;
       if (clientOrdersRealtimeNeedsCatchup) {
   refreshClientOrders({ silent: true, reconcileAfterInFlight: true })
-    .then(() => {
+    .then((recovered) => {
       if (
+        recovered !== false &&
         channel === clientOrdersChannel &&
         clientOrdersRealtimeStatus === "SUBSCRIBED"
       ) {
@@ -7594,6 +7598,12 @@ clientOrdersRealtimeStableTimer = setTimeout(() => {
         "No fue posible resincronizar los pedidos al reconectar Realtime.",
         error
       );
+    }).finally(() => {
+      // A live socket cannot recover events missed before its subscription.
+      // Keep one bounded fallback until the snapshot is confirmed.
+      if (channel === clientOrdersChannel && clientOrdersRealtimeNeedsCatchup) {
+        startClientOrdersPolling({ preserveExisting: true });
+      }
     });
 }
         return;

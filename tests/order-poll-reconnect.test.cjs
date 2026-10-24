@@ -12,7 +12,7 @@ function harness(file) {
     clientOrdersTimer: null, clientOrdersPollGeneration: 0,
     clientOrdersPollInFlightGeneration: null, clientOrdersPollingDelay: 120000,
     CLIENT_ORDERS_POLL_MIN_MS: 120000, CLIENT_ORDERS_POLL_MAX_MS: 300000,
-    clientOrdersRealtimeStatus: 'idle', canUseCustomerModule: () => true,
+    clientOrdersRealtimeStatus: 'idle', clientOrdersRealtimeNeedsCatchup: false, canUseCustomerModule: () => true,
     navigator: { onLine: true }, document: { visibilityState: 'visible' },
     Math: Object.assign(Object.create(Math), { random: () => 0.5 }),
     console: { error() {} },
@@ -99,6 +99,72 @@ for (const file of ['app.js', 'www/app.js']) {
     const h = harness(file);
     const body = h.source.slice(h.source.indexOf('function startClientOrdersRealtime()'),
       h.source.indexOf('// Bound repeated courier-tracking reads'));
-    assert.equal((body.match(/preserveExisting: true/g) || []).length, 2);
+    assert.equal((body.match(/preserveExisting: true/g) || []).length, 3);
+  });
+}
+
+for (const file of ['app.js', 'www/app.js']) {
+  test(file + ': subscribed socket retries failed catch-up with bounded backoff, then stops', async () => {
+    const h = harness(file);
+    h.context.clientOrdersRealtimeStatus = 'SUBSCRIBED';
+    h.context.clientOrdersRealtimeNeedsCatchup = true;
+    h.fail();
+    h.context.startClientOrdersPolling({ preserveExisting: true });
+    await h.advance(120000);
+    assert.equal(h.reads, 1);
+    assert.equal(h.context.clientOrdersRealtimeNeedsCatchup, true);
+    assert.equal(h.context.clientOrdersPollingDelay, 240000);
+    for (let i=0;i<100;i++) h.context.startClientOrdersPolling({ preserveExisting: true });
+    assert.equal(h.timers.size, 1);
+    await h.advance(240000);
+    assert.equal(h.reads, 2);
+    assert.equal(h.context.clientOrdersRealtimeNeedsCatchup, false);
+    assert.equal(h.timers.size, 0);
+  });
+}
+
+for (const file of ['app.js', 'www/app.js']) {
+  test(file + ': successful disconnected poll still requires catch-up on reconnect', async () => {
+    const h = harness(file);
+    h.context.clientOrdersRealtimeNeedsCatchup = true;
+    h.context.startClientOrdersPolling();
+    await h.advance(120000);
+    assert.equal(h.context.clientOrdersRealtimeNeedsCatchup, true);
+    assert.equal(h.timers.size, 1);
+  });
+  test(file + ': actual SUBSCRIBED callback schedules failed catch-up and ignores retired channel', async () => {
+    for (const outcome of ['failure', 'stale', 'success', 'retired']) {
+      const h = harness(file);
+      let callback, finish;
+      const channel = { on() { return this; }, subscribe(fn) { callback = fn; } };
+      Object.assign(h.context, {
+        cloudState: { user: { id: 'restaurant' }, client: { channel: () => channel } },
+        clientOrdersChannel: null,
+        clientOrdersRealtimeReconnectTimer: null,
+        clientOrdersRealtimeStableTimer: null,
+        CLIENT_ORDERS_REALTIME_STABLE_MS: 30000,
+        CLIENT_ORDERS_REALTIME_RECONNECT_MIN_MS: 1500,
+        clientOrdersRealtimeNeedsCatchup: true,
+        stopClientOrdersRealtime() {},
+        handleClientOrderRealtimePayload() {},
+        handleDeliveryAssignmentRealtimePayload() {},
+        handleClientMessageRealtimePayload() {},
+        setTimeout() { return 99; }, clearTimeout() {},
+        refreshClientOrders: () => new Promise((resolve, reject) => {
+          finish = () => outcome === 'failure' || outcome === 'retired'
+            ? reject(new Error('503')) : resolve(outcome === 'stale' ? false : undefined);
+        }),
+      });
+      vm.runInContext(h.source.slice(h.source.indexOf('function startClientOrdersRealtime()'),
+        h.source.indexOf('// Bound repeated courier-tracking reads')), h.context);
+      h.context.startClientOrdersRealtime();
+      callback('SUBSCRIBED');
+      assert.equal(h.timers.size, 0);
+      if (outcome === 'retired') h.context.clientOrdersChannel = null;
+      finish();
+      await new Promise(resolve => setImmediate(resolve));
+      assert.equal(h.timers.size, ['failure', 'stale'].includes(outcome) ? 1 : 0);
+      assert.equal(h.context.clientOrdersRealtimeNeedsCatchup, outcome !== 'success');
+    }
   });
 }
