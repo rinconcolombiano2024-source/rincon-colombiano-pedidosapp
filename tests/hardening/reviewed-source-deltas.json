@@ -1,6 +1,6 @@
 {
   "cliente.js": {
-    "sha256": "70e324f5ef9b076a3575f98b4d5fd0186e3b854a1a142be90a478f0e9c7b1d13",
+    "sha256": "ddab761b0c102ae759f34ffa6692f5c4cebad0d1d4110f09e969e62003063fda",
     "regressionTests": "tests/hardening/customer-tracking-recovery.test.mjs; tests/e2e/courier-tracking.spec.js; tests/hardening/frontend.test.mjs; tests/directory-realtime-burst.test.cjs; tests/customer-menu-realtime-burst.test.cjs; tests/customer-profile-event-coalesce.test.cjs; tests/customer-tracking-coalesce.test.cjs; tests/hardening/payment-return-safety.test.mjs; tests/customer-menu-category-realtime.test.cjs; tests/customer-live-menu-localizations.test.cjs; tests/hardening/checkout-provider-routing.test.mjs; tests/public-menu-error-pressure.test.cjs; tests/hardening/customer-independent-item-notes.test.mjs; tests/hardening/customer-menu-product-id-match.test.mjs; tests/hardening/customer-visible-checkout-status.test.mjs; tests/e2e/checkout-feedback.spec.js; tests/hardening/customer-verified-gps-null.test.mjs; tests/hardening/google-maps-auth-gps-fallback.test.mjs; tests/hardening/customer-delivery-quote-stale.test.mjs; tests/hardening/customer-gps-async-revision.test.mjs; tests/hardening/maps-distance-invalid-quote.test.mjs; tests/customer-directory-recovery.test.cjs; tests/customer-directory-cancellation.test.cjs; tests/customer-checkout-profile-failure.test.cjs; tests/customer-full-menu-descriptions.test.cjs",
     "edits": [
       {
@@ -522,6 +522,11 @@
         "before": "        const description = customerNormalizeProductDescription(dish?.description || dish?.descripcion || dish?.details || \"\");\r\n        if (name) {\r\n          normalized[finalCategory].push({\r\n            id: customerNormalizeProductId(dish?.id || dish?.productId) || customerStableProductId(finalCategory, name, description),",
         "after": "        const description = customerNormalizePublishedDescription(dish?.description || dish?.descripcion || dish?.details || \"\");\r\n        if (name) {\r\n          normalized[finalCategory].push({\r\n            // Preserve legacy fallback IDs for dishes without a persistent ID:\r\n            // historical IDs were hashed using only the first 260 characters.\r\n            id: customerNormalizeProductId(dish?.id || dish?.productId) || customerStableProductId(finalCategory, name, customerNormalizeProductDescription(description)),",
         "afterByteOffset": 181505
+      },
+      {
+        "before": "    (error) => {\r\n      customerLocationCoords = null;\r\n      customerElements.useLocationButton.disabled = false;",
+        "after": "    (error) => {\r\n      // A delayed GPS denial must not erase a newer address or selected map pin.\r\n      if (requestedQuoteGeneration !== customerDeliveryQuoteGeneration ||\r\n          requestedRestaurant !== customerStoreId ||\r\n          requestedDestination !== customerDeliveryDestination() ||\r\n          previousCoordinates !== JSON.stringify(customerLocationCoords) ||\r\n          customerElements.orderType.value !== \"Domicilio\") {\r\n        customerElements.useLocationButton.disabled = false;\r\n        return;\r\n      }\r\n      // A GPS permission error must not erase coordinates selected manually.\r\n      customerElements.useLocationButton.disabled = false;",
+        "afterByteOffset": 217389
       }
     ]
   },
